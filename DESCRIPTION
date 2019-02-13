@@ -1,21 +1,11 @@
-Package: NetBID.internal
+Package: NetBID2
 Type: Package
-Title: Network-based Bayesian Inference of Drivers
+Title: What the Package Does (Title Case)
 Version: 0.1.0
-Authors@R: person("Jiyang", "Yu", email = "jiyang.yu@stjude.org", role = c("aut", "cre"))
-Maintainer@R: person("Jiyang", "Yu", email = "jiyang.yu@stjude.org")
-Description: A integrative systems biolgy algorithm to infer driers of phenotype based on data-driven context-specific network and Bayesian inference.
-License: MIT
+Author: Who wrote it
+Maintainer: The package maintainer <yourself@somewhere.net>
+Description: More about what it does (maybe more than one line)
+    Use four spaces when indenting paragraphs within the Description.
+License: What license is it under?
 Encoding: UTF-8
 LazyData: true
-Depends: 
-    R (>= 3.4)
-Imports: 
-    arm,
-    dplyr,
-    Biobase,
-    Rcpp
-Suggests:
-    MCMCglmm,
-    lme4
-RoxygenNote: 6.0.1.9000
