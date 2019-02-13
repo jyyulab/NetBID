@@ -7,7 +7,7 @@ Network-based Bayesian Inference of Drivers
 
 library(githubinstall)
 
-githubinstall("jyyulab/NetBID-dev",ref='NetBID2-R')
+githubinstall("jyyulab/NetBID-dev",ref='NetBID2-R') ## not public yet
 
 ## functions used for analysis
 pipeline_functions.R 
