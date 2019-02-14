@@ -1,7 +1,7 @@
 # NetBID2
 Network-based Bayesian Inference of Drivers
 
-# local version
+# public version (not available yet)
 
 # install 
 
