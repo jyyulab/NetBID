@@ -1,26 +1,33 @@
 # NetBID2
 Network-based Bayesian Inference of Drivers
 
-# public version (not available yet)
+# public version (not available to install remotely yet)
 
-# install 
+# remote install (not available yet)
 
 library(githubinstall)
 
 githubinstall("jyyulab/NetBID-dev",ref='NetBID2-R') ## not public yet
 
-## functions used for analysis
-pipeline_functions.R 
 
-## demo scripts for network generation
-pipeline_network_demo1.R 
+# local install
+
+download the directory to your workspace and then run:
+
+devtools::install(pkg='.') ## please input the path to the directory
+
+
+# the documents for some functions are not available yet (just write a blank page)
+
+## demo scripts for network generation, in demo/ directory 
+pipeline_network_demo1.R
 * Step1: load in gene expression datasets for network construction (exp-load)
 * Step2: normalization for the exp dataset (exp-QC)
 * Step3: check sample cluster info, optional (exp-cluster)
 * Step4: prepare SJARACNE (sjaracne-prep)
 
 ## demo scripts for network-based analysis
-pipeline_analysis_demo1.R 
+pipeline_analysis_demo1.R
 * Step1: load in gene expression datasets for analysis (exp-load,exp-cluster,exp-QC)
 * Step2: activity calculation (act-prep,act-get)
 * Step3: get DE/DA (act-DA)

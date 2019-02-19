@@ -12,7 +12,7 @@ library(RColorBrewer) ## for color scale
 library(colorspace) ## for color scale
 library(plot3D) ## for 3D plot
 library(vsn) ## for QC plot, require hexbin
-library(gplots) ## for some plot like venn
+#library(gplots) ## for some plot like venn
 library(igraph) ## for network related functions
 library(plotrix) ## for draw.ellipse
 
@@ -24,27 +24,55 @@ library(msigdbr) ## for msigDB gene sets
 library(ComplexHeatmap) ## for complex heatmap
 library(umap) ## for umap visualization
 library(rhdf5) ## for read in MICA results
+#source('pipeline_functions_bid.R')
 
-###### preload database into R
-# gene info from GENCODE, support human and mouse, other species may try
-# required: use_level, use_spe
-# use_level: transcript, gene
-# use_spe: suggested human / mouse, others may work
-# TF_list, SIG_list: can define byself or use in db/TF.txt db/SIG.txt (external_gene_symbol/hgnc_symbol)
-# input_attr_type: applied when TF_list/Sig_list not equal to NULL
-# update: 0, judge existence, 1, always update
-db.preload <- function(use_level='transcript',use_spe='human',update = 0,
-                       TF_list=NULL,SIG_list=NULL,input_attr_type='external_gene_name'){
+#' Load database files used for NetBID2 into R workspace.
+#'
+#' \code{db.preload} returns the TF (transcription factors) and Sig (signaling factors) list (tf_sigs)
+#' and biomart database information (db_info) by input interested species name and make choice from
+#' gene or transcript level.
+#'
+#' This is a pre-processing function for NetBID2, user could input the species name (e.g human, mouse),
+#' analysis level (transcript or gene level) and optionally input TF list or SIG list
+#' (otherwise will use list from package data). The function could automatically download information
+#' from biomart and save into RData under the db/ directory with specified species name and analysis level.
+#'
+#' @param use_level character, either 'transcript' or 'gene', default is 'gene'
+#' @param use_spe character, input the species name (e.g 'human', 'mouse', 'rat'), default is 'human'
+#' @param update logical,whether to update if previous RData has been generated, default FALSE
+#' @param TF_list a character vector,input the list of TF names, if NULL, will use pre-defined list in the package, default NULL
+#' @param SIG_list a character vector,input the list of SIG names, if NULL, will use pre-defined list in the package, default NULL
+#' @param input_attr_type character, input the type for the list of TF_list, SIG_list. If no input for TF_list, SIG_list, just leave it to NULL, default NULL.
+#' See biomaRt \url{https://bioconductor.org/packages/release/bioc/vignettes/biomaRt/inst/doc/biomaRt.html} for more details.
+#' @param db.dir character, file path for saving the RData, default is \code{db} directory under \code{main.dir} when setting for \code{main.dir}.
+#'
+#' @return Reture TRUE if success and FALSE if not. Will load two variables into R workspace, tf_sigs and db_info.
+#'
+#' @examples
+#' main.dir <- system.file(package = "NetBID2")
+#' db.preload(use_level='gene',use_spe='human',update=FALSE)
+#' db.preload(use_level='gene',use_spe='mouse',update=FALSE)
+#'
+#' \dontrun{
+#' main.dir <- system.file(package = "NetBID2") ## must specify a main directory
+#' db.preload(use_level='transcript',use_spe='human',update=FALSE)
+#' }
+#' @export
+db.preload <- function(use_level='transcript',use_spe='human',update = FALSE,
+                       TF_list=NULL,SIG_list=NULL,input_attr_type='external_gene_name',
+                       db.dir=sprintf("%s/db/",main.dir)){
   ## load annotation info, including: TF/Sig list, gene info
-  if(is.null(main.dir)){message('main.dir required, please check and re-try !');return(FALSE)}
-  db.dir <- sprintf("%s/db/",main.dir)
+  if(is.null(main.dir) & is.null(db.dir)){message('db.dir or main.dir required, please check and re-try !');return(FALSE)}
+  if(is.null(main.dir)==FALSE & is.null(db.dir)==TRUE){
+    db.dir <- sprintf("%s/db/",main.dir)
+  }
   use_spe <- toupper(use_spe)
   output.db.dir <- sprintf('%s/%s',db.dir,use_spe)
   if(!file.exists(output.db.dir)){
     dir.create(output.db.dir)
   }
   RData.file <- sprintf('%s/%s_%s.RData', output.db.dir,use_spe,use_level)
-  if (update == 1 | !file.exists(RData.file)) {
+  if (update == TRUE | !file.exists(RData.file)) {
     ## get info from use_spe
     ensembl <- useMart("ensembl")
     all_ds  <- listDatasets(ensembl)
@@ -69,13 +97,13 @@ db.preload <- function(use_level='transcript',use_spe='human',update = 0,
     attributes <- listAttributes(mart)
     ensembl.attr.transcript <- c('ensembl_transcript_id_version','ensembl_gene_id_version',
                                  'external_transcript_name','external_gene_name',
-                      'transcript_biotype','gene_biotype',
-                      'chromosome_name','strand','start_position','end_position','band','transcript_start','transcript_end',
-                      'description','phenotype_description','hgnc_symbol','entrezgene','refseq_mrna')
+                                 'transcript_biotype','gene_biotype',
+                                 'chromosome_name','strand','start_position','end_position','band','transcript_start','transcript_end',
+                                 'description','phenotype_description','hgnc_symbol','entrezgene','refseq_mrna')
     ensembl.attr.gene <- c('ensembl_gene_id_version','external_gene_name',
-                          'gene_biotype',
-                          'chromosome_name','strand','start_position','end_position','band',
-                          'description','phenotype_description','hgnc_symbol','entrezgene','refseq_mrna')
+                           'gene_biotype',
+                           'chromosome_name','strand','start_position','end_position','band',
+                           'description','phenotype_description','hgnc_symbol','entrezgene','refseq_mrna')
     ## do not output hgnc in non-human species
     if(use_spe != 'HUMAN')
       ensembl.attr.transcript <- setdiff(ensembl.attr.transcript,'hgnc_symbol')
@@ -141,10 +169,10 @@ db.preload <- function(use_level='transcript',use_spe='human',update = 0,
     tf_sigs <- list();tf_sigs$tf <- list();tf_sigs$sig <- list();
     tf_sigs$tf$info  <- TF_info; tf_sigs$sig$info <- SIG_info;
     for(each_id_type in intersect(c('ensembl_transcript_id_version','ensembl_gene_id_version',
-                            'external_transcript_name','external_gene_name','hgnc_symbol',
-                            'entrezgene','refseq_mrna'),colnames(TF_info))){
-      tf_sigs$tf[[each_id_type]] <- setdiff(unique(TF_info[[each_id_type]]),'')
-      tf_sigs$sig[[each_id_type]] <- setdiff(unique(SIG_info[[each_id_type]]),'')
+                                    'external_transcript_name','external_gene_name','hgnc_symbol',
+                                    'entrezgene','refseq_mrna'),colnames(TF_info))){
+      tf_sigs$tf[[each_id_type]] <- setdiff(unique(TF_info[[each_id_type]]),"")
+      tf_sigs$sig[[each_id_type]] <- setdiff(unique(SIG_info[[each_id_type]]),"")
     }
     db_info <- all_ds[w1,]
     save(tf_sigs,db_info=db_info,file = RData.file)
@@ -152,7 +180,9 @@ db.preload <- function(use_level='transcript',use_spe='human',update = 0,
   load(RData.file,.GlobalEnv)
   return(TRUE)
 }
-## get TF SIG list for the input genes
+
+#' Get transcription factor (TF) and signaling factor (SIG) list
+#' @export
 get.TF_SIG.list <- function(use_genes,use_gene_type='ensembl_gene_id',dataset=db_info[1]){
   n1 <- names(tf_sigs$tf)[-1]
   if(use_gene_type %in% n1){
@@ -175,7 +205,34 @@ get.TF_SIG.list <- function(use_genes,use_gene_type='ensembl_gene_id',dataset=db
   message(sprintf('%d TFs and %s SIGs are included in the expression matrix !',length(TF_list),length(SIG_list)))
   return(list(tf=TF_list,sig=SIG_list))
 }
-## get Id transfer table, could be input info for update.eset.feature
+
+#' Gene ID conversion related functions.
+#'
+#' \code{get_IDtransfer} will generate a transfer table for ID conversion by input the from-gene type and to-gene type.
+#'
+#' @param from_type character, attribute name from the biomaRt package, such as 'ensembl_gene_id','ensembl_gene_id_version'
+#' 'ensembl_transcript_id','ensembl_transcript_id_version','refseq_mrna'. Full list could be obtained by
+#' \code{listAttributes(mart)$name}, where \code{mart} is the output of \code{useMart} function.
+#' The type must be the gene type for the input \code{use_genes}.
+#' @param to_type character, character, attribute name from the biomaRt package, the gene type will be convereted to.
+#' @param use_genes a vector of characters, gene list used for ID conversion.
+#' @param dataset character, name for the dataset used for ID conversion, such as 'hsapiens_gene_ensembl'.
+#' If NULL, will use \code{db_info[1]} if run \code{db.preload} brefore. Default is NULL.
+#'
+#' @return
+#' \code{get_IDtransfer} will return a data.frame for the transfer table.
+#'
+#' @examples
+#' use_genes <- c("ENST00000210187",ENST00000216083","ENST00000216127",
+#'              "ENST00000216416","ENST00000217233",ENST00000221418")
+#' transfer_tab <- get_IDtransfer(from_type = 'ensembl_transcript_id',
+#'                                to_type='external_gene_name',use_genes=use_genes) ## get transfer table !!!
+#' res1 <- get_name_transfertab(use_genes,transfer_tab=transfer_tab)
+#' transfer_tab_withtype <- get_IDtransfer2symbol2type(from_type = 'ensembl_transcript_id',
+#'                                                    use_genes=use_genes) ## get transfer table !!!
+#' \dontrun{
+#' }
+#' @export
 get_IDtransfer <- function(from_type=NULL,to_type=NULL,use_genes=NULL,dataset=db_info[1]){
   mart <- useMart(biomart="ensembl", dataset=dataset) ## get mart for id conversion !!!! db_info is saved in db RData
   attributes <- listAttributes(mart)
@@ -186,12 +243,40 @@ get_IDtransfer <- function(from_type=NULL,to_type=NULL,use_genes=NULL,dataset=db
     message(sprintf('%s not in the attributes for %s, please check and re-try !',to_type,db_info[1]));return(FALSE)
   }
   tmp1 <- getBM(attributes=c(from_type,to_type),values=use_genes,mart=mart,filters=from_type)
-  w1 <- apply(tmp1,1,function(x)length(which(is.na(x)==TRUE | x=='')))
+  w1 <- apply(tmp1,1,function(x)length(which(is.na(x)==TRUE | x=="")))
   transfer_tab <- tmp1[which(w1==0),]
   return(transfer_tab)
 }
-## get Id transfer table, for bubble plot !!!
-get_IDtransfer2symbol2type <- function(from_type=NULL,use_genes=NULL,dataset=db_info[1],use_level='transcript'){
+
+
+#' Gene ID conversion related functions.
+#' \code{get_IDtransfer2symbol2type} will generate the transfer table for the original ID to the gene symbol and gene biotype (at gene level)
+#' or transcript symbol and transcript biotype (at transcript level).
+#'
+#' @param from_type character, attribute name from the biomaRt package, such as 'ensembl_gene_id','ensembl_gene_id_version'
+#' 'ensembl_transcript_id','ensembl_transcript_id_version','refseq_mrna'. Full list could be obtained by
+#' \code{listAttributes(mart)$name}, where \code{mart} is the output of \code{useMart} function.
+#' The type must be the gene type for the input \code{use_genes}.
+#' @param use_genes a vector of characters, gene list used for ID conversion.
+#' @param dataset character, name for the dataset used for ID conversion, such as 'hsapiens_gene_ensembl'.
+#' If NULL, will use \code{db_info[1]} if run \code{db.preload} brefore. Default is NULL.
+#' @param use_level character, either 'transcript' or 'gene', default is 'gene'
+#'
+#' @return
+#' \code{get_IDtransfer2symbol2type} will return a data.frame for the transfer table with gene/transcript biotype.
+#'
+#' @examples
+#' use_genes <- c("ENST00000210187",ENST00000216083","ENST00000216127",
+#'              "ENST00000216416","ENST00000217233",ENST00000221418")
+#' transfer_tab <- get_IDtransfer(from_type = 'ensembl_transcript_id',
+#'                                to_type='external_gene_name',use_genes=use_genes) ## get transfer table !!!
+#' res1 <- get_name_transfertab(x=use_genes,transfer_tab=transfer_tab)
+#' transfer_tab_withtype <- get_IDtransfer2symbol2type(from_type = 'ensembl_transcript_id',
+#'                                                    use_genes=use_genes) ## get transfer table !!!
+#' \dontrun{
+#' }
+#' @export
+get_IDtransfer2symbol2type <- function(from_type=NULL,use_genes=NULL,dataset=db_info[1],use_level='gene'){
   message(sprintf('Your setting is at %s level',use_level))
   mart <- useMart(biomart="ensembl", dataset=dataset) ## get mart for id conversion !!!! db_info is saved in db RData
   attributes <- listAttributes(mart)
@@ -200,24 +285,51 @@ get_IDtransfer2symbol2type <- function(from_type=NULL,use_genes=NULL,dataset=db_
   }
   if(use_level=='gene') tmp1 <- getBM(attributes=c(from_type,c('external_gene_name','gene_biotype')),values=use_genes,mart=mart,filters=from_type)
   if(use_level=='transcript') tmp1 <- getBM(attributes=c(from_type,c('external_gene_name','transcript_biotype')),values=use_genes,mart=mart,filters=from_type)
-  w1 <- apply(tmp1,1,function(x)length(which(is.na(x)==TRUE | x=='')))
+  w1 <- apply(tmp1,1,function(x)length(which(is.na(x)==TRUE | x=="")))
   transfer_tab <- tmp1[which(w1==0),]
   return(transfer_tab)
 }
-## get name by transfer tab
-get_name_transfertab <- function(x,transfer_tab){
-  t1 <- unique(transfer_tab[which(transfer_tab[,1] %in% x),])
-  rownames(t1) <- t1[,1]
-  x1 <- t1[x,2]
+
+#' Gene ID conversion related functions.
+#'
+#' \code{get_name_transfertab} will get the transfered ID by input the original ID and transfer table.
+#'
+#' @param from_type character, attribute name from the biomaRt package, such as 'ensembl_gene_id','ensembl_gene_id_version'
+#' 'ensembl_transcript_id','ensembl_transcript_id_version','refseq_mrna'. Full list could be obtained by
+#' \code{listAttributes(mart)$name}, where \code{mart} is the output of \code{useMart} function.
+#' The type must be the gene type for the input \code{use_genes}.
+#' @param to_type character, character, attribute name from the biomaRt package, the gene type will be convereted to.
+#' @param use_genes a vector of characters, gene list used for ID conversion.
+#' @param transfer_tab data.frame, the transfer table for ID conversion, could be obtained by \code{get_IDtransfer}.
+#'
+#' @return
+#' \code{get_name_transfertab} will return the list for the converted IDs.
+#'
+#' @examples
+#' use_genes <- c("ENST00000210187",ENST00000216083","ENST00000216127",
+#'              "ENST00000216416","ENST00000217233",ENST00000221418")
+#' transfer_tab <- get_IDtransfer(from_type = 'ensembl_transcript_id',
+#'                                to_type='external_gene_name',use_genes=use_genes) ## get transfer table !!!
+#' res1 <- get_name_transfertab(use_genes,transfer_tab=transfer_tab)
+#' transfer_tab_withtype <- get_IDtransfer2symbol2type(from_type = 'ensembl_transcript_id',
+#'                                                    use_genes=use_genes) ## get transfer table !!!
+#' \dontrun{
+#' }
+#' @export
+get_name_transfertab <- function(use_genes=NULL,transfer_tab=NULL,from_type=NULL,to_type=NULL){
+  if(is.null(from_type)==TRUE){from_type=colnames(transfer_tab)[1];}
+  if(is.null(to_type)==TRUE){to_type=colnames(transfer_tab)[2];}
+  x <- use_genes;
+  t1 <- unique(transfer_tab[which(transfer_tab[,from_type] %in% x),])
+  rownames(t1) <- t1[,from_type]
+  x1 <- t1[x,to_type]
   w1 <- which(is.na(x1)==TRUE)
   x1[w1] <- x[w1]
   x1
 }
-######## generate project space and working directory structure
-## create file directory for NetBID working space, the network part
-# project_main_dir: main directory for the project
-# project_name: name of the project
-# create network.par
+
+#' Create directory for the network generation part Suggested not required.
+#' @export
 NetBID.network.dir.create <- function(project_main_dir=NULL,prject_name=NULL){
   if(exists('network.par')==TRUE){message('network.par is occupied in the current session,please manually run: rm(network.par) and re-try, otherwise will not change !');
     return(network.par)}
@@ -249,10 +361,9 @@ NetBID.network.dir.create <- function(project_main_dir=NULL,prject_name=NULL){
   message(sprintf('Project space created, please check %s',network.par$out.dir))
   return(network.par)
 }
-## create file directory for NetBID working space, the analysis part
-# project_main_dir: main directory for the project
-# project_name: name of the project
-# create analysis.par
+
+#' Create directory for the driver analysis part. Suggested not required.
+#' @export
 NetBID.analysis.dir.create <- function(project_main_dir=NULL,prject_name=NULL,network_dir=NULL, network_project_name=NULL){
   if(exists('analysis.par')==TRUE){message('analysis.par is occupied in the current session,please manually run: rm(analysis.par) and re-try, otherwise will not change !');
     return(analysis.par)}
@@ -281,9 +392,9 @@ NetBID.analysis.dir.create <- function(project_main_dir=NULL,prject_name=NULL,ne
     dir.create(analysis.par$out.dir.PLOT, recursive = TRUE) ## directory for Result Plots
   }
   analysis.par$tf.network.file  <- sprintf('%s/SJAR/%s/output_tf_sjaracne_%s_out_.final/consensus_network_ncol_.txt',
-                                          network_dir,network_project_name,network_project_name)
+                                           network_dir,network_project_name,network_project_name)
   analysis.par$sig.network.file <- sprintf('%s/SJAR/%s/output_sig_sjaracne_%s_out_.final/consensus_network_ncol_.txt',
-                                          network_dir,network_project_name,network_project_name)
+                                           network_dir,network_project_name,network_project_name)
   if(file.exists(analysis.par$tf.network.file)){
     message(sprintf('TF network file found in %s',analysis.par$tf.network.file))
   }else{
@@ -299,6 +410,7 @@ NetBID.analysis.dir.create <- function(project_main_dir=NULL,prject_name=NULL,ne
   message(sprintf('Analysis space created, please check %s',analysis.par$out.dir))
   return(analysis.par)
 }
+
 ###### overall functions
 ## check network.par
 check_network.par <- function(network.par,step='pre-load'){
@@ -342,7 +454,9 @@ check_analysis.par <- function(analysis.par,step='pre-load'){
   }
   return(TRUE)
 }
-## step save and load
+
+#' Automatically save RData for NetBID2.
+#' @export
 NetBID2.saveRData <- function(network.par=NULL,analysis.par=NULL,step='exp-load'){
   if(is.null(network.par)==FALSE & is.null(analysis.par)==FALSE){
     message('Can not save network.par and analysis.par at once, please only use one !');return(FALSE)
@@ -358,6 +472,9 @@ NetBID2.saveRData <- function(network.par=NULL,analysis.par=NULL,step='exp-load'
     message(sprintf('Successful save to %s',sprintf('%s/analysis.par.Step.%s.RData',analysis.par$out.dir.DATA,step)))
   }
 }
+
+#' Automatically load RData for NetBID2.
+#' @export
 NetBID2.loadRData <- function(network.par=NULL,analysis.par=NULL,step='exp-load'){
   if(is.null(network.par)==FALSE & is.null(analysis.par)==FALSE){
     message('Can not load network.par and analysis.par at once, please only use one !');return(FALSE)
@@ -373,12 +490,10 @@ NetBID2.loadRData <- function(network.par=NULL,analysis.par=NULL,step='exp-load'
     message(sprintf('Successful load from %s',sprintf('%s/analysis.par.Step.%s.RData',analysis.par$out.dir.DATA,step)))
   }
 }
-############################# load functions
-## load exp data from GEO
-# network.par required
-# GSE,GPL required
-# update=0, if the RData exists, will directly load
-load.exp.GEO <- function(out.dir=network.par$out.dir.DATA,GSE = NULL,GPL = NULL,getGPL=TRUE,update = 0){
+
+#' Load gene expression set from GEO
+#' @export
+load.exp.GEO <- function(out.dir=network.par$out.dir.DATA,GSE = NULL,GPL = NULL,getGPL=TRUE,update = TRUE){
   if(is.null(out.dir)==TRUE){
     message('out.dir required, please re-try')
     return(FALSE)
@@ -388,8 +503,8 @@ load.exp.GEO <- function(out.dir=network.par$out.dir.DATA,GSE = NULL,GPL = NULL,
     return(FALSE)
   }
   expRData_dir <- sprintf('%s/%s_%s.RData', out.dir, GSE,GPL)
-  if (file.exists(expRData_dir) & update == 0) {
-    message(sprintf('RData exist in %s and update==0, will directly load from RData .',expRData_dir))
+  if (file.exists(expRData_dir) & update == TRUE) {
+    message(sprintf('RData exist in %s and update==TRUE, will directly load from RData .',expRData_dir))
     load(expRData_dir)
   } else{
     eset <- getGEO(GSE, GSEMatrix = TRUE, getGPL = getGPL)
@@ -404,29 +519,31 @@ load.exp.GEO <- function(out.dir=network.par$out.dir.DATA,GSE = NULL,GPL = NULL,
   return(eset)
 }
 
-## load exp from RNASeq, demo functions for salmon
-load.exp.RNASeq.demoSalmon <- function(salmon_dir = '',tx2gene=NULL,use_phenotype_info = NULL,use_sample_col=NULL,use_design_col=NULL,return_type='eset',merge_level='gene') {
-    files <- file.path(salmon_dir, list.files(salmon_dir), "quant.sf")
-    sample_name <- gsub('(.*)_salmon', '\\1', list.files(salmon_dir))
-    names(files) <- sample_name
-    w1 <- length(files)
-    message(sprintf('%d salmon_output/quant.sf found !',w1))
-    if(is.null(tx2gene)){
-      gene_info <- read.delim(file = files[1], stringsAsFactors = FALSE)[, 1]
-      gen1 <- sapply(gene_info, function(x)unlist(strsplit(x, '\\|')))
-      gen1 <- t(gen1)
-      if(merge_level=='gene'){
-        tx2gene <- data.frame('transcript' = gene_info,'gene' = gen1[,2],stringsAsFactors = FALSE)
-      }else{
-        tx2gene <- data.frame('transcript' = gene_info,'gene' = gen1[,1],stringsAsFactors = FALSE)
-      }
+#' Load gene expression set from Salmon output (demo version).
+#' @export
+load.exp.RNASeq.demoSalmon <- function(salmon_dir = "",tx2gene=NULL,use_phenotype_info = NULL,use_sample_col=NULL,use_design_col=NULL,return_type='eset',merge_level='gene') {
+  files <- file.path(salmon_dir, list.files(salmon_dir), "quant.sf")
+  sample_name <- gsub('(.*)_salmon', '\\1', list.files(salmon_dir))
+  names(files) <- sample_name
+  w1 <- length(files)
+  message(sprintf('%d salmon_output/quant.sf found !',w1))
+  if(is.null(tx2gene)){
+    gene_info <- read.delim(file = files[1], stringsAsFactors = FALSE)[, 1]
+    gen1 <- sapply(gene_info, function(x)unlist(strsplit(x, '\\|')))
+    gen1 <- t(gen1)
+    if(merge_level=='gene'){
+      tx2gene <- data.frame('transcript' = gene_info,'gene' = gen1[,2],stringsAsFactors = FALSE)
+    }else{
+      tx2gene <- data.frame('transcript' = gene_info,'gene' = gen1[,1],stringsAsFactors = FALSE)
     }
-    eset <- load.exp.RNASeq.demo(files,type='salmon',tx2gene=tx2gene,use_phenotype_info=use_phenotype_info,use_sample_col=use_sample_col,use_design_col=use_design_col,
-                                 return_type=return_type,merge_level=merge_level)
-    return(eset)
+  }
+  eset <- load.exp.RNASeq.demo(files,type='salmon',tx2gene=tx2gene,use_phenotype_info=use_phenotype_info,use_sample_col=use_sample_col,use_design_col=use_design_col,
+                               return_type=return_type,merge_level=merge_level)
+  return(eset)
 }
-## load exp from RNASeq, demo functions
-# return_type: dds, eset, both
+
+#' Load gene expression set from RNASeq (demo version).
+#' @export
 load.exp.RNASeq.demo <- function(files,type='salmon',tx2gene=NULL,use_phenotype_info = NULL,use_sample_col=NULL,use_design_col=NULL, return_type='eset',merge_level='gene') {
   n1 <- colnames(use_phenotype_info)
   if(!use_sample_col %in% n1){
@@ -461,10 +578,10 @@ load.exp.RNASeq.demo <- function(files,type='salmon',tx2gene=NULL,use_phenotype_
     if(return_type=='both') return(list(eset=eset,dds=dds))
   }
 }
-####################### eset related functions
-## generate eset
-# phe, gen can be null
-generate.eset <- function(exp_mat=NULL, phenotype_info=NULL, feature_info=NULL, annotation_info='') {
+
+#' Generate expression set.
+#' @export
+generate.eset <- function(exp_mat=NULL, phenotype_info=NULL, feature_info=NULL, annotation_info="") {
   if(is.null(exp_mat)){
     message('exp_mat required, please re-try !');
     return(FALSE)
@@ -495,8 +612,9 @@ generate.eset <- function(exp_mat=NULL, phenotype_info=NULL, feature_info=NULL, 
     )
   return(eset)
 }
-###
-## merge two eset, remove batch effects
+
+#' Merge two expression set.
+#' @export
 merge.eset <- function(eset1,eset2,group1,group2,phe1,phe2,
                        use_col = NULL,
                        remove_batch = TRUE) {
@@ -525,11 +643,14 @@ merge.eset <- function(eset1,eset2,group1,group2,phe1,phe2,
   return(reset)
 }
 
-## update eset feature, mainly for gene ID conversion
-# ID conversion, or merge transcript level to expression level, use_feature_info can be other dataframe info
-# merge_method: mean median max min
-# if multi-from --> one to: merge
-# if one-from --> multi to: equal distribute ?
+#' Update eset feature, mainly for gene ID conversion
+#'
+#' ID conversion, or merge transcript level to expression level, use_feature_info can be other dataframe info
+#' merge_method: mean median max min
+#' if multi-from --> one to: merge
+#' if one-from --> multi to: equal distribute.
+#'
+#' @export
 update.eset.feature <- function(use_eset=NULL,use_feature_info=NULL,from_feature=NULL,to_feature=NULL,merge_method='median'){
   if(is.null(use_eset)){
     message('use_eset required, please re-try !');
@@ -549,7 +670,7 @@ update.eset.feature <- function(use_eset=NULL,use_feature_info=NULL,from_feature
   }
   mat <- exprs(use_eset)
   use_feature_info <- unique(use_feature_info);
-  w1 <- which(use_feature_info[,1]!='' & use_feature_info[,2]!='' & is.na(use_feature_info[,1])==FALSE & is.na(use_feature_info[,2])==FALSE)
+  w1 <- which(use_feature_info[,1]!="" & use_feature_info[,2]!="" & is.na(use_feature_info[,1])==FALSE & is.na(use_feature_info[,2])==FALSE)
   use_feature_info <- use_feature_info[w1,]
   g1 <- rownames(mat) ## rownames for the expmat
   f1 <- as.character(use_feature_info[,from_feature]) ## from feature info
@@ -563,7 +684,7 @@ update.eset.feature <- function(use_eset=NULL,use_feature_info=NULL,from_feature
   fc1 <- table(f1); tc1 <- table(t1); fw1 <- which(fc1>1); tw1 <- which(tc1>1); ## check duplicate records
   if(length(fw1)>0){
     message(sprintf('Original feature %s has %d items with duplicate records, will distribute the original values equal to all related items !
-            if do not want this, please check and retry !',from_feature,length(fw1)))
+                    if do not want this, please check and retry !',from_feature,length(fw1)))
     #return(use_eset)
     w2 <- which(f1 %in% names(fw1)) ## need to distribute
     w0 <- setdiff(1:length(f1),w2) ## do not need to distribute
@@ -589,8 +710,10 @@ update.eset.feature <- function(use_eset=NULL,use_feature_info=NULL,from_feature
   new_eset <- generate.eset(exp_mat=mat_new, phenotype_info=pData(use_eset), feature_info=NULL, annotation_info=annotation(use_eset))
   return(new_eset)
 }
-## update eset phenotype, mainly for input more phenotype info
-# use_col: GEO-auto, use :ch1
+
+#' Update eset phenotype
+#'
+#' @export
 update.eset.phenotype <- function(use_eset=NULL,use_phenotype_info=NULL,use_sample_col=NULL,use_col='GEO-auto'){
   if(is.null(use_eset)){
     message('use_eset required, please re-try !');
@@ -637,23 +760,26 @@ update.eset.phenotype <- function(use_eset=NULL,use_phenotype_info=NULL,use_samp
   return(new_eset)
 }
 
-## IQR fileter;
-# loose_gene: genes will use loose threshold
+#' IQR filter
+#'
+#' @export
 IQR.filter <- function(exp_mat,use_genes=rownames(exp_mat),thre = 0.5,loose_gene=NULL,loose_thre=0.1) {
-    use_genes <- intersect(use_genes,rownames(exp_mat))
-    use_genes <- setdiff(use_genes,'')
-    exp_mat <- exp_mat[use_genes,]
-    iqr <- apply(exp_mat, 1, IQR) ## calculate IQR for each gene
-    choose0 <- use_genes[iqr > quantile(iqr, loose_thre)] ## for loose_gene
-    choose1 <- use_genes[iqr > quantile(iqr, thre)] ## for all genes
-    choose2 <- unique(c(intersect(loose_gene, choose0), choose1)) ## union set
-    use_vec <- rep(FALSE,length.out=length(use_genes));names(use_vec) <- use_genes
-    use_vec[choose2] <- TRUE
-    print(table(use_vec))
-    return(use_vec)
+  use_genes <- intersect(use_genes,rownames(exp_mat))
+  use_genes <- setdiff(use_genes,"")
+  exp_mat <- exp_mat[use_genes,]
+  iqr <- apply(exp_mat, 1, IQR) ## calculate IQR for each gene
+  choose0 <- use_genes[iqr > quantile(iqr, loose_thre)] ## for loose_gene
+  choose1 <- use_genes[iqr > quantile(iqr, thre)] ## for all genes
+  choose2 <- unique(c(intersect(loose_gene, choose0), choose1)) ## union set
+  use_vec <- rep(FALSE,length.out=length(use_genes));names(use_vec) <- use_genes
+  use_vec[choose2] <- TRUE
+  print(table(use_vec))
+  return(use_vec)
 }
-### simple functions
-## normalization for RNASeq Count
+
+#' Simple function to normalize for RNASeq Count
+#'
+#' @export
 RNASeqCount.normalize.scale <- function(d,
                                         total = NULL,
                                         pseudoCount = 1) {
@@ -673,8 +799,9 @@ RNASeqCount.normalize.scale <- function(d,
     d <- d + pseudoCount
   d
 }
+
 dist2 <- function (x, fun = function(a, b) mean(abs(a - b), na.rm = TRUE),
-          diagonal = 0)
+                   diagonal = 0)
 {
   if (!(is.numeric(diagonal) && (length(diagonal) == 1)))
     stop("'diagonal' must be a numeric scalar.")
@@ -724,45 +851,49 @@ std <- function(x) {
   x <- x[!is.na(x)]
   (x - mean(x,na.rm=TRUE)) / sd(x,na.rm=TRUE)
 }
-## calculate activity for network targets, standard input !!!
-# es.method: mean, weighted mean, maxmean, absmean
+
+#' calculate activity for network targets
+#' @param  es.method: mean, weighted mean, maxmean, absmean
+#' @export
 cal.Activity <- function(all_target=NULL, cal_mat=NULL, es.method = 'mean') {
-    ## mean, absmean, maxmean, weightedmean
-    use_genes <- row.names(cal_mat)
-    #all_target <- all_target[intersect(use_genes, names(all_target))]
-    ac.mat <-
-      matrix(NA, ncol = ncol(cal_mat), nrow = length(all_target)) ## generate activity matrix, each col for sample, each row for source target
-    #z-normalize each sample
-    cal_mat <- apply(cal_mat, 2, std)
-    for (i in 1:length(all_target)) {
-      x <- names(all_target)[i]
-      x1 <- all_target[[x]]
-      x2 <- unique(intersect(rownames(x1), use_genes)) ## filter target by cal genes
-      x1 <- x1[x2, ]
-      target_num <- length(x2)
-      if (target_num == 0)
-        next
-      if (target_num == 1){
-        ac.mat[i, ] <- cal_mat[x2,]
-        next
-      }
-      if (es.method != 'weightedmean')
-        ac.mat[i, ] <- apply(cal_mat[x2,], 2, es, es.method)
-      if (es.method == 'weightedmean') {
-        weight <- x1$MI * sign(x1$spearman)
-        if (length(x2) == 1)
-          ac.mat[i, ] <-
-            sapply(cal_mat * weight, es, 'mean')[x2]
-        else
-          ac.mat[i, ] <- apply(cal_mat[x2,] * weight, 2, es, 'mean')
-      }
+  ## mean, absmean, maxmean, weightedmean
+  use_genes <- row.names(cal_mat)
+  #all_target <- all_target[intersect(use_genes, names(all_target))]
+  ac.mat <-
+    matrix(NA, ncol = ncol(cal_mat), nrow = length(all_target)) ## generate activity matrix, each col for sample, each row for source target
+  #z-normalize each sample
+  cal_mat <- apply(cal_mat, 2, std)
+  for (i in 1:length(all_target)) {
+    x <- names(all_target)[i]
+    x1 <- all_target[[x]]
+    x2 <- unique(intersect(rownames(x1), use_genes)) ## filter target by cal genes
+    x1 <- x1[x2, ]
+    target_num <- length(x2)
+    if (target_num == 0)
+      next
+    if (target_num == 1){
+      ac.mat[i, ] <- cal_mat[x2,]
+      next
     }
-    rownames(ac.mat) <- names(all_target)
-    colnames(ac.mat) <- colnames(cal_mat)
-    return(ac.mat)
+    if (es.method != 'weightedmean')
+      ac.mat[i, ] <- apply(cal_mat[x2,], 2, es, es.method)
+    if (es.method == 'weightedmean') {
+      weight <- x1$MI * sign(x1$spearman)
+      if (length(x2) == 1)
+        ac.mat[i, ] <-
+          sapply(cal_mat * weight, es, 'mean')[x2]
+      else
+        ac.mat[i, ] <- apply(cal_mat[x2,] * weight, 2, es, 'mean')
+    }
   }
-## calculate activity for genesets
-# mean, absmean, maxmean
+  rownames(ac.mat) <- names(all_target)
+  colnames(ac.mat) <- colnames(cal_mat)
+  return(ac.mat)
+}
+
+#' calculate activity for gene sets
+#' @param  es.method: mean, absmean, maxmean
+#' @export
 cal.Activity.GS <- function(use_gs2gene=all_gs2gene[c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG')], cal_mat=NULL, es.method = 'mean') {
   while(class(use_gs2gene[[1]])=='list'){
     nn <- unlist(lapply(use_gs2gene,names))
@@ -793,6 +924,7 @@ cal.Activity.GS <- function(use_gs2gene=all_gs2gene[c('H','CP:BIOCARTA','CP:REAC
   ac.mat <- ac.mat[which(w1==0),]
   return(ac.mat)
 }
+
 ########################### DE-related functions
 #############################################################
 #' Network-based Bayesian Inference of Drivers
@@ -823,7 +955,7 @@ netbidi<-function(netbid.list,signed=FALSE){
   rs<-NULL
   for(i in 1:n){
 
-    if(names(netbid.list)[i]==''|is.null(names(netbid.list)[i]))
+    if(names(netbid.list)[i]==""|is.null(names(netbid.list)[i]))
       names(netbid.list)[i]<-i
 
     names(netbid.list[[i]])[-1]<-paste(names(netbid.list[[i]])[-1],names(netbid.list)[i],sep='_')
@@ -860,9 +992,9 @@ netbidi<-function(netbid.list,signed=FALSE){
   rs<-dplyr::arrange(rs,pval_comb)
   rs
 }
-############bid: Bayesian Inference of Drivers by differential analysis of case vs. ctrl
+
+#' Bayesian Inference to get differential expression/activity between case and control
 #' @export
-#source('pipeline_functions_bid.R')
 getDE.BID.2G <-function(eset,G1=NULL, G0=NULL,G1_name=NULL,G0_name=NULL,verbose=TRUE){
   if(verbose==TRUE){
     print(sprintf('G1:%s', paste(G1, collapse = ';')))
@@ -875,7 +1007,7 @@ getDE.BID.2G <-function(eset,G1=NULL, G0=NULL,G1_name=NULL,G0_name=NULL,verbose=
   d<-data.frame(id=rownames(exp_mat),exp_mat,stringsAsFactors=FALSE)
   comp <- factor(c(rep(1,length.out=length(G1)),rep(0,length.out=length(G0))))
   de<-plyr::ddply(d,'id','combRowEvid.2grps',comp=comp,family=gaussian,method='Bayesian',n.iter=5000,nitt=25000,burnin=5000,thin=1,pooling=c('full'),logTransformed=TRUE,restand=FALSE,average.method=c('geometric'))
-  names(de)<-gsub('.full','',names(de))
+  names(de)<-gsub('.full',"",names(de))
   de$P.Value<-de$pval
   de$adj.P.Val<-p.adjust(de$P.Value,'fdr')
   de$logFC<-sign(de$FC)*log2(abs(de$FC))
@@ -894,8 +1026,7 @@ getDE.BID.2G <-function(eset,G1=NULL, G0=NULL,G1_name=NULL,G0_name=NULL,verbose=
   if(is.null(G1_name)==FALSE) colnames(tT) <- gsub('Ave.G1',paste0('Ave.',G1_name),colnames(tT))
   return(tT)
 }
-#############################################################
-#
+
 # class_label can be obtained by get_class
 get_class2design <- function(class_label){
   design <- model.matrix(~0+class_label);colnames(design) <- unique(class_label);
@@ -907,7 +1038,9 @@ get_class2design <- function(class_label){
   #for(i in 1:length(class_label)){design.mat[names(class_label)[i],class_label[i]]<-1;}
   #return(design.mat)
 }
-## getDE score by limma
+
+#' Limma functions to get differential expression/activity between case and control
+#' @export
 getDE.limma.2G <- function(eset=NULL, G1=NULL, G0=NULL,G1_name=NULL,G0_name=NULL,verbose=TRUE,random_effect=NULL) {
   if(verbose==TRUE){
     print(sprintf('G1:%s', paste(G1, collapse = ';')))
@@ -959,13 +1092,13 @@ getDE.limma.2G <- function(eset=NULL, G1=NULL, G0=NULL,G1_name=NULL,G0_name=NULL
   if(is.null(G1_name)==FALSE) colnames(tT) <- gsub('Ave.G1',paste0('Ave.',G1_name),colnames(tT))
   return(tT)
 }
-## combine p-values
-#combine Pvalues by Fisher or Stouffer's method
-#input:
-#dat, a dataframe containing pvalue.cols
-#sign.cols: column labels indicating sign of stat, if NULL, use absolute values to calculate overall stat for Stouffer's method
-#combine one pvalues vector, the signed version
-# For Fisher's method: if twosided, pvalues are transformed into single
+
+#' combine Pvalues by Fisher or Stouffer's method
+#' @param dat, a dataframe containing pvalue.cols
+#' @param sign.cols column labels indicating sign of stat, if NULL, use absolute values to calculate overall stat for Stouffer's method
+#' @param combine one pvalues vector, the signed version
+#' @param twosided For Fisher's method: if twosided, pvalues are transformed into single
+#' @export
 combinePvalVector <-
   function(pvals,
            method = c('Stouffer', 'Fisher'),
@@ -1038,8 +1171,10 @@ combinePvalVector <-
     }
     return(c(`Z-statistics` = stat, `P.Value` = pval))
   }
+
 ########################### ms table related functions
-## merge TF/SIG AC
+#' merge activity matrix for TF and SIG
+#' @export
 merge.TF_SIG.AC <- function(TF_AC=NULL,SIG_AC=NULL){
   mat_TF <- exprs(TF_AC)
   mat_SIG <- exprs(SIG_AC)
@@ -1052,7 +1187,9 @@ merge.TF_SIG.AC <- function(TF_AC=NULL,SIG_AC=NULL){
                                 feature_info=NULL,annotation_info='activity in net-dataset')
   return(eset_combine)
 }
-## merge TF/SIG network
+
+#' merge target network for TF and SIG
+#' @export
 merge.TF_SIG.network <- function(TF_network=NULL,SIG_network=NULL){
   s_TF  <- names(TF_network$target_list)
   s_SIG <- names(SIG_network$target_list)
@@ -1069,12 +1206,11 @@ merge.TF_SIG.network <- function(TF_network=NULL,SIG_network=NULL){
   igraph_obj <- graph_from_data_frame(net_dat[,c('source','target','MI')],directed=TRUE)
   return(list(network_dat=net_dat,target_list=target_list_combine,igraph_obj=igraph_obj))
 }
-## generate ms table
-# master table : gene-label, geneSymbol, network id-label,funcType, avgAC,z.DA, avgExp,z.DE, other info
-# display_col do not need to include ave related columns
-# if not merge before
+
+#' Generate master table by input of TF and SIG results.
+#' @export
 generate.masterTable.TF_SIG <- function(use_comp=NULL,DE=NULL,DA_TF=NULL,DA_SIG=NULL,TF_network=NULL,SIG_network=NULL,main_id_type=NULL,
-                              tf_sigs=tf_sigs,z_col=NULL,display_col=NULL){
+                                        tf_sigs=tf_sigs,z_col=NULL,display_col=NULL){
   if(is.null(use_comp)){message('No input for use_comp, please check and re-try!');return(FALSE)}
   if(is.null(main_id_type)){message('No input for main_id_type, please check and re-try!');return(FALSE)}
   if(is.null(DE)){message('No input for DE, please check and re-try!');return(FALSE)}
@@ -1106,7 +1242,7 @@ generate.masterTable.TF_SIG <- function(use_comp=NULL,DE=NULL,DA_TF=NULL,DA_SIG=
   use_info <- unique(use_info)
   # merge info
   tmp1 <- aggregate(use_info,list(use_info[,main_id_type]),function(x){
-    x1 <- x[which(x!='')]
+    x1 <- x[which(x!="")]
     x1 <- x1[which(is.na(x1)==FALSE)]
     paste(sort(unique(x1)),collapse=';')
   })
@@ -1144,9 +1280,11 @@ generate.masterTable.TF_SIG <- function(use_comp=NULL,DE=NULL,DA_TF=NULL,DA_SIG=
   ms_tab <- cbind(label_info,combine_info_DA,combine_info_DE,add_info)
   return(ms_tab)
 }
-# if the network + DA is merged before
+
+#' Generate master
+#' @export
 generate.masterTable <- function(use_comp=NULL,DE=NULL,DA=NULL,network=NULL,main_id_type=NULL,
-                                        tf_sigs=tf_sigs,z_col=NULL,display_col=NULL){
+                                 tf_sigs=tf_sigs,z_col=NULL,display_col=NULL){
   if(is.null(use_comp)){message('No input for use_comp, please check and re-try!');return(FALSE)}
   if(is.null(main_id_type)){message('No input for main_id_type, please check and re-try!');return(FALSE)}
   if(is.null(DE)){message('No input for DE, please check and re-try!');return(FALSE)}
@@ -1177,7 +1315,7 @@ generate.masterTable <- function(use_comp=NULL,DE=NULL,DA=NULL,network=NULL,main
   use_info <- unique(use_info)
   # merge info
   tmp1 <- aggregate(use_info,list(use_info[,main_id_type]),function(x){
-    x1 <- x[which(x!='')]
+    x1 <- x[which(x!="")]
     x1 <- x1[which(is.na(x1)==FALSE)]
     paste(sort(unique(x1)),collapse=';')
   })
@@ -1216,8 +1354,9 @@ generate.masterTable <- function(use_comp=NULL,DE=NULL,DA=NULL,network=NULL,main
   ms_tab <- cbind(label_info,combine_info_DA,combine_info_DE,add_info)
   return(ms_tab)
 }
-## output ms table to excel files
-######## output to excel
+
+#' output master table to excel files.
+#' @export
 out2excel <- function(all_ms_tab,out.xls,mark_gene=NULL,mark_col,workbook_name='ms_tab',z_column=NULL,sig_thre=1.64){
   wb <- createWorkbook(workbook_name)
   if(!'list' %in% class(all_ms_tab)){
@@ -1268,21 +1407,41 @@ out2excel <- function(all_ms_tab,out.xls,mark_gene=NULL,mark_col,workbook_name='
   saveWorkbook(wb, out.xls, overwrite = TRUE)
   ##
 }
-########################### gene set related functions
-# geneset info
-# ## h:hallmark genesets; c1:positional gene sets; c2: curated gene set;c3: motif; c4: computational;c5:GO;c6:oncogenic;c7:immune
-# CGP: chemical and genetic perturbations
-# CP: Canonical pathways
-# CP:BIOCARTA: BioCarta gene sets
-# CP:KEGG: KEGG gene sets
-# CP:REACTOME: Reactome gene sets
-# MIR: microRNA targets
-# TFT: transcription factor targets
-# CGN: cancer gene neighborhoods
-# CM: cancer modules
-gs.preload <- function(use_spe='Homo sapiens',update=0){ ## only support geneSymbol (because pipeline-generated master table will contain geneSymbol column)
-  if(is.null(main.dir)){message('main.dir required, please check and re-try !');return(FALSE)}
-  db.dir <- sprintf("%s/db/",main.dir)
+
+#' Load MsigDB for NetBID2 into R workspace.
+#'
+#' \code{gs.preload} will load two variables into R workspace, the list for gene set to genes (all_gs2gene)
+#'  and a data frame (all_gs2gene_info) for detailed description for gene sets.
+#'
+#' This is a pre-processing function for NetBID2 advanced analysis, user only need to input the species name (e.g Homo sapiens, Mus musculus).
+#' The function could automatically download information from MSigDB by the functions in \code{msigdbr} and save into RData under the db/ directory
+#' with specified species name.
+#'
+#' @param use_spe character, input the species name (e.g 'Homo sapiens', 'Mus musculus'). Full list of available species name could be found by \code{msigdbr_show_species()}.
+#' Default is 'Homo sapiens'
+#' @param update logical,whether to update if previous RData has been generated, default FALSE
+#' @param db.dir character, file path for saving the RData, default is \code{db} directory under \code{main.dir} when setting for \code{main.dir}.
+#'
+#' @return Reture TRUE if success and FALSE if not. Will load two variables into R workspace, all_gs2gene and all_gs2gene_info
+#'
+#' @examples
+#' main.dir <- system.file(package = "NetBID2")
+#' gs.preload(use_spe='Homo sapiens',update=FALSE)
+#' gs.preload(use_spe='Mus musculus',update=FALSE)
+#' print(all_gs2gene_info)
+#' # contain the information for all gene set category, category info, category size,
+#' ## sub category,sub category info, sub category size
+#' print(names(all_gs2gene)) # the first level of the list is the category and sub-category IDs
+#' print(str(all_gs2gene$`CP:KEGG`))
+#'
+#' \dontrun{
+#' gs.preload(use_spe='Homo sapiens',update=TRUE)
+#' }
+#' @export
+gs.preload <- function(use_spe='Homo sapiens',update=TRUE,db.dir=sprintf("%s/db/",main.dir)){
+  ## only support geneSymbol (because pipeline-generated master table will contain geneSymbol column)
+  if(is.null(db.dir)){message('db.dir required, please check and re-try !');return(FALSE)}
+  #db.dir <- sprintf("%s/db/",main.dir)
   all_spe <- msigdbr_show_species()
   if(!use_spe %in% all_spe){
     message(sprintf('%s not in %s, please check and re-try !',use_spe,paste(all_spe,collapse=';')))
@@ -1290,7 +1449,7 @@ gs.preload <- function(use_spe='Homo sapiens',update=0){ ## only support geneSym
   }
   use_spe1 <- gsub(' ','_',use_spe)
   out_file <- sprintf('%s/%s_gs2gene.RData',db.dir,use_spe1)
-  if(file.exists(out_file)==FALSE | update==1){
+  if(file.exists(out_file)==FALSE | update==TRUE){
     message('Begin generating all_gs2gene !')
     all_gs_info <-  msigdbr(species = use_spe) ## use msigdbr_show_species() to check possible available species
     # for gs_cat
@@ -1304,7 +1463,7 @@ gs.preload <- function(use_spe='Homo sapiens',update=0){ ## only support geneSym
       names(x2) <- all_gs;x2
     })
     names(all_gs2gene_1) <- all_gs_cat
-    all_gs_subcat <- setdiff(unique(all_gs_info$gs_subcat),'')
+    all_gs_subcat <- setdiff(unique(all_gs_info$gs_subcat),"")
     all_gs2gene_2 <- lapply(all_gs_subcat,function(x){
       x1 <- all_gs_info[which(all_gs_info$gs_subcat==x),]
       all_gs <- unique(x1$gs_name)
@@ -1327,28 +1486,53 @@ gs.preload <- function(use_spe='Homo sapiens',update=0){ ## only support geneSym
     all_gs2gene_info <- data.frame(cat_rel[,1],info_cat[cat_rel[,1]],gs_size[cat_rel[,1]],cat_rel[,2],info_subcat[cat_rel[,2]],gs_size[cat_rel[,2]],stringsAsFactors = FALSE)
     colnames(all_gs2gene_info) <- c('Category','Category_Info','Category_Size','Sub-Category','Sub-Category_Info','Sub-Category_Size')
     all_gs2gene_info <- all_gs2gene_info[order(all_gs2gene_info[,1]),]
-    all_gs2gene_info[,c(1,2,4,5)] <- as.data.frame(apply(all_gs2gene_info[,c(1,2,4,5)],2,function(x){x[which(is.na(x)==TRUE)] <- '';x}),stringsAsFactors=FALSE)
+    all_gs2gene_info[,c(1,2,4,5)] <- as.data.frame(apply(all_gs2gene_info[,c(1,2,4,5)],2,function(x){x[which(is.na(x)==TRUE)] <- "";x}),stringsAsFactors=FALSE)
     save(all_gs2gene,all_gs2gene_info,file=out_file)
   }
   load(out_file,.GlobalEnv)
   message('all_gs2gene loaded, you could see all_gs2gene_info to check the details !')
   return(TRUE)
 }
-##
-
 
 ########################### visualization functions
 ## simple functions to get info
+#' Generate a vector for sample category.
+#'
+#' \code{get_obs_label} will generate a vector for sample categories with names to the vector representing the sample name.
+#'
+#' This is a simple function to generate sample category vector from a data.frame.
+#' Mainly used for input preparation in the visualization plots.
+#'
+#' @param phe_info data.frame, phenotype data frame for the samples with sample names in rownames, e.g from \code{pData(eset)}.
+#' @param i numeric or character, the column index or column name for extraction to get the sample category vector.
+#'
+#' @return
+#' Will return a vector for sample categories with names to the vector representing the sample name.
+
+#' @examples
+#' analysis.par <- list()
+#' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
+#' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' phe_info <- pData(analysis.par$cal.eset)
+#' use_obs_class <- get_obs_label(phe_info = phe_info,'tumor type')
+#' print(use_obs_class)
+#' \dontrun{
+#'}
+#' @export
 get_obs_label <- function(phe_info,i){
   obs_label<-phe_info[,i];names(obs_label) <- rownames(phe_info);obs_label
 }
+
+
 get_int_group <- function(eset){
   phe <- pData(eset)
   feature_len <- apply(phe,2,function(x)length(unique(x)))
   intgroup <- colnames(phe)[which(feature_len>1 & feature_len<nrow(phe))]
   return(intgroup)
 }
-## get jaccard accuracy
+
+#' get jaccard accuracy between predicted label and observed label
+#' @export
 get_jac <- function(pred_label, obs_label) {
   jac1 <- c()
   for (i in unique(pred_label)) {
@@ -1364,7 +1548,9 @@ get_jac <- function(pred_label, obs_label) {
   jac1 <- sum(jac1) / length(pred_label)
   return(jac1)
 }
-## transfer z to color
+
+#' transfer Z statistics to color bar
+#' @export
 z2col <- function(x,n_len=60,sig_thre=0.01,col_min_thre=0.01,col_max_thre=3,
                   blue_col=brewer.pal(9,'Set1')[2],red_col=brewer.pal(9,'Set1')[1]){ ## create vector for z-score, can change sig threshold
   x[which(is.na(x)==TRUE)] <- 0
@@ -1391,9 +1577,39 @@ z2col <- function(x,n_len=60,sig_thre=0.01,col_min_thre=0.01,col_max_thre=3,
   x2[which(abs(x)<sig_thre)] <- 'white'
   x2
 }
-## get color info for class
-# x:vector for class
-# use_color : use color sets
+
+#' Generate a color vector for input character.
+#'
+#' \code{get.class.color} will generate a vector of colors for input character.
+#'
+#' This is a simple function to generate a vector of colors for input characters.
+#' Users could define some of the colors for part of the inputs.
+#'
+#' @param x a vector of characters.
+#' @param use_color a vector of characters, color bar used to generate the color vector for the input.Default is brewer.pal(12, 'Set3').
+#' @param pre_define a vector of characters, pre-defined color code for some of the input characters. Default is NULL.
+#' @param user_inner logical, indicating whether to use inner pre-defined color code for some characters. Default is TRUE.
+#'
+#' @return
+#' Will return a vector of colors with names the input vector characters.
+
+#' @examples
+#' get.class.color(c('ClassA','ClassB','ClassC','ClassA','ClassC','ClassC'))
+#' get.class.color(c('ClassA','ClassB','ClassC','SHH','WNT','Group3','Group4'),
+#'                 use_inner=FALSE)
+#' get.class.color(c('ClassA','ClassB','ClassC','SHH','WNT','Group3','Group4'),
+#'                 use_inner=FALSE,use_color=brewer.pal(8, 'Set1'))
+#'
+#' pre_define <- c('blue', 'red', 'yellow', 'green','yellow', 'green')
+#'                 ## pre-defined colors for MB
+#' names(pre_define) <- c('WNT', 'SHH', 'Group3', 'Group4','GroupC', 'GroupD')
+#'                 ##pre-defined color name for MB
+#' get.class.color(c('ClassA','ClassB','ClassC','SHH','WNT','Group3','Group4'),
+#'                 pre_define=pre_define,use_inner=FALSE)
+#'
+#' \dontrun{
+#'}
+#' @export
 get.class.color <- function(x,use_color=NULL,pre_define=NULL,use_inner=TRUE) {
   if(is.null(pre_define)==FALSE & is.null(names(pre_define))==TRUE){
     message('No class name for the color vector, please check and re-try !');return(FALSE);
@@ -1426,6 +1642,7 @@ get.class.color <- function(x,use_color=NULL,pre_define=NULL,use_inner=TRUE) {
   }
   return(cc2)
 }
+
 ## get color box text ## refer from web
 # https://stackoverflow.com/questions/45366243/text-labels-with-background-colour-in-r
 boxtext <- function(x, y, labels = NA, col.text = NULL, col.bg = NA,
@@ -1503,8 +1720,10 @@ boxtext <- function(x, y, labels = NA, col.text = NULL, col.bg = NA,
     invisible(cbind(xMid - rectWidth/2, xMid + rectWidth/2, yMid - rectHeight/2,yMid + rectHeight/2))
   }
 }
-## draw 2-dimension plot
-draw.2D <- function(X,Y,class_label,xlab='PC1',ylab='PC2',label_cex=0.8,main='',point_cex=1){
+
+#' Draw 2D dimension plot
+#' @export
+draw.2D <- function(X,Y,class_label,xlab='PC1',ylab='PC2',label_cex=0.8,main="",point_cex=1){
   if(is.null(class_label)==TRUE){
     message('No class_label, please check and re-try !');return(FALSE);
   }
@@ -1522,10 +1741,10 @@ draw.2D <- function(X,Y,class_label,xlab='PC1',ylab='PC2',label_cex=0.8,main='',
          horiz = FALSE,xpd = TRUE,border = NA,bty = 'n',cex=label_cex)
   return(TRUE)
 }
-## another way to draw 2-dimension plot
-# X,Y
-# class_label: class label vector
-draw.2D.ellipse <- function(X,Y,class_label,xlab='PC1',ylab='PC2',label_cex=0.8,main='',point_cex=1){
+
+#' Draw 2D dimension plot with ellipse
+#' @export
+draw.2D.ellipse <- function(X,Y,class_label,xlab='PC1',ylab='PC2',label_cex=0.8,main="",point_cex=1){
   if(is.null(class_label)==TRUE){
     message('No class_label, please check and re-try !');return(FALSE);
   }
@@ -1543,7 +1762,7 @@ draw.2D.ellipse <- function(X,Y,class_label,xlab='PC1',ylab='PC2',label_cex=0.8,
   cls_cc <- get.class.color(class_label) ## get color for each color
   par(mar=c(5,8,5,8))
   plot(Y~X,pch = 19,cex = point_cex,xlim=c(min(X)-IQR(X)/3,IQR(X)/3+max(X)),
-    col = cls_cc,bty='n',bg='white',xlab=xlab,ylab=ylab,main=main)
+       col = cls_cc,bty='n',bg='white',xlab=xlab,ylab=ylab,main=main)
   ## add ellipse
   for(i in unique(class_label)){
     w0 <- which(class_label==i)
@@ -1591,110 +1810,114 @@ draw.2D.ellipse <- function(X,Y,class_label,xlab='PC1',ylab='PC2',label_cex=0.8,
   }
   return(TRUE)
 }
-## QC plot for eset
-# eset, input
-# outdir: output directory
-# intgroup, interested group
+
+#' QC plot for eset
+#' @param eset input
+#' @param outdir output directory
+#' @param intgroup interested group
+#' @export
 plot.eset.QC <- function(eset,outdir = '.',do.logtransform = FALSE,intgroup=NULL,prefix = 'afterQC_',choose_plot=c('heatmap','pca','density','meansd')) {
-    if (!file.exists(outdir)) {
-      dir.create(outdir, recursive = TRUE)
-      message(paste0("The output directory: \"", outdir, "\" is created!"))
-    }else
-      message(paste0("The output will overwrite the files in directory: \"",outdir,"\""))
-    if(is.null(intgroup)){
-      intgroup <- get_int_group(eset)
-    }
-    if(length(intgroup)==0){
-      message('No intgroup, please check and re-try!');return(FALSE)
-    }
-    message('Preparing the data...')
-    x  <- prepdata(eset, do.logtransform = do.logtransform, intgroup = intgroup)
+  if (!file.exists(outdir)) {
+    dir.create(outdir, recursive = TRUE)
+    message(paste0("The output directory: \"", outdir, "\" is created!"))
+  }else
+    message(paste0("The output will overwrite the files in directory: \"",outdir,"\""))
+  if(is.null(intgroup)){
+    intgroup <- get_int_group(eset)
+  }
+  if(length(intgroup)==0){
+    message('No intgroup, please check and re-try!');return(FALSE)
+  }
+  message('Preparing the data...')
+  x  <- prepdata(eset, do.logtransform = do.logtransform, intgroup = intgroup)
 
-    ## pca
-    if('pca' %in% choose_plot){
-      pca <- prcomp(t(na.omit(x$M)))
-      x$key$rect$col <- get.class.color(x$key$text[[1]])
-      fp <- file.path(outdir, sprintf("%s%s.pdf", prefix, 'pca'))
-      pdf(fp, width = 14, height = 9)
-      for (i in 1:length(intgroup)) {
-        class_label <- x$pData[[x$intgroup[i]]]
-        class_label[which(is.na(class_label)==TRUE)] <- 'NA'
-        draw.2D(as.data.frame(pca$x)$PC1,as.data.frame(pca$x)$PC2,class_label=class_label,xlab='PC1',ylab='PC2',
-                label_cex=0.8,main=sprintf('PCA/Kmeans plot for %s',intgroup[i]))
-        draw.2D.ellipse(as.data.frame(pca$x)$PC1,as.data.frame(pca$x)$PC2,class_label=class_label,xlab='PC1',ylab='PC2',
-                        label_cex=0.8,main=sprintf('PCA/Kmeans plot for %s',intgroup[i]))
+  ## pca
+  if('pca' %in% choose_plot){
+    pca <- prcomp(t(na.omit(x$M)))
+    x$key$rect$col <- get.class.color(x$key$text[[1]])
+    fp <- file.path(outdir, sprintf("%s%s.pdf", prefix, 'pca'))
+    pdf(fp, width = 14, height = 9)
+    for (i in 1:length(intgroup)) {
+      class_label <- x$pData[[x$intgroup[i]]]
+      class_label[which(is.na(class_label)==TRUE)] <- 'NA'
+      draw.2D(as.data.frame(pca$x)$PC1,as.data.frame(pca$x)$PC2,class_label=class_label,xlab='PC1',ylab='PC2',
+              label_cex=0.8,main=sprintf('PCA/Kmeans plot for %s',intgroup[i]))
+      draw.2D.ellipse(as.data.frame(pca$x)$PC1,as.data.frame(pca$x)$PC2,class_label=class_label,xlab='PC1',ylab='PC2',
+                      label_cex=0.8,main=sprintf('PCA/Kmeans plot for %s',intgroup[i]))
+    }
+    dev.off()
+    message('Finish PCA plot !')
+  }
+
+  ## heatmap
+  if('heatmap' %in% choose_plot){
+    fp <- file.path(outdir, sprintf("%s%s.pdf", prefix, 'heatmap'))
+    pdf(fp, width = 12, height = 9)
+    par(mar = c(6, 6, 6, 6))
+    m <- dist2(x$M)
+    dend <- as.dendrogram(hclust(as.dist(m), method = "single"))
+    ord <- order.dendrogram(dend)
+    m <- m[ord, ord]
+    for(i in 1:length(intgroup)){
+      class_label <- x$pData[rownames(m),x$intgroup[i]]
+      class_label[which(is.na(class_label)==TRUE)] <- 'NA'
+      cls_cc <- get.class.color(class_label)
+      heatmap(
+        m,Colv = NA,Rowv = NA,labRow = NA,labCol = NA,margin = c(10, 10),scale = 'none',
+        col = colorRampPalette(c('blue', 'yellow'))(100),
+        RowSideColors = cls_cc,
+        ColSideColors = cls_cc
+      )
+      legend(0,0,legend=unique(class_label),
+             fill = cls_cc[unique(class_label)],
+             xpd = TRUE,border = NA,bty = 'n',horiz = TRUE)
+    }
+    dev.off()
+    message('Finish Heatmap plot !')
+  }
+
+
+  ## meansd
+  if('meansd' %in% choose_plot){
+    fp <- file.path(outdir, sprintf("%s%s.pdf", prefix, 'meansd'))
+    pdf(fp, width = 12, height = 9)
+    meanSdPlot(eset)
+    dev.off()
+    message('Finish MeanSD plot !')
+  }
+
+  ## density
+  if('density' %in% choose_plot){
+    fp <- file.path(outdir, sprintf("%s%s.pdf", prefix, 'density'))
+    pdf(fp, width = 12, height = 9)
+    for(i in 1:length(intgroup)){
+      all_dens <- list()
+      for (j in 1:ncol(x$M)) {
+        all_dens[[j]] <- density(x$M[,j],na.rm=TRUE)
       }
-      dev.off()
-      message('Finish PCA plot !')
-    }
-
-    ## heatmap
-    if('heatmap' %in% choose_plot){
-      fp <- file.path(outdir, sprintf("%s%s.pdf", prefix, 'heatmap'))
-      pdf(fp, width = 12, height = 9)
-      par(mar = c(6, 6, 6, 6))
-      m <- dist2(x$M)
-      dend <- as.dendrogram(hclust(as.dist(m), method = "single"))
-      ord <- order.dendrogram(dend)
-      m <- m[ord, ord]
-      for(i in 1:length(intgroup)){
-        class_label <- x$pData[rownames(m),x$intgroup[i]]
-        class_label[which(is.na(class_label)==TRUE)] <- 'NA'
-        cls_cc <- get.class.color(class_label)
-        heatmap(
-          m,Colv = NA,Rowv = NA,labRow = NA,labCol = NA,margin = c(10, 10),scale = 'none',
-          col = colorRampPalette(c('blue', 'yellow'))(100),
-          RowSideColors = cls_cc,
-          ColSideColors = cls_cc
-        )
-        legend(0,0,legend=unique(class_label),
-               fill = cls_cc[unique(class_label)],
-               xpd = TRUE,border = NA,bty = 'n',horiz = TRUE)
+      plot(1,col = 'white',xlim=c(min(unlist(lapply(all_dens,function(x)min(x$x)))),max(unlist(lapply(all_dens,function(x)max(x$x))))),
+           type = 'l',xlab = "",ylab='Density',main = sprintf('Density plot for %s',intgroup[i]),
+           ylim=c(min(unlist(lapply(all_dens,function(x)min(x$y)))),max(unlist(lapply(all_dens,function(x)max(x$y))))))
+      class_label <- x$pData[,x$intgroup[i]]
+      cls_cc <- get.class.color(class_label)
+      for (j in 1:ncol(x$M)) {
+        lines(all_dens[[j]], col = cls_cc[j])
       }
-      dev.off()
-      message('Finish Heatmap plot !')
+      legend('topright',legend=unique(class_label),
+             fill = cls_cc[unique(class_label)],
+             xpd = TRUE,border = NA,bty = 'n',horiz = FALSE)
     }
+    dev.off()
+    message('Finish Density plot !')
+  }
 
-
-    ## meansd
-    if('meansd' %in% choose_plot){
-      fp <- file.path(outdir, sprintf("%s%s.pdf", prefix, 'meansd'))
-      pdf(fp, width = 12, height = 9)
-      meanSdPlot(eset)
-      dev.off()
-      message('Finish MeanSD plot !')
-    }
-
-    ## density
-    if('density' %in% choose_plot){
-      fp <- file.path(outdir, sprintf("%s%s.pdf", prefix, 'density'))
-      pdf(fp, width = 12, height = 9)
-      for(i in 1:length(intgroup)){
-        all_dens <- list()
-        for (j in 1:ncol(x$M)) {
-          all_dens[[j]] <- density(x$M[,j],na.rm=TRUE)
-        }
-        plot(1,col = 'white',xlim=c(min(unlist(lapply(all_dens,function(x)min(x$x)))),max(unlist(lapply(all_dens,function(x)max(x$x))))),
-             type = 'l',xlab = '',ylab='Density',main = sprintf('Density plot for %s',intgroup[i]),
-             ylim=c(min(unlist(lapply(all_dens,function(x)min(x$y)))),max(unlist(lapply(all_dens,function(x)max(x$y))))))
-        class_label <- x$pData[,x$intgroup[i]]
-        cls_cc <- get.class.color(class_label)
-        for (j in 1:ncol(x$M)) {
-          lines(all_dens[[j]], col = cls_cc[j])
-        }
-        legend('topright',legend=unique(class_label),
-               fill = cls_cc[unique(class_label)],
-               xpd = TRUE,border = NA,bty = 'n',horiz = FALSE)
-      }
-      dev.off()
-      message('Finish Density plot !')
-    }
-
-    return(TRUE)
+  return(TRUE)
 }
-## pca+kmeans in 2D
-# plot_type: 2D or 2D.ellipse
-# obs_label, the value should be the class label with names equal to sample names
+
+#' pca+kmeans in 2D
+#' @param plot_type 2D or 2D.ellipse
+#' @param obs_label the value should be the class label with names equal to sample names
+#' @export
 plot.2D.pca.kmeans <- function(mat=NULL,all_k=NULL,obs_label=NULL,legend_pos = 'topleft',legend_cex = 0.8,plot_type='2D.ellipse',point_cex=1){
   if(is.null(mat)==TRUE){
     message('Please input mat, check and re-try !');return(FALSE)
@@ -1743,7 +1966,10 @@ plot.2D.pca.kmeans <- function(mat=NULL,all_k=NULL,obs_label=NULL,legend_pos = '
   layout(1);
   return(pred_label)
 }
-## pca+kmeans in 3D
+
+#' pca+kmeans in 3D
+#' @param obs_label the value should be the class label with names equal to sample names
+#' @export
 plot.3D.pca.kmeans <- function(mat=NULL,all_k=NULL,obs_label=NULL,legend_pos = 'topleft',legend_ncol = 1,legend_cex = 0.8){
   if(is.null(mat)==TRUE){
     message('Please input mat, check and re-try !');return(FALSE)
@@ -1825,7 +2051,11 @@ plot.3D.pca.kmeans <- function(mat=NULL,all_k=NULL,obs_label=NULL,legend_pos = '
   )
   return(pred_label)
 }
-## for umap visualization, use kmeans as cluster strategy
+
+#' umap+kmeans in 2D
+#' @param plot_type 2D or 2D.ellipse
+#' @param obs_label the value should be the class label with names equal to sample names
+#' @export
 plot.2D.umap.kmeans <- function(mat=NULL,all_k=NULL,obs_label=NULL,legend_pos = 'topleft',legend_cex = 0.8,plot_type='2D.ellipse',point_cex=1){
   if(is.null(mat)==TRUE){
     message('Please input mat, check and re-try !');return(FALSE)
@@ -1868,86 +2098,151 @@ plot.2D.umap.kmeans <- function(mat=NULL,all_k=NULL,obs_label=NULL,legend_pos = 
   d1 <- data.frame(id=colnames(mat),X=use_mat_umap$layout[,1],Y=use_mat_umap$layout[,2],label=pred_label,stringsAsFactors=FALSE)
   layout(t(matrix(1:2)))
   if(plot_type=='2D.ellipse'){
-    draw.2D.ellipse(d1$X,d1$Y,class_label=obs_label[d1$id],xlab='',ylab='',label_cex=0.8,point_cex=point_cex)
-    draw.2D.ellipse(d1$X,d1$Y,class_label=d1$label,xlab='',ylab='',label_cex=0.8,point_cex=point_cex)
+    draw.2D.ellipse(d1$X,d1$Y,class_label=obs_label[d1$id],xlab="",ylab="",label_cex=0.8,point_cex=point_cex)
+    draw.2D.ellipse(d1$X,d1$Y,class_label=d1$label,xlab="",ylab="",label_cex=0.8,point_cex=point_cex)
   }
   if(plot_type=='2D'){
-    draw.2D(d1$X,d1$Y,class_label=obs_label[d1$id],xlab='',ylab='',label_cex=0.8,point_cex=point_cex)
-    draw.2D(d1$X,d1$Y,class_label=d1$label,xlab='',ylab='',label_cex=0.8,point_cex=point_cex)
+    draw.2D(d1$X,d1$Y,class_label=obs_label[d1$id],xlab="",ylab="",label_cex=0.8,point_cex=point_cex)
+    draw.2D(d1$X,d1$Y,class_label=d1$label,xlab="",ylab="",label_cex=0.8,point_cex=point_cex)
   }
   layout(1);
   return(pred_label)
 }
-## functions for MICA result visualization
-# visualization_type: tsne, umap,mds
+
+#' MICA in 2D
+#' @param plot_type 2D or 2D.ellipse
+#' @param visualization_type tsne or umap
+#' @param obs_label the value should be the class label with names equal to sample names
+#' @export
 plot.2D.MICA <- function(outdir=NULL,prjname=NULL,all_k=NULL,obs_label=NULL,legend_pos = 'topleft',legend_cex = 0.8,point_cex=1,plot_type='2D.ellipse',
                          visualization_type='tsne') {
   # choose best k
-    all_jac <- get_jac_MICA(outdir=outdir, all_k=all_k, obs_label=obs_label, prjname = prjname)
-    use_k <- all_k[which.max(all_jac)]
-    message(sprintf('Best Jaccard Accuracy occurs when k=%s, with value=%s',use_k,all_jac[as.character(use_k)]))
+  all_jac <- get_jac_MICA(outdir=outdir, all_k=all_k, obs_label=obs_label, prjname = prjname)
+  use_k <- all_k[which.max(all_jac)]
+  message(sprintf('Best Jaccard Accuracy occurs when k=%s, with value=%s',use_k,all_jac[as.character(use_k)]))
   #
-    use_file <- sprintf('%s/scMINER_%s/scMINER_%s_MDS_%s/scMINER_MICA_out/%s.ggplot.txt',
+  use_file <- sprintf('%s/scMINER_%s/scMINER_%s_MDS_%s/scMINER_MICA_out/%s.ggplot.txt',
+                      outdir,prjname,prjname,use_k,prjname)
+  d1 <- read.delim(use_file, stringsAsFactors = FALSE) ## get cluster results
+  if(visualization_type=='umap' | visualization_type=='mds'){
+    use_file <- sprintf('%s/scMINER_%s/scMINER_%s_MDS_%s/scMINER_MICA_out/%s_clust.h5',
                         outdir,prjname,prjname,use_k,prjname)
-    d1 <- read.delim(use_file, stringsAsFactors = FALSE) ## get cluster results
-    if(visualization_type=='umap' | visualization_type=='mds'){
-      use_file <- sprintf('%s/scMINER_%s/scMINER_%s_MDS_%s/scMINER_MICA_out/%s_clust.h5',
-                          outdir,prjname,prjname,use_k,prjname)
-      fid <- H5Fopen(use_file)
-      dist_mat <- fid$`mds`$block0_values
-      if(visualization_type=='mds'){
-        X <- fid$mds$block0_values[1,];Y <- fid$mds$block0_values[2,]
-        d1$X <- X; d1$Y <- Y;
-      }else{
-        use_mat_umap <- umap(t(dist_mat))
-        X <- use_mat_umap$layout[,1];Y <- use_mat_umap$layout[,2]
-        d1$X <- X; d1$Y <- Y;
-      }
-      H5Fclose(fid)
+    fid <- H5Fopen(use_file)
+    dist_mat <- fid$`mds`$block0_values
+    if(visualization_type=='mds'){
+      X <- fid$mds$block0_values[1,];Y <- fid$mds$block0_values[2,]
+      d1$X <- X; d1$Y <- Y;
+    }else{
+      use_mat_umap <- umap(t(dist_mat))
+      X <- use_mat_umap$layout[,1];Y <- use_mat_umap$layout[,2]
+      d1$X <- X; d1$Y <- Y;
     }
-    layout(t(matrix(1:2)))
-    if(plot_type=='2D.ellipse'){
-      draw.2D.ellipse(d1$X,d1$Y,class_label=obs_label[d1$id],xlab='MICA-1',ylab='MICA-2',label_cex=legend_cex,point_cex=point_cex)
-      draw.2D.ellipse(d1$X,d1$Y,class_label=d1$label,xlab='MICA-1',ylab='MICA-2',label_cex=legend_cex,point_cex=point_cex)
-    }
-    if(plot_type=='2D'){
-      draw.2D(d1$X,d1$Y,class_label=obs_label[d1$id],xlab='MICA-1',ylab='MICA-2',label_cex=legend_cex,point_cex=point_cex)
-      draw.2D(d1$X,d1$Y,class_label=d1$label,xlab='MICA-1',ylab='MICA-2',label_cex=legend_cex,point_cex=point_cex)
-    }
-    ## jaccard accuracy
-    rownames(d1) <- d1$id
-    pred_label <- d1[names(obs_label), ]$label
-    names(pred_label) <- names(obs_label)
-    jac <- get_jac(pred_label, obs_label)
-    print(sprintf('Jaccard Accuracy:%s', jac))
-    return(pred_label)
+    H5Fclose(fid)
+  }
+  layout(t(matrix(1:2)))
+  if(plot_type=='2D.ellipse'){
+    draw.2D.ellipse(d1$X,d1$Y,class_label=obs_label[d1$id],xlab='MICA-1',ylab='MICA-2',label_cex=legend_cex,point_cex=point_cex)
+    draw.2D.ellipse(d1$X,d1$Y,class_label=d1$label,xlab='MICA-1',ylab='MICA-2',label_cex=legend_cex,point_cex=point_cex)
+  }
+  if(plot_type=='2D'){
+    draw.2D(d1$X,d1$Y,class_label=obs_label[d1$id],xlab='MICA-1',ylab='MICA-2',label_cex=legend_cex,point_cex=point_cex)
+    draw.2D(d1$X,d1$Y,class_label=d1$label,xlab='MICA-1',ylab='MICA-2',label_cex=legend_cex,point_cex=point_cex)
+  }
+  ## jaccard accuracy
+  rownames(d1) <- d1$id
+  pred_label <- d1[names(obs_label), ]$label
+  names(pred_label) <- names(obs_label)
+  jac <- get_jac(pred_label, obs_label)
+  print(sprintf('Jaccard Accuracy:%s', jac))
+  return(pred_label)
 }
+
 # get all jaccard accuracy for MICA
 get_jac_MICA <- function(outdir, all_k, obs_label, prjname = NULL) {
-    all_jac <- list()
-    for (k in all_k) {
-      use_file <-
-        sprintf(
-          '%s/scMINER_%s/scMINER_%s_MDS_%s/scMINER_MICA_out/%s.ggplot.txt',
-          outdir,prjname,prjname,k,prjname
-        )
-      d1 <- read.delim(use_file, stringsAsFactors = FALSE)
-      ## jaccard accuracy
-      rownames(d1) <- d1$id
-      pred_label <-
-        d1[names(obs_label), ]$label
-      names(pred_label) <- names(obs_label)
-      jac <- get_jac(pred_label, obs_label)
-      all_jac[[as.character(k)]] <- jac
-      print(sprintf('Jaccard Accuracy for %d:%s', k, jac))
-    }
-    return(all_jac)
+  all_jac <- list()
+  for (k in all_k) {
+    use_file <-
+      sprintf(
+        '%s/scMINER_%s/scMINER_%s_MDS_%s/scMINER_MICA_out/%s.ggplot.txt',
+        outdir,prjname,prjname,k,prjname
+      )
+    d1 <- read.delim(use_file, stringsAsFactors = FALSE)
+    ## jaccard accuracy
+    rownames(d1) <- d1$id
+    pred_label <-
+      d1[names(obs_label), ]$label
+    names(pred_label) <- names(obs_label)
+    jac <- get_jac(pred_label, obs_label)
+    all_jac[[as.character(k)]] <- jac
+    print(sprintf('Jaccard Accuracy for %d:%s', k, jac))
+  }
+  return(all_jac)
 }
-## draw volcano plot
-# label_type: origin / distribute
+#' Volcano plot for top DE (differentiated expressed) genes or DA (differentiated activity) drivers
+#'
+#' \code{draw.volcanoPlot} draw the volcano plot for top DE genes or DA drivers, could display the name of the top items in figures and will retrun the list of top items.
+#'
+#' This plot function input the master table and draw the volcano plot by setting significant threshold for logFC and P-value.
+#'
+#' @param dat data.frame, prefer the formatted master table generated by \code{generate.masterTable}, if not, must contain the columns for the following required parameters.
+#' @param label_col character, the name of the column in \code{dat}, which contains the gene/driver label for display
+#' @param logFC_col character, the name of the column in \code{dat}, which contains the logFC value
+#' @param Pv_col character, the name of the column in \code{dat}, which contains the P-value
+#' @param logFC_thre numeric, cutoff value for the logFC. Genes or drivers with absolute logFC value higher than the cutoff are remained.Default is 1.5.
+#' @param Pv_thre numeric, cutoff value for the p-values. Genes or drivers with lower p-values are remained.Default is 0.01.
+#' @param xlab character, title for the X axis
+#' @param ylab character, title for the Y axis
+#' @param show_label logical, whether or not to display the genes or drivers passed the cutoff on the plot. Default is FALSE
+#' @param label_cex numeric, \code{cex} for the label displayed on the plot. Default is 0.5
+#' @param legend_cex numeric, \code{cex} for the legend displayed on the plot. Default is 0.7
+#' @param label_type character, the strategy for label display on the plot, by choosing 'origin' or 'distribute'. Default is 'distribute'.
+#' @param main character, \code{main} for the title on the plot.
+#' @param pdf_file character, file path for the pdf file to save the figure into pdf format.If NULL, will not generate pdf file. Default is NULL.
+#'
+#' @return data.frame containing the significant genes or drivers with the following components:
+#'
+#' \item{label_col}{}
+#' \item{logFC_col}{}
+#' \item{Pv_col}{}
+#'
+#' @examples
+#' analysis.par <- list()
+#' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
+#' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' ms_tab <- analysis.par$final_ms_tab
+#' sig_driver1 <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
+#'                                Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.01,Pv_thre=0.1,
+#'                                main='Volcano Plot for metastasis2primary_DA',show_label=TRUE,
+#'                                label_cex = 1)
+#'
+#' \dontrun{
+#' analysis.par <- list()
+#' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
+#' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' ms_tab <- analysis.par$final_ms_tab
+#' analysis.par$out.dir.PLOT <- getwd() ## directory for saving the pdf files
+#' sig_driver1 <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
+#'                                Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.01,Pv_thre=0.1,
+#'                                main='Volcano Plot for metastasis2primary_DA',show_label=TRUE,
+#'                                pdf_file=sprintf('%s/vocalno_showlabel_distribute.pdf',analysis.par$out.dir.PLOT),
+#'                                label_cex = 1)
+#' sig_driver2 <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
+#'                                Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.02,Pv_thre=0.1,
+#'                                main='Volcano Plot for metastasis2primary_DA',show_label=TRUE,label_type = 'origin',label_cex = 0.5,
+#'                                pdf_file=sprintf('%s/vocalno_showlabel_origin.pdf',analysis.par$out.dir.PLOT))
+#' sig_driver3 <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
+#'                                Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.01,Pv_thre=0.1,
+#'                                main='Volcano Plot for metastasis2primary_DA',show_label=FALSE,label_type = 'origin',label_cex = 0.5,
+#'                                pdf_file=sprintf('%s/vocalno_nolabel_DA.pdf',analysis.par$out.dir.PLOT))
+#' sig_gene <- draw.volcanoPlot(dat=ms_tab,label_col='geneSymbol',logFC_col='logFC.metastasis2primary_DE',
+#'                                Pv_col='P.Value.metastasis2primary_DE',logFC_thre=0.5,Pv_thre=0.1,
+#'                                main='Volcano Plot for metastasis2primary_DE',show_label=FALSE,
+#'                                pdf_file=sprintf('%s/vocalno_nolabel_DE.pdf',analysis.par$out.dir.PLOT))
+#'}
+#' @export
 draw.volcanoPlot <- function(dat=NULL,label_col=NULL,logFC_col=NULL,Pv_col=NULL,logFC_thre=1.5, Pv_thre=0.01,
                              xlab='log2 Fold Change',ylab='P-value',show_label=FALSE,label_cex=0.5,legend_cex=0.7,
-                             label_type='distribute',main='',pdf_file=NULL){
+                             label_type='distribute',main="",pdf_file=NULL){
   dat <- unique(dat[,c(label_col,logFC_col,Pv_col)])
   dat <- dat[order(dat[,3],decreasing=TRUE),]
   dat <- dat[which(is.na(dat[,2])==FALSE),]
@@ -1955,30 +2250,28 @@ draw.volcanoPlot <- function(dat=NULL,label_col=NULL,logFC_col=NULL,Pv_col=NULL,
   y <- as.numeric(dat[,Pv_col]);
   y <- -log10(y)
   s1 <- which(abs(x)>=logFC_thre & y>= -log10(Pv_thre))
-  if(is.null(pdf_file)==FALSE){
-    geneWidth <- 0
-    geneHeight <- 0
-    if(length(s1)>0){
-      s11 <- s1[which(x[s1]>=0)]
-      s12 <- s1[which(x[s1]<0)]
-      geneWidth  <- max(strwidth(dat[s1,label_col],'inches',cex=label_cex))
-      geneHeight <- max(strwidth(toupper(letters),'inches',cex=label_cex))*max(length(s11),length(s12))*1.2
+  geneWidth <- 0
+  geneHeight <- 0
+  if(length(s1)>0){
+    s11 <- s1[which(x[s1]>=0)]
+    s12 <- s1[which(x[s1]<0)]
+    geneWidth  <- max(strwidth(dat[s1,label_col],'inches',cex=label_cex))
+    geneHeight <- max(strwidth(toupper(letters),'inches',cex=label_cex))*max(length(s11),length(s12))*1.2
+    if(is.null(pdf_file)==FALSE){
       if(show_label==TRUE & label_type=='distribute'){
         pdf(pdf_file,width=10+geneWidth*2,height=max(10,geneHeight))
       }else{
         pdf(pdf_file,width=10,height=10)
       }
-    }else{
-      pdf(pdf_file,width=10,height=10)
     }
   }
   par(mai=c(1.5,2,1.5,1))
   mm <- max(abs(x))
   if(show_label==TRUE & label_type=='distribute'){
-    plot(y~x,pch=16,col=get_transparent('grey',0.7),xlab=xlab,ylab='',
+    plot(y~x,pch=16,col=get_transparent('grey',0.7),xlab=xlab,ylab="",
          xlim=c(-3*mm/7*geneWidth-1.5*mm,1.5*mm+3*mm/7*geneWidth),ylim=c(0,max(y)*1.5),yaxt='n',main=main,cex.lab=1.2,cex.main=1.6)
   }else{
-    plot(y~x,pch=16,col=get_transparent('grey',0.7),xlab=xlab,ylab='',
+    plot(y~x,pch=16,col=get_transparent('grey',0.7),xlab=xlab,ylab="",
          xlim=c(-mm*1.5,mm*1.5),ylim=c(0,max(y)*1.5),yaxt='n',main=main,cex.lab=1.2,cex.main=1.6)
   }
   axis(side=2,at=seq(0,round(max(y)*1.5)),labels=c(1,format(10^-seq(1,round(max(y)*1.5)),scientific = TRUE)),las=2)
@@ -2022,10 +2315,75 @@ draw.volcanoPlot <- function(dat=NULL,label_col=NULL,logFC_col=NULL,Pv_col=NULL,
   return(sig_info)
   #return(TRUE)
 }
-## draw heatmap, use ComplexHeatmap
-# check Heatmap()
-draw.heatmap <- function(mat=NULL,use_genes=rownames(mat),use_gene_label=rownames(mat),use_samples=colnames(mat),use_sample_label=colnames(mat),
-                         phenotype_info=NULL,use_phe=NULL,main='',scale='none',pdf_file=NULL,
+###
+#' Heatmap plot for displaying expression level or activity level for genes and drivers
+#'
+#' \code{draw.heatmap} draw the heatmap for expression level or activity level for genes and drivers across selected samples.
+#'
+#' This plot function input the expression/activity matrix, with each row as one gene or driver, each column as one sample.
+#'
+#' @param mat numeric matrix, each row as one gene or driver, each column as one sample
+#' @param use_genes a vector of characters, the list of genes for display. Default is the rownames(mat).
+#' @param use_gene_label a vector of characters, label for the list of genes for display. Default is the use_genes.
+#' @param use_samples a vector of characters, the list of samples for display. Default is the colnames(mat).
+#' @param use_sample_label a vector of characters, label for the list of samples for display. Default is the use_samples.
+#' @param phenotype_info data.frame,contain the sample phenotype information, can be generated by \code{pData(eset)}.
+#' The rownames should match the colnames of mat. Default is NULL.
+#' @param use_phe a list of characters, selected phenotype for display,must be the subset of colnames of phenotype_info.Default is NULL.
+#' @param main character, title for the plot. Default is "".
+#' @param scale character, indicating if the values should be centered and scaled in either the row direction or the column direction, or none.
+#' The default is "none".
+#' @param pdf_file character, file path for the pdf file to save the figure into pdf format.If NULL, will not generate pdf file. Default is NULL.
+#' @param cluster_rows,cluster_columns parameters used in \code{Heatmap}, please check for details. Default is TRUE.
+#' @param clustering_distance_rows,clustering_distance_columns parameters used in \code{Heatmap}, please check for details. Default is 'pearson'.
+#' @param show_row_names,show_column_names parameters used in \code{Heatmap}, please check for details. Default is TRUE.
+#' @param row_names_gp,column_names_gp parameters used in \code{Heatmap}, please check for details. Default is gpar(fontsize = 12).
+#' @param ..., more parameters used in \code{Heatmap}
+#'
+#' @return logical value indicating whether the plot has been successfully generated
+#'
+#' @examples
+#' analysis.par <- list()
+#' analysis.par$out.dir.DATA <- system.file('demo/driver/DATA/',package = "NetBID2-R")
+#' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' ms_tab <- analysis.par$final_ms_tab
+#' exp_mat <- exprs(analysis.par$cal.eset) ## expression,the rownames matches originalID in ms_tab
+#' ac_mat <- exprs(analysis.par$merge.ac.eset) ## ac,the rownames matches originalID_label in ms_tab
+#' phe_info <- pData(analysis.par$cal.eset) ## phenotype information
+#' draw.heatmap(mat=exp_mat,use_genes=ms_tab[rownames(sig_driver),'originalID'],use_gene_label=ms_tab[rownames(sig_driver),'gene_label'],
+#'             use_samples=colnames(exp_mat),use_sample_label=phe_info[colnames(exp_mat),'geo_accession'],
+#'             phenotype_info=phe_info,use_phe=c('Sex','tumor type'),main='Expression for Top drivers',scale='row',
+#'             cluster_rows=TRUE,cluster_columns=TRUE,clustering_distance_rows='pearson',clustering_distance_columns='pearson',
+#'             row_names_gp = gpar(fontsize = 12))
+#' draw.heatmap(mat=ac_mat,use_genes=ms_tab[rownames(sig_driver),'originalID_label'],use_gene_label=ms_tab[rownames(sig_driver),'gene_label'],
+#'              use_samples=colnames(exp_mat),use_sample_label=phe_info[colnames(exp_mat),'geo_accession'],
+#'              phenotype_info=phe_info,use_phe=c('Sex','tumor type'),main='Activity for Top drivers',scale='row',
+#'              cluster_rows=FALSE,cluster_columns=TRUE,clustering_distance_rows='pearson',clustering_distance_columns='pearson',
+#'              row_names_gp = gpar(fontsize = 6))
+#'
+#' \dontrun{
+#' analysis.par <- list()
+#' analysis.par$out.dir.DATA <- system.file('demo/driver/DATA/',package = "NetBID2-R")
+#' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' ms_tab <- analysis.par$final_ms_tab
+#' exp_mat <- exprs(analysis.par$cal.eset) ## expression,the rownames matches originalID in ms_tab
+#' ac_mat <- exprs(analysis.par$merge.ac.eset) ## ac,the rownames matches originalID_label in ms_tab
+#' phe_info <- pData(analysis.par$cal.eset) ## phenotype information
+#' analysis.par$out.dir.PLOT <- getwd() ## directory for saving the pdf files
+#' draw.heatmap(mat=exp_mat,use_genes=ms_tab[rownames(sig_driver),'originalID'],use_gene_label=ms_tab[rownames(sig_driver),'gene_label'],
+#'             use_samples=colnames(exp_mat),use_sample_label=phe_info[colnames(exp_mat),'geo_accession'],
+#'             phenotype_info=phe_info,use_phe=c('Sex','tumor type'),main='Expression for Top drivers',scale='row',
+#'             cluster_rows=TRUE,cluster_columns=TRUE,clustering_distance_rows='pearson',clustering_distance_columns='pearson',
+#'             row_names_gp = gpar(fontsize = 12),pdf_file=sprintf('%s/heatmap_demo1.pdf',analysis.par$out.dir.PLOT))
+#' draw.heatmap(mat=ac_mat,use_genes=ms_tab[rownames(sig_driver),'originalID_label'],use_gene_label=ms_tab[rownames(sig_driver),'gene_label'],
+#'              use_samples=colnames(exp_mat),use_sample_label=phe_info[colnames(exp_mat),'geo_accession'],
+#'              phenotype_info=phe_info,use_phe=c('Sex','tumor type'),main='Activity for Top drivers',scale='row',
+#'              cluster_rows=FALSE,cluster_columns=TRUE,clustering_distance_rows='pearson',clustering_distance_columns='pearson',
+#'              row_names_gp = gpar(fontsize = 6),pdf_file=sprintf('%s/heatmap_demo2.pdf',analysis.par$out.dir.PLOT))
+#'}
+#' @export
+draw.heatmap <- function(mat=NULL,use_genes=rownames(mat),use_gene_label=use_genes,use_samples=colnames(mat),use_sample_label=use_samples,
+                         phenotype_info=NULL,use_phe=NULL,main="",scale='none',pdf_file=NULL,
                          cluster_rows=TRUE,cluster_columns=TRUE,
                          clustering_distance_rows='pearson',clustering_distance_columns='pearson',
                          row_names_gp = gpar(fontsize = 12),column_names_gp = gpar(fontsize = 12),
@@ -2076,19 +2434,19 @@ draw.heatmap <- function(mat=NULL,use_genes=rownames(mat),use_gene_label=rowname
     ha_column <- HeatmapAnnotation(df = data.frame(use_phe_info),col = use_col)
     if(scale=='none'){
       ht1 <- Heatmap(use_mat, column_title = main, top_annotation = ha_column,name='Raw value',
-                   cluster_rows=cluster_rows,cluster_columns=cluster_columns,
-                   show_row_names=show_row_names,show_column_names=show_column_names,
-                   clustering_distance_rows=clustering_distance_rows,clustering_distance_columns=clustering_distance_columns,
-                   row_names_gp=row_names_gp,column_names_gp=column_names_gp,
-                   row_names_max_width=row_names_max_width,column_names_max_height=column_names_max_height,...)
+                     cluster_rows=cluster_rows,cluster_columns=cluster_columns,
+                     show_row_names=show_row_names,show_column_names=show_column_names,
+                     clustering_distance_rows=clustering_distance_rows,clustering_distance_columns=clustering_distance_columns,
+                     row_names_gp=row_names_gp,column_names_gp=column_names_gp,
+                     row_names_max_width=row_names_max_width,column_names_max_height=column_names_max_height,...)
     }
     if(scale!='none'){
       ht1 <- Heatmap(use_mat, column_title = main, top_annotation = ha_column,name='Z value',
-                   cluster_rows=cluster_rows,cluster_columns=cluster_columns,
-                   clustering_distance_rows=clustering_distance_rows,clustering_distance_columns=clustering_distance_columns,
-                   row_names_gp=row_names_gp,column_names_gp=column_names_gp,
-                   show_row_names=show_row_names,show_column_names=show_column_names,
-                   row_names_max_width=row_names_max_width,column_names_max_height=column_names_max_height,...)
+                     cluster_rows=cluster_rows,cluster_columns=cluster_columns,
+                     clustering_distance_rows=clustering_distance_rows,clustering_distance_columns=clustering_distance_columns,
+                     row_names_gp=row_names_gp,column_names_gp=column_names_gp,
+                     show_row_names=show_row_names,show_column_names=show_column_names,
+                     row_names_max_width=row_names_max_width,column_names_max_height=column_names_max_height,...)
     }
   }
   ht_list <- ht1
@@ -2101,6 +2459,7 @@ draw.heatmap <- function(mat=NULL,use_genes=rownames(mat),use_gene_label=rowname
   if(is.null(pdf_file)==FALSE) dev.off()
   return(TRUE)
 }
+
 ################################ Function enrichment related functions
 find.gsByGene <- function(gene=NULL,use_gs=NULL){
   if(is.null(use_gs)==TRUE){
@@ -2119,7 +2478,8 @@ find.gsByGene <- function(gene=NULL,use_gs=NULL){
   return(x2)
 }
 ##
-# functions to merge gs
+#' merge genesets
+#' @export
 merge_gs <- function(all_gs2gene=NULL,use_gs=c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG','C5')){
   nn <- unlist(lapply(all_gs2gene[use_gs],names))
   use_gs2gene <- unlist(all_gs2gene[use_gs],recursive = FALSE)
@@ -2155,7 +2515,55 @@ vec2list <- function(input_v,sep=NULL){
   }
   tmp2
 }
-## Function enrichment by fisher
+
+#' Gene set enrichment analysis by Fisher's Exact Test.
+#'
+#' \code{funcEnrich.Fisher} will perform gene set enrichment analysis by Fisher's Exact Test.
+#'
+#' This is a function to find significant enriched gene sets for input gene list. Users could prepare gs2gene or use all_gs2gene preloaded by using \code{gs.preload}.
+#' Background gene list is accepeted.
+#'
+#' @param input_list a vector of characters, the list of genes for analysis. Only accept gene symbols, and gene ID conversion could be done by preparing a transfer table
+#' by using \code{get_IDtransfer} and using \code{get_name_transfertab} to transfer the gene IDs.
+#' @param bg_list a vector of characters, the background list of genes for analysis. Only accept gene symbols.
+#' Default is NULL, will use all genes in the gs2gene as the background list.
+#' @param gs2gene a list for geneset to genes, the name for the list is the gene set name and the content in each list is the vector for genes belong to that gene set.
+#' If NULL, will use all_gs2gene loaded by using \code{gs.preload}. Default is NULL.
+#' @param use_gs a vector of characters, the name for gene set category used for anlaysis. If gs2gene is set to NULL, use_gs must be the subset of \code{names(all_gs2gene)}.
+#' Could check \code{all_gs2gene_info} for the cateogory description.Default is \code{c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG')}.
+#' @param min_gs_size numeric, minimum gene set size for analysis, default is 5.
+#' @param max_gs_size numeric, maximum gene set size for analysis, default is 500.
+#' @param Pv_adj character, p-value adjustment method, could check \code{p.adjust.methods} for the available options. Default is 'fdr'.
+#' @param Pv_thre numeric, cutoff value for the adjusted p-values for significance. Default is 0.1.
+#'
+#' @return The function will return a list of gene sets with significant statistics, detailed as follows,
+#'
+#' \item{#Name}{Name for the enriched gene set}
+#' \item{Total_item}{Number of background size}
+#' \item{Num_item}{Number of genes in the gene set (filtered by the background list)}
+#' \item{Num_list}{Number of input genes for testing (filtered by the background list)}
+#' \item{Num_list_item}{Number input genes annotated by the gene set (filtered by the background list)}
+#' \item{Ori_P}{Original P-value from Fisher's Exact Test}
+#' \item{Adj_p}{Adjusted P-value}
+#' \item{Odds_Ratio}{Odds ratio by the 2*2 matrix used for Fisher's Exact Test}
+#' \item{Intersected_items}{List of the intersected genes, collapsed by ';', the number is equal to Num_list_item}
+#'
+#' @examples
+#' analysis.par <- list()
+#' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
+#' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' ms_tab <- analysis.par$final_ms_tab
+#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
+#'                                Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.01,Pv_thre=0.1,
+#'                                main='Volcano Plot for metastasis2primary_DA',show_label=FALSE,
+#'                                label_type = 'origin',label_cex = 0.5)
+#' main.dir <- system.file(package = "NetBID2")
+#' gs.preload(use_spe='Homo sapiens',update=FALSE)
+#' res1 <- funcEnrich.Fisher(input_list=ms_tab[rownames(sig_driver),'geneSymbol'],bg_list=ms_tab[,'geneSymbol'],
+#'                                use_gs=c('H','C5'),Pv_thre=0.1,Pv_adj = 'none')
+#' \dontrun{
+#' }
+#' @export
 funcEnrich.Fisher <- function(input_list=NULL,bg_list=NULL,gs2gene=NULL,use_gs=c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG'),
                               min_gs_size=5,max_gs_size=500,Pv_adj='fdr',Pv_thre=0.1){
   if(is.null(gs2gene)==TRUE){
@@ -2165,8 +2573,9 @@ funcEnrich.Fisher <- function(input_list=NULL,bg_list=NULL,gs2gene=NULL,use_gs=c
       return(FALSE)
     }
     if(length(use_gs)>1){
-      gs2gene <- unlist(all_gs2gene[use_gs],recursive = FALSE)
-      names(gs2gene)<-unlist(lapply(all_gs2gene[use_gs],names))
+      gs2gene <- merge_gs(all_gs2gene,use_gs = use_gs)
+      #gs2gene <- unlist(all_gs2gene[use_gs],recursive = FALSE)
+      #names(gs2gene)<-unlist(lapply(all_gs2gene[use_gs],names))
     }else{
       gs2gene <- all_gs2gene[[use_gs]]
     }
@@ -2217,11 +2626,73 @@ funcEnrich.Fisher <- function(input_list=NULL,bg_list=NULL,gs2gene=NULL,use_gs=c
   use_pv <- pv[which(pv$Adj_p<=Pv_thre),]
   return(use_pv)
 }
-## Barplot for enrichment
+
+#' Bar plot for the result of gene set enrichment analysis.
+#'
+#' \code{draw.funcEnrich.bar} will draw the barplot for the result of gene set enrichment analysis.
+#'
+#' This is a function to draw the barplot for the result of gene set enrichment analysis.
+#' Two modes, one just display the P-value, and the other could show the top intersected genes for each gene set.
+#'
+#' @param funcEnrich_res data.frame, containing the result for the function enrichment analysis. Prefer the format generated by using \code{funcEnrich.Fisher}.
+#' If not, users could prepare the required columns and indicate the column names in the following parameters.
+#' @param top_number numeric, number for the top enriched gene sets to be displayed on the plot. Default is 30.
+#' @param Pv_col character, the name of the column in \code{funcEnrich_res}, which contains the P-value. Default is 'Ori_P'.
+#' @param name_col character, the name of the column in \code{funcEnrich_res}, which contains the gene set name. Default is '#Name'.
+#' @param item_col character, the name of the column in \code{funcEnrich_res}, which contains the detailed intersected gene list, collapsed by ';'.
+#' Default is 'Intersected_items'.
+#' @param Pv_thre numeric, cutoff value for the p-values. Genes or drivers with lower p-values are remained. Default is 0.1.
+#' @param display_genes logical, whether or not to display the intersected genes on the plot. Default is FALSE
+#' @param gs_cex numeric, \code{cex} for the gene sets displayed on the plot. Default is 0.5
+#' @param gene_cex numeric, \code{cex} for the genes displayed on the plot. Default is 0.5
+#' @param main character, \code{main} for the title on the plot.
+#' @param bar_col character, color code for the bar on the plot. Default is brewer.pal(8,'RdBu')[7].
+#' @param eg_num numeric, example number of intersected genes shown on the plot. Default is 5.
+#' @param pdf_file character, file path for the pdf file to save the figure into pdf format.If NULL, will not generate pdf file. Default is NULL.
+#'
+#' @return logical value indicating whether the plot has been successfully generated
+#'
+#' @examples
+#' analysis.par <- list()
+#' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
+#' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' ms_tab <- analysis.par$final_ms_tab
+#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
+#'                                Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.01,Pv_thre=0.1,
+#'                                main='Volcano Plot for metastasis2primary_DA',show_label=FALSE,
+#'                                label_type = 'origin',label_cex = 0.5)
+#' main.dir <- system.file(package = "NetBID2")
+#' gs.preload(use_spe='Homo sapiens',update=FALSE)
+#' res1 <- funcEnrich.Fisher(input_list=ms_tab[rownames(sig_driver),'geneSymbol'],bg_list=ms_tab[,'geneSymbol'],
+#'                                use_gs=c('H','C5'),Pv_thre=0.1,Pv_adj = 'none')
+#' draw.funcEnrich.bar(funcEnrich_res=res1,top_number=30,main='Function Enrichment for Top drivers')
+#' draw.funcEnrich.bar(funcEnrich_res=res1,top_number=30,main='Function Enrichment for Top drivers',
+#'                     display_genes = TRUE,gs_cex=0.6)
+#' \dontrun{
+#' analysis.par <- list()
+#' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
+#' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' ms_tab <- analysis.par$final_ms_tab
+#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
+#'                                Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.01,Pv_thre=0.1,
+#'                                main='Volcano Plot for metastasis2primary_DA',show_label=FALSE,
+#'                                label_type = 'origin',label_cex = 0.5)
+#' main.dir <- system.file(package = "NetBID2")
+#' gs.preload(use_spe='Homo sapiens',update=FALSE)
+#' res1 <- funcEnrich.Fisher(input_list=ms_tab[rownames(sig_driver),'geneSymbol'],bg_list=ms_tab[,'geneSymbol'],
+#'                                use_gs=c('H','C5'),Pv_thre=0.1,Pv_adj = 'none')
+#' analysis.par$out.dir.PLOT <- getwd() ## directory for saving the pdf files
+#' draw.funcEnrich.bar(funcEnrich_res=res1,top_number=30,main='Function Enrichment for Top drivers',
+#'                     pdf_file=sprintf('%s/funcEnrich_bar_nogene.pdf',analysis.par$out.dir.PLOT))
+#' draw.funcEnrich.bar(funcEnrich_res=res1,top_number=30,main='Function Enrichment for Top drivers',
+#'                     display_genes = TRUE,gs_cex=0.6,
+#'                     pdf_file=sprintf('%s/funcEnrich_bar_withgene.pdf',analysis.par$out.dir.PLOT))
+#' }
+#' @export
 draw.funcEnrich.bar <- function(funcEnrich_res=NULL,top_number=30,
                                 Pv_col='Ori_P',item_col='Intersected_items',
                                 Pv_thre=0.1,display_genes=FALSE,name_col='#Name',
-                                gs_cex=0.5,gene_cex=0.5,main='',bar_col=brewer.pal(8,'RdBu')[7],eg_num=5,
+                                gs_cex=0.5,gene_cex=0.5,main="",bar_col=brewer.pal(8,'RdBu')[7],eg_num=5,
                                 pdf_file=NULL){
   if(is.null(top_number)==TRUE) top_number <- nrow(funcEnrich_res)
   funcEnrich_res <- funcEnrich_res[which(funcEnrich_res[,Pv_col]<=Pv_thre),]
@@ -2252,9 +2723,91 @@ draw.funcEnrich.bar <- function(funcEnrich_res=NULL,top_number=30,
   if(is.null(pdf_file)==FALSE) dev.off()
   return(funcEnrich_res)
 }
-## cluster plot for enrichment results
+#' Cluster plot for the result of gene set enrichment analysis.
+#'
+#' \code{draw.funcEnrich.cluster} will draw the cluster for the result of gene set enrichment analysis.
+#'
+#' This is a function to draw the cluster (genes and gene sets) for the result of gene set enrichment analysis.
+#' The cluster is based on the binary matrix representing the gene's existence in the enriched gene sets.
+#' Detailed matrix for the cluster, enriched P-value will be displayed on the plot.
+#'
+#' @param funcEnrich_res data.frame, containing the result for the function enrichment analysis. Prefer the format generated by using \code{funcEnrich.Fisher}.
+#' If not, users could prepare the required columns and indicate the column names in the following parameters.
+#' @param top_number numeric, number for the top enriched gene sets to be displayed on the plot. Default is 30.
+#' @param Pv_col character, the name of the column in \code{funcEnrich_res}, which contains the P-value. Default is 'Ori_P'.
+#' @param name_col character, the name of the column in \code{funcEnrich_res}, which contains the gene set name. Default is '#Name'.
+#' @param item_col character, the name of the column in \code{funcEnrich_res}, which contains the detailed intersected gene list, collapsed by ';'.
+#' Default is 'Intersected_items'.
+#' @param Pv_thre numeric, cutoff value for the p-values. Genes or drivers with lower p-values are remained. Default is 0.1.
+#' @param gs_cex numeric, \code{cex} for the gene sets displayed on the plot. Default is 0.7.
+#' @param gene_cex numeric, \code{cex} for the genes displayed on the plot. Default is 0.8.
+#' @param pv_cex numeric, \code{cex} for the P-value displayed on the plot. Default is 0.7.
+#' @param main character, \code{main} for the title on the plot.
+#' @param h numeric, cutoff for the cluster. This parameter will be used in the \code{cutree} function. Default is 0.95
+#' @param cluster_gs logical, whether or not to cluster gene sets. Default is TRUE.
+#' @param cluster_gene logical, whether or not to cluster genes. Default is TRUE.
+#' @param use_genes a vector of characters, gene list used for display in plot,
+#' if NULL will display all genes in the top enriched gene sets.Default is NULL.
+#' @param pdf_file character, file path for the pdf file to save the figure into pdf format.If NULL, will not generate pdf file. Default is NULL.
+#' @param return_mat logical, whether or not to return the matrix used for display. Default is FALSE.
+#'
+#' @return if return_mat==FALSE, will return logical value indicating whether the plot has been successfully generated,
+#' otherwise will return the matrix used for cluster.
+#'
+#' @examples
+#' analysis.par <- list()
+#' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
+#' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' ms_tab <- analysis.par$final_ms_tab
+#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
+#'                                Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.01,Pv_thre=0.1,
+#'                                main='Volcano Plot for metastasis2primary_DA',show_label=FALSE,
+#'                                label_type = 'origin',label_cex = 0.5)
+#' main.dir <- system.file(package = "NetBID2")
+#' gs.preload(use_spe='Homo sapiens',update=FALSE)
+#' res1 <- funcEnrich.Fisher(input_list=ms_tab[rownames(sig_driver),'geneSymbol'],bg_list=ms_tab[,'geneSymbol'],
+#'                                use_gs=c('H','C5'),Pv_thre=0.1,Pv_adj = 'none')
+#' draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 0.8,gene_cex=0.9,pv_cex=0.8)
+#' draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 1.4,gene_cex=1.5,pv_cex=1.2,
+#'                        cluster_gs=TRUE,cluster_gene = TRUE)
+#' draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 0.8,gene_cex=0.9,pv_cex=0.8,
+#'                        cluster_gs=TRUE,cluster_gene = FALSE)
+#' draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 0.8,gene_cex=0.9,pv_cex=0.8,
+#'                         cluster_gs=FALSE,cluster_gene = TRUE)
+#' draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 1.5,gene_cex=1.4,pv_cex=1.2,
+#'                         cluster_gs=FALSE,cluster_gene = FALSE)
+#' \dontrun{
+#' analysis.par <- list()
+#' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
+#' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' ms_tab <- analysis.par$final_ms_tab
+#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
+#'                                Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.01,Pv_thre=0.1,
+#'                                main='Volcano Plot for metastasis2primary_DA',show_label=FALSE,
+#'                                label_type = 'origin',label_cex = 0.5)
+#' main.dir <- system.file(package = "NetBID2")
+#' gs.preload(use_spe='Homo sapiens',update=FALSE)
+#' res1 <- funcEnrich.Fisher(input_list=ms_tab[rownames(sig_driver),'geneSymbol'],bg_list=ms_tab[,'geneSymbol'],
+#'                                use_gs=c('H','C5'),Pv_thre=0.1,Pv_adj = 'none')
+#' analysis.par$out.dir.PLOT <- getwd() ## directory for saving the pdf files
+#' draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 0.8,gene_cex=0.9,pv_cex=0.8,
+#' pdf_file = sprintf('%s/funcEnrich_cluster.pdf',analysis.par$out.dir.PLOT))
+#' draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 1.4,gene_cex=1.5,pv_cex=1.2,
+#'                         pdf_file = sprintf('%s/funcEnrich_clusterBOTH.pdf',analysis.par$out.dir.PLOT),
+#'                         cluster_gs=TRUE,cluster_gene = TRUE)
+#' draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 0.8,gene_cex=0.9,pv_cex=0.8,
+#'                         pdf_file = sprintf('%s/funcEnrich_clusterGS.pdf',analysis.par$out.dir.PLOT),
+#'                         cluster_gs=TRUE,cluster_gene = FALSE)
+#' draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 0.8,gene_cex=0.9,pv_cex=0.8,
+#'                         pdf_file = sprintf('%s/funcEnrich_clusterGENE.pdf',analysis.par$out.dir.PLOT),
+#'                         cluster_gs=FALSE,cluster_gene = TRUE)
+#' draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 1.5,gene_cex=1.4,pv_cex=1.2,
+#'                         pdf_file = sprintf('%s/funcEnrich_clusterNO.pdf',analysis.par$out.dir.PLOT),
+#'                         cluster_gs=FALSE,cluster_gene = FALSE)
+#' }
+#' @export
 draw.funcEnrich.cluster <- function(funcEnrich_res=NULL,top_number=30,Pv_col='Ori_P',name_col='#Name',item_col='Intersected_items',Pv_thre=0.1,
-                                    gs_cex=0.7,gene_cex=0.8,pv_cex=0.7,main='',h=0.95,cluster_gs=TRUE,cluster_gene=TRUE,
+                                    gs_cex=0.7,gene_cex=0.8,pv_cex=0.7,main="",h=0.95,cluster_gs=TRUE,cluster_gene=TRUE,
                                     pdf_file=NULL,use_genes=NULL,return_mat=FALSE){
   if(is.null(top_number)==TRUE) top_number <- nrow(funcEnrich_res)
   funcEnrich_res <- funcEnrich_res[which(funcEnrich_res[,Pv_col]<=Pv_thre),]
@@ -2325,7 +2878,7 @@ draw.funcEnrich.cluster <- function(funcEnrich_res=NULL,top_number=30,Pv_col='Or
   # draw p-value
   #pp <- par()$usr;
   par(mai=c(0.5,0,geneWidth2,0));
-  plot(1,xaxt='n',yaxt='n',bty='n',xlim=c(pp[1],pp[2]),ylim=c(pp[3],pp[4]),col='white',xlab='',ylab='')
+  plot(1,xaxt='n',yaxt='n',bty='n',xlim=c(pp[1],pp[2]),ylim=c(pp[3],pp[4]),col='white',xlab="",ylab="")
   pp <- par()$usr;
   yy <- (pp[4]-pp[3])/length(gs_cluster)
   pv_c <- z2col(qnorm(1-pv))
@@ -2337,7 +2890,7 @@ draw.funcEnrich.cluster <- function(funcEnrich_res=NULL,top_number=30,Pv_col='Or
   # draw gs name
   par(mai=c(0.5,0,geneWidth2,0.5));
   zz <- min(c(xx,yy))
-  plot(1,xaxt='n',yaxt='n',bty='n',xlim=c(pp[1],pp[2]),ylim=c(pp[3],pp[4]),col='white',xlab='',ylab='')
+  plot(1,xaxt='n',yaxt='n',bty='n',xlim=c(pp[1],pp[2]),ylim=c(pp[3],pp[4]),col='white',xlab="",ylab="")
   pp <- par()$usr;
   yy <- (pp[4]-pp[3])/length(gs_cluster)
   text(pp[1]+zz*0.2,c(1:length(gs_cluster))*yy+pp[3]-yy/2,rownames(mat1),xpd=TRUE,adj=0,cex=gs_cex)
@@ -2355,20 +2908,106 @@ draw.funcEnrich.cluster <- function(funcEnrich_res=NULL,top_number=30,Pv_col='Or
     return(TRUE)
   }
 }
-#### bubble plot
-## Pv_thre, threshold for fisher funcEnrich
-## driver_type, can add additional driver type info
-draw.bubblePlot <- function(driver_list=NULL,show_label=NULL,Z_val=NULL,driver_type=NULL,
+#' Bubble plot for the top drivers in NetBID2 analysis.
+#'
+#' \code{draw.bubblePlot} will draw the buble plot for the top drivers and the enriched gene sets for the targets of each driver.
+#'
+#' This is a function to draw the bubble plot for the top significant drivers. Each row is a gene set, and each column is a driver.
+#' Each bubble represents the enrichment for each driver's target gene in the corresponding gene set.
+#' The size for each bubble shows the intersected size for the target gene and the gene set.
+#' The color for each bubble shows the significance of enrichment performed by Fisher's Exact Test.
+#' Color bar and size bar are shown in the plot.
+#' Besides, the target size and the driver gene/transcript bio-type is shown at the bottom of the plot.
+#'
+#' @param driver_list a vector of characters, the name for the top drivers.
+#' @param show_label a vector of characters, the name for the top drivers to display on the plot.
+#' If NULL, will display the name in driver_list. Default is NULL.
+#' @param Z_val a vector of numeric values, the Z statistics for the driver_list.
+#' Better to give name to the vector, otherwise will automatically use driver_list as the name.
+#' @param driver_type a vector of characters, the bio-type or other characteristics for the driver.
+#' If not NULL, will display the type on the plot.
+#' Better to give name to the vector, otherwise will automatically use driver_list as the name.
+#' @param target_list a list for the target gene information for the drivers. The names for the list must contain the driver in driver_list.
+#' Each object in the list must be a data.frame and should contain one column ("target") to save the target genes.
+#' Strongly suggest to follow the NetBID2 pipeline, and the \code{target_list} could be automatically generated by \code{get_net2target_list} by
+#' running \code{get.SJAracne.network}.
+#' @param transfer2symbol2type data.frame, the transfer table for the original ID to the gene symbol and gene biotype (at gene level)
+#' or transcript symbol and transcript biotype (at transcript level). strongly suggest to use \code{get_IDtransfer2symbol2type} to generate the transfer table.
+#' @param gs2gene a list for geneset to genes, the name for the list is the gene set name and the content in each list is the vector for genes belong to that gene set.
+#' If NULL, will use all_gs2gene loaded by using \code{gs.preload}. Default is NULL.
+#' @param use_gs a vector of characters, the name for gene set category used for anlaysis. If gs2gene is set to NULL, use_gs must be the subset of \code{names(all_gs2gene)}.
+#' Could check \code{all_gs2gene_info} for the cateogory description.Default is \code{c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG')}.
+#' @param bg_list a vector of characters, the background list of genes for analysis. Only accept gene symbols.
+#' Default is NULL, will use all genes in the gs2gene as the background list.
+#' @param min_gs_size numeric, minimum gene set size for analysis, default is 5.
+#' @param max_gs_size numeric, maximum gene set size for analysis, default is 500.
+#' @param Pv_adj character, p-value adjustment method, could check \code{p.adjust.methods} for the available options. Default is 'none'.
+#' @param Pv_thre numeric, cutoff value for the adjusted p-values for significance.Default is 0.1.
+#' @param top_geneset_number number for the top enriched gene sets to be displayed on the plot. Default is 30.
+#' @param top_driver_number number for the top significant drivers to be displayed on the plot. Default is 30.
+#' @param main character, \code{main} for the title on the plot.
+#' @param pdf_file character, file path for the pdf file to save the figure into pdf format.If NULL, will not generate pdf file. Default is NULL.
+#' @param mark_gene a vector of characters, if not NULL, the drivers in the mark_gene will be labelled red in the plot. Default is NULL.
+#' @param driver_cex numeric, \code{cex} for the driver displayed on the plot. Default is 1.
+#' @param gs_cex numeric, \code{cex} for the gene sets displayed on the plot. Default is 1.
+#'
+#' @return
+#' Will return logical value indicating whether the plot has been successfully generated
+#'
+#' @examples
+#' analysis.par <- list()
+#' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
+#' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' ms_tab <- analysis.par$final_ms_tab
+#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
+#'                                Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.01,Pv_thre=0.1,
+#'                                main='Volcano Plot for metastasis2primary_DA',show_label=FALSE,
+#'                                label_type = 'origin',label_cex = 0.5)
+#' main.dir <- system.file(package = "NetBID2")
+#' gs.preload(use_spe='Homo sapiens',update=FALSE)
+#' transfer_tab <- get_IDtransfer2symbol2type(from_type = 'ensembl_transcript_id',use_genes=use_genes) ## get transfer table !!!
+#' draw.bubblePlot(driver_list=rownames(sig_driver),show_label=ms_tab[rownames(sig_driver),'gene_label'],
+#'                Z_val=ms_tab[rownames(sig_driver),'Z.metastasis2primary_DA'],
+#'                driver_type=ms_tab[rownames(sig_driver),'transcript_biotype'],
+#'                target_list=analysis.par$merge.network$target_list,transfer2symbol2type=transfer_tab,
+#'                bg_list=ms_tab[,'geneSymbol'],min_gs_size=5,max_gs_size=500,use_gs=c('H'),
+#'                top_geneset_number=30,top_driver_number=50,
+#'                main='Bubbleplot for top driver targets')
+#' \dontrun{
+#' analysis.par <- list()
+#' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
+#' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' ms_tab <- analysis.par$final_ms_tab
+#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
+#'                                Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.01,Pv_thre=0.1,
+#'                                main='Volcano Plot for metastasis2primary_DA',show_label=FALSE,
+#'                                label_type = 'origin',label_cex = 0.5)
+#' main.dir <- system.file(package = "NetBID2")
+#' gs.preload(use_spe='Homo sapiens',update=FALSE)
+#' transfer_tab <- get_IDtransfer2symbol2type(from_type = 'ensembl_transcript_id',use_genes=use_genes) ## get transfer table !!!
+#' analysis.par$out.dir.PLOT <- getwd() ## directory for saving the pdf files
+#' draw.bubblePlot(driver_list=rownames(sig_driver),show_label=ms_tab[rownames(sig_driver),'gene_label'],
+#'                Z_val=ms_tab[rownames(sig_driver),'Z.metastasis2primary_DA'],
+#'                driver_type=ms_tab[rownames(sig_driver),'transcript_biotype'],
+#'                target_list=analysis.par$merge.network$target_list,transfer2symbol2type=transfer_tab,
+#'                bg_list=ms_tab[,'geneSymbol'],min_gs_size=5,max_gs_size=500,use_gs=c('H'),
+#'                top_geneset_number=30,top_driver_number=50,
+#'                pdf_file = sprintf('%s/bubblePlot.pdf',analysis.par$out.dir.PLOT),
+#'                main='Bubbleplot for top driver targets')
+#' }
+#' @export
+draw.bubblePlot <- function(driver_list=NULL,show_label=driver_list,Z_val=NULL,driver_type=NULL,
                             target_list=NULL,transfer2symbol2type=NULL,
                             bg_list=NULL,min_gs_size=5,max_gs_size=500,gs2gene=NULL,use_gs=NULL,Pv_adj='none',Pv_thre=0.1,
                             top_geneset_number=30,top_driver_number=30,
-                            pdf_file=NULL,main='',mark_gene=NULL,driver_cex=1,gs_cex=1){
+                            pdf_file=NULL,main="",mark_gene=NULL,driver_cex=1,gs_cex=1){
   ## check NULL
 
-  ## get top driver list
-  names(show_label) <- driver_list
-  names(Z_val) <- driver_list
-  names(driver_type) <- driver_list
+  if(is.null(names(show_label))==TRUE){names(show_label) <- driver_list}
+  if(is.null(names(Z_val))==TRUE){names(Z_val) <- driver_list}
+  if(is.null(driver_type)==FALSE){
+    if(is.null(names(driver_type))==TRUE){names(driver_type) <- driver_list}
+  }
   driver_list <- driver_list[order(abs(Z_val),decreasing = TRUE)]
   if(length(driver_list)>top_driver_number){
     driver_list <- driver_list[1:top_driver_number]
@@ -2397,7 +3036,7 @@ draw.bubblePlot <- function(driver_list=NULL,show_label=NULL,Z_val=NULL,driver_t
   all_path <- unique(unlist(lapply(f_res,function(x){x[[1]]})))
   all_path <- all_path[which(is.na(all_path)==FALSE)] ## get all sig path
   f_mat <- lapply(f_res,function(x){
-      as.data.frame(x)[all_path,5:6]
+    as.data.frame(x)[all_path,5:6]
   })
   f_mat2 <- do.call(rbind,lapply(f_mat,function(x)qnorm(1-x[[2]])))
   f_mat2[which(is.na(f_mat2)==TRUE | f_mat2==-Inf)] <- 0
@@ -2441,7 +3080,7 @@ draw.bubblePlot <- function(driver_list=NULL,show_label=NULL,Z_val=NULL,driver_t
   ## output to pdf
   if(is.null(pdf_file)==FALSE) pdf(pdf_file,width=ww,height=hh)
   layout(1);par(mai=c(driverWidth+2,gsWidth+1.5,1,2))
-  plot(1,bty='n',col='white',xlim=c(0,nc+1),ylim=c(-2,nr+1),xaxt='n',yaxt='n',xlab='',ylab='',main=main)
+  plot(1,bty='n',col='white',xlim=c(0,nc+1),ylim=c(-2,nr+1),xaxt='n',yaxt='n',xlab="",ylab="",main=main)
   segments(x0=0,x1=nc,y0=0:nr,y1=0:nr,col='dark grey',xpd=TRUE)
   segments(x0=0:nc,x1=0:nc,y0=0,y1=nr,col='dark grey',xpd=TRUE)
   segments(x0=0:nc,x1=0:nc,y0=0,y1=-3,col='grey',xpd=TRUE)
@@ -2511,8 +3150,102 @@ draw.bubblePlot <- function(driver_list=NULL,show_label=NULL,Z_val=NULL,driver_t
   if(is.null(pdf_file)==FALSE) dev.off()
   return(TRUE)
 }
-###
-draw.GSEA <- function(rank_profile=NULL,use_genes=NULL,use_direction=NULL,main='',pdf_file=NULL,
+
+#' GSEA (gene set enrichment analysis) plot for a gene set or a driver.
+#'
+#' \code{draw.GSEA} will generate a GSEA plot for a gene set (with annotated gene list) or a driver (with target gene list).
+#'
+#' This is a plot function to draw GSEA for a gene set or a driver by input differentiated expression profile.
+#' User could input the annotation text for the significance or the function could display the significance calculated by Kolmogorov-Smirnov tests.
+#'
+#' @param rank_profile a vector of numerics. The ranking profile for the differentiated values in a specific sample condition comparison.
+#' The names of the vector must be the gene names. The value in the vector could be the logFC or t-statistics.
+#' @param use_genes a vector of characters, the list of genes for analysis. The ID must be the subset of the names of \code{rank_profile}.
+#' This could either be the annotated gene list for the gene set or the target gene list for the driver.
+#' @param use_direction a vector of numerics, indicate the direction for the driver and the target gene list.
+#' 1 indicates positive regulation and -1 indicates negative regulation.
+#' If NULL, will not consider direction information. Default is NULL.
+#' @param main character, title for the plot. Default is "".
+#' @param pdf_file character, file path for the pdf file to save the figure into pdf format.If NULL, will not generate pdf file. Default is NULL.
+#' @param annotation character, annotation for the significance to be displayed on the plot.
+#' If NULL, will perform Kolmogorov-Smirnov tests to get significance. Default is NULL.
+#' @param annotation_cex numeric, \code{cex} for the annotation displayed on the plot. Default is 1.2
+#' @param left_annotation character, annotation displayed on the left of the figure representing left condition of the rank_profile. Default is "".
+#' @param right_annotation character, annotation displayed on the right of the figure representing right condition of the rank_profile. Default is "".
+#'
+#' @return logical value indicating whether the plot has been successfully generated
+
+#' @examples
+#' analysis.par <- list()
+#' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
+#' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' ms_tab <- analysis.par$final_ms_tab
+#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
+#'                                Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.01,Pv_thre=0.1,
+#'                                main='Volcano Plot for metastasis2primary_DA',show_label=FALSE,
+#'                                label_type = 'origin',label_cex = 0.5)
+#' driver_list <- rownames(sig_driver)
+#' DE_profile <- analysis.par$DE[[1]]$`Z-statistics`;
+#' names(DE_profile) <- rownames(analysis.par$DE[[1]])
+#' use_driver <- driver_list[1]
+#' use_target_genes <- analysis.par$merge.network$target_list[[use_driver]]$target
+#' use_target_direction <- sign(analysis.par$merge.network$target_list[[use_driver]]$spearman) ## 1/-1
+#' annot <- sprintf('P-value: %s',signif(ms_tab[use_driver,'P.Value.metastasis2primary_DA'],2))
+#' ## draw for the driver
+#' draw.GSEA(rank_profile=DE_profile,use_genes=use_target_genes,use_direction=use_target_direction,
+#'           main=sprintf('GSEA plot for driver %s',ms_tab[use_driver,'gene_label']),
+#'           annotation=annot,annotation_cex=1.2,
+#'           left_annotation='high in metastasis',right_annotation='high in primary')
+#' ## draw for the gene set
+#' use_genes <- unique(analysis.par$merge.network$network_dat$target.symbol)
+#' transfer_tab <- get_IDtransfer2symbol2type(from_type = 'ensembl_transcript_id',use_genes=use_genes) ## get transfer table !!!
+#' DE_profile_symbol <- DE_profile
+#' names(DE_profile_symbol) <- get_name_transfertab(names(DE_profile),transfer_tab = transfer_tab)
+#' use_gs_id <- 'REACTOME_CD28_DEPENDENT_PI3K_AKT_SIGNALING'
+#' use_target_genes <- all_gs2gene[['CP:REACTOME']][[use_gs_id]]
+#' draw.GSEA(rank_profile=DE_profile_symbol,use_genes=use_target_genes,use_direction=NULL,
+#'           main=sprintf('GSEA plot for %s',use_gs_id),
+#'           annotation=NULL,annotation_cex=1.2,
+#'           left_annotation='high in metastasis',right_annotation='high in primary')
+#'
+#' \dontrun{
+#' #' analysis.par <- list()
+#' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
+#' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' ms_tab <- analysis.par$final_ms_tab
+#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
+#'                                Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.01,Pv_thre=0.1,
+#'                                main='Volcano Plot for metastasis2primary_DA',show_label=FALSE,
+#'                                label_type = 'origin',label_cex = 0.5)
+#' driver_list <- rownames(sig_driver)
+#' DE_profile <- analysis.par$DE[[1]]$`Z-statistics`;
+#' names(DE_profile) <- rownames(analysis.par$DE[[1]])
+#' use_driver <- driver_list[3]
+#' use_target_genes <- analysis.par$merge.network$target_list[[use_driver]]$target
+#' use_target_direction <- sign(analysis.par$merge.network$target_list[[use_driver]]$spearman) ## 1/-1
+#' annot <- sprintf('P-value: %s',signif(ms_tab[use_driver,'P.Value.metastasis2primary_DA'],2))
+#' analysis.par$out.dir.PLOT <- getwd() ## directory for saving the pdf files
+#' draw.GSEA(rank_profile=DE_profile,use_genes=use_target_genes,use_direction=use_target_direction,
+#'           main=sprintf('GSEA plot for driver %s',ms_tab[use_driver,'gene_label']),
+#'           pdf_file = sprintf('%s/GSEA_driver.pdf',analysis.par$out.dir.PLOT),
+#'           annotation=annot,annotation_cex=1.2,
+#'           left_annotation='high in metastasis',right_annotation='high in primary')
+#' ## draw for the gene set
+#' use_genes <- unique(analysis.par$merge.network$network_dat$target.symbol)
+#' transfer_tab <- get_IDtransfer2symbol2type(from_type = 'ensembl_transcript_id',use_genes=use_genes) ## get transfer table !!!
+#' DE_profile_symbol <- DE_profile
+#' names(DE_profile_symbol) <- get_name_transfertab(names(DE_profile),transfer_tab = transfer_tab)
+#' use_gs_id <- 'REACTOME_CD28_DEPENDENT_PI3K_AKT_SIGNALING'
+#' use_target_genes <- all_gs2gene[['CP:REACTOME']][[use_gs_id]]
+#' analysis.par$out.dir.PLOT <- getwd() ## directory for saving the pdf files
+#' draw.GSEA(rank_profile=DE_profile_symbol,use_genes=use_target_genes,use_direction=NULL,
+#'           main=sprintf('GSEA plot for %s',use_gs_id),
+#'           annotation=NULL,annotation_cex=1.2,
+#'           pdf_file = sprintf('%s/GSEA_gs.pdf',analysis.par$out.dir.PLOT),
+#'           left_annotation='high in metastasis',right_annotation='high in primary')
+#'}
+#' @export
+draw.GSEA <- function(rank_profile=NULL,use_genes=NULL,use_direction=NULL,main="",pdf_file=NULL,
                       annotation=NULL,annotation_cex=1.2,left_annotation=NULL,right_annotation=NULL){
   #### start plot
   if(is.null(pdf_file)==FALSE){
@@ -2537,7 +3270,7 @@ draw.GSEA <- function(rank_profile=NULL,use_genes=NULL,use_direction=NULL,main='
   unit <- r_len/10; unit <- round(unit/100)*100
   x1 <- seq(0,r_len,by=unit);x1 <- unique(x1); x1 <- c(x1,max(x1)+unit)
   par(usr=c(0,max(x1),-mm,mm))
-  plot(rank_profile,col='grey',pch=16,xaxt='n',yaxt='n',xlab='',ylab='',bty='n',type='n',ylim=c(-mm,mm))
+  plot(rank_profile,col='grey',pch=16,xaxt='n',yaxt='n',xlab="",ylab="",bty='n',type='n',ylim=c(-mm,mm))
   polygon(x=c(0,1:r_len,r_len),y=c(0,rank_profile,0),col='grey',border=NA)
   if(is.null(left_annotation)==FALSE) text(0+r_len/100,mm,adj=0,left_annotation,col='red',xpd=TRUE)
   if(is.null(right_annotation)==FALSE) text(r_len-r_len/100,-mm,adj=1,right_annotation,col='blue',xpd=TRUE)
@@ -2564,14 +3297,14 @@ draw.GSEA <- function(rank_profile=NULL,use_genes=NULL,use_direction=NULL,main='
   abline(v=use_pos/r_len,col='grey')
   ## mark gene position
   par(mar=c(0,6,0,2))
-  plot(1,col='white',xlab='',ylab='',bty='n',xlim=c(1,r_len),xaxt='n',yaxt='n')
+  plot(1,col='white',xlab="",ylab="",bty='n',xlim=c(1,r_len),xaxt='n',yaxt='n')
   abline(v=use_pos)
   ## GSEA ES
   par(mar=c(0,6,5,2))
   # get ES score
   es_res <- get_ES(rank_profile,use_genes)
   y2 <- seq(min(es_res$RES),max(es_res$RES),length.out=7); y2 <- round(y2,1)
-  plot(es_res$RES,col='green',xaxt='n',yaxt='n',xlab='',ylab='',bty='n',
+  plot(es_res$RES,col='green',xaxt='n',yaxt='n',xlab="",ylab="",bty='n',
        xlim=c(1,r_len),type='l',lwd=3,ylim=c(min(es_res$RES),max(y2)),main=main,xpd=TRUE)
   pp <- par()$usr
   #abline(h=0)
@@ -2639,14 +3372,126 @@ get_z2p <- function(x){
   use_p <- as.character(use_p)
   return(use_p)
 }
-# profile_trend: pos2neg, neg2pos
-# target_nrow:1,2
-# target_col:black,or RdBu
-# target_col_type: DE,PN
-draw.GSEA.NetBID <- function(DE=NULL,profile_col=NULL,profile_trend='pos2neg',
-                             driver_list=NULL,show_label=NULL,driver_DA_Z=NULL,driver_DE_Z=NULL,target_list=NULL,
+
+#' GSEA (gene set enrichment analysis) plot for the list of drivers.
+#'
+#' \code{draw.GSEA.NetBID} will generate a GSEA plot for the list of drivers, including the target genes' position on the differentiated expression profile, with
+#' statistics of differentiated expression (DE) and differentiated activity (DA) for each driver.
+#'
+#' This is a plot function to draw GSEA for the list of drivers by the input of differentiated expression profile.
+#' User could choose to display the target genes in one row or two rows, by selecting black color or red to blue color bar.
+#'
+#' @param DE data.frame,the differentiated expression results.
+#' This data.frame could be generated by using \code{getDE.limma.2G} or \code{getDE.BID.2G}.
+#' If user want to generate this data.frame by other strategies, the rownames must be the gene names or need one column to be the gene name
+#' (set in \code{name_col}) and must contain the columns indicating the differentiated expression profile.
+#' @param name_col character, the name of the column in \code{DE}, which contains the gene name. If NULL, will use the rownames of \code{DE}.
+#' Default is NULL.
+#' @param profile_col character, the name of the column in \code{DE}, which will be used as the differentiated expression profile.
+#' If DE is created by \code{getDE.limma.2G} or \code{getDE.BID.2G}, this parameter could be 'logFC' or 't'.
+#' @param profile_trend character, the choice of how to display the profile, from high/positive to low/negative ('pos2neg')
+#' or low/negative to high/positive ('neg2pos').Default is 'pos2neg'.
+#' @param driver_list a vector of characters, the name for the top drivers.
+#' @param show_label a vector of characters, the name for the top drivers to display on the plot.
+#' If NULL, will display the name in driver_list. Default is NULL.
+#' @param driver_DA_Z a vector of numeric values, the Z statistics of differentiated activity (DA) for the driver_list.
+#' Better to give name to the vector, otherwise will automatically use driver_list as the name.
+#' @param driver_DE_Z a vector of numeric values, the Z statistics of differentiated expression (DE) for the driver_list.
+#' Better to give name to the vector, otherwise will automatically use driver_list as the name.
+#' @param target_list a list for the target gene information for the drivers. The names for the list must contain the driver in driver_list.
+#' Each object in the list must be a data.frame and should contain one column ("target") to save the target genes.
+#' Strongly suggest to follow the NetBID2 pipeline, and the \code{target_list} could be automatically generated by \code{get_net2target_list} by
+#' running \code{get.SJAracne.network}.
+#' @param top_driver_number numeric, number for the top significant drivers to be displayed on the plot. Default is 30.
+#' @param target_nrow numeric, number of rows for each driver display on the plot. Two options, 1 or 2.
+#' If set to 1, the target genes' position on the profile will be displayed in one row.
+#' If set to 2, the target genes' position on the profile will be displayed in two rows,
+#' with positive regulated genes displayed on the first row and negative regulated genes displayed on the second row.
+#' Default is 2.
+#' @param target_col character, choice of color pattern used to display the targets. Two options,'black' or 'RdBu'.
+#' If set to 'black', the lines will be colored in black.
+#' If set to 'RdBu', the lines will be colored into Red to Blue color bar.
+#' If \code{target_col_type} is set as 'PN', the positive regulated genes will be colored in red and negative regulated genes in blue.
+#' If \code{target_col_type} is set as 'DE', the color for the target genes is set according to its value in the differentiated expression profile,
+#' with significant high set for red and low for blue. The significant threshold is set by \code{profile_sig_thre}.
+#' Default is 'RdBu'.
+#' @param target_col_type character, choice of the pattern used to display the color for target genes, only work when \code{target_col} is set as 'RdBu'.
+#' Two options,'PN' or 'DE'.
+#' If set as 'PN', the positive regulated genes will be colored in red and negative regulated genes in blue.
+#' If set as 'DE', the color for the target genes is set according to its value in the differentiated expression profile,
+#' Default is 'PN'.
+#' @param left_annotation character, annotation displayed on the left of the figure representing left condition of the rank_profile. Default is "".
+#' @param right_annotation character, annotation displayed on the right of the figure representing right condition of the rank_profile. Default is "".
+#' @param main character, title for the plot. Default is "".
+#' @param profile_sig_thre numeric, threshold for the absolute values in profile to be treated as significance.
+#' Target genes without signifcant values in the profile will be colored in grey. Only work when \code{target_col_type} is set as "DE" and \code{target_col} is set as "RdBu".
+#' Default is 0.
+#' @param Z_sig_thre numeric, threshold for the Z statistics in \code{driver_DA_Z} and \code{driver_DE_Z} to be treated as signifcance.
+#' Only signifcant values will have background color. Default is 1.64.
+#' @param pdf_file character, file path for the pdf file to save the figure into pdf format.If NULL, will not generate pdf file. Default is NULL.
+#'
+#' @return logical value indicating whether the plot has been successfully generated
+
+#' @examples
+#' analysis.par <- list()
+#' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
+#' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' ms_tab <- analysis.par$final_ms_tab
+#' comp <- 'metastasis2primary'
+#' DE <- analysis.par$DE[[comp]]
+#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
+#'                                Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.01,Pv_thre=0.1,
+#'                                main='Volcano Plot for metastasis2primary_DA',show_label=FALSE,
+#'                                label_type = 'origin',label_cex = 0.5)
+#' driver_list <- rownames(sig_driver)
+#' draw.GSEA.NetBID(DE=DE,profile_col='t',profile_trend='neg2pos',
+#'                  driver_list = driver_list,
+#'                  show_label=ms_tab[driver_list,'gene_label'],
+#'                  driver_DA_Z=ms_tab[driver_list,'Z.metastasis2primary_DA'],
+#'                  driver_DE_Z=ms_tab[driver_list,'Z.metastasis2primary_DE'],
+#'                  target_list=analysis.par$merge.network$target_list,
+#'                  top_driver_number=30,target_nrow=2,target_col='RdBu',
+#'                  left_annotation = 'test_left',right_annotation = 'test_right',
+#'                  main='test',target_col_type='DE',Z_sig_thre=1.64,profile_sig_thre = 1.64)
+#' \dontrun{
+#' analysis.par <- list()
+#' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
+#' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' ms_tab <- analysis.par$final_ms_tab
+#' comp <- 'metastasis2primary'
+#' DE <- analysis.par$DE[[comp]]
+#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
+#'                                Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.01,Pv_thre=0.1,
+#'                                main='Volcano Plot for metastasis2primary_DA',show_label=FALSE,
+#'                                label_type = 'origin',label_cex = 0.5)
+#' driver_list <- rownames(sig_driver)
+#' analysis.par$out.dir.PLOT <- getwd() ## directory for saving the pdf files
+#' draw.GSEA.NetBID(DE=DE,profile_col='t',profile_trend='neg2pos',
+#'                  driver_list = driver_list,
+#'                  show_label=ms_tab[driver_list,'gene_label'],
+#'                  driver_DA_Z=ms_tab[driver_list,'Z.metastasis2primary_DA'],
+#'                  driver_DE_Z=ms_tab[driver_list,'Z.metastasis2primary_DE'],
+#'                  target_list=analysis.par$merge.network$target_list,
+#'                  top_driver_number=30,target_nrow=2,target_col='RdBu',
+#'                  left_annotation = 'test_left',right_annotation = 'test_right',
+#'                  main='test',target_col_type='DE',Z_sig_thre=1.64,profile_sig_thre = 1.64,
+#'                  pdf_file=sprintf('%s/NetBID_GSEA_demo1.pdf',analysis.par$out.dir.PLOT))
+#'draw.GSEA.NetBID(DE=DE,profile_col='t',profile_trend='neg2pos',
+#'                  driver_list = driver_list,
+#'                  show_label=ms_tab[driver_list,'gene_label'],
+#'                  driver_DA_Z=ms_tab[driver_list,'Z.metastasis2primary_DA'],
+#'                  driver_DE_Z=ms_tab[driver_list,'Z.metastasis2primary_DE'],
+#'                  target_list=analysis.par$merge.network$target_list,
+#'                  top_driver_number=30,target_nrow=1,target_col='RdBu',
+#'                  left_annotation = 'test_left',right_annotation = 'test_right',
+#'                  main='test',target_col_type='PN',Z_sig_thre=1.64,profile_sig_thre = 1.64,
+#'                  pdf_file=sprintf('%s/NetBID_GSEA_demo2.pdf',analysis.par$out.dir.PLOT))
+#'}
+#' @export
+draw.GSEA.NetBID <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_trend='pos2neg',
+                             driver_list=NULL,show_label=driver_list,driver_DA_Z=NULL,driver_DE_Z=NULL,target_list=NULL,
                              top_driver_number=30,target_nrow=2,target_col='RdBu',target_col_type='PN',
-                             left_annotation='',right_annotation='',main='',
+                             left_annotation="",right_annotation="",main="",
                              profile_sig_thre=0,Z_sig_thre=1.64,pdf_file=NULL){
   if(!profile_col %in% colnames(DE)){
     message(sprintf('%s not in colnames of DE, please check and re-try!',profile_col))
@@ -2669,9 +3514,13 @@ draw.GSEA.NetBID <- function(DE=NULL,profile_col=NULL,profile_trend='pos2neg',
   driver_DE_Z <- driver_DE_Z[driver_list]
   ###################
   ## calculate layout
-
+  if(is.null(name_col)==TRUE){
+    DE <- cbind(DE[,setdiff(colnames(DE),'name')],name=rownames(DE),stringsAsFactors=FALSE)
+    name_col <- 'name'
+  }
   DE_profile <- DE[,profile_col]
-  names(DE_profile) <- rownames(DE)
+  #names(DE_profile) <- rownames(DE)
+  DE_profile_name <- DE[,name_col]
   if(profile_trend=='pos2neg') DE_profile <- sort(DE_profile,decreasing = TRUE) else DE_profile <- sort(DE_profile)
   n_gene <- length(DE_profile)
   if(target_nrow==2){
@@ -2702,7 +3551,7 @@ draw.GSEA.NetBID <- function(DE=NULL,profile_col=NULL,profile_trend='pos2neg',
   unit <- n_gene/10; unit <- round(unit/100)*100
   x1 <- seq(0,n_gene,by=unit);x1 <- unique(x1); x1 <- c(x1,max(x1)+unit)
   par(usr=c(0,length(DE_profile),mm[1],mm[2]))
-  plot(DE_profile,col='white',pch=16,xaxt='n',yaxt='n',xlab='',ylab='',bty='n',type='n',ylim=c(mm[1],mm[2]),main=main,cex.main=1.8)
+  plot(DE_profile,col='white',pch=16,xaxt='n',yaxt='n',xlab="",ylab="",bty='n',type='n',ylim=c(mm[1],mm[2]),main=main,cex.main=1.8)
   pp <- par()$usr; rr <- (pp[2]-pp[1])/n_gene
   polygon(x=c(pp[1],c(1:n_gene)*rr+pp[1],pp[2]),y=c(0,DE_profile,0),col='grey',border='grey',xpd=TRUE,lwd=0.3)
   if(profile_trend=='pos2neg'){
@@ -2724,7 +3573,7 @@ draw.GSEA.NetBID <- function(DE=NULL,profile_col=NULL,profile_trend='pos2neg',
   text(x1*rr,mm[1]-(mm[2]-mm[1])/10,get_label_manual(x1),adj=0.5,xpd=TRUE)
   ## plot2
   par(mar=c(2,1.5,2,0))
-  plot(1,col='white',xlab='',ylab='',xlim=c(0,n_gene),xaxt='n',yaxt='n')
+  plot(1,col='white',xlab="",ylab="",xlim=c(0,n_gene),xaxt='n',yaxt='n')
   pp <- par()$usr;rr <- (pp[2]-pp[1])/n_gene
   yy1 <- seq(from=pp[3],to=pp[4],length.out=n_driver+1)
   segments(x0=pp[1],x1=pp[2],y0=yy1,y1=yy1,lwd=0.2,col='light grey')
@@ -2736,13 +3585,13 @@ draw.GSEA.NetBID <- function(DE=NULL,profile_col=NULL,profile_trend='pos2neg',
   if(target_col_type=='DE'){
     cc <- z2col(DE_profile,sig_thre=profile_sig_thre,n_len=100,red_col = brewer.pal(9,'Reds')[5:9],blue_col=brewer.pal(9,'Blues')[5:9],
                 col_max_thre=max(abs(DE_profile)))
-    names(cc) <- names(DE_profile)
+    #names(cc) <- DE_profile_name
     cc[which(cc=='white')] <- 'light grey'
   }
   if(target_nrow==1){
     for(i in 1:length(driver_list)){
       t1 <- use_target_list[[driver_list[[i]]]]
-      w0 <- which(names(DE_profile) %in% t1$target)
+      w0 <- which(DE_profile_name %in% t1$target)
       w1 <- w0*rr+pp[1]
       if(target_col=='black'){
         segments(x0=w1,x1=w1,y0=yy1[i],y1=yy1[i+1],col='black',lwd=1)
@@ -2763,7 +3612,7 @@ draw.GSEA.NetBID <- function(DE=NULL,profile_col=NULL,profile_trend='pos2neg',
       t1 <- use_target_list[[driver_list[[i]]]]
       t11 <- t1[which(t1$spearman>=0),]$target
       t12 <- t1[which(t1$spearman<0),]$target
-      w0 <- which(names(DE_profile) %in% t11)
+      w0 <- which(DE_profile_name %in% t11)
       w1 <- w0*rr+pp[1]
       if(length(w1)>0){
         if(target_col=='black'){
@@ -2776,7 +3625,7 @@ draw.GSEA.NetBID <- function(DE=NULL,profile_col=NULL,profile_trend='pos2neg',
           }
         }
       }
-      w0 <- which(names(DE_profile) %in% t12)
+      w0 <- which(DE_profile_name %in% t12)
       w1 <- w0*rr+pp[1]
       if(length(w1)>0){
         if(target_col=='black'){
@@ -2793,7 +3642,7 @@ draw.GSEA.NetBID <- function(DE=NULL,profile_col=NULL,profile_trend='pos2neg',
   }
   ## plot 3
   par(mar=c(2,0.5,2,2))
-  plot(1,col='white',xlab='',ylab='',xlim=c(0,2),xaxt='n',yaxt='n',bty='n')
+  plot(1,col='white',xlab="",ylab="",xlim=c(0,2),xaxt='n',yaxt='n',bty='n')
   pp <- par()$usr
   rect(xleft=pp[1],xright=pp[2],ybottom=pp[3],ytop=pp[4])
   yy2 <- seq(from=pp[3],to=pp[4],length.out=length(driver_list)+1)
@@ -2824,7 +3673,7 @@ draw.GSEA.NetBID <- function(DE=NULL,profile_col=NULL,profile_trend='pos2neg',
   text((pp[2]+(pp[1]+pp[2])/2)/2,pp[4]+textheight,'DE',xpd=TRUE,cex=1.5)
   ## plot 4
   par(mar=c(2,6,2,0.2))
-  plot(1,col='white',xlab='',ylab='',xlim=c(0,2),xaxt='n',yaxt='n',bty='n')
+  plot(1,col='white',xlab="",ylab="",xlim=c(0,2),xaxt='n',yaxt='n',bty='n')
   pp <- par()$usr
   #yy1 <- seq(from=pp[3],to=pp[4],length.out=n_driver+1)
   #yy11 <- (yy1[1:(length(yy1)-1)]+yy1[2:length(yy1)])/2
@@ -2876,13 +3725,101 @@ draw.GSEA.NetBID <- function(DE=NULL,profile_col=NULL,profile_trend='pos2neg',
   return(TRUE)
 }
 ###
-# profile_trend: pos2neg, neg2pos
-# target_col:black,or RdBu
+#' GSEA (gene set enrichment analysis) plot for the list of gene sets.
+#'
+#' \code{draw.GSEA.NetBID.GS} will generate a GSEA plot for the list of gene sets, including the annotated genes' position on the differentiated expression profile, with
+#' statistics of differentiated activity (DA) for each gene set.
+#'
+#' This is a plot function to draw GSEA for the list of gene sets by the input of differentiated expression profile.
+#' User could choose to display the annotated genes by selecting black color or red to blue color bar.
+#' @param DE data.frame,the differentiated expression results.
+#' This data.frame could be generated by using \code{getDE.limma.2G} or \code{getDE.BID.2G}.
+#' If user want to generate this data.frame by other strategies, the rownames must be the gene names and
+#' must contain the columns indicating the differentiated expression profile.
+#' @param name_col character, the name of the column in \code{DE}, which contains the gene name. If NULL, will use the rownames of \code{DE}.
+#' Default is NULL.
+#' @param profile_col character, the name of the column in \code{DE}, which will be used as the differentiated expression profile.
+#' If DE is created by \code{getDE.limma.2G} or \code{getDE.BID.2G}, this parameter could be 'logFC' or 't'.
+#' @param profile_trend character, the choice of how to display the profile, from high/positive to low/negative ('pos2neg')
+#' or low/negative to high/positive ('neg2pos').Default is 'pos2neg'.
+#' @param use_gs2gene a list for geneset to genes, the name for the list is the gene set name and the content in each list is the vector for genes belong to that gene set.
+#' This parameter could be obtained by choosing one from \code{all_gs2gene[['CP:KEGG']]}, or merge several categories by \code{merge_gs}.
+#' @param sig_gs_list a vector of characters, the name for the top gene sets.
+#' @param gs_DA_Z a vector of numeric values, the Z statistics of differentiated activity (DA) for the sig_gs_list.
+#' Better to give name to the vector, otherwise will automatically use sig_gs_list as the name.
+#' @param top_gs_number numeric, number for the top significant gene sets to be displayed on the plot. Default is 30.
+#' @param target_col character, choice of color pattern used to display the targets. Two options,'black' or 'RdBu'.
+#' If set to 'black', the lines will be colored in black.
+#' If set to 'RdBu', the lines will be colored into Red to Blue color bar. The color for the annotated genes is set according
+#' to its value in the differentiated expression profile, with significant high set for red and low for blue.
+#' The significant threshold is set by \code{profile_sig_thre}.
+#' Default is 'RdBu'.
+#' @param left_annotation character, annotation displayed on the left of the figure representing left condition of the rank_profile. Default is "".
+#' @param right_annotation character, annotation displayed on the right of the figure representing right condition of the rank_profile. Default is "".
+#' @param main character, title for the plot. Default is "".
+#' @param profile_sig_thre numeric, threshold for the absolute values in profile to be treated as significance.
+#' annotated genes without signifcant values in the profile will be colored in grey. Only work when \code{target_col_type} is set as "DE" and \code{target_col} is set as "RdBu".
+#' Default is 0.
+#' @param Z_sig_thre numeric, threshold for the Z statistics in \code{driver_DA_Z} and \code{driver_DE_Z} to be treated as signifcance.
+#' Only signifcant values will have background color. Default is 1.64.
+#' @param pdf_file character, file path for the pdf file to save the figure into pdf format.If NULL, will not generate pdf file. Default is NULL.
+#'
+#' @return logical value indicating whether the plot has been successfully generated
+
+#' @examples
+#' \dontrun{
+#' main.dir <- system.file(package = "NetBID2")
+#' db.preload(use_level='transcript',use_spe='human',update=FALSE) ## get all_gs2gene
+#'
+#' analysis.par <- list()
+#' analysis.par$out.dir.DATA <- system.file('demo','gene set/DATA/',package = "NetBID2")
+#' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+#'
+#' ms_tab <- analysis.par$final_ms_tab
+#' comp <- 'metastasis2primary'
+#' DE <- analysis.par$DE[[comp]]
+#' analysis.par$out.dir.PLOT <- getwd() ## directory for saving the pdf files
+#' exp_mat <- exprs(analysis.par$cal.eset) ## expression,the rownames must be the originalID
+#'
+#' ## get transfer tab
+#' use_genes <- rownames(exp_mat)
+#' transfer_tab <- get_IDtransfer(from_type = 'ensembl_transcript_id',to_type='external_gene_name',use_genes=use_genes) ## get transfer table !!!
+#' ## get expression matrix for the transfered gene name
+#' exp_mat_gene <- exprs(update.eset.feature(use_eset=generate.eset(exp_mat=exp_mat),
+#'                                          use_feature_info = transfer_tab,
+#'                                          from_feature = 'ensembl_transcript_id',to_feature = 'external_gene_name'))
+#'
+#' ## calculate activity for all genesets
+#' use_gs2gene <- merge_gs(all_gs2gene=all_gs2gene,use_gs=c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG','C5'))
+#' ac_gs <- cal.Activity.GS(use_gs2gene = use_gs2gene,cal_mat = exp_mat_gene)
+#'
+#' ## get DA for the gene set
+#' phe_info <- pData(analysis.par$cal.eset)
+#' G0  <- rownames(phe_info)[which(phe_info$`tumor type`=='primary')] # get sample list for G0
+#' G1  <- rownames(phe_info)[which(phe_info$`tumor type`=='metastasis')] # get sample list for G1
+#' DA_gs <- getDE.limma.2G(eset=generate.eset(ac_gs),G1=G1,G0=G0,G1_name='metastasis',G0_name='primary')
+#' ## or use: DA_gs <- getDE.BID.2G(eset=generate.eset(ac_gs),G1=G1,G0=G0,G1_name='metastasis',G0_name='primary')
+#' ## draw vocalno plot for top sig-GS
+#' sig_gs <- draw.volcanoPlot(dat=cbind(DA_gs,names=rownames(DA_gs),stringsAsFactors=FALSE),label_col='names',logFC_col='logFC',
+#'                           Pv_col='P.Value',logFC_thre=0,Pv_thre=0.1,
+#'                           main='Volcano Plot for gene sets',show_label=TRUE,label_type = 'distribute',label_cex = 0.5,
+#'                           pdf_file=sprintf('%s/vocalno_GS_DA.pdf',analysis.par$out.dir.PLOT))
+#' ## GSEA plot for the significant gene sets
+#' draw.GSEA.NetBID.GS(DE=DE,name_col='symbol',profile_col='t',profile_trend='pos2neg',
+#'                     sig_gs_list = sig_gs$names,
+#'                     gs_DA_Z=DA_gs[sig_gs$names,'Z-statistics'],
+#'                     use_gs2gene = use_gs2gene,
+#'                     top_gs_number=20,target_col='RdBu',
+#'                     left_annotation = 'test_left',right_annotation = 'test_right',
+#'                     main='test',Z_sig_thre=1.64,profile_sig_thre = 0,
+#'                     pdf_file=sprintf('%s/NetBID_GSEA_GS_demo1.pdf',analysis.par$out.dir.PLOT))
+#'}
+#' @export
 draw.GSEA.NetBID.GS <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_trend='pos2neg',
-                              sig_gs_list=NULL,gs_DA_Z=NULL,use_gs2gene=NULL,
-                              top_gs_number=30,target_col='RdBu',
-                              left_annotation='',right_annotation='',main='',
-                              profile_sig_thre=0,Z_sig_thre=1.64,pdf_file=NULL){
+                                sig_gs_list=NULL,gs_DA_Z=NULL,use_gs2gene=NULL,
+                                top_gs_number=30,target_col='RdBu',
+                                left_annotation="",right_annotation="",main="",
+                                profile_sig_thre=0,Z_sig_thre=1.64,pdf_file=NULL){
   if(!profile_col %in% colnames(DE)){
     message(sprintf('%s not in colnames of DE, please check and re-try!',profile_col))
     return(FALSE)
@@ -2894,7 +3831,7 @@ draw.GSEA.NetBID.GS <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_t
   }
   use_gs2gene <- use_gs2gene[sig_gs_list]
   if(is.null(name_col)==TRUE){
-    DE <- cbind(DE,name=rownames(DE),stringsAsFactors=FALSE)
+    DE <- cbind(DE[,setdiff(colnames(DE),'name')],name=rownames(DE),stringsAsFactors=FALSE)
     name_col <- 'name'
   }
   if(is.null(names(gs_DA_Z))) names(gs_DA_Z) <- sig_gs_list
@@ -2921,7 +3858,7 @@ draw.GSEA.NetBID.GS <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_t
   gswidth <- max(strwidth(sig_gs_list,units='inches',cex=1))
   ratio1 <- ceiling(1.2*n_driver/15) ## profile height to rows
   ratio2 <- 4 ## width of profile to DA/DE
-  rr1 <- ceiling(gswidth)/2
+  rr1 <- ceiling(gswidth/2)
   rr2 <- 1
   #
   if(is.null(pdf_file)==FALSE){
@@ -2932,6 +3869,10 @@ draw.GSEA.NetBID.GS <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_t
                   rep(c(rep(4,length.out=rr1),rep(2,length.out=ratio2),rep(3,length.out=rr2*1)),
                       length.out=ratio1*(ratio2+rr1+rr2))),
                 ncol=c(ratio2+rr1+rr2),byrow=TRUE))
+  print(matrix(c(rep(0,length.out=rr1),rep(1,length.out=ratio2),rep(0,length.out=rr2*1),
+                 rep(c(rep(4,length.out=rr1),rep(2,length.out=ratio2),rep(3,length.out=rr2*1)),
+                     length.out=ratio1*(ratio2+rr1+rr2))),
+               ncol=c(ratio2+rr1+rr2),byrow=TRUE))
   ## plot 1
   par(mar=c(1.5,1.5,4,0))
   mm <- quantile(DE_profile,probs=c(0.0001,0.9999));
@@ -2940,7 +3881,7 @@ draw.GSEA.NetBID.GS <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_t
   unit <- n_gene/10; unit <- round(unit/100)*100
   x1 <- seq(0,n_gene,by=unit);x1 <- unique(x1); x1 <- c(x1,max(x1)+unit)
   par(usr=c(0,length(DE_profile),mm[1],mm[2]))
-  plot(DE_profile,col='white',pch=16,xaxt='n',yaxt='n',xlab='',ylab='',bty='n',type='n',ylim=c(mm[1],mm[2]),main=main,cex.main=1.8)
+  plot(DE_profile,col='white',pch=16,xaxt='n',yaxt='n',xlab="",ylab="",bty='n',type='n',ylim=c(mm[1],mm[2]),main=main,cex.main=1.8)
   pp <- par()$usr; rr <- (pp[2]-pp[1])/n_gene
   polygon(x=c(pp[1],c(1:n_gene)*rr+pp[1],pp[2]),y=c(0,DE_profile,0),col='grey',border='grey',xpd=TRUE,lwd=0.3)
   if(profile_trend=='pos2neg'){
@@ -2957,7 +3898,7 @@ draw.GSEA.NetBID.GS <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_t
   text(x1*rr,mm[1]-(mm[2]-mm[1])/10,get_label_manual(x1),adj=0.5,xpd=TRUE)
   ## plot2
   par(mar=c(2,1.5,2,0))
-  plot(1,col='white',xlab='',ylab='',xlim=c(0,n_gene),xaxt='n',yaxt='n')
+  plot(1,col='white',xlab="",ylab="",xlim=c(0,n_gene),xaxt='n',yaxt='n')
   pp <- par()$usr;rr <- (pp[2]-pp[1])/n_gene
   yy1 <- seq(from=pp[3],to=pp[4],length.out=n_driver+1)
   segments(x0=pp[1],x1=pp[2],y0=yy1,y1=yy1,lwd=0.2,col='light grey')
@@ -2981,7 +3922,7 @@ draw.GSEA.NetBID.GS <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_t
   }
   ## plot 3
   par(mar=c(2,0.5,2,2))
-  plot(1,col='white',xlab='',ylab='',xlim=c(0,1),xaxt='n',yaxt='n',bty='n')
+  plot(1,col='white',xlab="",ylab="",xlim=c(0,1),xaxt='n',yaxt='n',bty='n')
   pp <- par()$usr
   rect(xleft=pp[1],xright=pp[2],ybottom=pp[3],ytop=pp[4])
   yy2 <- seq(from=pp[3],to=pp[4],length.out=length(sig_gs_list)+1)
@@ -3003,7 +3944,7 @@ draw.GSEA.NetBID.GS <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_t
   text((pp[1]+pp[2])/2,pp[4]+textheight,'DA',xpd=TRUE,cex=1.5)
   ## plot 4
   par(mar=c(2,6,2,0.2))
-  plot(1,col='white',xlab='',ylab='',xlim=c(0,2),xaxt='n',yaxt='n',bty='n')
+  plot(1,col='white',xlab="",ylab="",xlim=c(0,2),xaxt='n',yaxt='n',bty='n')
   pp <- par()$usr
   yy2 <- seq(from=pp[3],to=pp[4],length.out=length(sig_gs_list)+1)
   yy22 <- (yy2[1:(length(yy2)-1)]+yy2[2:length(yy2)])/2
@@ -3030,20 +3971,142 @@ draw.GSEA.NetBID.GS <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_t
   layout(1);
   return(TRUE)
 }
-###
-####### NetBID SINBA plot
-# profile_trend: pos2neg, neg2pos
-# target_nrow:1,2
-# target_col:black,or RdBu
-# target_col_type: DE,PN
-# top_order: merge, diff
-draw.GSEA.NetBID.SINBA <- function(DE=NULL,profile_col=NULL,profile_trend='pos2neg',
+
+#' GSEA (gene set enrichment analysis) plot for the Synergy Inference by data-driven Network-based Bayesian Analysis (SINBA) analysis results.
+#'
+#' \code{draw.GSEA.NetBID.SINBA} will generate a GSEA plot for Synergy Inference by data-driven Network-based Bayesian Analysis (SINBA)
+#' analysis results. SINBA calculates the synergistic effect between a seed driver and a partner driver.
+#' The plot includes the GSEA plot for the seed driver and the partner driver independently and
+#' the GSEA plot for the combination for the seed driver to each partner driver.
+#' The statistics on the plot include the differentiated expression (DE), differentiated activity (DA) for each driver,
+#' and the different Z (deltaZ) showing the difference between the combination of the seed and the partner driver to the sum of the original Z statistics.
+#'
+#' This is a plot function to draw GSEA for synergistic effect prediction between the seed driver and a list of partner drivers.
+#' User need to input the differentiated expression information, and choose to display the target genes in one row or two rows,
+#' by selecting black color or red to blue color bar.
+#'
+#' @param DE data.frame,the differentiated expression results.
+#' This data.frame could be generated by using \code{getDE.limma.2G} or \code{getDE.BID.2G}.
+#' If user want to generate this data.frame by other strategies, the rownames must be the gene names or need one column to be the gene name
+#' (set in \code{name_col}) and must contain the columns indicating the differentiated expression profile.
+#' @param name_col character, the name of the column in \code{DE}, which contains the gene name. If NULL, will use the rownames of \code{DE}.
+#' Default is NULL.
+#' @param profile_col character, the name of the column in \code{DE}, which will be used as the differentiated expression profile.
+#' If DE is created by \code{getDE.limma.2G} or \code{getDE.BID.2G}, this parameter could be 'logFC' or 't'.
+#' @param profile_trend character, the choice of how to display the profile, from high/positive to low/negative ('pos2neg')
+#' or low/negative to high/positive ('neg2pos').Default is 'pos2neg'.
+#' @param seed_driver character, name for the seed driver.
+#' @param partner_driver_list a vector of characters, name for the partner driver list.
+#' @param seed_driver_label character, label for the seed driver displayed on the plot. Default is seed_driver.
+#' @param partner_driver_label a vector of characters, label for the partner driver list displayed on the plot. Default is partner_driver_list
+#' @param driver_DA_Z a vector of numeric values, the Z statistics of differentiated activity (DA) for the driver list.
+#' Better to give name to the vector, otherwise will automatically use driver list (seed + partner) as the name.
+#' @param driver_DE_Z a vector of numeric values, the Z statistics of differentiated expression (DE) for the driver list.
+#' Better to give name to the vector, otherwise will automatically use driver list (seed + partner) as the name.
+#' @param target_list a list for the target gene information for the drivers. The names for the list must contain the driver in driver list (seed + partner)
+#' Each object in the list must be a data.frame and should contain one column ("target") to save the target genes.
+#' Strongly suggest to follow the NetBID2 pipeline, and the \code{target_list} could be automatically generated by \code{get_net2target_list} by
+#' running \code{get.SJAracne.network}.
+#' @param DA_Z_merge a vector of numeric values, the Z statistics of differentiated activity (DA) for the combination of the seed driver to partner drivers saperately.
+#' Better to give name to the vector, otherwise will automatically use partner driver list as the name.
+#' @param target_list_merge a list for the target gene information for thecombination of the seed driver to partner drivers saperately.
+#' The names for the list must contain the driver in partner_driver_list
+#' Each object in the list must be a data.frame and should contain one column ("target") to save the target genes.
+#' Strongly suggest to follow the NetBID2 pipeline, and the \code{target_list_merge} could be automatically generated by \code{merge_target_list}.
+#' @param top_driver_number numeric, number for the top significant partner drivers to be displayed on the plot. Default is 10.
+#' @param top_order character, choice of order pattern used to display the partner drivers. Two options,'merge' or 'diff'.
+#' 'merge' means the partner drivers will be sorted by the combined Z statistics.
+#' 'diff' means the partner drivers will be sorted by the delta Z statistics.
+#' Default is 'merge'.
+#' @param target_nrow numeric, number of rows for each driver display on the plot. Two options, 1 or 2.
+#' If set to 1, the target genes' position on the profile will be displayed in one row.
+#' If set to 2, the target genes' position on the profile will be displayed in two rows,
+#' with positive regulated genes displayed on the first row and negative regulated genes displayed on the second row.
+#' Default is 2.
+#' @param target_col character, choice of color pattern used to display the targets. Two options,'black' or 'RdBu'.
+#' If set to 'black', the lines will be colored in black.
+#' If set to 'RdBu', the lines will be colored into Red to Blue color bar.
+#' If \code{target_col_type} is set as 'PN', the positive regulated genes will be colored in red and negative regulated genes in blue.
+#' If \code{target_col_type} is set as 'DE', the color for the target genes is set according to its value in the differentiated expression profile,
+#' with significant high set for red and low for blue. The significant threshold is set by \code{profile_sig_thre}.
+#' Default is 'RdBu'.
+#' @param target_col_type character, choice of the pattern used to display the color for target genes, only work when \code{target_col} is set as 'RdBu'.
+#' Two options,'PN' or 'DE'.
+#' If set as 'PN', the positive regulated genes will be colored in red and negative regulated genes in blue.
+#' If set as 'DE', the color for the target genes is set according to its value in the differentiated expression profile,
+#' Default is 'PN'.
+#' @param left_annotation character, annotation displayed on the left of the figure representing left condition of the rank_profile. Default is "".
+#' @param right_annotation character, annotation displayed on the right of the figure representing right condition of the rank_profile. Default is "".
+#' @param main character, title for the plot. Default is "".
+#' @param profile_sig_thre numeric, threshold for the absolute values in profile to be treated as significance.
+#' Target genes without signifcant values in the profile will be colored in grey. Only work when \code{target_col_type} is set as "DE" and \code{target_col} is set as "RdBu".
+#' Default is 0.
+#' @param Z_sig_thre numeric, threshold for the Z statistics in \code{driver_DA_Z} and \code{driver_DE_Z} to be treated as signifcance.
+#' Only signifcant values will have background color. Default is 1.64.
+#' @param pdf_file character, file path for the pdf file to save the figure into pdf format.If NULL, will not generate pdf file. Default is NULL.
+#'
+#' @return logical value indicating whether the plot has been successfully generated
+
+#' @examples
+#' \dontrun{
+#' analysis.par <- list()
+#' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
+#' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' ms_tab <- analysis.par$final_ms_tab
+#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
+#'                                Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.01,Pv_thre=0.1,
+#'                                main='Volcano Plot for metastasis2primary_DA',show_label=FALSE,
+#'                                label_type = 'origin',label_cex = 0.5)
+#' driver_list <- rownames(sig_driver)
+#' ## choose seed driver and partner driver list
+#' seed_driver <- driver_list[1]
+#' part_driver <- ms_tab$originalID_label
+#' ## get merge target
+#' merge_target <- lapply(part_driver,function(x){
+#'   m1 <- merge_target_list(driver1=seed_driver,driver2=x,target_list=analysis.par$merge.network$target_list)
+#' })
+#' names(merge_target) <- part_driver
+#' ## get activity matrix for the merge target network
+#' ac_combine_mat <- cal.Activity(all_target=merge_target,cal_mat=exprs(analysis.par$cal.eset),es.method='weightedmean')
+#' ## get DA for the combined drivers
+#' comp_name <- 'metastasis2primary'
+#' G0  <- rownames(phe_info)[which(phe_info$`tumor type`=='primary')] # get sample list for G0
+#' G1  <- rownames(phe_info)[which(phe_info$`tumor type`=='metastasis')] # get sample list for G1
+#' DA_driver_combine <- getDE.limma.2G(eset=generate.eset(ac_combine_mat),G1=G1,G0=G0,G1_name='metastasis',G0_name='primary')
+#' ## or use: DA_driver_combine <- getDE.BID.2G(eset=generate.eset(ac_combine_mat),G1=G1,G0=G0,G1_name='metastasis',G0_name='primary')
+#' ## prepare for SINBA input
+#' ori_part_Z <- analysis.par$DA[[comp_name]][part_driver,'Z-statistics']
+#' ori_seed_Z <- analysis.par$DA[[comp_name]][seed_driver,'Z-statistics']
+#' DE <- analysis.par$DE[[comp_name]]
+#' driver_DA_Z <- analysis.par$DA[[comp_name]][,'Z-statistics']
+#' names(driver_DA_Z) <- rownames(analysis.par$DA[[comp_name]])
+#' driver_DE_Z <- analysis.par$DE[[comp_name]][,'Z-statistics']
+#' names(driver_DE_Z) <- rownames(analysis.par$DE[[comp_name]])
+#' DA_Z_merge <- DA_driver_combine[,'Z-statistics']
+#' names(DA_Z_merge) <- rownames(DA_driver_combine)
+#' target_list_merge <- merge_target
+#' seed_driver_label <- ms_tab[seed_driver,'gene_label']
+#' partner_driver_list <- part_driver
+#' profile_col <- 't'
+#' partner_driver_label <- ms_tab[partner_driver_list,'gene_label']
+#' target_list <- analysis.par$merge.network$target_list
+##
+#' draw.GSEA.NetBID.SINBA(DE=DE,profile_col = profile_col,seed_driver=seed_driver,partner_driver_list=partner_driver_list,
+#'                        seed_driver_label=seed_driver_label,partner_driver_label=partner_driver_label,
+#'                        driver_DA_Z=driver_DA_Z,driver_DE_Z=driver_DE_Z,target_list=target_list,
+#'                        DA_Z_merge=DA_Z_merge,target_list_merge=target_list_merge,
+#'                        top_driver_number=20,profile_trend='pos2neg',top_order='merge',Z_sig_thre = 1.64,
+#'                        target_nrow=1,target_col='RdBu',target_col_type='PN',
+#'                        pdf_file=sprintf('%s/NetBID_GSEA_SINBA_demo1.pdf',analysis.par$out.dir.PLOT))
+#'}
+#' @export
+draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_trend='pos2neg',
                                    seed_driver=NULL,partner_driver_list=NULL,
                                    seed_driver_label=seed_driver,partner_driver_label=partner_driver_list,
                                    driver_DA_Z=NULL,driver_DE_Z=NULL,target_list=NULL,
                                    DA_Z_merge=NULL,target_list_merge=NULL,
                                    top_driver_number=10,top_order='merge',target_nrow=2,target_col='RdBu',target_col_type='PN',
-                                   left_annotation='',right_annotation='',main='',
+                                   left_annotation="",right_annotation="",main="",
                                    profile_sig_thre=0,Z_sig_thre=1.64,pdf_file=NULL){
   if(!profile_col %in% colnames(DE)){
     message(sprintf('%s not in colnames of DE, please check and re-try!',profile_col))
@@ -3090,13 +4153,17 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,profile_col=NULL,profile_trend='pos2n
   driver_DE_Z <- driver_DE_Z[driver_list]
   diff_Z <- diff_Z[partner_driver_list]
   DA_Z_merge <- DA_Z_merge[partner_driver_list]
+  if(is.null(name_col)==TRUE){
+    DE <- cbind(DE[,setdiff(colnames(DE),'name')],name=rownames(DE),stringsAsFactors=FALSE)
+    name_col <- 'name'
+  }
+  DE_profile_name <- DE[,name_col]
   ##############################################
   ## calculate layout
   DE_profile <- DE[,profile_col]
-  names(DE_profile) <- rownames(DE)
   ##
-  target_list <- lapply(target_list,function(x)x[which(x$target %in% names(DE_profile)),])
-  target_list_merge <- lapply(target_list_merge,function(x)x[which(x$target %in% names(DE_profile)),])
+  target_list <- lapply(target_list,function(x)x[which(x$target %in% DE_profile_name),])
+  target_list_merge <- lapply(target_list_merge,function(x)x[which(x$target %in% DE_profile_name),])
 
   if(profile_trend=='pos2neg') DE_profile <- sort(DE_profile,decreasing = TRUE) else DE_profile <- sort(DE_profile)
   n_gene <- length(DE_profile)
@@ -3128,7 +4195,7 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,profile_col=NULL,profile_trend='pos2n
   unit <- n_gene/10; unit <- round(unit/100)*100
   x1 <- seq(0,n_gene,by=unit);x1 <- unique(x1); x1 <- c(x1,max(x1)+unit)
   par(usr=c(0,length(DE_profile),mm[1],mm[2]))
-  plot(DE_profile,col='white',pch=16,xaxt='n',yaxt='n',xlab='',ylab='',bty='n',type='n',ylim=c(mm[1],mm[2]),main=main,cex.main=1.8)
+  plot(DE_profile,col='white',pch=16,xaxt='n',yaxt='n',xlab="",ylab="",bty='n',type='n',ylim=c(mm[1],mm[2]),main=main,cex.main=1.8)
   pp <- par()$usr; rr <- (pp[2]-pp[1])/n_gene
   polygon(x=c(pp[1],c(1:n_gene)*rr+pp[1],pp[2]),y=c(0,DE_profile,0),col='grey',border='grey',xpd=TRUE,lwd=0.3)
   if(profile_trend=='pos2neg'){
@@ -3145,7 +4212,7 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,profile_col=NULL,profile_trend='pos2n
   text(x1*rr,mm[1]-(mm[2]-mm[1])/25,get_label_manual(x1),adj=0.5,xpd=TRUE)
   ## plot2
   par(mar=c(2,1.5,2,0))
-  plot(1,col='white',xlab='',ylab='',xlim=c(0,n_gene),xaxt='n',yaxt='n')
+  plot(1,col='white',xlab="",ylab="",xlim=c(0,n_gene),xaxt='n',yaxt='n')
 
   pp <- par()$usr;rr <- (pp[2]-pp[1])/n_gene
   yy1 <- seq(from=pp[3],to=pp[4],length.out=n_driver+1) # separate each detail
@@ -3154,7 +4221,7 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,profile_col=NULL,profile_trend='pos2n
   yy4 <- yy2+(yy1[2]-yy1[1])*target_nrow
 
   rect(xleft = pp[1],xright=pp[2],ybottom = yy1[length(yy1)-target_nrow],ytop=yy1[length(yy1)],border=NA,col=get_transparent(brewer.pal(11,'Set3')[2],0.3)) ## for seed rows
-  rect(xleft = pp[1],xright=pp[2],ybottom = yy2,ytop=yy4,border=NA,col=get_transparent(brewer.pal(11,'Set3')[2],0.1)) ## for combine rows
+  rect(xleft = pp[1],xright=pp[2],ybottom = yy2,ytop=yy4,border=NA,col=get_transparent(brewer.pal(11,'Set3')[2],0.2)) ## for combine rows
 
   segments(x0=pp[1],x1=pp[2],y0=yy1,y1=yy1,lwd=0.2,col='light grey')
   segments(x0=pp[1],x1=pp[2],y0=yy3,y1=yy3,lwd=1,col='dark grey')
@@ -3172,13 +4239,13 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,profile_col=NULL,profile_trend='pos2n
   if(target_col_type=='DE'){
     cc <- z2col(DE_profile,sig_thre=profile_sig_thre,n_len=100,red_col = brewer.pal(9,'Reds')[5:9],blue_col=brewer.pal(9,'Blues')[5:9],
                 col_max_thre=max(abs(DE_profile)))
-    names(cc) <- names(DE_profile)
+    #names(cc) <- names(DE_profile)
     cc[which(cc=='white')] <- 'light grey'
   }
   if(target_nrow==1){
     # for seed driver
     t1 <- use_target_list[[seed_driver]]
-    w0 <- which(names(DE_profile) %in% t1$target)
+    w0 <- which(DE_profile_name %in% t1$target)
     w1 <- w0*rr+pp[1]
     if(target_col=='black'){
       segments(x0=w1,x1=w1,y0=yy1[length(yy1)-1],y1=yy1[length(yy1)],col='black',lwd=1)
@@ -3194,7 +4261,7 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,profile_col=NULL,profile_trend='pos2n
     # for each partner driver
     for(i in 1:length(partner_driver_list)){
       t1 <- use_target_list[[partner_driver_list[[i]]]]
-      w0 <- which(names(DE_profile) %in% t1$target)
+      w0 <- which(DE_profile_name %in% t1$target)
       w1 <- w0*rr+pp[1]
       if(target_col=='black'){
         segments(x0=w1,x1=w1,y0=yy1[2*i],y1=yy11[2*i+1],col='black',lwd=1)
@@ -3211,10 +4278,10 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,profile_col=NULL,profile_trend='pos2n
     # for combine
     for(i in 1:length(partner_driver_list)){
       t1 <- target_list_merge[[partner_driver_list[[i]]]]
-      w0 <- which(names(DE_profile) %in% t1$target)
+      w0 <- which(DE_profile_name %in% t1$target)
       w1 <- w0*rr+pp[1]
       t_over <- intersect(target_list[[partner_driver_list[[i]]]]$target,target_list[[seed_driver]]$target)
-      w0_over <- which(names(DE_profile) %in% t_over)
+      w0_over <- which(DE_profile_name %in% t_over)
       w1_over <- w0_over*rr+pp[1]
       if(target_col=='black'){
         segments(x0=w1,x1=w1,y0=yy1[2*i-1],y1=yy11[2*i],col='black',lwd=1)
@@ -3234,7 +4301,7 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,profile_col=NULL,profile_trend='pos2n
     t1 <- use_target_list[[seed_driver]]
     t11 <- t1[which(t1$spearman>=0),]$target
     t12 <- t1[which(t1$spearman<0),]$target
-    w0 <- which(names(DE_profile) %in% t11)
+    w0 <- which(DE_profile_name %in% t11)
     w1 <- w0*rr+pp[1]
     if(length(w1)>0){
       if(target_col=='black'){
@@ -3247,7 +4314,7 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,profile_col=NULL,profile_trend='pos2n
         }
       }
     }
-    w0 <- which(names(DE_profile) %in% t12)
+    w0 <- which(DE_profile_name %in% t12)
     w1 <- w0*rr+pp[1]
     if(length(w1)>0){
       if(target_col=='black'){
@@ -3265,7 +4332,7 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,profile_col=NULL,profile_trend='pos2n
       t1 <- use_target_list[[partner_driver_list[[i]]]]
       t11 <- t1[which(t1$spearman>=0),]$target
       t12 <- t1[which(t1$spearman<0),]$target
-      w0 <- which(names(DE_profile) %in% t11)
+      w0 <- which(DE_profile_name %in% t11)
       w1 <- w0*rr+pp[1]
       if(length(w1)>0){
         if(target_col=='black'){
@@ -3278,7 +4345,7 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,profile_col=NULL,profile_trend='pos2n
           }
         }
       }
-      w0 <- which(names(DE_profile) %in% t12)
+      w0 <- which(DE_profile_name %in% t12)
       w1 <- w0*rr+pp[1]
       if(length(w1)>0){
         if(target_col=='black'){
@@ -3297,10 +4364,10 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,profile_col=NULL,profile_trend='pos2n
       t1 <- target_list_merge[[partner_driver_list[[i]]]]
       t11 <- t1[which(t1$spearman>=0),]$target
       t12 <- t1[which(t1$spearman<0),]$target
-      w0 <- which(names(DE_profile) %in% t11)
+      w0 <- which(DE_profile_name %in% t11)
       w1 <- w0*rr+pp[1]
       t_over <- intersect(target_list[[partner_driver_list[[i]]]]$target,target_list[[seed_driver]]$target)
-      w0_over <- which(names(DE_profile) %in% t_over) ## setdiff(t_over,names(DE_profile)) !!!
+      w0_over <- which(DE_profile_name %in% t_over) ## setdiff(t_over,names(DE_profile)) !!!
       w1_over <- w0_over*rr+pp[1]
       if(length(w1)>0){
         if(target_col=='black'){
@@ -3314,7 +4381,7 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,profile_col=NULL,profile_trend='pos2n
         }
       }
       points(intersect(w1_over,w1),rep((yy11[4*i-1]+yy1[4*i-1])/2,length.out=length(intersect(w1_over,w1))),pch='*',col='black')
-      w0 <- which(names(DE_profile) %in% t12)
+      w0 <- which(DE_profile_name %in% t12)
       w1 <- w0*rr+pp[1]
       if(length(w1)>0){
         if(target_col=='black'){
@@ -3334,7 +4401,7 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,profile_col=NULL,profile_trend='pos2n
   ###################
   ## plot 3
   par(mar=c(2,0.5,2,2))
-  plot(1,col='white',xlab='',ylab='',xlim=c(0,3),xaxt='n',yaxt='n',bty='n')
+  plot(1,col='white',xlab="",ylab="",xlim=c(0,3),xaxt='n',yaxt='n',bty='n')
   pp <- par()$usr
   rect(xleft=pp[1],xright=pp[2],ybottom=pp[3],ytop=pp[4])
 
@@ -3405,7 +4472,7 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,profile_col=NULL,profile_trend='pos2n
 
   ## plot 4
   par(mar=c(2,6,2,0.2))
-  plot(1,col='white',xlab='',ylab='',xlim=c(0,2),xaxt='n',yaxt='n',bty='n')
+  plot(1,col='white',xlab="",ylab="",xlim=c(0,2),xaxt='n',yaxt='n',bty='n')
 
   pp <- par()$usr;rr <- (pp[2]-pp[1])/n_gene
   yy1 <- seq(from=pp[3],to=pp[4],length.out=n_driver+1) # separate each detail
@@ -3500,8 +4567,8 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,profile_col=NULL,profile_trend='pos2n
   total_possible_target <- unique(unlist(lapply(target_list,function(x)x$target)))
   for(i in 1:length(partner_driver_list)){
     res1 <- test.targetNet.overlap(seed_driver,partner_driver_list[i],
-                                   target1=intersect(use_target_list[[seed_driver]]$target,names(DE_profile)),
-                                   target2=intersect(use_target_list[[partner_driver_list[i]]]$target,names(DE_profile)),
+                                   target1=intersect(use_target_list[[seed_driver]]$target,DE_profile_name),
+                                   target2=intersect(use_target_list[[partner_driver_list[i]]]$target,DE_profile_name),
                                    total_possible_target = total_possible_target)
     pv <- format(res1[1],digits=2,scientific=TRUE)
     ov <- round(res1[3])
@@ -3520,8 +4587,9 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,profile_col=NULL,profile_trend='pos2n
   layout(1);
   return(TRUE)
 }
-############## SINBA related functions
-## merge target list
+
+#' merge target list
+#' @export
 merge_target_list <- function(driver1=NULL,driver2=NULL,target_list=NULL){
   t1 <- target_list[driver1][[1]]
   t2 <- target_list[driver2][[1]]
@@ -3544,10 +4612,83 @@ merge_target_list <- function(driver1=NULL,driver2=NULL,target_list=NULL){
   return(t_out)
 }
 #
-### draw boxplot + stripchart for multiple groups
+#' Box plot and stripchart for the gene's expression levels and driver's activity values in samples with different categories.
+#'
+#' \code{draw.categoryValue} will draw the box plot with stripchart for the gene's expression levels and/or driver's activity values
+#'  in samples with different phenotype categories.
+#'
+#' This is a function to draw the gene's expression level and driver's activity values at the same time in one plot
+#' across samples with different phenotype categories. Also, only draw of expression level or activity level is accepted.
+#'
+#' @param ac_val a vector of numeric values, the activity level for the interested driver across all samples.
+#' @param exp_val a vector of numeric values, the expression level for the interested gene across all samples.
+#' @param use_obs_class a vector of characters, the cateogory class for all samples.
+#' The order of samples in \code{use_obs_class} must be the same with \code{ac_val} or \code{exp_val}.
+#' This vector could be generated by the function \code{get_obs_label} to extract this vector from the data frame of \code{pData(eset)}
+#' by selecting the column name.
+#' @param class_order a vector of characters, the order of category class displayed on the figure.
+#' If NULL, will use the alphabetical order of the category class name. Default is NULL.
+#' @param category_color a vector of characters, each item is the color for the class in \code{class_order}.
+#' If NULL, will automatically use function \code{get.class.color} generate the color bar. Default is NULL.
+#' @param stripchart_color character, the color for the stripchart. Default is 'black' with transparent alpha set at 0.7.
+#' @param strip_cex numeric, \code{cex} for points on the plot. Default is 1.
+#' @param class_srt numeric, the displayed category class label rotation in degrees. Default is 90.
+#' @param class_cex numeric, \code{cex} for the category class label displayed on the plot. Default is 1.
+#' @param pdf_file character, file path for the pdf file to save the figure into pdf format.If NULL, will not generate pdf file. Default is NULL.
+#' @param main_ac character, main for the sub-plot of activity level. Default is "".
+#' @param main_exp character,main for the sub-plot of expression level. Default is "".
+#' @param main_cex numeric, \code{cex} for the main title displayed on the plot. Default is 1.
+#'
+#' @return
+#' Will return logical value indicating whether the plot has been successfully generated
+
+#' @examples
+#' analysis.par <- list()
+#' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
+#' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' ms_tab <- analysis.par$final_ms_tab
+#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
+#'                                Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.01,Pv_thre=0.1,
+#'                                main='Volcano Plot for metastasis2primary_DA',show_label=FALSE,
+#'                                label_type = 'origin',label_cex = 0.5)
+#' driver_list <- rownames(sig_driver)
+#' use_driver <- driver_list[3]
+#' exp_mat <- exprs(analysis.par$cal.eset) ## expression,the rownames could match originalID
+#' ac_mat  <- exprs(analysis.par$merge.ac.eset) ## activity,the rownames could match originalID_label
+#' phe_info <- pData(analysis.par$cal.eset)
+#' use_obs_class <- get_obs_label(phe_info = phe_info,'tumor type')
+#' draw.categoryValue(ac_val=ac_mat[use_driver,],exp_val=exp_mat[ms_tab[use_driver,'originalID'],],
+#'                    use_obs_class=use_obs_class,
+#'                    class_order=c('primary','metastasis'),class_srt=30,
+#'                    main_ac = ms_tab[use_driver,'gene_label'],
+#'                    main_exp=ms_tab[use_driver,'geneSymbol'])
+#' \dontrun{
+#' analysis.par <- list()
+#' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
+#' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' ms_tab <- analysis.par$final_ms_tab
+#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
+#'                                Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.01,Pv_thre=0.1,
+#'                                main='Volcano Plot for metastasis2primary_DA',show_label=FALSE,
+#'                                label_type = 'origin',label_cex = 0.5)
+#' driver_list <- rownames(sig_driver)
+#' use_driver <- driver_list[3]
+#' exp_mat <- exprs(analysis.par$cal.eset) ## expression,the rownames could match originalID
+#' ac_mat  <- exprs(analysis.par$merge.ac.eset) ## activity,the rownames could match originalID_label
+#' phe_info <- pData(analysis.par$cal.eset)
+#' use_obs_class <- get_obs_label(phe_info = phe_info,'tumor type')
+#' analysis.par$out.dir.PLOT <- getwd() ## directory for saving the pdf files
+#' draw.categoryValue(ac_val=ac_mat[use_driver,],exp_val=exp_mat[ms_tab[use_driver,'originalID'],],
+#'                    use_obs_class=use_obs_class,
+#'                    class_order=c('primary','metastasis'),class_srt=30,
+#'                    main_ac = ms_tab[use_driver,'gene_label'],
+#'                    main_exp=ms_tab[use_driver,'geneSymbol'],
+#'                    pdf_file=sprintf('%s/categoryValue_demo1.pdf',analysis.par$out.dir.PLOT))
+#'}
+#' @export
 draw.categoryValue <- function(ac_val=NULL,exp_val=NULL,use_obs_class=NULL,category_color=NULL,
-                               stripchart_color='black',strip_cex=1,class_order=NULL,class_srt=90,class_cex=1,pdf_file=NULL,
-                               main_ac='',main_exp=''){
+                               stripchart_color=get_transparent('black',0.7),strip_cex=1,class_order=NULL,class_srt=90,class_cex=1,pdf_file=NULL,
+                               main_ac="",main_exp="",main_cex=1){
   if(is.null(class_order)){
     class_order <- sort(unique(use_obs_class))
   }
@@ -3557,7 +4698,6 @@ draw.categoryValue <- function(ac_val=NULL,exp_val=NULL,use_obs_class=NULL,categ
   }else{
     class_col1 <- category_color
   }
-  stripchart_color <- get_transparent(stripchart_color,0.7)
   c1 <- 0
   if(is.null(ac_val)==FALSE){c1 <- c1+1}
   if(is.null(exp_val)==FALSE){c1 <- c1+1}
@@ -3572,14 +4712,14 @@ draw.categoryValue <- function(ac_val=NULL,exp_val=NULL,use_obs_class=NULL,categ
   if(is.null(ac_val)==FALSE){
     ddf <- data.frame(data=ac_val,class=factor(use_obs_class,levels=class_order))
     a <- boxplot(data~class,data=ddf,ylab='Activity Value',col=class_col1,outline=FALSE,border='dark grey',cex.lab=1.2,names=NA,bty='n',
-                 ylim=c(min(ddf$data),max(ddf$data)),main=main_ac)
+                 ylim=c(min(ddf$data),max(ddf$data)),main=main_ac,cex.main=main_cex)
     text(1:length(class_order),par()$usr[3]-(par()$usr[4]-par()$usr[3])/20,adj=0.5+class_srt/180,class_order,srt=class_srt,xpd=TRUE,cex=class_cex)
     stripchart(data~class,data=ddf,add=TRUE,pch=16,method='jitter',vertical=TRUE,col=stripchart_color,cex=strip_cex)
   }
   if(is.null(exp_val)==FALSE){
     ddf <- data.frame(data=exp_val,class=factor(use_obs_class,levels=class_order))
     a <- boxplot(data~class,data=ddf,col=class_col1,ylab='Expression Value',outline=FALSE,border='dark grey',cex.lab=1.2,names=NA,bty='n',
-                 ylim=c(min(ddf$data),max(ddf$data)),main=main_exp)
+                 ylim=c(min(ddf$data),max(ddf$data)),main=main_exp,cex.main=main_cex)
     text(1:length(class_order),par()$usr[3]-(par()$usr[4]-par()$usr[3])/20,adj=0.5+class_srt/180,class_order,srt=class_srt,xpd=TRUE,cex=class_cex)
     stripchart(data~class,data=ddf,add=TRUE,pch=16,method='jitter',vertical=TRUE,col=stripchart_color,cex=strip_cex)
   }
@@ -3587,25 +4727,61 @@ draw.categoryValue <- function(ac_val=NULL,exp_val=NULL,use_obs_class=NULL,categ
   if(is.null(pdf_file)==FALSE) dev.off()
   return(TRUE)
 }
+
 ### simple functions
 get_transparent <- function(x,alpha=0.1){
   rgb(t(col2rgb(x)/255),alpha=alpha)
 }
+
 get_label_manual <- function(x){
   x1 <- sapply(x,function(x2){
-    x3 <- unlist(strsplit(as.character(x2),''))
+    x3 <- unlist(strsplit(as.character(x2),""))
     x4 <- length(x3)%/%3 ## add number
     if(x4>0){
-      pp <- length(x3)-seq(1,x4)*3; x3[pp] <- paste0(x3[pp],','); paste(x3,collapse='')
+      pp <- length(x3)-seq(1,x4)*3; x3[pp] <- paste0(x3[pp],','); paste(x3,collapse="")
     }else{
       x2
     }
   })
   unlist(x1)
 }
-##### network visualization
-## draw network structure
-draw.targetNet <- function(source_label='',source_z=NULL,edge_score=NULL,label_cex=0.7,init.angle=0,pdf_file=NULL){
+
+#' Target network structure plot for the driver.
+#'
+#' \code{draw.targetNet} will draw the network structure for the selected driver and its target genes.
+#'
+#' This is a function to draw target network structure for the selected driver.
+#' The color bar represents the positive (red) or negative (blue) regulation with line width showing the strength.
+#'
+#' @param source_label the label for the driver displayed on the plot.
+#' @param source_z numeric, the Z statistic for the driver, used to color the driver point.
+#' If NULL, the driver will be colored in grey. Default is NULL.
+#' @param edge_score a vector of numeric values, indicating the correlation between the driver and the target genes.
+#' The value ranges from -1 to 1, with positive value indicating postivie regulation and negative value indicating negative correlation.
+#' The names for the vector is the gene labels displayed on the plot.
+#' @param label_cex numeric, \code{cex} for the target genes displayed on the plot. Default is 0.7.
+#' @param pdf_file character, file path for the pdf file to save the figure into pdf format.If NULL, will not generate pdf file. Default is NULL.
+#'
+#' @return Will return logical value indicating whether the plot has been successfully generated
+#'
+#' @examples
+#' source_label <- 'test1'
+#' source_z <- 1.96
+#' edge_score <- (sample(1:200,size=100,replace=TRUE)-100)/100
+#' names(edge_score) <- paste0('G',1:100)
+#' draw.targetNet(source_label=source_label,source_z=source_z,edge_score=edge_score)
+#' \dontrun{
+#' source_label <- 'test1'
+#' source_z <- 1.96
+#' edge_score <- (sample(1:200,size=100,replace=TRUE)-100)/100
+#' names(edge_score) <- paste0('G',1:100)
+#' analysis.par <- list()
+#' analysis.par$out.dir.PLOT <- getwd()
+#' draw.targetNet(source_label=source_label,source_z=source_z,edge_score=edge_score,
+#'                pdf_file=sprintf('%s/targetNet.pdf',analysis.par$out.dir.PLOT))
+#'}
+#' @export
+draw.targetNet <- function(source_label="",source_z=NULL,edge_score=NULL,label_cex=0.7,pdf_file=NULL){
   edge_score<- sort(edge_score)
   tmp1 <- sapply(unique(names(edge_score)),function(x){
     x1 <- edge_score[which(names(edge_score)==x)]
@@ -3619,15 +4795,15 @@ draw.targetNet <- function(source_label='',source_z=NULL,edge_score=NULL,label_c
   ec <- get_transparent(ec,alpha=0.8)
   ew <- 2*(abs(edge_score)-min(abs(edge_score)))/(max(abs(edge_score))-min(abs(edge_score)))+0.5; names(ew) <- names(edge_score)
   t2xy <- function(tt,radius=1) {
-    t2p <- pi*2 * tt + init.angle * pi/180
+    t2p <- pi*2 * tt
     list(x = radius * cos(t2p), y = radius * sin(t2p))
   }
   geneWidth <- max(strwidth(g1,'inches',cex=label_cex))
   if(is.null(pdf_file)==FALSE) pdf(pdf_file,width=6+2*geneWidth,height=6+2*geneWidth)
   par(mai=c(1,1,1,1))
-  plot(1,xlim=c(-1,1),ylim=c(-1,1),bty='n',col='white',xlab='',ylab='',xaxt='n',yaxt='n')
+  plot(1,xlim=c(-1,1),ylim=c(-1,1),bty='n',col='white',xlab="",ylab="",xaxt='n',yaxt='n')
   pp <- par()$usr
-  tt <- seq(-0.5,0.5,length.out=length(g1)+1)[-1];init.angle <- init.angle;p1<-t2xy(tt,radius=0.8);
+  tt <- seq(-0.5,0.5,length.out=length(g1)+1)[-1];p1<-t2xy(tt,radius=0.8);
   for(i in 1:length(p1$x)) text(p1$x[i],p1$y[i],g1[i],cex=label_cex,srt=180*atan(p1$y[i]/p1$x[i])/pi,adj=ifelse(p1$x[i]>0,0,1),xpd=TRUE)
   p1<-t2xy(tt,radius=0.78);#segments(x0=0,y0=0,x1=p1$x,y1=p1$y,col=ec[g1],lwd=1);
   p2<-t2xy(tt,radius=0.77);arrows(x0=0,y0=0,x1=p2$x,y1=p2$y,col=ec,lwd=ew,angle=10,length=0.1);
@@ -3642,8 +4818,67 @@ draw.targetNet <- function(source_label='',source_z=NULL,edge_score=NULL,label_c
   if(is.null(pdf_file)==FALSE) dev.off()
   return(TRUE)
 }
-##
-draw.targetNet.TWO <- function(source1_label='',source2_label='',
+
+#' Target network structure plot for two drivers.
+#'
+#' \code{draw.targetNet.TWO} will draw the network structure for the selected two drivers and their target genes.
+#'
+#' This is a function to draw target network structure for the selected two drivers.
+#' The color bar represents the positive (red) or negative (blue) regulation with line width showing the strength.
+#'
+#' @param source1_label the label for the first(left) driver displayed on the plot.
+#' @param source2_label the label for the second(right) driver displayed on the plot.
+#' @param source1_z numeric, the Z statistic for the first driver, used to color the driver point.
+#' If NULL, the driver will be colored in grey. Default is NULL.
+#' @param source2_z numeric, the Z statistic for the second driver, used to color the driver point.
+#' If NULL, the driver will be colored in grey. Default is NULL.
+#' @param edge_score1 a vector of numeric values, indicating the correlation between the first driver and the target genes.
+#' The value ranges from -1 to 1, with positive value indicating postivie regulation and negative value indicating negative correlation.
+#' The names for the vector is the gene labels displayed on the plot.
+#' @param edge_score2 a vector of numeric values, indicating the correlation between the second driver and the target genes.
+#' Similar with \code{edge_score1}
+#' @param label_cex numeric, \code{cex} for the target genes displayed on the plot. Default is 0.7.
+#' @param pdf_file character, file path for the pdf file to save the figure into pdf format.If NULL, will not generate pdf file. Default is NULL.
+#' @param total_possible_target numeric or a vector of characters. If input numeric, will be the total number of possible targets.
+#' If input a vector of characters, will be the background list of all possible target genes.
+#' This parameter will be passed to function \code{test.targetNet.overlap} to test whether the target genes of the two drivers are significantly intersected.
+#' If NULL, will do not perform this test. Default is NULL.
+#' @param show_test logical, indicating whether the testing results will be printed and returned. Default is FALSE.
+#'
+#' @return if \code{show_test}==FALSE, will return logical value indicating whether the plot has been successfully generated, otherwise will return the statistics of testing.
+#'
+#' @examples
+#' source1_label <- 'test1'
+#' source1_z <- 1.96
+#' edge_score1 <- (sample(1:160,size=80,replace=TRUE)-80)/80
+#' names(edge_score1) <- sample(paste0('G',1:1000),size=80)
+#' source2_label <- 'test2'
+#' source2_z <- -2.36
+#' edge_score2 <- (sample(1:240,size=120,replace=TRUE)-120)/120
+#' names(edge_score2) <- sample(paste0('G',1:1000),size=120)
+#' draw.targetNet.TWO(source1_label=source1_label,source2_label=source2_label,
+#'                source1_z=source1_z,source2_z=source2_z,
+#'                edge_score1=edge_score1,edge_score2=edge_score2,
+#'                total_possible_target=paste0('G',1:1000),show_test=TRUE,label_cex=0.6)
+#' \dontrun{
+#' source1_label <- 'test1'
+#' source1_z <- 1.96
+#' edge_score1 <- (sample(1:160,size=100,replace=TRUE)-80)/80
+#' names(edge_score1) <- sample(paste0('G',1:1000),size=80)
+#' source2_label <- 'test2'
+#' source2_z <- -2.36
+#' edge_score2 <- (sample(1:240,size=100,replace=TRUE)-120)/120
+#' names(edge_score2) <- sample(paste0('G',1:1000),size=120)
+#' analysis.par <- list()
+#' analysis.par$out.dir.PLOT <- getwd()
+#' #' draw.targetNet.TWO(source1_label=source1_label,source2_label=source2_label,
+#'                source1_z=source1_z,source2_z=source2_z,
+#'                edge_score1=edge_score1,edge_score2=edge_score2,
+#'                total_possible_target=paste0('G',1:1000),show_test=TRUE,
+#'                pdf_file=sprintf('%s/targetNetTWO.pdf',analysis.par$out.dir.PLOT))
+#' }
+#' @export
+draw.targetNet.TWO <- function(source1_label="",source2_label="",
                                source1_z=NULL,source2_z=NULL,
                                edge_score1=NULL,edge_score2=NULL,
                                label_cex=0.7,pdf_file=NULL,
@@ -3671,7 +4906,7 @@ draw.targetNet.TWO <- function(source1_label='',source2_label='',
   }
   geneWidth <- max(strwidth(g1,'inches',cex=label_cex))
   if(is.null(pdf_file)==FALSE) pdf(pdf_file,width=10+4*geneWidth,height=8+2*geneWidth)
-  plot(1,xlim=c(-1,1),ylim=c(-1,1),bty='n',col='white',xlab='',ylab='',xaxt='n',yaxt='n')
+  plot(1,xlim=c(-1,1),ylim=c(-1,1),bty='n',col='white',xlab="",ylab="",xaxt='n',yaxt='n')
   par(mai=c(1,1,1,1))
   if(length(g1)>0){
     tt <- seq(-0.225,0.225,length.out=length(g1));init.angle <- -180;p1<-t2xy(tt,radius=0.8);
@@ -3722,7 +4957,36 @@ draw.targetNet.TWO <- function(source1_label='',source2_label='',
   if(is.null(pdf_file)==FALSE) dev.off()
   return(TRUE)
 }
-test.targetNet.overlap <- function(source1_label,source2_label,target1,target2,total_possible_target){
+
+#' Test for the target genes' intersection between two drivers.
+#'
+#' \code{test.targetNet.overlap} will test whether the target genes of two drivers are significantly intersected.
+#'
+#' This is a function to perform Fisher's Exact Test for the intersection of the target genes from two drivers.
+#'
+#' @param source1_label character, the label for the first driver.
+#' @param source2_label character, the label for the second driver.
+#' @param target1 a vector of characters, the list of target genes for the first driver.
+#' @param target2 a vector of characters, the list of target genes for the second driver.
+#' @param total_possible_target numeric or a vector of characters. If input numeric, will be the total number of possible targets.
+#' If input a vector of characters, will be the background list of all possible target genes.
+#'
+#' @return Return the statistics of testing, including the \code{P.Value}, \code{Odds_Ratio} and \code{Intersected_Nuumber}.
+#'
+#' @examples
+#' source1_label <- 'test1'
+#' target1 <- sample(paste0('G',1:1000),size=80)
+#' source2_label <- 'test2'
+#' target2 <- sample(paste0('G',1:1000),size=120)
+#' test.targetNet.overlap(source1_label=source1_label,source2_label=source2_label,
+#'                target1=target1,target2=target2,
+#'                total_possible_target=paste0('G',1:1000))
+#' \dontrun{
+#' }
+#' @export
+test.targetNet.overlap <- function(source1_label=NULL,source2_label=NULL,
+                                   target1=NULL,target2=NULL,
+                                   total_possible_target=NULL){
   t1  <- unique(target1)
   t2  <- unique(target2)
   print(sprintf('%s has %d unique targets !',source1_label,length(t1)))
@@ -3763,11 +5027,11 @@ get.spByGene <- function(igraph_obj=NULL,driver_list=NULL,target_list=NULL,mode=
   }
   #r1 <- all_shortest_paths(igraph_obj,from=use_list,to=use_list,mode=mode)$res
   #r2 <- unique(unlist(lapply(r1,names)))
- print(driver_list)
- print(target_list)
+  print(driver_list)
+  print(target_list)
 
- if(length(driver_list)==0) driver_list <- target_list
- if(length(target_list)==0) target_list <- driver_list
+  if(length(driver_list)==0) driver_list <- target_list
+  if(length(target_list)==0) target_list <- driver_list
 
   all_r1 <- list()
   for(d in driver_list){
@@ -3824,10 +5088,9 @@ plot.spByGene <- function(net,driver_list=NULL,target_list=NULL,transfer_tab=NUL
   }
   return(TRUE)
 }
-##
-########################## analysis part functions
-## get_target, save network data into list
-## get target genes for each source
+
+#' get target list by input network data
+#' @export
 get_net2target_list <- function(net_dat=NULL) {
   all_source <- unique(net_dat$source)
   all_target <- lapply(all_source, function(x) {
@@ -3838,6 +5101,9 @@ get_net2target_list <- function(net_dat=NULL) {
   names(all_target) <- all_source
   return(all_target)
 }
+
+#' get network information by input network file from SJAracne
+#' @export
 get.SJAracne.network <- function(network_file=NULL){
   if(is.null(network_file)){
     message('No input network file, please check and re-try !');return(FALSE)
@@ -3847,8 +5113,10 @@ get.SJAracne.network <- function(network_file=NULL){
   igraph_obj <- graph_from_data_frame(net_dat[,c('source','target','MI')],directed=TRUE)
   return(list(network_dat=net_dat,target_list=target_list,igraph_obj=igraph_obj))
 }
-## functions to plot QC for network
-plot.network.QC <- function(igraph_obj,outdir=NULL,prefix=''){
+
+#' QC plot for the network
+#' @export
+plot.network.QC <- function(igraph_obj,outdir=NULL,prefix=""){
   if (!file.exists(outdir)) {
     dir.create(outdir, recursive = TRUE)
     message(paste0("The output directory: \"", outdir, "\" is created!"))
@@ -3864,7 +5132,9 @@ plot.network.QC <- function(igraph_obj,outdir=NULL,prefix=''){
   check_scalefree(igraph_obj);
   dev.off()
 }
-# functions to check the network
+
+#' functions to check the scale free feature of the network
+#' @export
 check_scalefree <- function(gr1) {
   fp1 <- degree_distribution(gr1)
   dd <- as.data.frame(cbind(k = 1:max(degree(gr1)), pk = fp1[-1]))
@@ -3879,8 +5149,9 @@ check_scalefree <- function(gr1) {
 get_server_path <- function(x){
   gsub(RP.main_dir, RP.bash.main_dir, x)
 }
-## run MICA clustering, row(sample), col(gene)
-# run MICA with mat variable (first step output into file)
+
+#' Inner use: prepare for MICA
+#' @export
 SJ.MICA.prepare <- function(mat,outdir = '.',prjname = NULL,all_k=NULL,retransformation="False",perplexity=30) {
   if(is.null(prjname)){
     message('prjname should be input, please check and re-try !');return(FALSE)
@@ -3906,7 +5177,7 @@ SJ.MICA.prepare <- function(mat,outdir = '.',prjname = NULL,all_k=NULL,retransfo
   run_file <- file.path(outdir, 'run_MICA_S2.sh')
   cmd <-
     sprintf('%s\nsh %s/run_MICA.sh %s %s/ %s %s %s \"%s\"',RP.load,RP.MICA.main,prjname,
-      outdir,input_exp,retransformation,perplexity,paste(all_k,collapse = ' ')
+            outdir,input_exp,retransformation,perplexity,paste(all_k,collapse = ' ')
     )
   cmd <- get_server_path(cmd)
   cat(cmd, file = run_file, sep = '\n')
@@ -3914,7 +5185,9 @@ SJ.MICA.prepare <- function(mat,outdir = '.',prjname = NULL,all_k=NULL,retransfo
   print(sprintf('Check %s', run_file))
   return(TRUE)
 }
-# run MICA with existing file
+
+#' Inner use: prepare for MICA with file
+#' @export
 SJ.MICA.prepare.withfile <- function(input_exp,outdir = '.',prjname = NULL,all_k=NULL,retransformation="False",perplexity=30) {
   if(is.null(prjname)){
     message('prjname should be input, please check and re-try !');return(FALSE)
@@ -3931,19 +5204,21 @@ SJ.MICA.prepare.withfile <- function(input_exp,outdir = '.',prjname = NULL,all_k
   run_file1 <- run_file
   run_file <- file.path(outdir, 'run_MICA_S2.sh')
   cmd <- sprintf('%s\nsh %s/run_MICA.sh %s %s/ %s %s %s \"%s\"',RP.load,RP.MICA.main,prjname,outdir,
-      input_exp,retransformation,perplexity,paste(all_k,collapse = ' '))
+                 input_exp,retransformation,perplexity,paste(all_k,collapse = ' '))
   cmd <- get_server_path(cmd)
   cat(cmd, file = run_file, sep = '\n')
   run_file <- get_server_path(run_file)
   print(sprintf('Check %s', run_file))
   return(paste0('sh ',c(run_file1,run_file)))
 }
-## prepare for SJaracne run on SJ server
-## prepare SJAracne dataset for net-dataset
-# project_name expression_matrix hub_genes outdir
+
+#' Inner use: prepare for SJaracne run on SJ server
+#' prepare SJAracne dataset for net-dataset
+#' project_name expression_matrix hub_genes outdir
+#' @export
 SJ.SJAracne.prepare <-
   function(eset,use.samples = rownames(pData(eset)),TF_list=NULL,SIG_list=NULL,
-           SJAR.project_name = '',
+           SJAR.project_name = "",
            SJAR.main_dir = NULL,
            SJAR.bash.main_dir = NULL,
            mem = 40960,IQR.thre=0.5,IQR.loose_thre=0.1) {
@@ -4126,8 +5401,10 @@ SJ.SJAracne.prepare <-
         bash.sig = get_server_path(SJAR.bash_file.sig)
       )
     )
-}
-## auto generate bash files for Step1, Step2, Step3, Step4 for all bash files under one directory
+  }
+
+#' Inner use: auto generate bash files for Step1, Step2, Step3, Step4 for all bash files under one directory
+#' @export
 SJ.SJAracne.step <- function(out.dir.SJAR) {
   tf_bash <- list.files(out.dir.SJAR, pattern = 'tf.sh', recursive = TRUE)
   sig_bash <-

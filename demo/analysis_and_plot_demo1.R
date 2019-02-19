@@ -1,0 +1,402 @@
+## This script aims to do following analysis ##
+############# preparations ####################
+
+library(NetBID2)
+main.dir <- system.file(package = "NetBID2")
+
+# set the directory
+analysis.par <- list()
+analysis.par$out.dir.DATA <- 'demo1/analysis_2019-02-06/DATA'
+
+############ Step0: load
+# RData for ms table
+NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+
+################# PartI: overview plots
+############ I.1: volcano plot for DE/DA, p-value Vs. fold-change
+ms_tab <- analysis.par$final_ms_tab
+sig_driver1 <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
+                               Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.01,Pv_thre=0.1,
+                               main='Volcano Plot for metastasis2primary_DA',show_label=TRUE,
+                               pdf_file=sprintf('%s/vocalno_showlabel_distribute.pdf',analysis.par$out.dir.PLOT),label_cex = 1)
+sig_driver2 <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
+                               Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.02,Pv_thre=0.1,
+                               main='Volcano Plot for metastasis2primary_DA',show_label=TRUE,label_type = 'origin',label_cex = 0.5,
+                               pdf_file=sprintf('%s/vocalno_showlabel_origin.pdf',analysis.par$out.dir.PLOT))
+sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
+                                Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.01,Pv_thre=0.1,
+                                main='Volcano Plot for metastasis2primary_DA',show_label=FALSE,label_type = 'origin',label_cex = 0.5,
+                                pdf_file=sprintf('%s/vocalno_nolabel_DA.pdf',analysis.par$out.dir.PLOT))
+sig_gene <- draw.volcanoPlot(dat=ms_tab,label_col='geneSymbol',logFC_col='logFC.metastasis2primary_DE',
+                             Pv_col='P.Value.metastasis2primary_DE',logFC_thre=0.5,Pv_thre=0.1,
+                             main='Volcano Plot for metastasis2primary_DE',show_label=FALSE,
+                             pdf_file=sprintf('%s/vocalno_nolabel_DE.pdf',analysis.par$out.dir.PLOT))
+
+############ I.2: Heatmap for top drivers
+ms_tab  <- analysis.par$final_ms_tab
+exp_mat <- exprs(analysis.par$cal.eset) ## expression,the rownames must be the originalID
+ac_mat <- exprs(analysis.par$merge.ac.eset) ## ac,the rownames must be the originalID_label
+phe_info <- pData(analysis.par$cal.eset)
+# could use addtional paramters in Heatmap()
+draw.heatmap(mat=exp_mat,use_genes=ms_tab[rownames(sig_driver),'originalID'],use_gene_label=ms_tab[rownames(sig_driver),'gene_label'],
+             use_samples=colnames(exp_mat),use_sample_label=phe_info[colnames(exp_mat),'geo_accession'],
+             phenotype_info=phe_info,use_phe=c('Sex','tumor type'),main='Expression for Top drivers',scale='row',
+             cluster_rows=TRUE,cluster_columns=TRUE,clustering_distance_rows='pearson',clustering_distance_columns='pearson',
+             row_names_gp = gpar(fontsize = 12),pdf_file=sprintf('%s/heatmap_demo1.pdf',analysis.par$out.dir.PLOT))
+
+draw.heatmap(mat=ac_mat,use_genes=ms_tab[rownames(sig_driver),'originalID_label'],use_gene_label=ms_tab[rownames(sig_driver),'gene_label'],
+             use_samples=colnames(exp_mat),use_sample_label=phe_info[colnames(exp_mat),'geo_accession'],
+             phenotype_info=phe_info,use_phe=c('Sex','tumor type'),main='Activity for Top drivers',scale='row',
+             cluster_rows=FALSE,cluster_columns=TRUE,clustering_distance_rows='pearson',clustering_distance_columns='pearson',
+             row_names_gp = gpar(fontsize = 6),pdf_file=sprintf('%s/heatmap_demo2.pdf',analysis.par$out.dir.PLOT))
+
+############ I.3: Function enrichment plot for top drivers
+# load RData for all_gs2gene
+gs.preload(use_spe='Homo sapiens',update=FALSE)
+# get function enrichment results
+res1 <- funcEnrich.Fisher(input_list=ms_tab[rownames(sig_driver),'geneSymbol'],bg_list=ms_tab[,'geneSymbol'],use_gs=c('H','C5'),Pv_thre=0.1,Pv_adj = 'none')
+# draw barplot
+draw.funcEnrich.bar(funcEnrich_res=res1,top_number=30,main='Function Enrichment for Top drivers',pdf_file=sprintf('%s/funcEnrich_bar_nogene.pdf',analysis.par$out.dir.PLOT))
+draw.funcEnrich.bar(funcEnrich_res=res1,top_number=30,main='Function Enrichment for Top drivers',display_genes = TRUE,gs_cex=0.6,
+                    pdf_file=sprintf('%s/funcEnrich_bar_withgene.pdf',analysis.par$out.dir.PLOT))
+
+# draw cluster results for function enrichment (here provide pdf_file as input for directly output into pdf file, need for other functions?)
+draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 0.8,gene_cex=0.9,pv_cex=0.8,pdf_file = sprintf('%s/funcEnrich_cluster.pdf',analysis.par$out.dir.PLOT))
+draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 1.4,gene_cex=1.5,pv_cex=1.2,pdf_file = sprintf('%s/funcEnrich_clusterBOTH.pdf',analysis.par$out.dir.PLOT),
+                        cluster_gs=TRUE,cluster_gene = TRUE)
+draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 0.8,gene_cex=0.9,pv_cex=0.8,pdf_file = sprintf('%s/funcEnrich_clusterGS.pdf',analysis.par$out.dir.PLOT),
+                        cluster_gs=TRUE,cluster_gene = FALSE)
+draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 0.8,gene_cex=0.9,pv_cex=0.8,pdf_file = sprintf('%s/funcEnrich_clusterGENE.pdf',analysis.par$out.dir.PLOT),
+                        cluster_gs=FALSE,cluster_gene = TRUE)
+draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 1.5,gene_cex=1.4,pv_cex=1.2,pdf_file = sprintf('%s/funcEnrich_clusterNO.pdf',analysis.par$out.dir.PLOT),
+                        cluster_gs=FALSE,cluster_gene = FALSE)
+
+############ I.4: Bubble plot for top drivers
+# need to prepare ID transfer tab first
+# load db
+db.preload(use_level='transcript',use_spe='human',update=FALSE)
+# get transfer table for all target genes
+ms_tab  <- analysis.par$final_ms_tab
+use_genes <- unique(analysis.par$merge.network$network_dat$target.symbol)
+transfer_tab <- get_IDtransfer2symbol2type(from_type = 'ensembl_transcript_id',use_genes=use_genes) ## get transfer table !!!
+## draw
+draw.bubblePlot(driver_list=rownames(sig_driver),show_label=ms_tab[rownames(sig_driver),'gene_label'],
+                Z_val=ms_tab[rownames(sig_driver),'Z.metastasis2primary_DA'],
+                driver_type=ms_tab[rownames(sig_driver),'transcript_biotype'],
+                target_list=analysis.par$merge.network$target_list,transfer2symbol2type=transfer_tab,
+                bg_list=ms_tab[,'geneSymbol'],min_gs_size=5,max_gs_size=500,use_gs=c('H'),
+                top_geneset_number=30,top_driver_number=50,
+                pdf_file = sprintf('%s/bubblePlot.pdf',analysis.par$out.dir.PLOT),
+                main='Bubbleplot for top driver targets')
+
+draw.bubblePlot(driver_list=rownames(sig_driver),show_label=ms_tab[rownames(sig_driver),'gene_label'],
+                Z_val=ms_tab[rownames(sig_driver),'Z.metastasis2primary_DA'],
+                driver_type=ms_tab[rownames(sig_driver),'transcript_biotype'],
+                target_list=analysis.par$merge.network$target_list,transfer2symbol2type=transfer_tab,
+                bg_list=ms_tab[,'geneSymbol'],min_gs_size=30,max_gs_size=300,use_gs=c('CP:KEGG'),
+                top_geneset_number=30,top_driver_number=50,
+                pdf_file = sprintf('%s/bubblePlot_KEGG.pdf',analysis.par$out.dir.PLOT),
+                main='Bubbleplot for top driver targets')
+# add marker gene
+mark_gene <- c('RBBP4','MMAB','HAMP') ## just select for test
+draw.bubblePlot(driver_list=rownames(sig_driver),show_label=ms_tab[rownames(sig_driver),'gene_label'],
+                Z_val=ms_tab[rownames(sig_driver),'Z.metastasis2primary_DA'],
+                driver_type=ms_tab[rownames(sig_driver),'transcript_biotype'],
+                target_list=analysis.par$merge.network$target_list,transfer2symbol2type=transfer_tab,
+                bg_list=ms_tab[,'geneSymbol'],min_gs_size=30,max_gs_size=300,use_gs=c('CP:KEGG','CP:BIOCARTA','H'),
+                top_geneset_number=50,top_driver_number=80,
+                pdf_file = sprintf('%s/bubblePlot_combine.pdf',analysis.par$out.dir.PLOT),
+                main='Bubbleplot for top driver targets',mark_gene=ms_tab[which(ms_tab$geneSymbol %in% mark_gene),'originalID_label'],gs_cex = 1,driver_cex=1.2)
+
+############ I.5: GSEA plot for top driver
+## NetBID GSEA plot
+db.preload(use_level='transcript',use_spe='human',update=FALSE)
+## prepare
+# get DE profile for all genes
+ms_tab <- analysis.par$final_ms_tab
+ms_tab <- ms_tab[which(ms_tab$Size>50),]
+comp <- 'metastasis2primary'
+DE <- analysis.par$DE[[comp]]
+driver_list <- rownames(sig_driver)
+driver_list <- driver_list[which(driver_list %in% ms_tab$originalID_label)]
+###
+draw.GSEA.NetBID(DE=DE,profile_col='t',profile_trend='neg2pos',
+                 driver_list = driver_list,
+                 show_label=ms_tab[driver_list,'gene_label'],
+                 driver_DA_Z=ms_tab[driver_list,'Z.metastasis2primary_DA'],
+                 driver_DE_Z=ms_tab[driver_list,'Z.metastasis2primary_DE'],
+                 target_list=analysis.par$merge.network$target_list,
+                 top_driver_number=30,target_nrow=2,target_col='RdBu',
+                 left_annotation = 'test_left',right_annotation = 'test_right',
+                 main='test',target_col_type='DE',Z_sig_thre=1.64,profile_sig_thre = 1.64,
+                 pdf_file=sprintf('%s/NetBID_GSEA_demo1.pdf',analysis.par$out.dir.PLOT))
+
+draw.GSEA.NetBID(DE=DE,profile_col='t',profile_trend='pos2neg',
+                 driver_list = driver_list,
+                 show_label=ms_tab[driver_list,'gene_label'],
+                 driver_DA_Z=ms_tab[driver_list,'Z.metastasis2primary_DA'],
+                 driver_DE_Z=ms_tab[driver_list,'Z.metastasis2primary_DE'],
+                 target_list=analysis.par$merge.network$target_list,
+                 top_driver_number=30,target_nrow=2,target_col='RdBu',
+                 left_annotation = 'test_left',right_annotation = 'test_right',
+                 main='test',target_col_type='PN',Z_sig_thre=1.64,profile_sig_thre = 1.64,
+                 pdf_file=sprintf('%s/NetBID_GSEA_demo2.pdf',analysis.par$out.dir.PLOT))
+
+draw.GSEA.NetBID(DE=DE,profile_col='t',profile_trend='pos2neg',
+                 driver_list = driver_list,
+                 show_label=ms_tab[driver_list,'gene_label'],
+                 driver_DA_Z=ms_tab[driver_list,'Z.metastasis2primary_DA'],
+                 driver_DE_Z=ms_tab[driver_list,'Z.metastasis2primary_DE'],
+                 target_list=analysis.par$merge.network$target_list,
+                 top_driver_number=30,target_nrow=2,target_col='black',
+                 left_annotation = 'test_left',right_annotation = 'test_right',
+                 main='test',target_col_type='PN',Z_sig_thre=1.64,profile_sig_thre = 1.64,
+                 pdf_file=sprintf('%s/NetBID_GSEA_demo3.pdf',analysis.par$out.dir.PLOT))
+
+draw.GSEA.NetBID(DE=DE,profile_col='t',profile_trend='pos2neg',
+                 driver_list = driver_list,
+                 show_label=ms_tab[driver_list,'gene_label'],
+                 driver_DA_Z=ms_tab[driver_list,'Z.metastasis2primary_DA'],
+                 driver_DE_Z=ms_tab[driver_list,'Z.metastasis2primary_DE'],
+                 target_list=analysis.par$merge.network$target_list,
+                 top_driver_number=30,target_nrow=1,target_col='RdBu',
+                 left_annotation = 'test_left',right_annotation = 'test_right',
+                 main='test',target_col_type='DE',Z_sig_thre=1.64,profile_sig_thre = 1.64,
+                 pdf_file=sprintf('%s/NetBID_GSEA_demo4.pdf',analysis.par$out.dir.PLOT))
+
+draw.GSEA.NetBID(DE=DE,profile_col='t',profile_trend='pos2neg',
+                 driver_list = driver_list,
+                 show_label=ms_tab[driver_list,'gene_label'],
+                 driver_DA_Z=ms_tab[driver_list,'Z.metastasis2primary_DA'],
+                 driver_DE_Z=ms_tab[driver_list,'Z.metastasis2primary_DE'],
+                 target_list=analysis.par$merge.network$target_list,
+                 top_driver_number=30,target_nrow=1,target_col='black',
+                 left_annotation = 'test_left',right_annotation = 'test_right',
+                 main='test',target_col_type='PN',Z_sig_thre=1.64,profile_sig_thre = 1.64,
+                 pdf_file=sprintf('%s/NetBID_GSEA_demo5.pdf',analysis.par$out.dir.PLOT))
+
+################# PartII: for each driver
+############ II.1: GSEA plot for the driver
+ms_tab <- analysis.par$final_ms_tab
+DE_profile <- analysis.par$DE[[1]]$`Z-statistics`; names(DE_profile) <- rownames(analysis.par$DE[[1]])
+driver_list <- rownames(sig_driver)
+use_driver <- driver_list[order(sig_driver[,3])[1]]
+use_target_genes <- analysis.par$merge.network$target_list[[use_driver]]$target
+use_target_direction <- sign(analysis.par$merge.network$target_list[[use_driver]]$spearman) ## 1/-1
+annot <- sprintf('P-value: %s',signif(ms_tab[use_driver,'P.Value.metastasis2primary_DA'],2))
+## original GSEA plot
+draw.GSEA(rank_profile=DE_profile,use_genes=use_target_genes,use_direction=use_target_direction,
+          main=sprintf('GSEA plot for driver %s',ms_tab[use_driver,'gene_label']),
+          pdf_file = sprintf('%s/GSEA_each.pdf',analysis.par$out.dir.PLOT),
+          annotation=annot,annotation_cex=1.2,
+          left_annotation='high in metastasis',right_annotation='high in primary')
+
+############ II.2: target network structure for each driver
+use_driver <- driver_list[1]
+#transfer_tab <- get_IDtransfer2symbol2type(from_type = 'ensembl_transcript_id',use_genes=use_genes) ## get transfer table !!!
+edge_score <- analysis.par$merge.network$target_list[[use_driver]]$MI*sign(analysis.par$merge.network$target_list[[use_driver]]$spearman)
+names(edge_score) <- get_name_transfertab(analysis.par$merge.network$target_list[[use_driver]]$target,transfer_tab)
+#
+use_driver2 <- driver_list[5]
+edge_score2 <- analysis.par$merge.network$target_list[[use_driver2]]$MI*sign(analysis.par$merge.network$target_list[[use_driver2]]$spearman)
+names(edge_score2) <- get_name_transfertab(analysis.par$merge.network$target_list[[use_driver2]]$target,transfer_tab)
+#
+draw.targetNet(source_label=ms_tab[use_driver,'gene_label'],source_z=ms_tab[use_driver,'Z.metastasis2primary_DA'],
+               edge_score = edge_score,pdf_file=sprintf('%s/targetNet.pdf',analysis.par$out.dir.PLOT))
+
+# for two target
+use_genes <- get_name_transfertab(unique(analysis.par$merge.network$network_dat$target.symbol),transfer_tab)
+draw.targetNet.TWO(source1_label=ms_tab[use_driver,'gene_label'],edge_score1 = edge_score,
+                   source2_label=ms_tab[use_driver2,'gene_label'],edge_score2 = edge_score2,
+                   source1_z=ms_tab[use_driver,'Z.metastasis2primary_DA'],source2_z=ms_tab[use_driver2,'Z.metastasis2primary_DA'],
+                   pdf_file=sprintf('%s/targetNetTWO.pdf',analysis.par$out.dir.PLOT),total_possible_target=use_genes,show_test=TRUE)
+
+# or directly get the test result
+test.targetNet.overlap(source1_label=ms_tab[use_driver,'gene_label'],source2_label=ms_tab[use_driver2,'gene_label'],
+                       target1 = names(edge_score),target2 = names(edge_score2),total_possible_target=use_genes)
+
+############ II.3: category plot for the expression/activity for each driver
+use_driver <- driver_list[3]
+exp_mat <- exprs(analysis.par$cal.eset) ## expression,the rownames must be the originalID
+ac_mat <- exprs(analysis.par$merge.ac.eset) ## ac,the rownames must be the originalID_label
+phe_info <- pData(analysis.par$cal.eset)
+use_obs_class <- get_obs_label(phe_info = phe_info,'tumor type')
+#
+draw.categoryValue(ac_val=ac_mat[use_driver,],exp_val=exp_mat[ms_tab[use_driver,'originalID'],],use_obs_class=use_obs_class,
+                   class_order=c('primary','metastasis'),class_srt=30,main_ac = ms_tab[use_driver,'gene_label'],main_exp=ms_tab[use_driver,'geneSymbol'],
+                   pdf_file=sprintf('%s/categoryValue_demo1.pdf',analysis.par$out.dir.PLOT))
+draw.categoryValue(ac_val=ac_mat[use_driver,],exp_val=NULL,use_obs_class=use_obs_class,class_order=c('primary','metastasis'),
+                   pdf_file=sprintf('%s/categoryValue_demo2.pdf',analysis.par$out.dir.PLOT))
+
+## function enrichment plot for the target genes for the driver, similar as above
+
+################# PartIII: advanced part
+
+############# III.1: input driver and target, get shortest path and draw subnetwork
+use_genes <- unique(analysis.par$merge.network$network_dat$target.symbol)
+transfer_tab <- get_IDtransfer2symbol2type(from_type = 'ensembl_transcript_id',use_genes=use_genes) ## get transfer table !!!
+
+## input one driver and one target gene
+sp1 <- get.spByGene(igraph_obj = analysis.par$merge.network$igraph_obj,driver_list = rownames(sig_driver)[1:2],
+                    target_list = transfer_tab[which(transfer_tab$external_gene_name %in% c('MYC')),1],
+                    transfer_tab = transfer_tab,
+                    plot_pattern = 'random_one')
+print(sp1$all_sp) ## print all sp
+# can plot saperately
+plot.spByGene(sp1$use_sp,driver_list = rownames(sig_driver)[1], target_list = transfer_tab[which(transfer_tab$external_gene_name=='PRDM6'),1],
+              transfer_tab = transfer_tab,vertex.size = 20,vertex.label.cex = 1,edge.arrow.size=1,layout='auto',edge.color = 'grey')
+
+## input only target gene, get all driver for the gene
+sp2 <- get.spByGene(igraph_obj = analysis.par$merge.network$igraph_obj,driver_list = NULL, target_list = transfer_tab[which(transfer_tab$external_gene_name=='PRDM6'),1],
+                    transfer_tab = transfer_tab,
+                    plot_pattern = 'random_one')
+print(sp2$all_sp) ## print all sp
+# can plot saperately
+plot.spByGene(sp2$use_sp,driver_list = NULL, target_list = transfer_tab[which(transfer_tab$external_gene_name=='PRDM6'),1],
+              transfer_tab = transfer_tab,vertex.size = 10,vertex.label.cex = 0.6,edge.arrow.size=0.1,layout=layout_in_circle,edge.color = 'grey')
+
+############## III.2: gene set-based activity analysis, including vocalno, heatmap, category and GSEA plot
+db.preload(use_level='transcript',use_spe='human',update=FALSE)
+exp_mat <- exprs(analysis.par$cal.eset) ## expression,the rownames must be the originalID
+
+## get transfer tab
+use_genes <- rownames(exp_mat)
+transfer_tab <- get_IDtransfer(from_type = 'ensembl_transcript_id',to_type='external_gene_name',use_genes=use_genes) ## get transfer table !!!
+
+## get expression matrix for the transfered gene name
+exp_mat_gene <- exprs(update.eset.feature(use_eset=generate.eset(exp_mat=exp_mat),
+                                        use_feature_info = transfer_tab,
+                                        from_feature = 'ensembl_transcript_id',to_feature = 'external_gene_name'))
+## calculate activity for all genesets
+use_gs2gene <- merge_gs(all_gs2gene=all_gs2gene,use_gs=c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG','C5'))
+ac_gs <- cal.Activity.GS(use_gs2gene = use_gs2gene,cal_mat = exp_mat_gene)
+
+## get DA
+phe_info <- pData(analysis.par$cal.eset)
+G0  <- rownames(phe_info)[which(phe_info$`tumor type`=='primary')] # get sample list for G0
+G1  <- rownames(phe_info)[which(phe_info$`tumor type`=='metastasis')] # get sample list for G1
+DA_gs <- getDE.limma.2G(eset=generate.eset(ac_gs),G1=G1,G0=G0,G1_name='metastasis',G0_name='primary')
+DA_gs_bid <- getDE.BID.2G(eset=generate.eset(ac_gs),G1=G1,G0=G0,G1_name='metastasis',G0_name='primary')
+
+## draw vocalno plot for top sig-GS
+sig_gs <- draw.volcanoPlot(dat=cbind(DA_gs,names=rownames(DA_gs),stringsAsFactors=FALSE),label_col='names',logFC_col='logFC',
+                               Pv_col='P.Value',logFC_thre=0,Pv_thre=0.1,
+                               main='Volcano Plot for gene sets',show_label=TRUE,label_type = 'distribute',label_cex = 0.5,
+                               pdf_file=sprintf('%s/vocalno_GS_DA.pdf',analysis.par$out.dir.PLOT))
+
+## draw heatmap for top sig-GS
+draw.heatmap(mat=ac_gs[sig_gs$names,],pdf_file=sprintf('%s/heatmap_GS.pdf',analysis.par$out.dir.PLOT),scale='row',
+             phenotype_info=phe_info,use_phe=c('Sex','tumor type'))
+
+## draw GSEA plot for top sig-GS
+comp <- 'metastasis2primary'
+DE <- analysis.par$DE[[comp]]
+# id conversion
+DE$symbol <- get_name_transfertab(rownames(DE),transfer_tab = transfer_tab)
+#
+draw.GSEA.NetBID.GS(DE=DE,name_col='symbol',profile_col='t',profile_trend='pos2neg',
+                 sig_gs_list = sig_gs$names,
+                 gs_DA_Z=DA_gs[sig_gs$names,'Z-statistics'],
+                 use_gs2gene = use_gs2gene,
+                 top_gs_number=20,target_col='RdBu',
+                 left_annotation = 'test_left',right_annotation = 'test_right',
+                 main='test',Z_sig_thre=1.64,profile_sig_thre = 0,
+                 pdf_file=sprintf('%s/NetBID_GSEA_GS_demo1.pdf',analysis.par$out.dir.PLOT))
+
+draw.GSEA.NetBID.GS(DE=DE,name_col='symbol',profile_col='t',profile_trend='pos2neg',
+                    sig_gs_list = sig_gs$names,
+                    gs_DA_Z=DA_gs[sig_gs$names,'Z-statistics'],
+                    use_gs2gene = use_gs2gene,
+                    top_gs_number=20,target_col='black',
+                    left_annotation = 'test_left',right_annotation = 'test_right',
+                    main='test',Z_sig_thre=1.64,profile_sig_thre = 0,
+                    pdf_file=sprintf('%s/NetBID_GSEA_GS_demo2.pdf',analysis.par$out.dir.PLOT))
+
+## draw category plot for each sig-GS
+use_obs_class <- get_obs_label(phe_info = phe_info,'tumor type')
+draw.categoryValue(ac_val=ac_gs[sig_gs$names[1],],use_obs_class=use_obs_class,
+                   class_order=c('primary','metastasis'),class_srt=30,pdf_file=sprintf('%s/categoryValue_GS_demo1.pdf',analysis.par$out.dir.PLOT),
+                   main_ac=sig_gs$names[1],main_cex=0.8)
+
+## draw GSEA plot for each sig-GS
+DE_profile <- DE$`Z-statistics`; names(DE_profile) <- rownames(DE)
+use_target_genes <- rownames(DE)[which(DE$symbol %in% use_gs2gene[[sig_gs$names[1]]])]
+draw.GSEA(rank_profile=DE_profile,use_genes=use_target_genes,
+          main=sprintf('GSEA plot for %s',sig_gs$names[1]),
+          pdf_file = sprintf('%s/GSEA_GS_each.pdf',analysis.par$out.dir.PLOT),
+          left_annotation='high in metastasis',right_annotation='high in primary')
+
+
+############## III.3: SINBA plot for synergistic effect
+
+seed_driver <- driver_list[3]
+part_driver <- ms_tab$originalID_label
+
+######
+comp_name <- 'metastasis2primary' ## each comparison must give a name !!!
+G0  <- rownames(phe_info)[which(phe_info$`tumor type`=='primary')] # get sample list for G0
+G1  <- rownames(phe_info)[which(phe_info$`tumor type`=='metastasis')] # get sample list for G1
+##
+merge_target <- lapply(part_driver,function(x){
+  m1 <- merge_target_list(driver1=seed_driver,driver2=x,target_list=analysis.par$merge.network$target_list)
+})
+names(merge_target) <- part_driver
+ac_combine_mat <- cal.Activity(all_target=merge_target,cal_mat=exprs(analysis.par$cal.eset),es.method='weightedmean')
+DA_driver_combine <- getDE.BID.2G(eset=generate.eset(ac_combine_mat),G1=G1,G0=G0,G1_name='metastasis',G0_name='primary')
+ori_part_Z <- analysis.par$DA[[comp_name]][part_driver,'Z-statistics']
+ori_seed_Z <- analysis.par$DA[[comp_name]][seed_driver,'Z-statistics']
+diff_Z <- 2*DA_driver_combine[part_driver,'Z-statistics']-(ori_part_Z+ori_seed_Z)
+names(diff_Z) <- part_driver
+#
+comp <- 'metastasis2primary'
+DE <- analysis.par$DE[[comp]]
+driver_DA_Z <- analysis.par$DA[[comp_name]][,'Z-statistics']
+names(driver_DA_Z) <- rownames(analysis.par$DA[[comp_name]])
+driver_DE_Z <- analysis.par$DE[[comp_name]][,'Z-statistics']
+names(driver_DE_Z) <- rownames(analysis.par$DE[[comp_name]])
+DA_Z_merge <- DA_driver_combine[,'Z-statistics']
+names(DA_Z_merge) <- rownames(DA_driver_combine)
+target_list_merge <- merge_target
+seed_driver_label <- ms_tab[seed_driver,'gene_label']
+partner_driver_list <- part_driver
+profile_col <- 't'
+partner_driver_label <- ms_tab[partner_driver_list,'gene_label']
+target_list <- analysis.par$merge.network$target_list
+##
+draw.GSEA.NetBID.SINBA(DE=DE,profile_col = profile_col,seed_driver=seed_driver,partner_driver_list=partner_driver_list,
+                       seed_driver_label=seed_driver_label,partner_driver_label=partner_driver_label,
+                       driver_DA_Z=driver_DA_Z,driver_DE_Z=driver_DE_Z,target_list=target_list,
+                       DA_Z_merge=DA_Z_merge,target_list_merge=target_list_merge,
+                       top_driver_number=20,profile_trend='pos2neg',top_order='merge',Z_sig_thre = 1.64,
+                       target_nrow=1,target_col='RdBu',target_col_type='PN',
+                       pdf_file=sprintf('%s/NetBID_GSEA_SINBA_demo1.pdf',analysis.par$out.dir.PLOT))
+
+draw.GSEA.NetBID.SINBA(DE=DE,profile_col = profile_col,seed_driver=seed_driver,partner_driver_list=partner_driver_list,
+                       seed_driver_label=seed_driver_label,partner_driver_label=partner_driver_label,
+                       driver_DA_Z=driver_DA_Z,driver_DE_Z=driver_DE_Z,target_list=target_list,
+                       DA_Z_merge=DA_Z_merge,target_list_merge=target_list_merge,
+                       top_driver_number=15,profile_trend='pos2neg',top_order='merge',Z_sig_thre = 1.64,
+                       target_nrow=2,target_col='RdBu',target_col_type='PN',
+                       pdf_file=sprintf('%s/NetBID_GSEA_SINBA_demo2.pdf',analysis.par$out.dir.PLOT))
+
+draw.GSEA.NetBID.SINBA(DE=DE,profile_col = profile_col,seed_driver=seed_driver,partner_driver_list=partner_driver_list,
+                       seed_driver_label=seed_driver_label,partner_driver_label=partner_driver_label,
+                       driver_DA_Z=driver_DA_Z,driver_DE_Z=driver_DE_Z,target_list=target_list,
+                       DA_Z_merge=DA_Z_merge,target_list_merge=target_list_merge,
+                       top_driver_number=5,profile_trend='pos2neg',top_order='merge',Z_sig_thre = 1.64,
+                       target_nrow=1,target_col='black',target_col_type='PN',
+                       pdf_file=sprintf('%s/NetBID_GSEA_SINBA_demo3.pdf',analysis.par$out.dir.PLOT))
+
+################# PartIV: Supplementary usage for different conditions
+
+############## III.1: if want to get mean expression/activity value for each phenotype cluster
+phe_info <- pData(analysis.par$cal.eset)
+phe2sample <- vec2list(get_obs_label(phe_info,'tumor type'),sep=NULL)
+exp_mat <- exprs(analysis.par$cal.eset) ## expression,the rownames must be the originalID
+ac_mat <- exprs(analysis.par$merge.ac.eset) ## ac,the rownames must be the originalID_label
+merge_exp  <- cal.Activity.GS(use_gs2gene=phe2sample,cal_mat=t(exp_mat),es.method = 'median')
+merge_ac   <- cal.Activity.GS(use_gs2gene=phe2sample,cal_mat=t(ac_mat),es.method = 'median')
+
+
+
+
