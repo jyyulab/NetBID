@@ -57,10 +57,12 @@ source2_label <- 'test2'
 source2_z <- -2.36
 edge_score2 <- (sample(1:240,size=120,replace=TRUE)-120)/120
 names(edge_score2) <- sample(paste0('G',1:1000),size=120)
-draw.targetNet.TWO(source1_label=source1_label,source2_label=source2_label,
+draw.targetNet.TWO(source1_label=source1_label,
+               source2_label=source2_label,
                source1_z=source1_z,source2_z=source2_z,
                edge_score1=edge_score1,edge_score2=edge_score2,
-               total_possible_target=paste0('G',1:1000),show_test=TRUE,label_cex=0.6)
+               total_possible_target=paste0('G',1:1000),
+               show_test=TRUE,label_cex=0.6)
 \dontrun{
 source1_label <- 'test1'
 source1_z <- 1.96
@@ -72,10 +74,12 @@ edge_score2 <- (sample(1:240,size=100,replace=TRUE)-120)/120
 names(edge_score2) <- sample(paste0('G',1:1000),size=120)
 analysis.par <- list()
 analysis.par$out.dir.PLOT <- getwd()
-#' draw.targetNet.TWO(source1_label=source1_label,source2_label=source2_label,
+draw.targetNet.TWO(source1_label=source1_label,
+               source2_label=source2_label,
                source1_z=source1_z,source2_z=source2_z,
                edge_score1=edge_score1,edge_score2=edge_score2,
                total_possible_target=paste0('G',1:1000),show_test=TRUE,
-               pdf_file=sprintf('\%s/targetNetTWO.pdf',analysis.par$out.dir.PLOT))
+               pdf_file=sprintf('\%s/targetNetTWO.pdf',
+               analysis.par$out.dir.PLOT))
 }
 }

@@ -55,32 +55,42 @@ across samples with different phenotype categories. Also, only draw of expressio
 }
 \examples{
 analysis.par <- list()
-analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
+analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
 NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 ms_tab <- analysis.par$final_ms_tab
-sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
-                               Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.01,Pv_thre=0.1,
-                               main='Volcano Plot for metastasis2primary_DA',show_label=FALSE,
+sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
+                               logFC_col='logFC.metastasis2primary_DA',
+                               Pv_col='P.Value.metastasis2primary_DA',
+                               logFC_thre=0.01,Pv_thre=0.1,
+                               main='Volcano Plot for metastasis2primary_DA',
+                               show_label=FALSE,
                                label_type = 'origin',label_cex = 0.5)
 driver_list <- rownames(sig_driver)
 use_driver <- driver_list[3]
-exp_mat <- exprs(analysis.par$cal.eset) ## expression,the rownames could match originalID
-ac_mat  <- exprs(analysis.par$merge.ac.eset) ## activity,the rownames could match originalID_label
+exp_mat <- exprs(analysis.par$cal.eset)
+## expression,the rownames could match originalID
+ac_mat  <- exprs(analysis.par$merge.ac.eset)
+## activity,the rownames could match originalID_label
 phe_info <- pData(analysis.par$cal.eset)
 use_obs_class <- get_obs_label(phe_info = phe_info,'tumor type')
-draw.categoryValue(ac_val=ac_mat[use_driver,],exp_val=exp_mat[ms_tab[use_driver,'originalID'],],
+draw.categoryValue(ac_val=ac_mat[use_driver,],
+                   exp_val=exp_mat[ms_tab[use_driver,'originalID'],],
                    use_obs_class=use_obs_class,
-                   class_order=c('primary','metastasis'),class_srt=30,
+                   class_order=c('primary','metastasis'),
+                   class_srt=30,
                    main_ac = ms_tab[use_driver,'gene_label'],
                    main_exp=ms_tab[use_driver,'geneSymbol'])
 \dontrun{
 analysis.par <- list()
-analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
+analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
 NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 ms_tab <- analysis.par$final_ms_tab
-sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
-                               Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.01,Pv_thre=0.1,
-                               main='Volcano Plot for metastasis2primary_DA',show_label=FALSE,
+sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
+                               logFC_col='logFC.metastasis2primary_DA',
+                               Pv_col='P.Value.metastasis2primary_DA',
+                               logFC_thre=0.01,Pv_thre=0.1,
+                               main='Volcano Plot for metastasis2primary_DA',
+                               show_label=FALSE,
                                label_type = 'origin',label_cex = 0.5)
 driver_list <- rownames(sig_driver)
 use_driver <- driver_list[3]
@@ -89,11 +99,14 @@ ac_mat  <- exprs(analysis.par$merge.ac.eset) ## activity,the rownames could matc
 phe_info <- pData(analysis.par$cal.eset)
 use_obs_class <- get_obs_label(phe_info = phe_info,'tumor type')
 analysis.par$out.dir.PLOT <- getwd() ## directory for saving the pdf files
-draw.categoryValue(ac_val=ac_mat[use_driver,],exp_val=exp_mat[ms_tab[use_driver,'originalID'],],
+draw.categoryValue(ac_val=ac_mat[use_driver,],
+                   exp_val=exp_mat[ms_tab[use_driver,'originalID'],],
                    use_obs_class=use_obs_class,
-                   class_order=c('primary','metastasis'),class_srt=30,
+                   class_order=c('primary','metastasis'),
+                   class_srt=30,
                    main_ac = ms_tab[use_driver,'gene_label'],
                    main_exp=ms_tab[use_driver,'geneSymbol'],
-                   pdf_file=sprintf('\%s/categoryValue_demo1.pdf',analysis.par$out.dir.PLOT))
+                   pdf_file=sprintf('\%s/categoryValue_demo1.pdf',
+                   analysis.par$out.dir.PLOT))
 }
 }

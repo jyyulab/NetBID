@@ -23,7 +23,7 @@ Mainly used for input preparation in the visualization plots.
 }
 \examples{
 analysis.par <- list()
-analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
+analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
 NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 phe_info <- pData(analysis.par$cal.eset)
 use_obs_class <- get_obs_label(phe_info = phe_info,'tumor type')

@@ -2,9 +2,9 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{gs.preload}
 \alias{gs.preload}
-\title{Load MsigDB for NetBID2 into R workspace.}
+\title{Load MSigDB for NetBID2 into R workspace.}
 \usage{
-gs.preload(use_spe = "Homo sapiens", update = TRUE,
+gs.preload(use_spe = "Homo sapiens", update = FALSE,
   db.dir = sprintf("\%s/db/", main.dir))
 }
 \arguments{

@@ -1,0 +1,3 @@
+load("/Volumes/project_space/brainTumor_JY/yu3grp/FudanData/softs/NetBID2/db/HUMAN/HUMAN_transcript.RData")
+db_info
+ls()

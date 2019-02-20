@@ -42,10 +42,10 @@ from biomart and save into RData under the db/ directory with specified species 
 \examples{
 main.dir <- system.file(package = "NetBID2")
 db.preload(use_level='gene',use_spe='human',update=FALSE)
-db.preload(use_level='gene',use_spe='mouse',update=FALSE)
 
 \dontrun{
 main.dir <- system.file(package = "NetBID2") ## must specify a main directory
 db.preload(use_level='transcript',use_spe='human',update=FALSE)
+db.preload(use_level='gene',use_spe='mouse',update=FALSE)
 }
 }

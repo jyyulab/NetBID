@@ -5,31 +5,31 @@ Version: 0.1.0
 Authors@R: person("Xinran", "Dong", email = "xinran.dong@stjude.org", role = c("aut", "cre"))
 Maintainer@R: person("Xinran", "Dong", email = "xinran.dong@stjude.org")
 Description: A integrative systems biolgy algorithm to infer driers of phenotype based on data-driven context-specific network and Bayesian inference.
-License: Apache 2.0
+License: GPL (>= 2)
 Encoding: UTF-8
 LazyData: true
 Depends: 
-    R (>= 3.4)
-Imports: 
-    Biobase,
-    GEOquery,
-    limma,
-    DESeq2,
-    tximport,
-    arrayQualityMetrics,
-    RColorBrewer,
+    R (>= 3.4),
+    Biobase (>= 2.40.0),
+    GEOquery (>= 2.48.0),
+    limma (>= 3.36.5),
+    DESeq2 (>= 1.20.0),
+    tximport (>= 1.8.0),
+    arrayQualityMetrics (>= 3.36.0),
+    RColorBrewer (>= 1.1-2),
+    plot3D (>= 1.1.1),
+    vsn (>= 3.48.1),
+    igraph (>= 1.2.2),
+    plotrix (>= 3.7-4),
+    biomaRt (>= 2.36.1),
+    openxlsx (>= 4.1.0),
+    impute (>= 1.54.0),
+    msigdbr (>= 6.2.1),
+    ComplexHeatmap (>= 1.18.1),
+    umap (>= 0.2.0.0),
+    plyr (>= 1.8.4)
+Imports:
     colorspace,
-    plot3D,
-    vsn,
-    gplots,
-    igraph,
-    plotrix,
-    biomaRt,
-    openxlsx,
-    impute,
-    msigdbr,
-    ComplexHeatmap,
-    umap,
     rhdf5
 Suggests:
     MCMCglmm,

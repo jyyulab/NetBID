@@ -15,9 +15,11 @@ get_name_transfertab(use_genes = NULL, transfer_tab = NULL,
 \item{from_type}{character, attribute name from the biomaRt package, such as 'ensembl_gene_id','ensembl_gene_id_version'
 'ensembl_transcript_id','ensembl_transcript_id_version','refseq_mrna'. Full list could be obtained by
 \code{listAttributes(mart)$name}, where \code{mart} is the output of \code{useMart} function.
-The type must be the gene type for the input \code{use_genes}.}
+The type must be the gene type for the input \code{use_genes}.
+ If NULL, will use the first column in the transfer table.}
 
-\item{to_type}{character, character, attribute name from the biomaRt package, the gene type will be convereted to.}
+\item{to_type}{character, character, attribute name from the biomaRt package, the gene type will be convereted to.
+If NULL, will use the second column in the transfer table.}
 }
 \value{
 \code{get_name_transfertab} will return the list for the converted IDs.
@@ -26,13 +28,17 @@ The type must be the gene type for the input \code{use_genes}.}
 \code{get_name_transfertab} will get the transfered ID by input the original ID and transfer table.
 }
 \examples{
-use_genes <- c("ENST00000210187",ENST00000216083","ENST00000216127",
-             "ENST00000216416","ENST00000217233",ENST00000221418")
+use_genes <- c("ENST00000210187","ENST00000216083","ENST00000216127",
+             "ENST00000216416","ENST00000217233","ENST00000221418")
 transfer_tab <- get_IDtransfer(from_type = 'ensembl_transcript_id',
-                               to_type='external_gene_name',use_genes=use_genes) ## get transfer table !!!
-res1 <- get_name_transfertab(use_genes,transfer_tab=transfer_tab)
+                               to_type='external_gene_name',use_genes=use_genes,
+                               dataset='hsapiens_gene_ensembl')
+                               ## get transfer table !!!
+res1 <- get_name_transfertab(use_genes=use_genes,transfer_tab=transfer_tab)
 transfer_tab_withtype <- get_IDtransfer2symbol2type(from_type = 'ensembl_transcript_id',
-                                                   use_genes=use_genes) ## get transfer table !!!
+                                                   use_genes=use_genes,
+                                                   dataset='hsapiens_gene_ensembl')
+                                                   ## get transfer table !!!
 \dontrun{
 }
 }

@@ -93,13 +93,15 @@ User could choose to display the target genes in one row or two rows, by selecti
 }
 \examples{
 analysis.par <- list()
-analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
+analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
 NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 ms_tab <- analysis.par$final_ms_tab
 comp <- 'metastasis2primary'
 DE <- analysis.par$DE[[comp]]
-sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
-                               Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.01,Pv_thre=0.1,
+sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
+                               logFC_col='logFC.metastasis2primary_DA',
+                               Pv_col='P.Value.metastasis2primary_DA',
+                               logFC_thre=0.01,Pv_thre=0.1,
                                main='Volcano Plot for metastasis2primary_DA',show_label=FALSE,
                                label_type = 'origin',label_cex = 0.5)
 driver_list <- rownames(sig_driver)
@@ -109,19 +111,22 @@ draw.GSEA.NetBID(DE=DE,profile_col='t',profile_trend='neg2pos',
                  driver_DA_Z=ms_tab[driver_list,'Z.metastasis2primary_DA'],
                  driver_DE_Z=ms_tab[driver_list,'Z.metastasis2primary_DE'],
                  target_list=analysis.par$merge.network$target_list,
-                 top_driver_number=30,target_nrow=2,target_col='RdBu',
+                 top_driver_number=5,target_nrow=2,target_col='RdBu',
                  left_annotation = 'test_left',right_annotation = 'test_right',
                  main='test',target_col_type='DE',Z_sig_thre=1.64,profile_sig_thre = 1.64)
 \dontrun{
 analysis.par <- list()
-analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
+analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
 NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 ms_tab <- analysis.par$final_ms_tab
 comp <- 'metastasis2primary'
 DE <- analysis.par$DE[[comp]]
-sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
-                               Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.01,Pv_thre=0.1,
-                               main='Volcano Plot for metastasis2primary_DA',show_label=FALSE,
+sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
+                               logFC_col='logFC.metastasis2primary_DA',
+                               Pv_col='P.Value.metastasis2primary_DA',
+                               logFC_thre=0.01,Pv_thre=0.1,
+                               main='Volcano Plot for metastasis2primary_DA',
+                               show_label=FALSE,
                                label_type = 'origin',label_cex = 0.5)
 driver_list <- rownames(sig_driver)
 analysis.par$out.dir.PLOT <- getwd() ## directory for saving the pdf files
@@ -131,10 +136,14 @@ draw.GSEA.NetBID(DE=DE,profile_col='t',profile_trend='neg2pos',
                  driver_DA_Z=ms_tab[driver_list,'Z.metastasis2primary_DA'],
                  driver_DE_Z=ms_tab[driver_list,'Z.metastasis2primary_DE'],
                  target_list=analysis.par$merge.network$target_list,
-                 top_driver_number=30,target_nrow=2,target_col='RdBu',
-                 left_annotation = 'test_left',right_annotation = 'test_right',
-                 main='test',target_col_type='DE',Z_sig_thre=1.64,profile_sig_thre = 1.64,
-                 pdf_file=sprintf('\%s/NetBID_GSEA_demo1.pdf',analysis.par$out.dir.PLOT))
+                 top_driver_number=30,
+                 target_nrow=2,target_col='RdBu',
+                 left_annotation = 'test_left',
+                 right_annotation = 'test_right',
+                 main='test',target_col_type='DE',
+                 Z_sig_thre=1.64,profile_sig_thre = 1.64,
+                 pdf_file=sprintf('\%s/NetBID_GSEA_demo1.pdf',
+                 analysis.par$out.dir.PLOT))
 draw.GSEA.NetBID(DE=DE,profile_col='t',profile_trend='neg2pos',
                  driver_list = driver_list,
                  show_label=ms_tab[driver_list,'gene_label'],
@@ -142,8 +151,11 @@ draw.GSEA.NetBID(DE=DE,profile_col='t',profile_trend='neg2pos',
                  driver_DE_Z=ms_tab[driver_list,'Z.metastasis2primary_DE'],
                  target_list=analysis.par$merge.network$target_list,
                  top_driver_number=30,target_nrow=1,target_col='RdBu',
-                 left_annotation = 'test_left',right_annotation = 'test_right',
-                 main='test',target_col_type='PN',Z_sig_thre=1.64,profile_sig_thre = 1.64,
-                 pdf_file=sprintf('\%s/NetBID_GSEA_demo2.pdf',analysis.par$out.dir.PLOT))
+                 left_annotation = 'test_left',
+                 right_annotation = 'test_right',
+                 main='test',target_col_type='PN',
+                 Z_sig_thre=1.64,profile_sig_thre = 1.64,
+                 pdf_file=sprintf('\%s/NetBID_GSEA_demo2.pdf',
+                 analysis.par$out.dir.PLOT))
 }
 }

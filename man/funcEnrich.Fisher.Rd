@@ -4,10 +4,9 @@
 \alias{funcEnrich.Fisher}
 \title{Gene set enrichment analysis by Fisher's Exact Test.}
 \usage{
-funcEnrich.Fisher(input_list = NULL, bg_list = NULL, gs2gene = NULL,
-  use_gs = c("H", "CP:BIOCARTA", "CP:REACTOME", "CP:KEGG"),
-  min_gs_size = 5, max_gs_size = 500, Pv_adj = "fdr",
-  Pv_thre = 0.1)
+funcEnrich.Fisher(input_list = NULL, bg_list = NULL, use_gs = NULL,
+  gs2gene = NULL, min_gs_size = 5, max_gs_size = 500,
+  Pv_adj = "fdr", Pv_thre = 0.1)
 }
 \arguments{
 \item{input_list}{a vector of characters, the list of genes for analysis. Only accept gene symbols, and gene ID conversion could be done by preparing a transfer table
@@ -16,11 +15,15 @@ by using \code{get_IDtransfer} and using \code{get_name_transfertab} to transfer
 \item{bg_list}{a vector of characters, the background list of genes for analysis. Only accept gene symbols.
 Default is NULL, will use all genes in the gs2gene as the background list.}
 
+\item{use_gs}{a vector of characters, the name for gene set category used for anlaysis.
+If gs2gene is set to NULL, use_gs must be the subset of \code{names(all_gs2gene)}.
+Could check \code{all_gs2gene_info} for the cateogory description.
+If set to 'all', all gene sets in gs2gene will be used.
+Default is \code{c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG')} if gs2gene is set to NULL (use all_gs2gene).
+If user input own gs2gene list, use_gs will be set to 'all' as default.}
+
 \item{gs2gene}{a list for geneset to genes, the name for the list is the gene set name and the content in each list is the vector for genes belong to that gene set.
 If NULL, will use all_gs2gene loaded by using \code{gs.preload}. Default is NULL.}
-
-\item{use_gs}{a vector of characters, the name for gene set category used for anlaysis. If gs2gene is set to NULL, use_gs must be the subset of \code{names(all_gs2gene)}.
-Could check \code{all_gs2gene_info} for the cateogory description.Default is \code{c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG')}.}
 
 \item{min_gs_size}{numeric, minimum gene set size for analysis, default is 5.}
 
@@ -52,17 +55,22 @@ Background gene list is accepeted.
 }
 \examples{
 analysis.par <- list()
-analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
+analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
 NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 ms_tab <- analysis.par$final_ms_tab
-sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
-                               Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.01,Pv_thre=0.1,
-                               main='Volcano Plot for metastasis2primary_DA',show_label=FALSE,
+sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
+                               logFC_col='logFC.metastasis2primary_DA',
+                               Pv_col='P.Value.metastasis2primary_DA',
+                               logFC_thre=0.01,Pv_thre=0.1,
+                               main='Volcano Plot for metastasis2primary_DA',
+                               show_label=FALSE,
                                label_type = 'origin',label_cex = 0.5)
 main.dir <- system.file(package = "NetBID2")
 gs.preload(use_spe='Homo sapiens',update=FALSE)
-res1 <- funcEnrich.Fisher(input_list=ms_tab[rownames(sig_driver),'geneSymbol'],bg_list=ms_tab[,'geneSymbol'],
-                               use_gs=c('H','C5'),Pv_thre=0.1,Pv_adj = 'none')
+res1 <- funcEnrich.Fisher(input_list=ms_tab[rownames(sig_driver),'geneSymbol'],
+                               bg_list=ms_tab[,'geneSymbol'],
+                               use_gs=c('H','C5'),
+                               Pv_thre=0.1,Pv_adj = 'none')
 \dontrun{
 }
 }

@@ -61,53 +61,76 @@ Detailed matrix for the cluster, enriched P-value will be displayed on the plot.
 }
 \examples{
 analysis.par <- list()
-analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
+analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
 NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 ms_tab <- analysis.par$final_ms_tab
-sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
-                               Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.01,Pv_thre=0.1,
-                               main='Volcano Plot for metastasis2primary_DA',show_label=FALSE,
+sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
+                               logFC_col='logFC.metastasis2primary_DA',
+                               Pv_col='P.Value.metastasis2primary_DA',
+                               logFC_thre=0.01,Pv_thre=0.1,
+                               main='Volcano Plot for metastasis2primary_DA',
+                               show_label=FALSE,
                                label_type = 'origin',label_cex = 0.5)
 main.dir <- system.file(package = "NetBID2")
 gs.preload(use_spe='Homo sapiens',update=FALSE)
-res1 <- funcEnrich.Fisher(input_list=ms_tab[rownames(sig_driver),'geneSymbol'],bg_list=ms_tab[,'geneSymbol'],
-                               use_gs=c('H','C5'),Pv_thre=0.1,Pv_adj = 'none')
-draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 0.8,gene_cex=0.9,pv_cex=0.8)
-draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 1.4,gene_cex=1.5,pv_cex=1.2,
+res1 <- funcEnrich.Fisher(input_list=ms_tab[rownames(sig_driver),'geneSymbol'],
+                          bg_list=ms_tab[,'geneSymbol'],
+                          use_gs=c('H','C5'),Pv_thre=0.1,Pv_adj = 'none')
+draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 0.5,
+                       gene_cex=0.9,pv_cex=0.8)
+draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=10,gs_cex = 0.6,
+                       gene_cex=1,pv_cex=1,
                        cluster_gs=TRUE,cluster_gene = TRUE)
-draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 0.8,gene_cex=0.9,pv_cex=0.8,
+draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=15,gs_cex = 0.8,
+                       gene_cex=0.9,pv_cex=0.8,
                        cluster_gs=TRUE,cluster_gene = FALSE)
-draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 0.8,gene_cex=0.9,pv_cex=0.8,
+draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=20,gs_cex = 0.8,
+                        gene_cex=0.9,pv_cex=0.8,
                         cluster_gs=FALSE,cluster_gene = TRUE)
-draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 1.5,gene_cex=1.4,pv_cex=1.2,
+draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=20,gs_cex = 1,
+                        gene_cex=1,pv_cex=0.8,
                         cluster_gs=FALSE,cluster_gene = FALSE)
 \dontrun{
 analysis.par <- list()
-analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
+analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
 NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 ms_tab <- analysis.par$final_ms_tab
-sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
-                               Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.01,Pv_thre=0.1,
-                               main='Volcano Plot for metastasis2primary_DA',show_label=FALSE,
+sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
+                               logFC_col='logFC.metastasis2primary_DA',
+                               Pv_col='P.Value.metastasis2primary_DA',
+                               logFC_thre=0.01,Pv_thre=0.1,
+                               main='Volcano Plot for metastasis2primary_DA',
+                               show_label=FALSE,
                                label_type = 'origin',label_cex = 0.5)
 main.dir <- system.file(package = "NetBID2")
 gs.preload(use_spe='Homo sapiens',update=FALSE)
-res1 <- funcEnrich.Fisher(input_list=ms_tab[rownames(sig_driver),'geneSymbol'],bg_list=ms_tab[,'geneSymbol'],
-                               use_gs=c('H','C5'),Pv_thre=0.1,Pv_adj = 'none')
+res1 <- funcEnrich.Fisher(input_list=ms_tab[rownames(sig_driver),'geneSymbol'],
+                          bg_list=ms_tab[,'geneSymbol'],
+                          use_gs=c('H','C5'),Pv_thre=0.1,Pv_adj = 'none')
 analysis.par$out.dir.PLOT <- getwd() ## directory for saving the pdf files
-draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 0.8,gene_cex=0.9,pv_cex=0.8,
-pdf_file = sprintf('\%s/funcEnrich_cluster.pdf',analysis.par$out.dir.PLOT))
-draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 1.4,gene_cex=1.5,pv_cex=1.2,
-                        pdf_file = sprintf('\%s/funcEnrich_clusterBOTH.pdf',analysis.par$out.dir.PLOT),
+draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 0.8,
+                        gene_cex=0.9,pv_cex=0.8,
+                        pdf_file = sprintf('\%s/funcEnrich_cluster.pdf',
+                        analysis.par$out.dir.PLOT))
+draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 1.4,
+                        gene_cex=1.5,pv_cex=1.2,
+                        pdf_file = sprintf('\%s/funcEnrich_clusterBOTH.pdf',
+                        analysis.par$out.dir.PLOT),
                         cluster_gs=TRUE,cluster_gene = TRUE)
-draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 0.8,gene_cex=0.9,pv_cex=0.8,
-                        pdf_file = sprintf('\%s/funcEnrich_clusterGS.pdf',analysis.par$out.dir.PLOT),
+draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 0.8,
+                        gene_cex=0.9,pv_cex=0.8,
+                        pdf_file = sprintf('\%s/funcEnrich_clusterGS.pdf',
+                        analysis.par$out.dir.PLOT),
                         cluster_gs=TRUE,cluster_gene = FALSE)
-draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 0.8,gene_cex=0.9,pv_cex=0.8,
-                        pdf_file = sprintf('\%s/funcEnrich_clusterGENE.pdf',analysis.par$out.dir.PLOT),
+draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 0.8,
+                        gene_cex=0.9,pv_cex=0.8,
+                        pdf_file = sprintf('\%s/funcEnrich_clusterGENE.pdf',
+                        analysis.par$out.dir.PLOT),
                         cluster_gs=FALSE,cluster_gene = TRUE)
-draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 1.5,gene_cex=1.4,pv_cex=1.2,
-                        pdf_file = sprintf('\%s/funcEnrich_clusterNO.pdf',analysis.par$out.dir.PLOT),
+draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 1.5,
+                        gene_cex=1.4,pv_cex=1.2,
+                        pdf_file = sprintf('\%s/funcEnrich_clusterNO.pdf',
+                        analysis.par$out.dir.PLOT),
                         cluster_gs=FALSE,cluster_gene = FALSE)
 }
 }

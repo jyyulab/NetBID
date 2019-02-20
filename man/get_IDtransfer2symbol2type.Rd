@@ -31,13 +31,17 @@ Gene ID conversion related functions.
 or transcript symbol and transcript biotype (at transcript level).
 }
 \examples{
-use_genes <- c("ENST00000210187",ENST00000216083","ENST00000216127",
-             "ENST00000216416","ENST00000217233",ENST00000221418")
+use_genes <- c("ENST00000210187","ENST00000216083","ENST00000216127",
+             "ENST00000216416","ENST00000217233","ENST00000221418")
 transfer_tab <- get_IDtransfer(from_type = 'ensembl_transcript_id',
-                               to_type='external_gene_name',use_genes=use_genes) ## get transfer table !!!
-res1 <- get_name_transfertab(x=use_genes,transfer_tab=transfer_tab)
+                               to_type='external_gene_name',use_genes=use_genes,
+                               dataset='hsapiens_gene_ensembl')
+                               ## get transfer table !!!
+res1 <- get_name_transfertab(use_genes,transfer_tab=transfer_tab)
 transfer_tab_withtype <- get_IDtransfer2symbol2type(from_type = 'ensembl_transcript_id',
-                                                   use_genes=use_genes) ## get transfer table !!!
+                                                   use_genes=use_genes,
+                                                   dataset='hsapiens_gene_ensembl')
+                                                   ## get transfer table !!!
 \dontrun{
 }
 }

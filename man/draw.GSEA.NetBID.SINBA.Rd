@@ -118,12 +118,15 @@ by selecting black color or red to blue color bar.
 \examples{
 \dontrun{
 analysis.par <- list()
-analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
+analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
 NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 ms_tab <- analysis.par$final_ms_tab
-sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
-                               Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.01,Pv_thre=0.1,
-                               main='Volcano Plot for metastasis2primary_DA',show_label=FALSE,
+sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
+                               logFC_col='logFC.metastasis2primary_DA',
+                               Pv_col='P.Value.metastasis2primary_DA',
+                               logFC_thre=0.01,Pv_thre=0.1,
+                               main='Volcano Plot for metastasis2primary_DA',
+                               show_label=FALSE,
                                label_type = 'origin',label_cex = 0.5)
 driver_list <- rownames(sig_driver)
 ## choose seed driver and partner driver list
@@ -131,17 +134,26 @@ seed_driver <- driver_list[1]
 part_driver <- ms_tab$originalID_label
 ## get merge target
 merge_target <- lapply(part_driver,function(x){
-  m1 <- merge_target_list(driver1=seed_driver,driver2=x,target_list=analysis.par$merge.network$target_list)
+  m1 <- merge_target_list(driver1=seed_driver,driver2=x,
+                          target_list=analysis.par$merge.network$target_list)
 })
 names(merge_target) <- part_driver
 ## get activity matrix for the merge target network
-ac_combine_mat <- cal.Activity(all_target=merge_target,cal_mat=exprs(analysis.par$cal.eset),es.method='weightedmean')
+ac_combine_mat <- cal.Activity(all_target=merge_target,
+                               cal_mat=exprs(analysis.par$cal.eset),
+                               es.method='weightedmean')
 ## get DA for the combined drivers
 comp_name <- 'metastasis2primary'
-G0  <- rownames(phe_info)[which(phe_info$`tumor type`=='primary')] # get sample list for G0
-G1  <- rownames(phe_info)[which(phe_info$`tumor type`=='metastasis')] # get sample list for G1
-DA_driver_combine <- getDE.limma.2G(eset=generate.eset(ac_combine_mat),G1=G1,G0=G0,G1_name='metastasis',G0_name='primary')
-## or use: DA_driver_combine <- getDE.BID.2G(eset=generate.eset(ac_combine_mat),G1=G1,G0=G0,G1_name='metastasis',G0_name='primary')
+G0  <- rownames(phe_info)[which(phe_info$`tumor type`=='primary')]
+# get sample list for G0
+G1  <- rownames(phe_info)[which(phe_info$`tumor type`=='metastasis')]
+# get sample list for G1
+DA_driver_combine <- getDE.limma.2G(eset=generate.eset(ac_combine_mat),
+                                    G1=G1,G0=G0,
+                                    G1_name='metastasis',G0_name='primary')
+## or use: DA_driver_combine <- getDE.BID.2G(eset=generate.eset(ac_combine_mat),
+                                    G1=G1,G0=G0,
+                                    G1_name='metastasis',G0_name='primary')
 ## prepare for SINBA input
 ori_part_Z <- analysis.par$DA[[comp_name]][part_driver,'Z-statistics']
 ori_seed_Z <- analysis.par$DA[[comp_name]][seed_driver,'Z-statistics']
@@ -158,12 +170,19 @@ partner_driver_list <- part_driver
 profile_col <- 't'
 partner_driver_label <- ms_tab[partner_driver_list,'gene_label']
 target_list <- analysis.par$merge.network$target_list
-draw.GSEA.NetBID.SINBA(DE=DE,profile_col = profile_col,seed_driver=seed_driver,partner_driver_list=partner_driver_list,
-                       seed_driver_label=seed_driver_label,partner_driver_label=partner_driver_label,
-                       driver_DA_Z=driver_DA_Z,driver_DE_Z=driver_DE_Z,target_list=target_list,
-                       DA_Z_merge=DA_Z_merge,target_list_merge=target_list_merge,
-                       top_driver_number=20,profile_trend='pos2neg',top_order='merge',Z_sig_thre = 1.64,
+draw.GSEA.NetBID.SINBA(DE=DE,profile_col = profile_col,
+                       seed_driver=seed_driver,
+                       partner_driver_list=partner_driver_list,
+                       seed_driver_label=seed_driver_label,
+                       partner_driver_label=partner_driver_label,
+                       driver_DA_Z=driver_DA_Z,driver_DE_Z=driver_DE_Z,
+                       target_list=target_list,
+                       DA_Z_merge=DA_Z_merge,
+                       target_list_merge=target_list_merge,
+                       top_driver_number=20,profile_trend='pos2neg',
+                       top_order='merge',Z_sig_thre = 1.64,
                        target_nrow=1,target_col='RdBu',target_col_type='PN',
-                       pdf_file=sprintf('\%s/NetBID_GSEA_SINBA_demo1.pdf',analysis.par$out.dir.PLOT))
+                       pdf_file=sprintf('\%s/NetBID_GSEA_SINBA_demo1.pdf',
+                       analysis.par$out.dir.PLOT))
 }
 }

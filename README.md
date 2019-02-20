@@ -16,6 +16,14 @@ download the directory to your workspace and then run:
 
 devtools::install(pkg='.') ## please input the path to the directory
 
+or get the source package file from server ('/research/projects/yu3grp/Network_JY/yu3grp/NetBID2/NetBID2_0.1.0.tar.gz') and install locally by:
+
+install.packages('NetBID2_0.1.0.tar.gz') ## path to the directory
+
+or directly install:
+
+install.packages('/research/projects/yu3grp/Network_JY/yu3grp/NetBID2/NetBID2_0.1.0.tar.gz')
+
 
 # the documents for some functions are not available yet (just write a blank page)
 

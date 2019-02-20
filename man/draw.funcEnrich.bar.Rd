@@ -51,38 +51,55 @@ Two modes, one just display the P-value, and the other could show the top inters
 }
 \examples{
 analysis.par <- list()
-analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
+analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
 NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 ms_tab <- analysis.par$final_ms_tab
-sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
-                               Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.01,Pv_thre=0.1,
-                               main='Volcano Plot for metastasis2primary_DA',show_label=FALSE,
+sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
+                               logFC_col='logFC.metastasis2primary_DA',
+                               Pv_col='P.Value.metastasis2primary_DA',
+                               logFC_thre=0.01,Pv_thre=0.1,
+                               main='Volcano Plot for metastasis2primary_DA',
+                               show_label=FALSE,
                                label_type = 'origin',label_cex = 0.5)
 main.dir <- system.file(package = "NetBID2")
 gs.preload(use_spe='Homo sapiens',update=FALSE)
-res1 <- funcEnrich.Fisher(input_list=ms_tab[rownames(sig_driver),'geneSymbol'],bg_list=ms_tab[,'geneSymbol'],
-                               use_gs=c('H','C5'),Pv_thre=0.1,Pv_adj = 'none')
-draw.funcEnrich.bar(funcEnrich_res=res1,top_number=30,main='Function Enrichment for Top drivers')
-draw.funcEnrich.bar(funcEnrich_res=res1,top_number=30,main='Function Enrichment for Top drivers',
-                    display_genes = TRUE,gs_cex=0.6)
+res1 <- funcEnrich.Fisher(input_list=ms_tab[rownames(sig_driver),'geneSymbol'],
+                          bg_list=ms_tab[,'geneSymbol'],
+                          use_gs=c('H'),Pv_thre=0.1,
+                          Pv_adj = 'none')
+draw.funcEnrich.bar(funcEnrich_res=res1,top_number=5,
+                   main='Function Enrichment for Top drivers',
+                   gs_cex=0.4,gene_cex=0.5)
+draw.funcEnrich.bar(funcEnrich_res=res1,top_number=5,
+                   main='Function Enrichment for Top drivers',
+                   display_genes = TRUE,eg_num=3,
+                   gs_cex=0.6,gene_cex=0.5)
 \dontrun{
 analysis.par <- list()
-analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
+analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
 NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 ms_tab <- analysis.par$final_ms_tab
-sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
-                               Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.01,Pv_thre=0.1,
-                               main='Volcano Plot for metastasis2primary_DA',show_label=FALSE,
+sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
+                               logFC_col='logFC.metastasis2primary_DA',
+                               Pv_col='P.Value.metastasis2primary_DA',
+                               logFC_thre=0.01,Pv_thre=0.1,
+                               main='Volcano Plot for metastasis2primary_DA',
+                               show_label=FALSE,
                                label_type = 'origin',label_cex = 0.5)
 main.dir <- system.file(package = "NetBID2")
 gs.preload(use_spe='Homo sapiens',update=FALSE)
-res1 <- funcEnrich.Fisher(input_list=ms_tab[rownames(sig_driver),'geneSymbol'],bg_list=ms_tab[,'geneSymbol'],
-                               use_gs=c('H','C5'),Pv_thre=0.1,Pv_adj = 'none')
+res1 <- funcEnrich.Fisher(input_list=ms_tab[rownames(sig_driver),'geneSymbol'],
+                          bg_list=ms_tab[,'geneSymbol'],
+                          use_gs=c('H','C5'),Pv_thre=0.1,Pv_adj = 'none')
 analysis.par$out.dir.PLOT <- getwd() ## directory for saving the pdf files
-draw.funcEnrich.bar(funcEnrich_res=res1,top_number=30,main='Function Enrichment for Top drivers',
-                    pdf_file=sprintf('\%s/funcEnrich_bar_nogene.pdf',analysis.par$out.dir.PLOT))
-draw.funcEnrich.bar(funcEnrich_res=res1,top_number=30,main='Function Enrichment for Top drivers',
+draw.funcEnrich.bar(funcEnrich_res=res1,top_number=30,
+                    main='Function Enrichment for Top drivers',
+                    pdf_file=sprintf('\%s/funcEnrich_bar_nogene.pdf',
+                    analysis.par$out.dir.PLOT))
+draw.funcEnrich.bar(funcEnrich_res=res1,top_number=30,
+                    main='Function Enrichment for Top drivers',
                     display_genes = TRUE,gs_cex=0.6,
-                    pdf_file=sprintf('\%s/funcEnrich_bar_withgene.pdf',analysis.par$out.dir.PLOT))
+                    pdf_file=sprintf('\%s/funcEnrich_bar_withgene.pdf',
+                    analysis.par$out.dir.PLOT))
 }
 }

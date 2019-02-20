@@ -44,7 +44,9 @@ edge_score <- (sample(1:200,size=100,replace=TRUE)-100)/100
 names(edge_score) <- paste0('G',1:100)
 analysis.par <- list()
 analysis.par$out.dir.PLOT <- getwd()
-draw.targetNet(source_label=source_label,source_z=source_z,edge_score=edge_score,
-               pdf_file=sprintf('\%s/targetNet.pdf',analysis.par$out.dir.PLOT))
+draw.targetNet(source_label=source_label,source_z=source_z,
+               edge_score=edge_score,
+               pdf_file=sprintf('\%s/targetNet.pdf',
+               analysis.par$out.dir.PLOT))
 }
 }

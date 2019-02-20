@@ -51,11 +51,11 @@ library(rhdf5) ## for read in MICA results
 #' @examples
 #' main.dir <- system.file(package = "NetBID2")
 #' db.preload(use_level='gene',use_spe='human',update=FALSE)
-#' db.preload(use_level='gene',use_spe='mouse',update=FALSE)
 #'
 #' \dontrun{
 #' main.dir <- system.file(package = "NetBID2") ## must specify a main directory
 #' db.preload(use_level='transcript',use_spe='human',update=FALSE)
+#' db.preload(use_level='gene',use_spe='mouse',update=FALSE)
 #' }
 #' @export
 db.preload <- function(use_level='transcript',use_spe='human',update = FALSE,
@@ -223,13 +223,18 @@ get.TF_SIG.list <- function(use_genes,use_gene_type='ensembl_gene_id',dataset=db
 #' \code{get_IDtransfer} will return a data.frame for the transfer table.
 #'
 #' @examples
-#' use_genes <- c("ENST00000210187",ENST00000216083","ENST00000216127",
-#'              "ENST00000216416","ENST00000217233",ENST00000221418")
+#' use_genes <- c("ENST00000210187","ENST00000216083","ENST00000216127",
+#'              "ENST00000216416","ENST00000217233","ENST00000221418")
 #' transfer_tab <- get_IDtransfer(from_type = 'ensembl_transcript_id',
-#'                                to_type='external_gene_name',use_genes=use_genes) ## get transfer table !!!
+#'                                to_type='external_gene_name',
+#'                                use_genes=use_genes,
+#'                                dataset='hsapiens_gene_ensembl')
+#'                                ## get transfer table !!!
 #' res1 <- get_name_transfertab(use_genes,transfer_tab=transfer_tab)
 #' transfer_tab_withtype <- get_IDtransfer2symbol2type(from_type = 'ensembl_transcript_id',
-#'                                                    use_genes=use_genes) ## get transfer table !!!
+#'                                                    use_genes=use_genes,
+#'                                                    dataset='hsapiens_gene_ensembl')
+#'                                                    ## get transfer table !!!
 #' \dontrun{
 #' }
 #' @export
@@ -266,13 +271,17 @@ get_IDtransfer <- function(from_type=NULL,to_type=NULL,use_genes=NULL,dataset=db
 #' \code{get_IDtransfer2symbol2type} will return a data.frame for the transfer table with gene/transcript biotype.
 #'
 #' @examples
-#' use_genes <- c("ENST00000210187",ENST00000216083","ENST00000216127",
-#'              "ENST00000216416","ENST00000217233",ENST00000221418")
+#' use_genes <- c("ENST00000210187","ENST00000216083","ENST00000216127",
+#'              "ENST00000216416","ENST00000217233","ENST00000221418")
 #' transfer_tab <- get_IDtransfer(from_type = 'ensembl_transcript_id',
-#'                                to_type='external_gene_name',use_genes=use_genes) ## get transfer table !!!
-#' res1 <- get_name_transfertab(x=use_genes,transfer_tab=transfer_tab)
+#'                                to_type='external_gene_name',use_genes=use_genes,
+#'                                dataset='hsapiens_gene_ensembl')
+#'                                ## get transfer table !!!
+#' res1 <- get_name_transfertab(use_genes,transfer_tab=transfer_tab)
 #' transfer_tab_withtype <- get_IDtransfer2symbol2type(from_type = 'ensembl_transcript_id',
-#'                                                    use_genes=use_genes) ## get transfer table !!!
+#'                                                    use_genes=use_genes,
+#'                                                    dataset='hsapiens_gene_ensembl')
+#'                                                    ## get transfer table !!!
 #' \dontrun{
 #' }
 #' @export
@@ -294,25 +303,31 @@ get_IDtransfer2symbol2type <- function(from_type=NULL,use_genes=NULL,dataset=db_
 #'
 #' \code{get_name_transfertab} will get the transfered ID by input the original ID and transfer table.
 #'
+#' @param use_genes a vector of characters, gene list used for ID conversion.
+#' @param transfer_tab data.frame, the transfer table for ID conversion, could be obtained by \code{get_IDtransfer}.
 #' @param from_type character, attribute name from the biomaRt package, such as 'ensembl_gene_id','ensembl_gene_id_version'
 #' 'ensembl_transcript_id','ensembl_transcript_id_version','refseq_mrna'. Full list could be obtained by
 #' \code{listAttributes(mart)$name}, where \code{mart} is the output of \code{useMart} function.
 #' The type must be the gene type for the input \code{use_genes}.
+#'  If NULL, will use the first column in the transfer table.
 #' @param to_type character, character, attribute name from the biomaRt package, the gene type will be convereted to.
-#' @param use_genes a vector of characters, gene list used for ID conversion.
-#' @param transfer_tab data.frame, the transfer table for ID conversion, could be obtained by \code{get_IDtransfer}.
+#'  If NULL, will use the second column in the transfer table.
 #'
 #' @return
 #' \code{get_name_transfertab} will return the list for the converted IDs.
 #'
 #' @examples
-#' use_genes <- c("ENST00000210187",ENST00000216083","ENST00000216127",
-#'              "ENST00000216416","ENST00000217233",ENST00000221418")
+#' use_genes <- c("ENST00000210187","ENST00000216083","ENST00000216127",
+#'              "ENST00000216416","ENST00000217233","ENST00000221418")
 #' transfer_tab <- get_IDtransfer(from_type = 'ensembl_transcript_id',
-#'                                to_type='external_gene_name',use_genes=use_genes) ## get transfer table !!!
-#' res1 <- get_name_transfertab(use_genes,transfer_tab=transfer_tab)
+#'                                to_type='external_gene_name',use_genes=use_genes,
+#'                                dataset='hsapiens_gene_ensembl')
+#'                                ## get transfer table !!!
+#' res1 <- get_name_transfertab(use_genes=use_genes,transfer_tab=transfer_tab)
 #' transfer_tab_withtype <- get_IDtransfer2symbol2type(from_type = 'ensembl_transcript_id',
-#'                                                    use_genes=use_genes) ## get transfer table !!!
+#'                                                    use_genes=use_genes,
+#'                                                    dataset='hsapiens_gene_ensembl')
+#'                                                    ## get transfer table !!!
 #' \dontrun{
 #' }
 #' @export
@@ -925,74 +940,6 @@ cal.Activity.GS <- function(use_gs2gene=all_gs2gene[c('H','CP:BIOCARTA','CP:REAC
   return(ac.mat)
 }
 
-########################### DE-related functions
-#############################################################
-#' Network-based Bayesian Inference of Drivers
-#'
-#' Driver inference by intergrating multiple NetBID results
-#'
-#' @param netbid.list list of netbid outputs, e.g. list(mRNA=dmrna,wProtein=dwprotein,pProtein=dpprotein)
-#' @param signed If TURE, consider directions when combining NetBID results, If FALSE, ignore the directions
-#' @return data.frame of case vs. ctrl inference with statistics including cobmbined and individual netSize (network size), z, pval, FDR.BH (FDR by BH method), log2FC (if signed)
-#' @examples
-#'
-#' ###transform network into list of probes
-#' dci.kinase.probes<-network.tbl2list(dci.kinase.tbl[,c('source.symbol','target')])
-#' dmrna<-netbid(dci.kinase.probes,mrna,group.case='CD8pos.DC',group.ctrl='CD8neg.DC')
-#' ##whole proteomcis
-#' dci.kinase.wprotein<-transformNetworkListIds(dci.kinase.symbols,ref=fData(wprotein)[,c('geneSymbol','proteinId')])
-#' dwprotein<-netbid(dci.kinase.wprotein,wprotein,group.case='CD8pos.DC',group.ctrl='CD8neg.DC')
-
-#' dcomb<-netbidi(list(mRNA=dmrna,wProtein=dwprotein))
-#'
-#'
-#'
-#' @export
-netbidi<-function(netbid.list,signed=FALSE){
-  n<-length(netbid.list)
-  if(n<2) stop('At least two netbid outputs are required for netbidi analysis!\n')
-
-  rs<-NULL
-  for(i in 1:n){
-
-    if(names(netbid.list)[i]==""|is.null(names(netbid.list)[i]))
-      names(netbid.list)[i]<-i
-
-    names(netbid.list[[i]])[-1]<-paste(names(netbid.list[[i]])[-1],names(netbid.list)[i],sep='_')
-
-    netbid.list[[i]]$id<-as.character(netbid.list[[i]]$id)
-    if(i==1){
-      rs<-netbid.list[[i]]
-    }else{
-      rs<-dplyr::full_join(rs,netbid.list[[i]],by='id')
-    }
-  }
-  conds<-names(netbid.list)
-  if(sum(grepl('log2FC',names(rs)))>0){
-    FC.cols<-paste('log2FC',conds,sep='_')
-  }else{
-    FC.cols<-NULL
-  }
-  comb<-combinePvalues(rs,pvalue.cols=paste('pval',conds,sep='_'),sign.cols=paste('z',conds,sep='_'),FC.cols =FC.cols,logTransformed=TRUE,log.base=2,method=c('Stouffer'),twosided=TRUE,signed=signed,byRow=TRUE)
-  comb<-comb[,-1]
-  names(comb)<-paste(names(comb),'comb',sep='_')
-
-  rs<-cbind(comb,rs)
-
-  col.sel<-c('id',
-             grep('^netSize_',names(rs),value=TRUE)
-             ,
-             grep('^z_',names(rs),value=TRUE),
-             grep('^log2FC_',names(rs),value=TRUE),
-             grep('^pval_',names(rs),value=TRUE),
-             grep('^FDR.BH_',names(rs),value=TRUE)
-  )
-
-  rs<-rs[,c(col.sel,setdiff(names(rs),col.sel))]
-  rs<-dplyr::arrange(rs,pval_comb)
-  rs
-}
-
 #' Bayesian Inference to get differential expression/activity between case and control
 #' @export
 getDE.BID.2G <-function(eset,G1=NULL, G0=NULL,G1_name=NULL,G0_name=NULL,verbose=TRUE){
@@ -1408,7 +1355,7 @@ out2excel <- function(all_ms_tab,out.xls,mark_gene=NULL,mark_col,workbook_name='
   ##
 }
 
-#' Load MsigDB for NetBID2 into R workspace.
+#' Load MSigDB for NetBID2 into R workspace.
 #'
 #' \code{gs.preload} will load two variables into R workspace, the list for gene set to genes (all_gs2gene)
 #'  and a data frame (all_gs2gene_info) for detailed description for gene sets.
@@ -1438,7 +1385,7 @@ out2excel <- function(all_ms_tab,out.xls,mark_gene=NULL,mark_col,workbook_name='
 #' gs.preload(use_spe='Homo sapiens',update=TRUE)
 #' }
 #' @export
-gs.preload <- function(use_spe='Homo sapiens',update=TRUE,db.dir=sprintf("%s/db/",main.dir)){
+gs.preload <- function(use_spe='Homo sapiens',update=FALSE,db.dir=sprintf("%s/db/",main.dir)){
   ## only support geneSymbol (because pipeline-generated master table will contain geneSymbol column)
   if(is.null(db.dir)){message('db.dir required, please check and re-try !');return(FALSE)}
   #db.dir <- sprintf("%s/db/",main.dir)
@@ -1552,13 +1499,15 @@ get_jac <- function(pred_label, obs_label) {
 #' transfer Z statistics to color bar
 #' @export
 z2col <- function(x,n_len=60,sig_thre=0.01,col_min_thre=0.01,col_max_thre=3,
-                  blue_col=brewer.pal(9,'Set1')[2],red_col=brewer.pal(9,'Set1')[1]){ ## create vector for z-score, can change sig threshold
+                  blue_col=RColorBrewer::brewer.pal(9,'Set1')[2],
+                  red_col=RColorBrewer::brewer.pal(9,'Set1')[1]){
+  ## create vector for z-score, can change sig threshold
   x[which(is.na(x)==TRUE)] <- 0
   x[which(x==Inf)]<-  max(x[which(x!=Inf)])+1
   x[which(x==-Inf)]<- min(x[which(x!=-Inf)])-1
   if(col_min_thre<0) col_min_thre<-0.01
   if(col_max_thre<0) col_max_thre<-3
-  #c1 <- brewer.pal(9,'Set1')
+  #c1 <- RColorBrewer::brewer.pal(9,'Set1')
   c2 <- colorRampPalette(c(blue_col,'white',red_col))(n_len)
   r1 <- 1.05*max(abs(x)) ## -r1~r1
   if(r1 < col_max_thre){
@@ -1586,7 +1535,7 @@ z2col <- function(x,n_len=60,sig_thre=0.01,col_min_thre=0.01,col_max_thre=3,
 #' Users could define some of the colors for part of the inputs.
 #'
 #' @param x a vector of characters.
-#' @param use_color a vector of characters, color bar used to generate the color vector for the input.Default is brewer.pal(12, 'Set3').
+#' @param use_color a vector of characters, color bar used to generate the color vector for the input.Default is RColorBrewer::brewer.pal(12, 'Set3').
 #' @param pre_define a vector of characters, pre-defined color code for some of the input characters. Default is NULL.
 #' @param user_inner logical, indicating whether to use inner pre-defined color code for some characters. Default is TRUE.
 #'
@@ -1598,7 +1547,7 @@ z2col <- function(x,n_len=60,sig_thre=0.01,col_min_thre=0.01,col_max_thre=3,
 #' get.class.color(c('ClassA','ClassB','ClassC','SHH','WNT','Group3','Group4'),
 #'                 use_inner=FALSE)
 #' get.class.color(c('ClassA','ClassB','ClassC','SHH','WNT','Group3','Group4'),
-#'                 use_inner=FALSE,use_color=brewer.pal(8, 'Set1'))
+#'                 use_inner=FALSE,use_color=RColorBrewer::brewer.pal(8, 'Set1'))
 #'
 #' pre_define <- c('blue', 'red', 'yellow', 'green','yellow', 'green')
 #'                 ## pre-defined colors for MB
@@ -1620,9 +1569,9 @@ get.class.color <- function(x,use_color=NULL,pre_define=NULL,use_inner=TRUE) {
   }
   if(is.null(use_color)==TRUE){
     if (length(intersect(x, names(pre_define))) == 0){
-      use_color <- brewer.pal(12, 'Set3')
+      use_color <- RColorBrewer::brewer.pal(12, 'Set3')
     }else{
-      use_color <- brewer.pal(12, 'Set3')[c(1,3,5,7,9,10,11)]
+      use_color <- RColorBrewer::brewer.pal(12, 'Set3')[c(1,3,5,7,9,10,11)]
     }
   }
   if (length(intersect(x, names(pre_define))) == 0) {
@@ -2109,6 +2058,100 @@ plot.2D.umap.kmeans <- function(mat=NULL,all_k=NULL,obs_label=NULL,legend_pos = 
   return(pred_label)
 }
 
+#' umap+kmeans in 3D
+#' @param obs_label the value should be the class label with names equal to sample names
+#' @export
+plot.3D.umap.kmeans <- function(mat=NULL,all_k=NULL,obs_label=NULL,legend_pos = 'topleft',legend_cex = 0.8,point_cex=1){
+  if(is.null(mat)==TRUE){
+    message('Please input mat, check and re-try !');return(FALSE)
+  }
+  if(is.null(obs_label)==TRUE){
+    message('Please input obs_label, check and re-try !');return(FALSE)
+  }
+  if(is.null(all_k)==TRUE){
+    all_k <- 2:min(length(obs_label)-1,2*length(unique(obs_label)))
+  }
+  if(length(setdiff(all_k,2:length(obs_label)))>0){
+    message('some value in all_k exceed the maximum sample size, check and re-try !');return(FALSE);
+  }
+  #pc <- prcomp(t(mat))$x
+  ori_cc <- umap.defaults; ori_cc$n_components <- 3
+  use_mat_umap <- umap(t(mat),config=ori_cc)
+  #
+  all_jac <- list()
+  all_k_res <- list()
+  for(k in all_k){
+    tmp_k <- list()
+    for(i in 1:10){
+      tmp_k[[i]] <- kmeans(use_mat_umap$layout,centers=as.numeric(k))
+    }
+    pred_label <- lapply(tmp_k,function(x)x$cluster)
+    jac <- unlist(lapply(pred_label,function(x){get_jac(x, obs_label)}))
+    top_i <- which.max(jac)
+    all_k_res[[k]] <- tmp_k[[top_i]]
+  }
+  for(k in all_k){
+    pred_label <- all_k_res[[k]]$cluster
+    jac <- get_jac(pred_label, obs_label)
+    all_jac[[as.character(k)]] <- signif(jac,4)
+  }
+  print(all_jac)
+  use_k <- all_k[which.max(all_jac)]
+  message(sprintf('Best Jaccard Accuracy occurs when k=%s, with value=%s',use_k,all_jac[as.character(use_k)]))
+  pred_label <- all_k_res[[use_k]]$cluster
+
+  d1 <- data.frame(id=colnames(mat),X=use_mat_umap$layout[,1],
+                   Y=use_mat_umap$layout[,2],Z=use_mat_umap$layout[,3],label=pred_label,stringsAsFactors=FALSE)
+  layout(t(matrix(1:2)))
+  d1$obs <- obs_label
+  print(str(d1))
+  layout(t(matrix(1:2)))
+  cls_cc <- get.class.color(unique(d1$obs))
+  scatter3D(
+    d1$X,
+    d1$Y,
+    d1$Z,
+    pch = 16,cex=point_cex,
+    xlab = 'MICA-1',
+    ylab = 'MICA-2',
+    zlab='MICA-3',bty='g',colvar=as.numeric(factor(d1$obs,levels=unique(d1$obs))),col=cls_cc,colkey = FALSE
+  )
+  legend(
+    legend_pos,
+    legend=unique(obs_label[d1$id]),
+    fill = cls_cc[unique(obs_label[d1$id])],
+    border = NA,
+    bty = 'n',
+    ncol = legend_ncol,
+    cex = legend_cex,xpd=TRUE
+  )
+  ##
+  cls_cc <- get.class.color(as.character(unique(d1$label)))
+  scatter3D(
+    d1$X,
+    d1$Y,
+    d1$Z,
+    pch = 16,cex=point_cex,
+    xlab = 'MICA-1',
+    ylab = 'MICA-2',
+    zlab='MICA-3',bty='g',colvar=as.numeric(factor(d1$label,levels=unique(d1$label))),col=cls_cc,colkey = FALSE
+  )
+  legend(
+    legend_pos,
+    legend=as.character(sort(unique(d1$label))),
+    fill = cls_cc[as.character(sort(unique(
+      d1$label
+    )))],
+    border = NA,
+    bty = 'n',
+    ncol = legend_ncol,
+    cex = legend_cex,xpd=TRUE
+  )
+  layout(1);
+  return(pred_label)
+}
+
+
 #' MICA in 2D
 #' @param plot_type 2D or 2D.ellipse
 #' @param visualization_type tsne or umap
@@ -2157,6 +2200,94 @@ plot.2D.MICA <- function(outdir=NULL,prjname=NULL,all_k=NULL,obs_label=NULL,lege
   return(pred_label)
 }
 
+#' MICA in 3D
+#' @param visualization_type tsne or umap
+#' @param obs_label the value should be the class label with names equal to sample names
+#' @param visualization_type mds,umap
+#' @export
+plot.3D.MICA <- function(outdir=NULL,prjname=NULL,all_k=NULL,obs_label=NULL,
+                         legend_pos = 'topleft',legend_cex = 0.8,legend_ncol=1,point_cex=1,
+                         visualization_type='umap') {
+  if(visualization_type=='tsne'){
+    message('tsne is not supported in 3D');return(FALSE)
+  }
+  # choose best k
+  all_jac <- get_jac_MICA(outdir=outdir, all_k=all_k, obs_label=obs_label, prjname = prjname)
+  use_k <- all_k[which.max(all_jac)]
+  message(sprintf('Best Jaccard Accuracy occurs when k=%s, with value=%s',use_k,all_jac[as.character(use_k)]))
+  #
+  use_file <- sprintf('%s/scMINER_%s/scMINER_%s_MDS_%s/scMINER_MICA_out/%s.ggplot.txt',
+                      outdir,prjname,prjname,use_k,prjname)
+  d1 <- read.delim(use_file, stringsAsFactors = FALSE) ## get cluster results
+  if(visualization_type=='umap' | visualization_type=='mds'){
+    use_file <- sprintf('%s/scMINER_%s/scMINER_%s_MDS_%s/scMINER_MICA_out/%s_clust.h5',
+                        outdir,prjname,prjname,use_k,prjname)
+    fid <- H5Fopen(use_file)
+    dist_mat <- fid$`mds`$block0_values
+    if(visualization_type=='mds'){
+      X <- fid$mds$block0_values[1,];Y <- fid$mds$block0_values[2,]; Z <- fid$mds$block0_values[3,]
+      d1$X <- X; d1$Y <- Y; d1$Z <- Z;
+    }else{
+      ori_cc <- umap.defaults; ori_cc$n_components <- 3
+      use_mat_umap <- umap(t(dist_mat),config=ori_cc)
+      X <- use_mat_umap$layout[,1];Y <- use_mat_umap$layout[,2]; Z <- use_mat_umap$layout[,3];
+      d1$X <- X; d1$Y <- Y; d1$Z <- Z;
+    }
+    H5Fclose(fid)
+  }
+  d1$obs <- obs_label
+  print(str(d1))
+  layout(t(matrix(1:2)))
+  cls_cc <- get.class.color(unique(d1$obs))
+  scatter3D(
+    d1$X,
+    d1$Y,
+    d1$Z,
+    pch = 16,cex=point_cex,
+    xlab = 'MICA-1',
+    ylab = 'MICA-2',
+    zlab='MICA-3',bty='g',colvar=as.numeric(factor(d1$obs,levels=unique(d1$obs))),col=cls_cc,colkey = FALSE
+  )
+  legend(
+    legend_pos,
+    legend=unique(obs_label[d1$id]),
+    fill = cls_cc[unique(obs_label[d1$id])],
+    border = NA,
+    bty = 'n',
+    ncol = legend_ncol,
+    cex = legend_cex,xpd=TRUE
+  )
+  ##
+  cls_cc <- get.class.color(as.character(unique(d1$label)))
+  scatter3D(
+    d1$X,
+    d1$Y,
+    d1$Z,
+    pch = 16,cex=point_cex,
+    xlab = 'MICA-1',
+    ylab = 'MICA-2',
+    zlab='MICA-3',bty='g',colvar=as.numeric(factor(d1$label,levels=unique(d1$label))),col=cls_cc,colkey = FALSE
+  )
+  legend(
+    legend_pos,
+    legend=as.character(sort(unique(d1$label))),
+    fill = cls_cc[as.character(sort(unique(
+      d1$label
+    )))],
+    border = NA,
+    bty = 'n',
+    ncol = legend_ncol,
+    cex = legend_cex,xpd=TRUE
+  )
+  ## jaccard accuracy
+  rownames(d1) <- d1$id
+  pred_label <- d1[names(obs_label), ]$label
+  names(pred_label) <- names(obs_label)
+  jac <- get_jac(pred_label, obs_label)
+  print(sprintf('Jaccard Accuracy:%s', jac))
+  return(pred_label)
+}
+
 # get all jaccard accuracy for MICA
 get_jac_MICA <- function(outdir, all_k, obs_label, prjname = NULL) {
   all_jac <- list()
@@ -2178,6 +2309,7 @@ get_jac_MICA <- function(outdir, all_k, obs_label, prjname = NULL) {
   }
   return(all_jac)
 }
+
 #' Volcano plot for top DE (differentiated expressed) genes or DA (differentiated activity) drivers
 #'
 #' \code{draw.volcanoPlot} draw the volcano plot for top DE genes or DA drivers, could display the name of the top items in figures and will retrun the list of top items.
@@ -2210,8 +2342,10 @@ get_jac_MICA <- function(outdir, all_k, obs_label, prjname = NULL) {
 #' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
 #' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
-#' sig_driver1 <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
-#'                                Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.01,Pv_thre=0.1,
+#' sig_driver1 <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
+#'                                logFC_col='logFC.metastasis2primary_DA',
+#'                                Pv_col='P.Value.metastasis2primary_DA',
+#'                                logFC_thre=0.01,Pv_thre=0.1,
 #'                                main='Volcano Plot for metastasis2primary_DA',show_label=TRUE,
 #'                                label_cex = 1)
 #'
@@ -2221,23 +2355,41 @@ get_jac_MICA <- function(outdir, all_k, obs_label, prjname = NULL) {
 #' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
 #' analysis.par$out.dir.PLOT <- getwd() ## directory for saving the pdf files
-#' sig_driver1 <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
-#'                                Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.01,Pv_thre=0.1,
-#'                                main='Volcano Plot for metastasis2primary_DA',show_label=TRUE,
-#'                                pdf_file=sprintf('%s/vocalno_showlabel_distribute.pdf',analysis.par$out.dir.PLOT),
+#' sig_driver1 <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
+#'                                logFC_col='logFC.metastasis2primary_DA',
+#'                                Pv_col='P.Value.metastasis2primary_DA',
+#'                                logFC_thre=0.01,Pv_thre=0.1,
+#'                                main='Volcano Plot for metastasis2primary_DA',
+#'                                show_label=TRUE,
+#'                                pdf_file=sprintf('%s/vocalno_showlabel_distribute.pdf',
+#'                                analysis.par$out.dir.PLOT),
 #'                                label_cex = 1)
-#' sig_driver2 <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
-#'                                Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.02,Pv_thre=0.1,
-#'                                main='Volcano Plot for metastasis2primary_DA',show_label=TRUE,label_type = 'origin',label_cex = 0.5,
-#'                                pdf_file=sprintf('%s/vocalno_showlabel_origin.pdf',analysis.par$out.dir.PLOT))
-#' sig_driver3 <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
-#'                                Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.01,Pv_thre=0.1,
-#'                                main='Volcano Plot for metastasis2primary_DA',show_label=FALSE,label_type = 'origin',label_cex = 0.5,
-#'                                pdf_file=sprintf('%s/vocalno_nolabel_DA.pdf',analysis.par$out.dir.PLOT))
-#' sig_gene <- draw.volcanoPlot(dat=ms_tab,label_col='geneSymbol',logFC_col='logFC.metastasis2primary_DE',
-#'                                Pv_col='P.Value.metastasis2primary_DE',logFC_thre=0.5,Pv_thre=0.1,
-#'                                main='Volcano Plot for metastasis2primary_DE',show_label=FALSE,
-#'                                pdf_file=sprintf('%s/vocalno_nolabel_DE.pdf',analysis.par$out.dir.PLOT))
+#' sig_driver2 <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
+#'                                logFC_col='logFC.metastasis2primary_DA',
+#'                                Pv_col='P.Value.metastasis2primary_DA',
+#'                                logFC_thre=0.02,Pv_thre=0.1,
+#'                                main='Volcano Plot for metastasis2primary_DA',
+#'                                show_label=TRUE,
+#'                                label_type = 'origin',label_cex = 0.5,
+#'                                pdf_file=sprintf('%s/vocalno_showlabel_origin.pdf',
+#'                                analysis.par$out.dir.PLOT))
+#' sig_driver3 <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
+#'                                logFC_col='logFC.metastasis2primary_DA',
+#'                                Pv_col='P.Value.metastasis2primary_DA',
+#'                                logFC_thre=0.01,Pv_thre=0.1,
+#'                                main='Volcano Plot for metastasis2primary_DA',
+#'                                show_label=FALSE,
+#'                                label_type = 'origin',label_cex = 0.5,
+#'                                pdf_file=sprintf('%s/vocalno_nolabel_DA.pdf',
+#'                                analysis.par$out.dir.PLOT))
+#' sig_gene <- draw.volcanoPlot(dat=ms_tab,label_col='geneSymbol',
+#'                                logFC_col='logFC.metastasis2primary_DE',
+#'                                Pv_col='P.Value.metastasis2primary_DE',
+#'                                logFC_thre=0.5,Pv_thre=0.1,
+#'                                main='Volcano Plot for metastasis2primary_DE',
+#'                                show_label=FALSE,
+#'                                pdf_file=sprintf('%s/vocalno_nolabel_DE.pdf',
+#'                                analysis.par$out.dir.PLOT))
 #'}
 #' @export
 draw.volcanoPlot <- function(dat=NULL,label_col=NULL,logFC_col=NULL,Pv_col=NULL,logFC_thre=1.5, Pv_thre=0.01,
@@ -2344,42 +2496,82 @@ draw.volcanoPlot <- function(dat=NULL,label_col=NULL,logFC_col=NULL,Pv_col=NULL,
 #'
 #' @examples
 #' analysis.par <- list()
-#' analysis.par$out.dir.DATA <- system.file('demo/driver/DATA/',package = "NetBID2-R")
+#' analysis.par$out.dir.DATA <- system.file('demo/driver/DATA/',package = "NetBID2")
 #' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
 #' exp_mat <- exprs(analysis.par$cal.eset) ## expression,the rownames matches originalID in ms_tab
 #' ac_mat <- exprs(analysis.par$merge.ac.eset) ## ac,the rownames matches originalID_label in ms_tab
 #' phe_info <- pData(analysis.par$cal.eset) ## phenotype information
-#' draw.heatmap(mat=exp_mat,use_genes=ms_tab[rownames(sig_driver),'originalID'],use_gene_label=ms_tab[rownames(sig_driver),'gene_label'],
-#'             use_samples=colnames(exp_mat),use_sample_label=phe_info[colnames(exp_mat),'geo_accession'],
-#'             phenotype_info=phe_info,use_phe=c('Sex','tumor type'),main='Expression for Top drivers',scale='row',
-#'             cluster_rows=TRUE,cluster_columns=TRUE,clustering_distance_rows='pearson',clustering_distance_columns='pearson',
+#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
+#'                                logFC_col='logFC.metastasis2primary_DA',
+#'                                Pv_col='P.Value.metastasis2primary_DA',
+#'                                logFC_thre=0.01,Pv_thre=0.1,
+#'                                main='Volcano Plot for metastasis2primary_DA',
+#'                                show_label=FALSE,
+#'                                label_type = 'origin',label_cex = 0.5)
+#' sig_driver <- sig_driver[1:10,]
+#' draw.heatmap(mat=exp_mat,use_genes=ms_tab[rownames(sig_driver),'originalID'],
+#'             use_gene_label=ms_tab[rownames(sig_driver),'gene_label'],
+#'             use_samples=colnames(exp_mat),
+#'             use_sample_label=phe_info[colnames(exp_mat),'geo_accession'],
+#'             phenotype_info=phe_info,use_phe=c('Sex','tumor type'),
+#'             main='Expression for Top drivers',scale='row',
+#'             cluster_rows=TRUE,cluster_columns=TRUE,
+#'             clustering_distance_rows='pearson',
+#'             clustering_distance_columns='pearson',
 #'             row_names_gp = gpar(fontsize = 12))
-#' draw.heatmap(mat=ac_mat,use_genes=ms_tab[rownames(sig_driver),'originalID_label'],use_gene_label=ms_tab[rownames(sig_driver),'gene_label'],
-#'              use_samples=colnames(exp_mat),use_sample_label=phe_info[colnames(exp_mat),'geo_accession'],
-#'              phenotype_info=phe_info,use_phe=c('Sex','tumor type'),main='Activity for Top drivers',scale='row',
-#'              cluster_rows=FALSE,cluster_columns=TRUE,clustering_distance_rows='pearson',clustering_distance_columns='pearson',
+#' draw.heatmap(mat=ac_mat,use_genes=ms_tab[rownames(sig_driver),'originalID_label'],
+#'              use_gene_label=ms_tab[rownames(sig_driver),'gene_label'],
+#'              use_samples=colnames(exp_mat),
+#'              use_sample_label=phe_info[colnames(exp_mat),'geo_accession'],
+#'              phenotype_info=phe_info,use_phe=c('Sex','tumor type'),
+#'              main='Activity for Top drivers',scale='row',
+#'              cluster_rows=FALSE,cluster_columns=TRUE,
+#'              clustering_distance_rows='pearson',
+#'              clustering_distance_columns='pearson',
 #'              row_names_gp = gpar(fontsize = 6))
 #'
 #' \dontrun{
 #' analysis.par <- list()
-#' analysis.par$out.dir.DATA <- system.file('demo/driver/DATA/',package = "NetBID2-R")
+#' analysis.par$out.dir.DATA <- system.file('demo/driver/DATA/',package = "NetBID2")
 #' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
 #' exp_mat <- exprs(analysis.par$cal.eset) ## expression,the rownames matches originalID in ms_tab
 #' ac_mat <- exprs(analysis.par$merge.ac.eset) ## ac,the rownames matches originalID_label in ms_tab
 #' phe_info <- pData(analysis.par$cal.eset) ## phenotype information
 #' analysis.par$out.dir.PLOT <- getwd() ## directory for saving the pdf files
-#' draw.heatmap(mat=exp_mat,use_genes=ms_tab[rownames(sig_driver),'originalID'],use_gene_label=ms_tab[rownames(sig_driver),'gene_label'],
-#'             use_samples=colnames(exp_mat),use_sample_label=phe_info[colnames(exp_mat),'geo_accession'],
-#'             phenotype_info=phe_info,use_phe=c('Sex','tumor type'),main='Expression for Top drivers',scale='row',
-#'             cluster_rows=TRUE,cluster_columns=TRUE,clustering_distance_rows='pearson',clustering_distance_columns='pearson',
-#'             row_names_gp = gpar(fontsize = 12),pdf_file=sprintf('%s/heatmap_demo1.pdf',analysis.par$out.dir.PLOT))
-#' draw.heatmap(mat=ac_mat,use_genes=ms_tab[rownames(sig_driver),'originalID_label'],use_gene_label=ms_tab[rownames(sig_driver),'gene_label'],
-#'              use_samples=colnames(exp_mat),use_sample_label=phe_info[colnames(exp_mat),'geo_accession'],
-#'              phenotype_info=phe_info,use_phe=c('Sex','tumor type'),main='Activity for Top drivers',scale='row',
-#'              cluster_rows=FALSE,cluster_columns=TRUE,clustering_distance_rows='pearson',clustering_distance_columns='pearson',
-#'              row_names_gp = gpar(fontsize = 6),pdf_file=sprintf('%s/heatmap_demo2.pdf',analysis.par$out.dir.PLOT))
+#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
+#'                                logFC_col='logFC.metastasis2primary_DA',
+#'                                Pv_col='P.Value.metastasis2primary_DA',
+#'                                logFC_thre=0.01,Pv_thre=0.1,
+#'                                main='Volcano Plot for metastasis2primary_DA',
+#'                                show_label=FALSE,
+#'                                label_type = 'origin',label_cex = 0.5)
+#' draw.heatmap(mat=exp_mat,use_genes=ms_tab[rownames(sig_driver),'originalID'],
+#'             use_gene_label=ms_tab[rownames(sig_driver),'gene_label'],
+#'             use_samples=colnames(exp_mat),
+#'             use_sample_label=phe_info[colnames(exp_mat),'geo_accession'],
+#'             phenotype_info=phe_info,use_phe=c('Sex','tumor type'),
+#'             main='Expression for Top drivers',scale='row',
+#'             cluster_rows=TRUE,cluster_columns=TRUE,
+#'             clustering_distance_rows='pearson',
+#'             clustering_distance_columns='pearson',
+#'             row_names_gp = gpar(fontsize = 12),
+#'             pdf_file=sprintf('%s/heatmap_demo1.pdf',
+#'             analysis.par$out.dir.PLOT))
+#' draw.heatmap(mat=ac_mat,use_genes=ms_tab[rownames(sig_driver),'originalID_label'],
+#'              use_gene_label=ms_tab[rownames(sig_driver),'gene_label'],
+#'              use_samples=colnames(exp_mat),
+#'              use_sample_label=phe_info[colnames(exp_mat),'geo_accession'],
+#'              phenotype_info=phe_info,
+#'              use_phe=c('Sex','tumor type'),
+#'              main='Activity for Top drivers',scale='row',
+#'              cluster_rows=FALSE,cluster_columns=TRUE,
+#'              clustering_distance_rows='pearson',
+#'              clustering_distance_columns='pearson',
+#'              row_names_gp = gpar(fontsize = 6),
+#'              pdf_file=sprintf('%s/heatmap_demo2.pdf',
+#'              analysis.par$out.dir.PLOT))
 #'}
 #' @export
 draw.heatmap <- function(mat=NULL,use_genes=rownames(mat),use_gene_label=use_genes,use_samples=colnames(mat),use_sample_label=use_samples,
@@ -2428,7 +2620,7 @@ draw.heatmap <- function(mat=NULL,use_genes=rownames(mat),use_gene_label=use_gen
       colnames(use_phe_info) <- gsub(' ','.',use_phe)
     }
     use_phe <- colnames(use_phe_info)
-    l2c <- get.class.color(unique(as.character(as.matrix(use_phe_info))),use_color=brewer.pal(12, 'Paired'))
+    l2c <- get.class.color(unique(as.character(as.matrix(use_phe_info))),use_color=RColorBrewer::brewer.pal(12, 'Paired'))
     use_col <- lapply(use_phe,function(x)l2c[unique(use_phe_info[,x])])
     names(use_col) <- use_phe
     ha_column <- HeatmapAnnotation(df = data.frame(use_phe_info),col = use_col)
@@ -2481,9 +2673,15 @@ find.gsByGene <- function(gene=NULL,use_gs=NULL){
 #' merge genesets
 #' @export
 merge_gs <- function(all_gs2gene=NULL,use_gs=c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG','C5')){
-  nn <- unlist(lapply(all_gs2gene[use_gs],names))
-  use_gs2gene <- unlist(all_gs2gene[use_gs],recursive = FALSE)
-  names(use_gs2gene)<-nn
+  if(is.null(use_gs)==TRUE){
+    nn <- unlist(lapply(all_gs2gene,names))
+    use_gs2gene <- unlist(all_gs2gene,recursive = FALSE)
+    names(use_gs2gene)<-nn
+  }else{
+    nn <- unlist(lapply(all_gs2gene[use_gs],names))
+    use_gs2gene <- unlist(all_gs2gene[use_gs],recursive = FALSE)
+    names(use_gs2gene)<-nn
+  }
   use_gs2gene
 }
 # simple functions
@@ -2529,8 +2727,12 @@ vec2list <- function(input_v,sep=NULL){
 #' Default is NULL, will use all genes in the gs2gene as the background list.
 #' @param gs2gene a list for geneset to genes, the name for the list is the gene set name and the content in each list is the vector for genes belong to that gene set.
 #' If NULL, will use all_gs2gene loaded by using \code{gs.preload}. Default is NULL.
-#' @param use_gs a vector of characters, the name for gene set category used for anlaysis. If gs2gene is set to NULL, use_gs must be the subset of \code{names(all_gs2gene)}.
-#' Could check \code{all_gs2gene_info} for the cateogory description.Default is \code{c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG')}.
+#' @param use_gs a vector of characters, the name for gene set category used for anlaysis.
+#' If gs2gene is set to NULL, use_gs must be the subset of \code{names(all_gs2gene)}.
+#' Could check \code{all_gs2gene_info} for the cateogory description.
+#' If set to 'all', all gene sets in gs2gene will be used.
+#' Default is \code{c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG')} if gs2gene is set to NULL (use all_gs2gene).
+#' If user input own gs2gene list, use_gs will be set to 'all' as default.
 #' @param min_gs_size numeric, minimum gene set size for analysis, default is 5.
 #' @param max_gs_size numeric, maximum gene set size for analysis, default is 500.
 #' @param Pv_adj character, p-value adjustment method, could check \code{p.adjust.methods} for the available options. Default is 'fdr'.
@@ -2553,20 +2755,34 @@ vec2list <- function(input_v,sep=NULL){
 #' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
 #' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
-#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
-#'                                Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.01,Pv_thre=0.1,
-#'                                main='Volcano Plot for metastasis2primary_DA',show_label=FALSE,
+#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
+#'                                logFC_col='logFC.metastasis2primary_DA',
+#'                                Pv_col='P.Value.metastasis2primary_DA',
+#'                                logFC_thre=0.01,Pv_thre=0.1,
+#'                                main='Volcano Plot for metastasis2primary_DA',
+#'                                show_label=FALSE,
 #'                                label_type = 'origin',label_cex = 0.5)
 #' main.dir <- system.file(package = "NetBID2")
 #' gs.preload(use_spe='Homo sapiens',update=FALSE)
-#' res1 <- funcEnrich.Fisher(input_list=ms_tab[rownames(sig_driver),'geneSymbol'],bg_list=ms_tab[,'geneSymbol'],
-#'                                use_gs=c('H','C5'),Pv_thre=0.1,Pv_adj = 'none')
+#' res1 <- funcEnrich.Fisher(input_list=ms_tab[rownames(sig_driver),'geneSymbol'],
+#'                                bg_list=ms_tab[,'geneSymbol'],
+#'                                use_gs=c('H','C5'),
+#'                                Pv_thre=0.1,Pv_adj = 'none')
 #' \dontrun{
 #' }
 #' @export
-funcEnrich.Fisher <- function(input_list=NULL,bg_list=NULL,gs2gene=NULL,use_gs=c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG'),
+funcEnrich.Fisher <- function(input_list=NULL,bg_list=NULL,
+                              use_gs=NULL,
+                              gs2gene=NULL,
                               min_gs_size=5,max_gs_size=500,Pv_adj='fdr',Pv_thre=0.1){
-  if(is.null(gs2gene)==TRUE){
+  if(is.null(gs2gene)==TRUE){ ## use inner gs2gene
+    if(is.null(use_gs)==TRUE){
+      use_gs <- c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG')
+    }else{
+      if(use_gs[1] == 'all'){
+        use_gs <- c(all_gs2gene_info$Category,all_gs2gene_info$`Sub-Category`)
+      }
+    }
     if(length(setdiff(use_gs,c(all_gs2gene_info$Category,all_gs2gene_info$`Sub-Category`)))>0){
       message(sprintf('Input %s not in all_gs2gene, please check all_gs2gene_info (items in Category or Sub-Category) and re-try!',
                       paste(setdiff(use_gs,c(all_gs2gene_info$Category,all_gs2gene_info$`Sub-Category`)),collapse=';')));
@@ -2574,10 +2790,21 @@ funcEnrich.Fisher <- function(input_list=NULL,bg_list=NULL,gs2gene=NULL,use_gs=c
     }
     if(length(use_gs)>1){
       gs2gene <- merge_gs(all_gs2gene,use_gs = use_gs)
-      #gs2gene <- unlist(all_gs2gene[use_gs],recursive = FALSE)
-      #names(gs2gene)<-unlist(lapply(all_gs2gene[use_gs],names))
     }else{
       gs2gene <- all_gs2gene[[use_gs]]
+    }
+  }else{
+    if(is.null(use_gs)==TRUE){
+      use_gs <- 'all'
+    }
+    if(length(use_gs)>1){
+        gs2gene <- merge_gs(gs2gene,use_gs = use_gs)
+    }else{
+      if(use_gs == 'all'){
+        gs2gene <- merge_gs(gs2gene,use_gs = NULL)
+      }else{
+        gs2gene <- gs2gene[[use_gs]]
+      }
     }
   }
   all_gs <- names(gs2gene)
@@ -2646,7 +2873,7 @@ funcEnrich.Fisher <- function(input_list=NULL,bg_list=NULL,gs2gene=NULL,use_gs=c
 #' @param gs_cex numeric, \code{cex} for the gene sets displayed on the plot. Default is 0.5
 #' @param gene_cex numeric, \code{cex} for the genes displayed on the plot. Default is 0.5
 #' @param main character, \code{main} for the title on the plot.
-#' @param bar_col character, color code for the bar on the plot. Default is brewer.pal(8,'RdBu')[7].
+#' @param bar_col character, color code for the bar on the plot. Default is RColorBrewer::brewer.pal(8,'RdBu')[7].
 #' @param eg_num numeric, example number of intersected genes shown on the plot. Default is 5.
 #' @param pdf_file character, file path for the pdf file to save the figure into pdf format.If NULL, will not generate pdf file. Default is NULL.
 #'
@@ -2657,42 +2884,59 @@ funcEnrich.Fisher <- function(input_list=NULL,bg_list=NULL,gs2gene=NULL,use_gs=c
 #' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
 #' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
-#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
-#'                                Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.01,Pv_thre=0.1,
-#'                                main='Volcano Plot for metastasis2primary_DA',show_label=FALSE,
+#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
+#'                                logFC_col='logFC.metastasis2primary_DA',
+#'                                Pv_col='P.Value.metastasis2primary_DA',
+#'                                logFC_thre=0.01,Pv_thre=0.1,
+#'                                main='Volcano Plot for metastasis2primary_DA',
+#'                                show_label=FALSE,
 #'                                label_type = 'origin',label_cex = 0.5)
 #' main.dir <- system.file(package = "NetBID2")
 #' gs.preload(use_spe='Homo sapiens',update=FALSE)
-#' res1 <- funcEnrich.Fisher(input_list=ms_tab[rownames(sig_driver),'geneSymbol'],bg_list=ms_tab[,'geneSymbol'],
-#'                                use_gs=c('H','C5'),Pv_thre=0.1,Pv_adj = 'none')
-#' draw.funcEnrich.bar(funcEnrich_res=res1,top_number=30,main='Function Enrichment for Top drivers')
-#' draw.funcEnrich.bar(funcEnrich_res=res1,top_number=30,main='Function Enrichment for Top drivers',
-#'                     display_genes = TRUE,gs_cex=0.6)
+#' res1 <- funcEnrich.Fisher(input_list=ms_tab[rownames(sig_driver),'geneSymbol'],
+#'                           bg_list=ms_tab[,'geneSymbol'],
+#'                           use_gs=c('H'),Pv_thre=0.1,
+#'                           Pv_adj = 'none')
+#' draw.funcEnrich.bar(funcEnrich_res=res1,top_number=5,
+#'                    main='Function Enrichment for Top drivers',
+#'                    gs_cex=0.4,gene_cex=0.5)
+#' draw.funcEnrich.bar(funcEnrich_res=res1,top_number=5,
+#'                    main='Function Enrichment for Top drivers',
+#'                    display_genes = TRUE,eg_num=3,
+#'                    gs_cex=0.6,gene_cex=0.5)
 #' \dontrun{
 #' analysis.par <- list()
 #' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
 #' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
-#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
-#'                                Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.01,Pv_thre=0.1,
-#'                                main='Volcano Plot for metastasis2primary_DA',show_label=FALSE,
+#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
+#'                                logFC_col='logFC.metastasis2primary_DA',
+#'                                Pv_col='P.Value.metastasis2primary_DA',
+#'                                logFC_thre=0.01,Pv_thre=0.1,
+#'                                main='Volcano Plot for metastasis2primary_DA',
+#'                                show_label=FALSE,
 #'                                label_type = 'origin',label_cex = 0.5)
 #' main.dir <- system.file(package = "NetBID2")
 #' gs.preload(use_spe='Homo sapiens',update=FALSE)
-#' res1 <- funcEnrich.Fisher(input_list=ms_tab[rownames(sig_driver),'geneSymbol'],bg_list=ms_tab[,'geneSymbol'],
-#'                                use_gs=c('H','C5'),Pv_thre=0.1,Pv_adj = 'none')
+#' res1 <- funcEnrich.Fisher(input_list=ms_tab[rownames(sig_driver),'geneSymbol'],
+#'                           bg_list=ms_tab[,'geneSymbol'],
+#'                           use_gs=c('H','C5'),Pv_thre=0.1,Pv_adj = 'none')
 #' analysis.par$out.dir.PLOT <- getwd() ## directory for saving the pdf files
-#' draw.funcEnrich.bar(funcEnrich_res=res1,top_number=30,main='Function Enrichment for Top drivers',
-#'                     pdf_file=sprintf('%s/funcEnrich_bar_nogene.pdf',analysis.par$out.dir.PLOT))
-#' draw.funcEnrich.bar(funcEnrich_res=res1,top_number=30,main='Function Enrichment for Top drivers',
+#' draw.funcEnrich.bar(funcEnrich_res=res1,top_number=30,
+#'                     main='Function Enrichment for Top drivers',
+#'                     pdf_file=sprintf('%s/funcEnrich_bar_nogene.pdf',
+#'                     analysis.par$out.dir.PLOT))
+#' draw.funcEnrich.bar(funcEnrich_res=res1,top_number=30,
+#'                     main='Function Enrichment for Top drivers',
 #'                     display_genes = TRUE,gs_cex=0.6,
-#'                     pdf_file=sprintf('%s/funcEnrich_bar_withgene.pdf',analysis.par$out.dir.PLOT))
+#'                     pdf_file=sprintf('%s/funcEnrich_bar_withgene.pdf',
+#'                     analysis.par$out.dir.PLOT))
 #' }
 #' @export
 draw.funcEnrich.bar <- function(funcEnrich_res=NULL,top_number=30,
                                 Pv_col='Ori_P',item_col='Intersected_items',
                                 Pv_thre=0.1,display_genes=FALSE,name_col='#Name',
-                                gs_cex=0.5,gene_cex=0.5,main="",bar_col=brewer.pal(8,'RdBu')[7],eg_num=5,
+                                gs_cex=0.5,gene_cex=0.5,main="",bar_col=RColorBrewer::brewer.pal(8,'RdBu')[7],eg_num=5,
                                 pdf_file=NULL){
   if(is.null(top_number)==TRUE) top_number <- nrow(funcEnrich_res)
   funcEnrich_res <- funcEnrich_res[which(funcEnrich_res[,Pv_col]<=Pv_thre),]
@@ -2759,50 +3003,73 @@ draw.funcEnrich.bar <- function(funcEnrich_res=NULL,top_number=30,
 #' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
 #' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
-#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
-#'                                Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.01,Pv_thre=0.1,
-#'                                main='Volcano Plot for metastasis2primary_DA',show_label=FALSE,
+#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
+#'                                logFC_col='logFC.metastasis2primary_DA',
+#'                                Pv_col='P.Value.metastasis2primary_DA',
+#'                                logFC_thre=0.01,Pv_thre=0.1,
+#'                                main='Volcano Plot for metastasis2primary_DA',
+#'                                show_label=FALSE,
 #'                                label_type = 'origin',label_cex = 0.5)
 #' main.dir <- system.file(package = "NetBID2")
 #' gs.preload(use_spe='Homo sapiens',update=FALSE)
-#' res1 <- funcEnrich.Fisher(input_list=ms_tab[rownames(sig_driver),'geneSymbol'],bg_list=ms_tab[,'geneSymbol'],
-#'                                use_gs=c('H','C5'),Pv_thre=0.1,Pv_adj = 'none')
-#' draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 0.8,gene_cex=0.9,pv_cex=0.8)
-#' draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 1.4,gene_cex=1.5,pv_cex=1.2,
+#' res1 <- funcEnrich.Fisher(input_list=ms_tab[rownames(sig_driver),'geneSymbol'],
+#'                           bg_list=ms_tab[,'geneSymbol'],
+#'                           use_gs=c('H','C5'),Pv_thre=0.1,Pv_adj = 'none')
+#' draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 0.5,
+#'                        gene_cex=0.9,pv_cex=0.8)
+#' draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=10,gs_cex = 0.6,
+#'                        gene_cex=1,pv_cex=1,
 #'                        cluster_gs=TRUE,cluster_gene = TRUE)
-#' draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 0.8,gene_cex=0.9,pv_cex=0.8,
+#' draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=15,gs_cex = 0.8,
+#'                        gene_cex=0.9,pv_cex=0.8,
 #'                        cluster_gs=TRUE,cluster_gene = FALSE)
-#' draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 0.8,gene_cex=0.9,pv_cex=0.8,
+#' draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=20,gs_cex = 0.8,
+#'                         gene_cex=0.9,pv_cex=0.8,
 #'                         cluster_gs=FALSE,cluster_gene = TRUE)
-#' draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 1.5,gene_cex=1.4,pv_cex=1.2,
+#' draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=20,gs_cex = 1,
+#'                         gene_cex=1,pv_cex=0.8,
 #'                         cluster_gs=FALSE,cluster_gene = FALSE)
 #' \dontrun{
 #' analysis.par <- list()
 #' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
 #' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
-#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
-#'                                Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.01,Pv_thre=0.1,
-#'                                main='Volcano Plot for metastasis2primary_DA',show_label=FALSE,
+#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
+#'                                logFC_col='logFC.metastasis2primary_DA',
+#'                                Pv_col='P.Value.metastasis2primary_DA',
+#'                                logFC_thre=0.01,Pv_thre=0.1,
+#'                                main='Volcano Plot for metastasis2primary_DA',
+#'                                show_label=FALSE,
 #'                                label_type = 'origin',label_cex = 0.5)
 #' main.dir <- system.file(package = "NetBID2")
 #' gs.preload(use_spe='Homo sapiens',update=FALSE)
-#' res1 <- funcEnrich.Fisher(input_list=ms_tab[rownames(sig_driver),'geneSymbol'],bg_list=ms_tab[,'geneSymbol'],
-#'                                use_gs=c('H','C5'),Pv_thre=0.1,Pv_adj = 'none')
+#' res1 <- funcEnrich.Fisher(input_list=ms_tab[rownames(sig_driver),'geneSymbol'],
+#'                           bg_list=ms_tab[,'geneSymbol'],
+#'                           use_gs=c('H','C5'),Pv_thre=0.1,Pv_adj = 'none')
 #' analysis.par$out.dir.PLOT <- getwd() ## directory for saving the pdf files
-#' draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 0.8,gene_cex=0.9,pv_cex=0.8,
-#' pdf_file = sprintf('%s/funcEnrich_cluster.pdf',analysis.par$out.dir.PLOT))
-#' draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 1.4,gene_cex=1.5,pv_cex=1.2,
-#'                         pdf_file = sprintf('%s/funcEnrich_clusterBOTH.pdf',analysis.par$out.dir.PLOT),
+#' draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 0.8,
+#'                         gene_cex=0.9,pv_cex=0.8,
+#'                         pdf_file = sprintf('%s/funcEnrich_cluster.pdf',
+#'                         analysis.par$out.dir.PLOT))
+#' draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 1.4,
+#'                         gene_cex=1.5,pv_cex=1.2,
+#'                         pdf_file = sprintf('%s/funcEnrich_clusterBOTH.pdf',
+#'                         analysis.par$out.dir.PLOT),
 #'                         cluster_gs=TRUE,cluster_gene = TRUE)
-#' draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 0.8,gene_cex=0.9,pv_cex=0.8,
-#'                         pdf_file = sprintf('%s/funcEnrich_clusterGS.pdf',analysis.par$out.dir.PLOT),
+#' draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 0.8,
+#'                         gene_cex=0.9,pv_cex=0.8,
+#'                         pdf_file = sprintf('%s/funcEnrich_clusterGS.pdf',
+#'                         analysis.par$out.dir.PLOT),
 #'                         cluster_gs=TRUE,cluster_gene = FALSE)
-#' draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 0.8,gene_cex=0.9,pv_cex=0.8,
-#'                         pdf_file = sprintf('%s/funcEnrich_clusterGENE.pdf',analysis.par$out.dir.PLOT),
+#' draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 0.8,
+#'                         gene_cex=0.9,pv_cex=0.8,
+#'                         pdf_file = sprintf('%s/funcEnrich_clusterGENE.pdf',
+#'                         analysis.par$out.dir.PLOT),
 #'                         cluster_gs=FALSE,cluster_gene = TRUE)
-#' draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 1.5,gene_cex=1.4,pv_cex=1.2,
-#'                         pdf_file = sprintf('%s/funcEnrich_clusterNO.pdf',analysis.par$out.dir.PLOT),
+#' draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 1.5,
+#'                         gene_cex=1.4,pv_cex=1.2,
+#'                         pdf_file = sprintf('%s/funcEnrich_clusterNO.pdf',
+#'                         analysis.par$out.dir.PLOT),
 #'                         cluster_gs=FALSE,cluster_gene = FALSE)
 #' }
 #' @export
@@ -2826,9 +3093,9 @@ draw.funcEnrich.cluster <- function(funcEnrich_res=NULL,top_number=30,Pv_col='Or
   gene_cluster <- cutree(h_gene,h=h)
   if(cluster_gs==FALSE){gs_cluster <- rep(1,length.out=nrow(mat1));names(gs_cluster)<-rownames(mat1);}
   if(cluster_gene==FALSE){gene_cluster <- rep(1,length.out=ncol(mat1));names(gene_cluster)<-colnames(mat1);}
-  cc1 <- colorRampPalette(brewer.pal(8,'Dark2'))(length(unique(gs_cluster)))
-  cc2 <- colorRampPalette(brewer.pal(9,'Pastel1'))(length(unique(gene_cluster)))
-  cc3 <- colorRampPalette(brewer.pal(9,'Reds')[3:9])(100)
+  cc1 <- colorRampPalette(RColorBrewer::brewer.pal(8,'Dark2'))(length(unique(gs_cluster)))
+  cc2 <- colorRampPalette(RColorBrewer::brewer.pal(9,'Pastel1'))(length(unique(gene_cluster)))
+  cc3 <- colorRampPalette(RColorBrewer::brewer.pal(9,'Reds')[3:9])(100)
   # get gs order
   if(cluster_gs==TRUE) gs_cluster <- gs_cluster[h_gs$order]
   tmp2 <- vec2list(gs_cluster,sep=NULL)
@@ -2959,40 +3226,64 @@ draw.funcEnrich.cluster <- function(funcEnrich_res=NULL,top_number=30,Pv_col='Or
 #' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
 #' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
-#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
-#'                                Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.01,Pv_thre=0.1,
-#'                                main='Volcano Plot for metastasis2primary_DA',show_label=FALSE,
+#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
+#'                                logFC_col='logFC.metastasis2primary_DA',
+#'                                Pv_col='P.Value.metastasis2primary_DA',
+#'                                logFC_thre=0.01,Pv_thre=0.1,
+#'                                main='Volcano Plot for metastasis2primary_DA',
+#'                                show_label=FALSE,
 #'                                label_type = 'origin',label_cex = 0.5)
 #' main.dir <- system.file(package = "NetBID2")
 #' gs.preload(use_spe='Homo sapiens',update=FALSE)
-#' transfer_tab <- get_IDtransfer2symbol2type(from_type = 'ensembl_transcript_id',use_genes=use_genes) ## get transfer table !!!
-#' draw.bubblePlot(driver_list=rownames(sig_driver),show_label=ms_tab[rownames(sig_driver),'gene_label'],
+#' use_genes <- unique(analysis.par$merge.network$network_dat$target.symbol)
+#' transfer_tab <- get_IDtransfer2symbol2type(from_type = 'ensembl_transcript_id',
+#'                                            use_genes=use_genes,
+#'                                            dataset='hsapiens_gene_ensembl')
+#' ## get transfer table !!!
+#' draw.bubblePlot(driver_list=rownames(sig_driver),
+#'                show_label=ms_tab[rownames(sig_driver),'gene_label'],
 #'                Z_val=ms_tab[rownames(sig_driver),'Z.metastasis2primary_DA'],
 #'                driver_type=ms_tab[rownames(sig_driver),'transcript_biotype'],
-#'                target_list=analysis.par$merge.network$target_list,transfer2symbol2type=transfer_tab,
-#'                bg_list=ms_tab[,'geneSymbol'],min_gs_size=5,max_gs_size=500,use_gs=c('H'),
-#'                top_geneset_number=30,top_driver_number=50,
-#'                main='Bubbleplot for top driver targets')
+#'                target_list=analysis.par$merge.network$target_list,
+#'                transfer2symbol2type=transfer_tab,
+#'                bg_list=ms_tab[,'geneSymbol'],min_gs_size=5,
+#'                max_gs_size=500,use_gs=c('H'),
+#'                top_geneset_number=5,top_driver_number=5,
+#'                main='Bubbleplot for top driver targets',
+#'                gs_cex = 0.4,driver_cex = 0.5)
+#'  ## the cex is set just in case of figure margin too large,
+#'  ## in real case, user could set cex larger or input pdf file name
 #' \dontrun{
 #' analysis.par <- list()
 #' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
 #' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
-#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
-#'                                Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.01,Pv_thre=0.1,
-#'                                main='Volcano Plot for metastasis2primary_DA',show_label=FALSE,
+#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
+#'                                logFC_col='logFC.metastasis2primary_DA',
+#'                                Pv_col='P.Value.metastasis2primary_DA',
+#'                                logFC_thre=0.01,Pv_thre=0.1,
+#'                                main='Volcano Plot for metastasis2primary_DA',
+#'                                show_label=FALSE,
 #'                                label_type = 'origin',label_cex = 0.5)
 #' main.dir <- system.file(package = "NetBID2")
 #' gs.preload(use_spe='Homo sapiens',update=FALSE)
-#' transfer_tab <- get_IDtransfer2symbol2type(from_type = 'ensembl_transcript_id',use_genes=use_genes) ## get transfer table !!!
+#' use_genes <- unique(analysis.par$merge.network$network_dat$target.symbol)
+#' transfer_tab <- get_IDtransfer2symbol2type(from_type = 'ensembl_transcript_id',
+#'                                            use_genes=use_genes,
+#'                                            dataset='hsapiens_gene_ensembl')
+#' ## get transfer table !!!
 #' analysis.par$out.dir.PLOT <- getwd() ## directory for saving the pdf files
-#' draw.bubblePlot(driver_list=rownames(sig_driver),show_label=ms_tab[rownames(sig_driver),'gene_label'],
+#' draw.bubblePlot(driver_list=rownames(sig_driver),
+#'                show_label=ms_tab[rownames(sig_driver),'gene_label'],
 #'                Z_val=ms_tab[rownames(sig_driver),'Z.metastasis2primary_DA'],
 #'                driver_type=ms_tab[rownames(sig_driver),'transcript_biotype'],
-#'                target_list=analysis.par$merge.network$target_list,transfer2symbol2type=transfer_tab,
-#'                bg_list=ms_tab[,'geneSymbol'],min_gs_size=5,max_gs_size=500,use_gs=c('H'),
+#'                target_list=analysis.par$merge.network$target_list,
+#'                transfer2symbol2type=transfer_tab,
+#'                bg_list=ms_tab[,'geneSymbol'],
+#'                min_gs_size=5,max_gs_size=500,use_gs=c('H'),
 #'                top_geneset_number=30,top_driver_number=50,
-#'                pdf_file = sprintf('%s/bubblePlot.pdf',analysis.par$out.dir.PLOT),
+#'                pdf_file = sprintf('%s/bubblePlot.pdf',
+#'                analysis.par$out.dir.PLOT),
 #'                main='Bubbleplot for top driver targets')
 #' }
 #' @export
@@ -3180,9 +3471,12 @@ draw.bubblePlot <- function(driver_list=NULL,show_label=driver_list,Z_val=NULL,d
 #' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
 #' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
-#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
-#'                                Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.01,Pv_thre=0.1,
-#'                                main='Volcano Plot for metastasis2primary_DA',show_label=FALSE,
+#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
+#'                                logFC_col='logFC.metastasis2primary_DA',
+#'                                Pv_col='P.Value.metastasis2primary_DA',
+#'                                logFC_thre=0.01,Pv_thre=0.1,
+#'                                main='Volcano Plot for metastasis2primary_DA',
+#'                                show_label=FALSE,
 #'                                label_type = 'origin',label_cex = 0.5)
 #' driver_list <- rownames(sig_driver)
 #' DE_profile <- analysis.par$DE[[1]]$`Z-statistics`;
@@ -3192,30 +3486,44 @@ draw.bubblePlot <- function(driver_list=NULL,show_label=driver_list,Z_val=NULL,d
 #' use_target_direction <- sign(analysis.par$merge.network$target_list[[use_driver]]$spearman) ## 1/-1
 #' annot <- sprintf('P-value: %s',signif(ms_tab[use_driver,'P.Value.metastasis2primary_DA'],2))
 #' ## draw for the driver
-#' draw.GSEA(rank_profile=DE_profile,use_genes=use_target_genes,use_direction=use_target_direction,
-#'           main=sprintf('GSEA plot for driver %s',ms_tab[use_driver,'gene_label']),
+#' draw.GSEA(rank_profile=DE_profile,use_genes=use_target_genes,
+#'           use_direction=use_target_direction,
+#'           main=sprintf('GSEA plot for driver %s',
+#'           ms_tab[use_driver,'gene_label']),
 #'           annotation=annot,annotation_cex=1.2,
-#'           left_annotation='high in metastasis',right_annotation='high in primary')
+#'           left_annotation='high in metastasis',
+#'           right_annotation='high in primary')
 #' ## draw for the gene set
 #' use_genes <- unique(analysis.par$merge.network$network_dat$target.symbol)
-#' transfer_tab <- get_IDtransfer2symbol2type(from_type = 'ensembl_transcript_id',use_genes=use_genes) ## get transfer table !!!
+#' transfer_tab <- get_IDtransfer2symbol2type(from_type = 'ensembl_transcript_id',
+#'                 use_genes=use_genes,dataset='hsapiens_gene_ensembl')
+#' ## get transfer table !!!
 #' DE_profile_symbol <- DE_profile
-#' names(DE_profile_symbol) <- get_name_transfertab(names(DE_profile),transfer_tab = transfer_tab)
+#' names(DE_profile_symbol) <- get_name_transfertab(names(DE_profile),
+#'                            transfer_tab = transfer_tab)
+#'
+#' main.dir <- system.file(package = "NetBID2")
+#' gs.preload(use_spe='Homo sapiens',update=FALSE)
 #' use_gs_id <- 'REACTOME_CD28_DEPENDENT_PI3K_AKT_SIGNALING'
 #' use_target_genes <- all_gs2gene[['CP:REACTOME']][[use_gs_id]]
-#' draw.GSEA(rank_profile=DE_profile_symbol,use_genes=use_target_genes,use_direction=NULL,
-#'           main=sprintf('GSEA plot for %s',use_gs_id),
-#'           annotation=NULL,annotation_cex=1.2,
-#'           left_annotation='high in metastasis',right_annotation='high in primary')
+#' draw.GSEA(rank_profile=DE_profile_symbol,
+#'          use_genes=use_target_genes,use_direction=NULL,
+#'          main=sprintf('GSEA plot for %s',use_gs_id),
+#'          annotation=NULL,annotation_cex=1.2,
+#'          left_annotation='high in metastasis',
+#'          right_annotation='high in primary')
 #'
 #' \dontrun{
 #' #' analysis.par <- list()
 #' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
 #' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
-#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
-#'                                Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.01,Pv_thre=0.1,
-#'                                main='Volcano Plot for metastasis2primary_DA',show_label=FALSE,
+#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
+#'                                logFC_col='logFC.metastasis2primary_DA',
+#'                                Pv_col='P.Value.metastasis2primary_DA',
+#'                                logFC_thre=0.01,Pv_thre=0.1,
+#'                                main='Volcano Plot for metastasis2primary_DA',
+#'                                show_label=FALSE,
 #'                                label_type = 'origin',label_cex = 0.5)
 #' driver_list <- rownames(sig_driver)
 #' DE_profile <- analysis.par$DE[[1]]$`Z-statistics`;
@@ -3225,16 +3533,23 @@ draw.bubblePlot <- function(driver_list=NULL,show_label=driver_list,Z_val=NULL,d
 #' use_target_direction <- sign(analysis.par$merge.network$target_list[[use_driver]]$spearman) ## 1/-1
 #' annot <- sprintf('P-value: %s',signif(ms_tab[use_driver,'P.Value.metastasis2primary_DA'],2))
 #' analysis.par$out.dir.PLOT <- getwd() ## directory for saving the pdf files
-#' draw.GSEA(rank_profile=DE_profile,use_genes=use_target_genes,use_direction=use_target_direction,
+#' draw.GSEA(rank_profile=DE_profile,use_genes=use_target_genes,
+#'           use_direction=use_target_direction,
 #'           main=sprintf('GSEA plot for driver %s',ms_tab[use_driver,'gene_label']),
-#'           pdf_file = sprintf('%s/GSEA_driver.pdf',analysis.par$out.dir.PLOT),
+#'           pdf_file = sprintf('%s/GSEA_driver.pdf',
+#'           analysis.par$out.dir.PLOT),
 #'           annotation=annot,annotation_cex=1.2,
-#'           left_annotation='high in metastasis',right_annotation='high in primary')
+#'           left_annotation='high in metastasis',
+#'           right_annotation='high in primary')
 #' ## draw for the gene set
 #' use_genes <- unique(analysis.par$merge.network$network_dat$target.symbol)
-#' transfer_tab <- get_IDtransfer2symbol2type(from_type = 'ensembl_transcript_id',use_genes=use_genes) ## get transfer table !!!
+#' transfer_tab <- get_IDtransfer2symbol2type(from_type = 'ensembl_transcript_id',
+#'                                           use_genes=use_genes,
+#'                                           dataset='hsapiens_gene_ensembl')
+#' ## get transfer table !!!
 #' DE_profile_symbol <- DE_profile
-#' names(DE_profile_symbol) <- get_name_transfertab(names(DE_profile),transfer_tab = transfer_tab)
+#' names(DE_profile_symbol) <- get_name_transfertab(names(DE_profile),
+#'                                                  transfer_tab = transfer_tab)
 #' use_gs_id <- 'REACTOME_CD28_DEPENDENT_PI3K_AKT_SIGNALING'
 #' use_target_genes <- all_gs2gene[['CP:REACTOME']][[use_gs_id]]
 #' analysis.par$out.dir.PLOT <- getwd() ## directory for saving the pdf files
@@ -3242,7 +3557,8 @@ draw.bubblePlot <- function(driver_list=NULL,show_label=driver_list,Z_val=NULL,d
 #'           main=sprintf('GSEA plot for %s',use_gs_id),
 #'           annotation=NULL,annotation_cex=1.2,
 #'           pdf_file = sprintf('%s/GSEA_gs.pdf',analysis.par$out.dir.PLOT),
-#'           left_annotation='high in metastasis',right_annotation='high in primary')
+#'           left_annotation='high in metastasis',
+#'           right_annotation='high in primary')
 #'}
 #' @export
 draw.GSEA <- function(rank_profile=NULL,use_genes=NULL,use_direction=NULL,main="",pdf_file=NULL,
@@ -3439,8 +3755,10 @@ get_z2p <- function(x){
 #' ms_tab <- analysis.par$final_ms_tab
 #' comp <- 'metastasis2primary'
 #' DE <- analysis.par$DE[[comp]]
-#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
-#'                                Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.01,Pv_thre=0.1,
+#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
+#'                                logFC_col='logFC.metastasis2primary_DA',
+#'                                Pv_col='P.Value.metastasis2primary_DA',
+#'                                logFC_thre=0.01,Pv_thre=0.1,
 #'                                main='Volcano Plot for metastasis2primary_DA',show_label=FALSE,
 #'                                label_type = 'origin',label_cex = 0.5)
 #' driver_list <- rownames(sig_driver)
@@ -3450,7 +3768,7 @@ get_z2p <- function(x){
 #'                  driver_DA_Z=ms_tab[driver_list,'Z.metastasis2primary_DA'],
 #'                  driver_DE_Z=ms_tab[driver_list,'Z.metastasis2primary_DE'],
 #'                  target_list=analysis.par$merge.network$target_list,
-#'                  top_driver_number=30,target_nrow=2,target_col='RdBu',
+#'                  top_driver_number=5,target_nrow=2,target_col='RdBu',
 #'                  left_annotation = 'test_left',right_annotation = 'test_right',
 #'                  main='test',target_col_type='DE',Z_sig_thre=1.64,profile_sig_thre = 1.64)
 #' \dontrun{
@@ -3460,9 +3778,12 @@ get_z2p <- function(x){
 #' ms_tab <- analysis.par$final_ms_tab
 #' comp <- 'metastasis2primary'
 #' DE <- analysis.par$DE[[comp]]
-#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
-#'                                Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.01,Pv_thre=0.1,
-#'                                main='Volcano Plot for metastasis2primary_DA',show_label=FALSE,
+#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
+#'                                logFC_col='logFC.metastasis2primary_DA',
+#'                                Pv_col='P.Value.metastasis2primary_DA',
+#'                                logFC_thre=0.01,Pv_thre=0.1,
+#'                                main='Volcano Plot for metastasis2primary_DA',
+#'                                show_label=FALSE,
 #'                                label_type = 'origin',label_cex = 0.5)
 #' driver_list <- rownames(sig_driver)
 #' analysis.par$out.dir.PLOT <- getwd() ## directory for saving the pdf files
@@ -3472,10 +3793,14 @@ get_z2p <- function(x){
 #'                  driver_DA_Z=ms_tab[driver_list,'Z.metastasis2primary_DA'],
 #'                  driver_DE_Z=ms_tab[driver_list,'Z.metastasis2primary_DE'],
 #'                  target_list=analysis.par$merge.network$target_list,
-#'                  top_driver_number=30,target_nrow=2,target_col='RdBu',
-#'                  left_annotation = 'test_left',right_annotation = 'test_right',
-#'                  main='test',target_col_type='DE',Z_sig_thre=1.64,profile_sig_thre = 1.64,
-#'                  pdf_file=sprintf('%s/NetBID_GSEA_demo1.pdf',analysis.par$out.dir.PLOT))
+#'                  top_driver_number=30,
+#'                  target_nrow=2,target_col='RdBu',
+#'                  left_annotation = 'test_left',
+#'                  right_annotation = 'test_right',
+#'                  main='test',target_col_type='DE',
+#'                  Z_sig_thre=1.64,profile_sig_thre = 1.64,
+#'                  pdf_file=sprintf('%s/NetBID_GSEA_demo1.pdf',
+#'                  analysis.par$out.dir.PLOT))
 #'draw.GSEA.NetBID(DE=DE,profile_col='t',profile_trend='neg2pos',
 #'                  driver_list = driver_list,
 #'                  show_label=ms_tab[driver_list,'gene_label'],
@@ -3483,9 +3808,12 @@ get_z2p <- function(x){
 #'                  driver_DE_Z=ms_tab[driver_list,'Z.metastasis2primary_DE'],
 #'                  target_list=analysis.par$merge.network$target_list,
 #'                  top_driver_number=30,target_nrow=1,target_col='RdBu',
-#'                  left_annotation = 'test_left',right_annotation = 'test_right',
-#'                  main='test',target_col_type='PN',Z_sig_thre=1.64,profile_sig_thre = 1.64,
-#'                  pdf_file=sprintf('%s/NetBID_GSEA_demo2.pdf',analysis.par$out.dir.PLOT))
+#'                  left_annotation = 'test_left',
+#'                  right_annotation = 'test_right',
+#'                  main='test',target_col_type='PN',
+#'                  Z_sig_thre=1.64,profile_sig_thre = 1.64,
+#'                  pdf_file=sprintf('%s/NetBID_GSEA_demo2.pdf',
+#'                  analysis.par$out.dir.PLOT))
 #'}
 #' @export
 draw.GSEA.NetBID <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_trend='pos2neg',
@@ -3555,11 +3883,11 @@ draw.GSEA.NetBID <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_tren
   pp <- par()$usr; rr <- (pp[2]-pp[1])/n_gene
   polygon(x=c(pp[1],c(1:n_gene)*rr+pp[1],pp[2]),y=c(0,DE_profile,0),col='grey',border='grey',xpd=TRUE,lwd=0.3)
   if(profile_trend=='pos2neg'){
-    if(is.null(left_annotation)==FALSE) text(pp[1]+(pp[2]-pp[1])/100,mm[2]*0.8,adj=0,left_annotation,col=brewer.pal(9,'Reds')[6],xpd=TRUE,cex=1.2)
-    if(is.null(right_annotation)==FALSE) text(pp[2]-(pp[2]-pp[1])/100,mm[1]*0.8,adj=1,right_annotation,col=brewer.pal(9,'Blues')[6],xpd=TRUE,cex=1.2)
+    if(is.null(left_annotation)==FALSE) text(pp[1]+(pp[2]-pp[1])/100,mm[2]*0.8,adj=0,left_annotation,col=RColorBrewer::brewer.pal(9,'Reds')[6],xpd=TRUE,cex=1.2)
+    if(is.null(right_annotation)==FALSE) text(pp[2]-(pp[2]-pp[1])/100,mm[1]*0.8,adj=1,right_annotation,col=RColorBrewer::brewer.pal(9,'Blues')[6],xpd=TRUE,cex=1.2)
   }else{
-    if(is.null(left_annotation)==FALSE) text(pp[1]+(pp[2]-pp[1])/100,mm[1]*0.8,adj=0,left_annotation,col=brewer.pal(9,'Reds')[6],xpd=TRUE,cex=1.2)
-    if(is.null(right_annotation)==FALSE) text(pp[2]-(pp[2]-pp[1])/100,mm[2]*0.8,adj=1,right_annotation,col=brewer.pal(9,'Blues')[6],xpd=TRUE,cex=1.2)
+    if(is.null(left_annotation)==FALSE) text(pp[1]+(pp[2]-pp[1])/100,mm[1]*0.8,adj=0,left_annotation,col=RColorBrewer::brewer.pal(9,'Reds')[6],xpd=TRUE,cex=1.2)
+    if(is.null(right_annotation)==FALSE) text(pp[2]-(pp[2]-pp[1])/100,mm[2]*0.8,adj=1,right_annotation,col=RColorBrewer::brewer.pal(9,'Blues')[6],xpd=TRUE,cex=1.2)
   }
   #segments(pp[1],pp[1],pp[2],pp[1],lwd=0.5)
   #segments(pp[1],min(y1),pp[1],max(y1),lwd=1.5)
@@ -3583,7 +3911,7 @@ draw.GSEA.NetBID <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_tren
   # add columns
   use_target_list <- target_list[driver_list]
   if(target_col_type=='DE'){
-    cc <- z2col(DE_profile,sig_thre=profile_sig_thre,n_len=100,red_col = brewer.pal(9,'Reds')[5:9],blue_col=brewer.pal(9,'Blues')[5:9],
+    cc <- z2col(DE_profile,sig_thre=profile_sig_thre,n_len=100,red_col = RColorBrewer::brewer.pal(9,'Reds')[5:9],blue_col=RColorBrewer::brewer.pal(9,'Blues')[5:9],
                 col_max_thre=max(abs(DE_profile)))
     #names(cc) <- DE_profile_name
     cc[which(cc=='white')] <- 'light grey'
@@ -3602,7 +3930,7 @@ draw.GSEA.NetBID <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_tren
         }else{
           segments(x0=w1,x1=w1,y0=yy1[i],y1=yy1[i+1],lwd=1.5,
                    col=z2col(t1$spearman,sig_thre=0,col_max_thre=1,col_min_thre=0.01,
-                             red_col = brewer.pal(9,'Reds')[7:9],blue_col=brewer.pal(9,'Blues')[7:9]))
+                             red_col = RColorBrewer::brewer.pal(9,'Reds')[7:9],blue_col=RColorBrewer::brewer.pal(9,'Blues')[7:9]))
         }
       }
     }
@@ -3621,7 +3949,7 @@ draw.GSEA.NetBID <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_tren
           if(target_col_type=='DE'){
             segments(x0=w1,x1=w1,y0=yy1[2*i],y1=yy1[2*i+1],col=cc[w0],lwd=1.5)
           }else{
-            segments(x0=w1,x1=w1,y0=yy1[2*i],y1=yy1[2*i+1],col=brewer.pal(9,'Reds')[6],lwd=1.5)
+            segments(x0=w1,x1=w1,y0=yy1[2*i],y1=yy1[2*i+1],col=RColorBrewer::brewer.pal(9,'Reds')[6],lwd=1.5)
           }
         }
       }
@@ -3634,7 +3962,7 @@ draw.GSEA.NetBID <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_tren
           if(target_col_type=='DE'){
             segments(x0=w1,x1=w1,y0=yy1[2*i-1],y1=yy1[2*i],col=cc[w0],lwd=1.5)
           }else{
-            segments(x0=w1,x1=w1,y0=yy1[2*i-1],y1=yy1[2*i],col=brewer.pal(9,'Blues')[6],lwd=1.5)
+            segments(x0=w1,x1=w1,y0=yy1[2*i-1],y1=yy1[2*i],col=RColorBrewer::brewer.pal(9,'Blues')[6],lwd=1.5)
           }
         }
       }
@@ -3653,9 +3981,9 @@ draw.GSEA.NetBID <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_tren
   mm_min <- min(min(abs(driver_DA_Z[driver_list]),na.rm=TRUE)*0.9,min(abs(driver_DE_Z[driver_list]),na.rm=TRUE)*0.9)
   mm_min <- max(mm_min,Z_sig_thre)
   mm_max <- max(max(abs(driver_DA_Z[driver_list]),na.rm=TRUE)*1.1,max(abs(driver_DE_Z[driver_list]),na.rm=TRUE)*1.1)
-  c1 <- z2col(driver_DA_Z[driver_list],sig_thre=Z_sig_thre,n_len=100,red_col = brewer.pal(9,'Reds')[7],blue_col=brewer.pal(9,'Blues')[7],
+  c1 <- z2col(driver_DA_Z[driver_list],sig_thre=Z_sig_thre,n_len=100,red_col = RColorBrewer::brewer.pal(9,'Reds')[7],blue_col=RColorBrewer::brewer.pal(9,'Blues')[7],
               col_min_thre=mm_min,col_max_thre=mm_max)
-  c2 <- z2col(driver_DE_Z[driver_list],sig_thre=Z_sig_thre,n_len=100,red_col = brewer.pal(9,'Reds')[7],blue_col=brewer.pal(9,'Blues')[7],
+  c2 <- z2col(driver_DE_Z[driver_list],sig_thre=Z_sig_thre,n_len=100,red_col = RColorBrewer::brewer.pal(9,'Reds')[7],blue_col=RColorBrewer::brewer.pal(9,'Blues')[7],
               col_min_thre=mm_min,col_max_thre=mm_max)
   for(i in 1:length(driver_list)){
     z1 <- driver_DA_Z[driver_list[i]]
@@ -3692,9 +4020,9 @@ draw.GSEA.NetBID <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_tren
     tt <- pp[2]-(pp[1]+pp[2])*0.55
     for(i in 1:length(driver_list)){
       rect(xleft=(pp[1]+pp[2])*0.55,xright=(pp[1]+pp[2])*0.55+target_size[i,1]/mm*tt,
-           ybottom=yy22[i],ytop=yy22[i]+dyy*0.35,col=brewer.pal(9,'Reds')[5],border=NA)
+           ybottom=yy22[i],ytop=yy22[i]+dyy*0.35,col=RColorBrewer::brewer.pal(9,'Reds')[5],border=NA)
       rect(xleft=(pp[1]+pp[2])*0.55,xright=(pp[1]+pp[2])*0.55+target_size[i,2]/mm*tt,
-           ytop=yy22[i],ybottom=yy22[i]-dyy*0.35,col=brewer.pal(9,'Blues')[5],border=NA)
+           ytop=yy22[i],ybottom=yy22[i]-dyy*0.35,col=RColorBrewer::brewer.pal(9,'Blues')[5],border=NA)
     }
     segments(x0=(pp[1]+pp[2])*0.55,x1=pp[2],y0=pp[4],y1=pp[4],xpd=TRUE)
     sst <- round(seq(0,mm,length.out=3))
@@ -3769,7 +4097,8 @@ draw.GSEA.NetBID <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_tren
 #' @examples
 #' \dontrun{
 #' main.dir <- system.file(package = "NetBID2")
-#' db.preload(use_level='transcript',use_spe='human',update=FALSE) ## get all_gs2gene
+#' db.preload(use_level='transcript',use_spe='human',update=FALSE)
+#' ## get all_gs2gene
 #'
 #' analysis.par <- list()
 #' analysis.par$out.dir.DATA <- system.file('demo','gene set/DATA/',package = "NetBID2")
@@ -3778,41 +4107,59 @@ draw.GSEA.NetBID <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_tren
 #' ms_tab <- analysis.par$final_ms_tab
 #' comp <- 'metastasis2primary'
 #' DE <- analysis.par$DE[[comp]]
-#' analysis.par$out.dir.PLOT <- getwd() ## directory for saving the pdf files
+#' analysis.par$out.dir.PLOT <- getwd()
+#' ## directory for saving the pdf files
 #' exp_mat <- exprs(analysis.par$cal.eset) ## expression,the rownames must be the originalID
 #'
 #' ## get transfer tab
 #' use_genes <- rownames(exp_mat)
-#' transfer_tab <- get_IDtransfer(from_type = 'ensembl_transcript_id',to_type='external_gene_name',use_genes=use_genes) ## get transfer table !!!
+#' transfer_tab <- get_IDtransfer(from_type = 'ensembl_transcript_id',
+#'                                to_type='external_gene_name',
+#'                                use_genes=use_genes,
+#'                                dataset='hsapiens_gene_ensembl')
+#'                                ## get transfer table !!!
 #' ## get expression matrix for the transfered gene name
 #' exp_mat_gene <- exprs(update.eset.feature(use_eset=generate.eset(exp_mat=exp_mat),
 #'                                          use_feature_info = transfer_tab,
-#'                                          from_feature = 'ensembl_transcript_id',to_feature = 'external_gene_name'))
+#'                                          from_feature = 'ensembl_transcript_id',
+#'                                          to_feature = 'external_gene_name'))
 #'
 #' ## calculate activity for all genesets
-#' use_gs2gene <- merge_gs(all_gs2gene=all_gs2gene,use_gs=c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG','C5'))
+#' use_gs2gene <- merge_gs(all_gs2gene=all_gs2gene,
+#'                        use_gs=c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG','C5'))
 #' ac_gs <- cal.Activity.GS(use_gs2gene = use_gs2gene,cal_mat = exp_mat_gene)
 #'
 #' ## get DA for the gene set
 #' phe_info <- pData(analysis.par$cal.eset)
-#' G0  <- rownames(phe_info)[which(phe_info$`tumor type`=='primary')] # get sample list for G0
-#' G1  <- rownames(phe_info)[which(phe_info$`tumor type`=='metastasis')] # get sample list for G1
-#' DA_gs <- getDE.limma.2G(eset=generate.eset(ac_gs),G1=G1,G0=G0,G1_name='metastasis',G0_name='primary')
-#' ## or use: DA_gs <- getDE.BID.2G(eset=generate.eset(ac_gs),G1=G1,G0=G0,G1_name='metastasis',G0_name='primary')
+#' G0  <- rownames(phe_info)[which(phe_info$`tumor type`=='primary')]
+#' # get sample list for G0
+#' G1  <- rownames(phe_info)[which(phe_info$`tumor type`=='metastasis')]
+#' # get sample list for G1
+#' DA_gs <- getDE.limma.2G(eset=generate.eset(ac_gs),G1=G1,G0=G0,
+#'                         G1_name='metastasis',G0_name='primary')
+#' ## or use: DA_gs <- getDE.BID.2G(eset=generate.eset(ac_gs),G1=G1,G0=G0,
+#'                         G1_name='metastasis',G0_name='primary')
 #' ## draw vocalno plot for top sig-GS
-#' sig_gs <- draw.volcanoPlot(dat=cbind(DA_gs,names=rownames(DA_gs),stringsAsFactors=FALSE),label_col='names',logFC_col='logFC',
+#' sig_gs <- draw.volcanoPlot(dat=cbind(DA_gs,names=rownames(DA_gs),
+#'                           stringsAsFactors=FALSE),
+#'                           label_col='names',logFC_col='logFC',
 #'                           Pv_col='P.Value',logFC_thre=0,Pv_thre=0.1,
-#'                           main='Volcano Plot for gene sets',show_label=TRUE,label_type = 'distribute',label_cex = 0.5,
-#'                           pdf_file=sprintf('%s/vocalno_GS_DA.pdf',analysis.par$out.dir.PLOT))
+#'                           main='Volcano Plot for gene sets',show_label=TRUE,
+#'                           label_type = 'distribute',label_cex = 0.5,
+#'                           pdf_file=sprintf('%s/vocalno_GS_DA.pdf',
+#'                           analysis.par$out.dir.PLOT))
 #' ## GSEA plot for the significant gene sets
-#' draw.GSEA.NetBID.GS(DE=DE,name_col='symbol',profile_col='t',profile_trend='pos2neg',
+#' draw.GSEA.NetBID.GS(DE=DE,name_col='symbol',
+#'                     profile_col='t',profile_trend='pos2neg',
 #'                     sig_gs_list = sig_gs$names,
 #'                     gs_DA_Z=DA_gs[sig_gs$names,'Z-statistics'],
 #'                     use_gs2gene = use_gs2gene,
-#'                     top_gs_number=20,target_col='RdBu',
-#'                     left_annotation = 'test_left',right_annotation = 'test_right',
+#'                     top_gs_number=5,target_col='RdBu',
+#'                     left_annotation = 'test_left',
+#'                     right_annotation = 'test_right',
 #'                     main='test',Z_sig_thre=1.64,profile_sig_thre = 0,
-#'                     pdf_file=sprintf('%s/NetBID_GSEA_GS_demo1.pdf',analysis.par$out.dir.PLOT))
+#'                     pdf_file=sprintf('%s/NetBID_GSEA_GS_demo1.pdf',
+#'                     analysis.par$out.dir.PLOT))
 #'}
 #' @export
 draw.GSEA.NetBID.GS <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_trend='pos2neg',
@@ -3885,11 +4232,11 @@ draw.GSEA.NetBID.GS <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_t
   pp <- par()$usr; rr <- (pp[2]-pp[1])/n_gene
   polygon(x=c(pp[1],c(1:n_gene)*rr+pp[1],pp[2]),y=c(0,DE_profile,0),col='grey',border='grey',xpd=TRUE,lwd=0.3)
   if(profile_trend=='pos2neg'){
-    if(is.null(left_annotation)==FALSE) text(pp[1]+(pp[2]-pp[1])/100,mm[2]*0.8,adj=0,left_annotation,col=brewer.pal(9,'Reds')[6],xpd=TRUE,cex=1.2)
-    if(is.null(right_annotation)==FALSE) text(pp[2]-(pp[2]-pp[1])/100,mm[1]*0.8,adj=1,right_annotation,col=brewer.pal(9,'Blues')[6],xpd=TRUE,cex=1.2)
+    if(is.null(left_annotation)==FALSE) text(pp[1]+(pp[2]-pp[1])/100,mm[2]*0.8,adj=0,left_annotation,col=RColorBrewer::brewer.pal(9,'Reds')[6],xpd=TRUE,cex=1.2)
+    if(is.null(right_annotation)==FALSE) text(pp[2]-(pp[2]-pp[1])/100,mm[1]*0.8,adj=1,right_annotation,col=RColorBrewer::brewer.pal(9,'Blues')[6],xpd=TRUE,cex=1.2)
   }else{
-    if(is.null(left_annotation)==FALSE) text(pp[1]+(pp[2]-pp[1])/100,mm[1]*0.8,adj=0,left_annotation,col=brewer.pal(9,'Reds')[6],xpd=TRUE,cex=1.2)
-    if(is.null(right_annotation)==FALSE) text(pp[2]-(pp[2]-pp[1])/100,mm[2]*0.8,adj=1,right_annotation,col=brewer.pal(9,'Blues')[6],xpd=TRUE,cex=1.2)
+    if(is.null(left_annotation)==FALSE) text(pp[1]+(pp[2]-pp[1])/100,mm[1]*0.8,adj=0,left_annotation,col=RColorBrewer::brewer.pal(9,'Reds')[6],xpd=TRUE,cex=1.2)
+    if(is.null(right_annotation)==FALSE) text(pp[2]-(pp[2]-pp[1])/100,mm[2]*0.8,adj=1,right_annotation,col=RColorBrewer::brewer.pal(9,'Blues')[6],xpd=TRUE,cex=1.2)
   }
   axis(side=2,at=y1,labels=y1)
   mtext(side=2,line = 2.5,profile_col,cex=1)
@@ -3907,7 +4254,7 @@ draw.GSEA.NetBID.GS <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_t
   segments(x0=pp[1],x1=pp[2],y0=yy2,y1=yy2,lwd=1.2,col='dark grey')
   # add columns
   use_target_list <- use_gs2gene[sig_gs_list]
-  cc <- z2col(DE_profile,sig_thre=profile_sig_thre,n_len=100,red_col = brewer.pal(9,'Reds')[5:9],blue_col=brewer.pal(9,'Blues')[5:9],
+  cc <- z2col(DE_profile,sig_thre=profile_sig_thre,n_len=100,red_col = RColorBrewer::brewer.pal(9,'Reds')[5:9],blue_col=RColorBrewer::brewer.pal(9,'Blues')[5:9],
               col_max_thre=max(abs(DE_profile)))
   cc[which(cc=='white')] <- 'light grey'
   for(i in 1:length(sig_gs_list)){
@@ -3932,7 +4279,7 @@ draw.GSEA.NetBID.GS <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_t
   mm_min <- min(abs(gs_DA_Z[sig_gs_list]),na.rm=TRUE)*0.9
   mm_min <- max(mm_min,Z_sig_thre)
   mm_max <- max(abs(gs_DA_Z[sig_gs_list]),na.rm=TRUE)*1.1
-  c1 <- z2col(gs_DA_Z[sig_gs_list],sig_thre=Z_sig_thre,n_len=100,red_col = brewer.pal(9,'Reds')[7],blue_col=brewer.pal(9,'Blues')[7],
+  c1 <- z2col(gs_DA_Z[sig_gs_list],sig_thre=Z_sig_thre,n_len=100,red_col = RColorBrewer::brewer.pal(9,'Reds')[7],blue_col=RColorBrewer::brewer.pal(9,'Blues')[7],
               col_min_thre=mm_min,col_max_thre=mm_max)
   for(i in 1:length(sig_gs_list)){
     z1 <- gs_DA_Z[sig_gs_list[i]]
@@ -4053,9 +4400,12 @@ draw.GSEA.NetBID.GS <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_t
 #' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
 #' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
-#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
-#'                                Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.01,Pv_thre=0.1,
-#'                                main='Volcano Plot for metastasis2primary_DA',show_label=FALSE,
+#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
+#'                                logFC_col='logFC.metastasis2primary_DA',
+#'                                Pv_col='P.Value.metastasis2primary_DA',
+#'                                logFC_thre=0.01,Pv_thre=0.1,
+#'                                main='Volcano Plot for metastasis2primary_DA',
+#'                                show_label=FALSE,
 #'                                label_type = 'origin',label_cex = 0.5)
 #' driver_list <- rownames(sig_driver)
 #' ## choose seed driver and partner driver list
@@ -4063,17 +4413,26 @@ draw.GSEA.NetBID.GS <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_t
 #' part_driver <- ms_tab$originalID_label
 #' ## get merge target
 #' merge_target <- lapply(part_driver,function(x){
-#'   m1 <- merge_target_list(driver1=seed_driver,driver2=x,target_list=analysis.par$merge.network$target_list)
+#'   m1 <- merge_target_list(driver1=seed_driver,driver2=x,
+#'                           target_list=analysis.par$merge.network$target_list)
 #' })
 #' names(merge_target) <- part_driver
 #' ## get activity matrix for the merge target network
-#' ac_combine_mat <- cal.Activity(all_target=merge_target,cal_mat=exprs(analysis.par$cal.eset),es.method='weightedmean')
+#' ac_combine_mat <- cal.Activity(all_target=merge_target,
+#'                                cal_mat=exprs(analysis.par$cal.eset),
+#'                                es.method='weightedmean')
 #' ## get DA for the combined drivers
 #' comp_name <- 'metastasis2primary'
-#' G0  <- rownames(phe_info)[which(phe_info$`tumor type`=='primary')] # get sample list for G0
-#' G1  <- rownames(phe_info)[which(phe_info$`tumor type`=='metastasis')] # get sample list for G1
-#' DA_driver_combine <- getDE.limma.2G(eset=generate.eset(ac_combine_mat),G1=G1,G0=G0,G1_name='metastasis',G0_name='primary')
-#' ## or use: DA_driver_combine <- getDE.BID.2G(eset=generate.eset(ac_combine_mat),G1=G1,G0=G0,G1_name='metastasis',G0_name='primary')
+#' G0  <- rownames(phe_info)[which(phe_info$`tumor type`=='primary')]
+#' # get sample list for G0
+#' G1  <- rownames(phe_info)[which(phe_info$`tumor type`=='metastasis')]
+#' # get sample list for G1
+#' DA_driver_combine <- getDE.limma.2G(eset=generate.eset(ac_combine_mat),
+#'                                     G1=G1,G0=G0,
+#'                                     G1_name='metastasis',G0_name='primary')
+#' ## or use: DA_driver_combine <- getDE.BID.2G(eset=generate.eset(ac_combine_mat),
+#'                                     G1=G1,G0=G0,
+#'                                     G1_name='metastasis',G0_name='primary')
 #' ## prepare for SINBA input
 #' ori_part_Z <- analysis.par$DA[[comp_name]][part_driver,'Z-statistics']
 #' ori_seed_Z <- analysis.par$DA[[comp_name]][seed_driver,'Z-statistics']
@@ -4091,13 +4450,20 @@ draw.GSEA.NetBID.GS <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_t
 #' partner_driver_label <- ms_tab[partner_driver_list,'gene_label']
 #' target_list <- analysis.par$merge.network$target_list
 ##
-#' draw.GSEA.NetBID.SINBA(DE=DE,profile_col = profile_col,seed_driver=seed_driver,partner_driver_list=partner_driver_list,
-#'                        seed_driver_label=seed_driver_label,partner_driver_label=partner_driver_label,
-#'                        driver_DA_Z=driver_DA_Z,driver_DE_Z=driver_DE_Z,target_list=target_list,
-#'                        DA_Z_merge=DA_Z_merge,target_list_merge=target_list_merge,
-#'                        top_driver_number=20,profile_trend='pos2neg',top_order='merge',Z_sig_thre = 1.64,
+#' draw.GSEA.NetBID.SINBA(DE=DE,profile_col = profile_col,
+#'                        seed_driver=seed_driver,
+#'                        partner_driver_list=partner_driver_list,
+#'                        seed_driver_label=seed_driver_label,
+#'                        partner_driver_label=partner_driver_label,
+#'                        driver_DA_Z=driver_DA_Z,driver_DE_Z=driver_DE_Z,
+#'                        target_list=target_list,
+#'                        DA_Z_merge=DA_Z_merge,
+#'                        target_list_merge=target_list_merge,
+#'                        top_driver_number=20,profile_trend='pos2neg',
+#'                        top_order='merge',Z_sig_thre = 1.64,
 #'                        target_nrow=1,target_col='RdBu',target_col_type='PN',
-#'                        pdf_file=sprintf('%s/NetBID_GSEA_SINBA_demo1.pdf',analysis.par$out.dir.PLOT))
+#'                        pdf_file=sprintf('%s/NetBID_GSEA_SINBA_demo1.pdf',
+#'                        analysis.par$out.dir.PLOT))
 #'}
 #' @export
 draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_trend='pos2neg',
@@ -4199,11 +4565,11 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profil
   pp <- par()$usr; rr <- (pp[2]-pp[1])/n_gene
   polygon(x=c(pp[1],c(1:n_gene)*rr+pp[1],pp[2]),y=c(0,DE_profile,0),col='grey',border='grey',xpd=TRUE,lwd=0.3)
   if(profile_trend=='pos2neg'){
-    if(is.null(left_annotation)==FALSE) text(pp[1]+(pp[2]-pp[1])/100,mm[2]*0.8,adj=0,left_annotation,col=brewer.pal(9,'Reds')[6],xpd=TRUE,cex=1.2)
-    if(is.null(right_annotation)==FALSE) text(pp[2]-(pp[2]-pp[1])/100,mm[1]*0.8,adj=1,right_annotation,col=brewer.pal(9,'Blues')[6],xpd=TRUE,cex=1.2)
+    if(is.null(left_annotation)==FALSE) text(pp[1]+(pp[2]-pp[1])/100,mm[2]*0.8,adj=0,left_annotation,col=RColorBrewer::brewer.pal(9,'Reds')[6],xpd=TRUE,cex=1.2)
+    if(is.null(right_annotation)==FALSE) text(pp[2]-(pp[2]-pp[1])/100,mm[1]*0.8,adj=1,right_annotation,col=RColorBrewer::brewer.pal(9,'Blues')[6],xpd=TRUE,cex=1.2)
   }else{
-    if(is.null(left_annotation)==FALSE) text(pp[1]+(pp[2]-pp[1])/100,mm[1]*0.8,adj=0,left_annotation,col=brewer.pal(9,'Reds')[6],xpd=TRUE,cex=1.2)
-    if(is.null(right_annotation)==FALSE) text(pp[2]-(pp[2]-pp[1])/100,mm[2]*0.8,adj=1,right_annotation,col=brewer.pal(9,'Blues')[6],xpd=TRUE,cex=1.2)
+    if(is.null(left_annotation)==FALSE) text(pp[1]+(pp[2]-pp[1])/100,mm[1]*0.8,adj=0,left_annotation,col=RColorBrewer::brewer.pal(9,'Reds')[6],xpd=TRUE,cex=1.2)
+    if(is.null(right_annotation)==FALSE) text(pp[2]-(pp[2]-pp[1])/100,mm[2]*0.8,adj=1,right_annotation,col=RColorBrewer::brewer.pal(9,'Blues')[6],xpd=TRUE,cex=1.2)
   }
   axis(side=2,at=y1,labels=y1)
   mtext(side=2,line = 2.5,profile_col,cex=1)
@@ -4220,8 +4586,8 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profil
   yy2 <- yy1[seq(from=1,to=length(yy1),by=target_nrow*2)] # separate each driver combine
   yy4 <- yy2+(yy1[2]-yy1[1])*target_nrow
 
-  rect(xleft = pp[1],xright=pp[2],ybottom = yy1[length(yy1)-target_nrow],ytop=yy1[length(yy1)],border=NA,col=get_transparent(brewer.pal(11,'Set3')[2],0.3)) ## for seed rows
-  rect(xleft = pp[1],xright=pp[2],ybottom = yy2,ytop=yy4,border=NA,col=get_transparent(brewer.pal(11,'Set3')[2],0.2)) ## for combine rows
+  rect(xleft = pp[1],xright=pp[2],ybottom = yy1[length(yy1)-target_nrow],ytop=yy1[length(yy1)],border=NA,col=get_transparent(RColorBrewer::brewer.pal(11,'Set3')[2],0.3)) ## for seed rows
+  rect(xleft = pp[1],xright=pp[2],ybottom = yy2,ytop=yy4,border=NA,col=get_transparent(RColorBrewer::brewer.pal(11,'Set3')[2],0.2)) ## for combine rows
 
   segments(x0=pp[1],x1=pp[2],y0=yy1,y1=yy1,lwd=0.2,col='light grey')
   segments(x0=pp[1],x1=pp[2],y0=yy3,y1=yy3,lwd=1,col='dark grey')
@@ -4237,7 +4603,7 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profil
   use_merge_target_list <- target_list_merge[partner_driver_list]
 
   if(target_col_type=='DE'){
-    cc <- z2col(DE_profile,sig_thre=profile_sig_thre,n_len=100,red_col = brewer.pal(9,'Reds')[5:9],blue_col=brewer.pal(9,'Blues')[5:9],
+    cc <- z2col(DE_profile,sig_thre=profile_sig_thre,n_len=100,red_col = RColorBrewer::brewer.pal(9,'Reds')[5:9],blue_col=RColorBrewer::brewer.pal(9,'Blues')[5:9],
                 col_max_thre=max(abs(DE_profile)))
     #names(cc) <- names(DE_profile)
     cc[which(cc=='white')] <- 'light grey'
@@ -4255,7 +4621,7 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profil
                  col=cc[w0])
       }else{
         segments(x0=w1,x1=w1,y0=yy1[length(yy1)-1],y1=yy1[length(yy1)],lwd=1.5,
-                 col=c(brewer.pal(9,'Blues')[5],'white',brewer.pal(9,'Reds')[5])[sign(t1$spearman)+2])
+                 col=c(RColorBrewer::brewer.pal(9,'Blues')[5],'white',RColorBrewer::brewer.pal(9,'Reds')[5])[sign(t1$spearman)+2])
       }
     }
     # for each partner driver
@@ -4271,7 +4637,7 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profil
                    col=cc[w0])
         }else{
           segments(x0=w1,x1=w1,y0=yy1[2*i],y1=yy11[2*i+1],lwd=1.5,
-                   col=c(brewer.pal(9,'Blues')[5],'white',brewer.pal(9,'Reds')[5])[sign(t1$spearman)+2])
+                   col=c(RColorBrewer::brewer.pal(9,'Blues')[5],'white',RColorBrewer::brewer.pal(9,'Reds')[5])[sign(t1$spearman)+2])
         }
       }
     }
@@ -4289,7 +4655,7 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profil
         if(target_col_type=='DE'){
           segments(x0=w1,x1=w1,y0=yy1[2*i-1],y1=yy11[2*i],lwd=1.5,col=cc[w0])
         }else{
-          segments(x0=w1,x1=w1,y0=yy1[2*i-1],y1=yy11[2*i],lwd=1.5,col=c(brewer.pal(9,'Blues')[5],'white',brewer.pal(9,'Reds')[5])[sign(t1$spearman)+2])
+          segments(x0=w1,x1=w1,y0=yy1[2*i-1],y1=yy11[2*i],lwd=1.5,col=c(RColorBrewer::brewer.pal(9,'Blues')[5],'white',RColorBrewer::brewer.pal(9,'Reds')[5])[sign(t1$spearman)+2])
         }
       }
       points(w1_over,rep((yy11[2*i]+yy1[2*i])/2,length.out=length(w1_over)),pch='*',col='black')
@@ -4310,7 +4676,7 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profil
         if(target_col_type=='DE'){
           segments(x0=w1,x1=w1,y0=yy1[length(yy1)-1],y1=yy1[length(yy1)],col=cc[w0],lwd=1.5)
         }else{
-          segments(x0=w1,x1=w1,y0=yy1[length(yy1)-1],y1=yy1[length(yy1)],col=brewer.pal(9,'Reds')[9],lwd=1.5)
+          segments(x0=w1,x1=w1,y0=yy1[length(yy1)-1],y1=yy1[length(yy1)],col=RColorBrewer::brewer.pal(9,'Reds')[9],lwd=1.5)
         }
       }
     }
@@ -4323,7 +4689,7 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profil
         if(target_col_type=='DE'){
           segments(x0=w1,x1=w1,y0=yy1[length(yy1)-2],y1=yy1[length(yy1)-1],col=cc[w0],lwd=1.5)
         }else{
-          segments(x0=w1,x1=w1,y0=yy1[length(yy1)-2],y1=yy1[length(yy1)-1],col=brewer.pal(9,'Blues')[9],lwd=1.5)
+          segments(x0=w1,x1=w1,y0=yy1[length(yy1)-2],y1=yy1[length(yy1)-1],col=RColorBrewer::brewer.pal(9,'Blues')[9],lwd=1.5)
         }
       }
     }
@@ -4341,7 +4707,7 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profil
           if(target_col_type=='DE'){
             segments(x0=w1,x1=w1,y0=yy1[4*i],y1=yy11[4*i+1],col=cc[w0],lwd=1.5)
           }else{
-            segments(x0=w1,x1=w1,y0=yy1[4*i],y1=yy11[4*i+1],col=brewer.pal(9,'Reds')[5],lwd=1.5)
+            segments(x0=w1,x1=w1,y0=yy1[4*i],y1=yy11[4*i+1],col=RColorBrewer::brewer.pal(9,'Reds')[5],lwd=1.5)
           }
         }
       }
@@ -4354,7 +4720,7 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profil
           if(target_col_type=='DE'){
             segments(x0=w1,x1=w1,y0=yy1[4*i-1],y1=yy11[4*i],col=cc[w0],lwd=1.5)
           }else{
-            segments(x0=w1,x1=w1,y0=yy1[4*i-1],y1=yy11[4*i],col=brewer.pal(9,'Blues')[5],lwd=1.5)
+            segments(x0=w1,x1=w1,y0=yy1[4*i-1],y1=yy11[4*i],col=RColorBrewer::brewer.pal(9,'Blues')[5],lwd=1.5)
           }
         }
       }
@@ -4376,7 +4742,7 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profil
           if(target_col_type=='DE'){
             segments(x0=w1,x1=w1,y0=yy1[4*i-2],y1=yy11[4*i-1],col=cc[w0],lwd=1.5)
           }else{
-            segments(x0=w1,x1=w1,y0=yy1[4*i-2],y1=yy11[4*i-1],col=brewer.pal(9,'Reds')[5],lwd=1.5)
+            segments(x0=w1,x1=w1,y0=yy1[4*i-2],y1=yy11[4*i-1],col=RColorBrewer::brewer.pal(9,'Reds')[5],lwd=1.5)
           }
         }
       }
@@ -4390,7 +4756,7 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profil
           if(target_col_type=='DE'){
             segments(x0=w1,x1=w1,y0=yy1[4*i-3],y1=yy11[4*i-2],col=cc[w0],lwd=1.5)
           }else{
-            segments(x0=w1,x1=w1,y0=yy1[4*i-3],y1=yy11[4*i-2],col=brewer.pal(9,'Blues')[5],lwd=1.5)
+            segments(x0=w1,x1=w1,y0=yy1[4*i-3],y1=yy11[4*i-2],col=RColorBrewer::brewer.pal(9,'Blues')[5],lwd=1.5)
           }
         }
       }
@@ -4422,13 +4788,13 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profil
   mm_min <- max(mm_min,Z_sig_thre)
   mm_max <- max(max(abs(driver_DA_Z[partner_driver_list]),na.rm=TRUE)*1.1,max(abs(driver_DE_Z[partner_driver_list]),na.rm=TRUE)*1.1,
                 max(abs(diff_Z[partner_driver_list]),na.rm=TRUE)*1.1,max(abs(DA_Z_merge[partner_driver_list]),na.rm=TRUE)*1.1)
-  c1 <- z2col(driver_DA_Z[driver_list],sig_thre=Z_sig_thre,n_len=100,red_col = brewer.pal(9,'Reds')[7],blue_col=brewer.pal(9,'Blues')[7],
+  c1 <- z2col(driver_DA_Z[driver_list],sig_thre=Z_sig_thre,n_len=100,red_col = RColorBrewer::brewer.pal(9,'Reds')[7],blue_col=RColorBrewer::brewer.pal(9,'Blues')[7],
               col_min_thre=mm_min,col_max_thre=mm_max)
-  c2 <- z2col(driver_DE_Z[driver_list],sig_thre=Z_sig_thre,n_len=100,red_col = brewer.pal(9,'Reds')[7],blue_col=brewer.pal(9,'Blues')[7],
+  c2 <- z2col(driver_DE_Z[driver_list],sig_thre=Z_sig_thre,n_len=100,red_col = RColorBrewer::brewer.pal(9,'Reds')[7],blue_col=RColorBrewer::brewer.pal(9,'Blues')[7],
               col_min_thre=mm_min,col_max_thre=mm_max)
-  c3 <- z2col(diff_Z[partner_driver_list],sig_thre=Z_sig_thre,n_len=100,red_col = brewer.pal(9,'Reds')[7],blue_col=brewer.pal(9,'Blues')[7],
+  c3 <- z2col(diff_Z[partner_driver_list],sig_thre=Z_sig_thre,n_len=100,red_col = RColorBrewer::brewer.pal(9,'Reds')[7],blue_col=RColorBrewer::brewer.pal(9,'Blues')[7],
               col_min_thre=mm_min,col_max_thre=mm_max)
-  c4 <- z2col(DA_Z_merge[partner_driver_list],sig_thre=Z_sig_thre,n_len=100,red_col = brewer.pal(9,'Reds')[7],blue_col=brewer.pal(9,'Blues')[7],
+  c4 <- z2col(DA_Z_merge[partner_driver_list],sig_thre=Z_sig_thre,n_len=100,red_col = RColorBrewer::brewer.pal(9,'Reds')[7],blue_col=RColorBrewer::brewer.pal(9,'Blues')[7],
               col_min_thre=mm_min,col_max_thre=mm_max)
 
   # for seed driver
@@ -4511,9 +4877,9 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profil
     mm <- max(merge_target_size)
     i <- length(yy1)-1
     rect(xleft=xleft,xright=xleft+target_size[1,1]/mm*tt,
-         ybottom=yy1[i],ytop=yy1[i]+dyy22/2*0.35,col=brewer.pal(9,'Reds')[5],border=NA)
+         ybottom=yy1[i],ytop=yy1[i]+dyy22/2*0.35,col=RColorBrewer::brewer.pal(9,'Reds')[5],border=NA)
     rect(xleft=xleft,xright=xleft+target_size[1,2]/mm*tt,
-         ytop=yy1[i],ybottom=yy1[i]-dyy22/2*0.35,col=brewer.pal(9,'Blues')[5],border=NA)
+         ytop=yy1[i],ybottom=yy1[i]-dyy22/2*0.35,col=RColorBrewer::brewer.pal(9,'Blues')[5],border=NA)
   }else{
     target_size <- rowSums(target_size)
     merge_target_size <- rowSums(merge_target_size)
@@ -4527,14 +4893,14 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profil
     mm <- max(merge_target_size)
     for(i in 1:length(partner_driver_list)){
       rect(xleft=xleft,xright=xleft+target_size[i+1,1]/mm*tt,
-           ybottom=yy33[2*i],ytop=yy33[2*i]+dyy33*0.35,col=brewer.pal(9,'Reds')[5],border=NA)
+           ybottom=yy33[2*i],ytop=yy33[2*i]+dyy33*0.35,col=RColorBrewer::brewer.pal(9,'Reds')[5],border=NA)
       rect(xleft=xleft,xright=xleft+target_size[i+1,2]/mm*tt,
-           ytop=yy33[2*i],ybottom=yy33[2*i]-dyy33*0.35,col=brewer.pal(9,'Blues')[5],border=NA)
+           ytop=yy33[2*i],ybottom=yy33[2*i]-dyy33*0.35,col=RColorBrewer::brewer.pal(9,'Blues')[5],border=NA)
       # merge
       rect(xleft=xleft,xright=xleft+merge_target_size[i,1]/mm*tt,
-           ybottom=yy33[2*i-1],ytop=yy33[2*i-1]+dyy33*0.35,col=brewer.pal(9,'Reds')[5],border=NA)
+           ybottom=yy33[2*i-1],ytop=yy33[2*i-1]+dyy33*0.35,col=RColorBrewer::brewer.pal(9,'Reds')[5],border=NA)
       rect(xleft=xleft,xright=xleft+merge_target_size[i,2]/mm*tt,
-           ytop=yy33[2*i-1],ybottom=yy33[2*i-1]-dyy33*0.35,col=brewer.pal(9,'Blues')[5],border=NA)
+           ytop=yy33[2*i-1],ybottom=yy33[2*i-1]-dyy33*0.35,col=RColorBrewer::brewer.pal(9,'Blues')[5],border=NA)
     }
     segments(x0=xleft,x1=pp[2],y0=pp[4],y1=pp[4],xpd=TRUE)
     sst <- round(seq(0,mm,length.out=3))
@@ -4647,19 +5013,26 @@ merge_target_list <- function(driver1=NULL,driver2=NULL,target_list=NULL){
 #' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
 #' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
-#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
-#'                                Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.01,Pv_thre=0.1,
-#'                                main='Volcano Plot for metastasis2primary_DA',show_label=FALSE,
+#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
+#'                                logFC_col='logFC.metastasis2primary_DA',
+#'                                Pv_col='P.Value.metastasis2primary_DA',
+#'                                logFC_thre=0.01,Pv_thre=0.1,
+#'                                main='Volcano Plot for metastasis2primary_DA',
+#'                                show_label=FALSE,
 #'                                label_type = 'origin',label_cex = 0.5)
 #' driver_list <- rownames(sig_driver)
 #' use_driver <- driver_list[3]
-#' exp_mat <- exprs(analysis.par$cal.eset) ## expression,the rownames could match originalID
-#' ac_mat  <- exprs(analysis.par$merge.ac.eset) ## activity,the rownames could match originalID_label
+#' exp_mat <- exprs(analysis.par$cal.eset)
+#' ## expression,the rownames could match originalID
+#' ac_mat  <- exprs(analysis.par$merge.ac.eset)
+#' ## activity,the rownames could match originalID_label
 #' phe_info <- pData(analysis.par$cal.eset)
 #' use_obs_class <- get_obs_label(phe_info = phe_info,'tumor type')
-#' draw.categoryValue(ac_val=ac_mat[use_driver,],exp_val=exp_mat[ms_tab[use_driver,'originalID'],],
+#' draw.categoryValue(ac_val=ac_mat[use_driver,],
+#'                    exp_val=exp_mat[ms_tab[use_driver,'originalID'],],
 #'                    use_obs_class=use_obs_class,
-#'                    class_order=c('primary','metastasis'),class_srt=30,
+#'                    class_order=c('primary','metastasis'),
+#'                    class_srt=30,
 #'                    main_ac = ms_tab[use_driver,'gene_label'],
 #'                    main_exp=ms_tab[use_driver,'geneSymbol'])
 #' \dontrun{
@@ -4667,9 +5040,12 @@ merge_target_list <- function(driver1=NULL,driver2=NULL,target_list=NULL){
 #' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
 #' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
-#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col='logFC.metastasis2primary_DA',
-#'                                Pv_col='P.Value.metastasis2primary_DA',logFC_thre=0.01,Pv_thre=0.1,
-#'                                main='Volcano Plot for metastasis2primary_DA',show_label=FALSE,
+#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
+#'                                logFC_col='logFC.metastasis2primary_DA',
+#'                                Pv_col='P.Value.metastasis2primary_DA',
+#'                                logFC_thre=0.01,Pv_thre=0.1,
+#'                                main='Volcano Plot for metastasis2primary_DA',
+#'                                show_label=FALSE,
 #'                                label_type = 'origin',label_cex = 0.5)
 #' driver_list <- rownames(sig_driver)
 #' use_driver <- driver_list[3]
@@ -4678,12 +5054,15 @@ merge_target_list <- function(driver1=NULL,driver2=NULL,target_list=NULL){
 #' phe_info <- pData(analysis.par$cal.eset)
 #' use_obs_class <- get_obs_label(phe_info = phe_info,'tumor type')
 #' analysis.par$out.dir.PLOT <- getwd() ## directory for saving the pdf files
-#' draw.categoryValue(ac_val=ac_mat[use_driver,],exp_val=exp_mat[ms_tab[use_driver,'originalID'],],
+#' draw.categoryValue(ac_val=ac_mat[use_driver,],
+#'                    exp_val=exp_mat[ms_tab[use_driver,'originalID'],],
 #'                    use_obs_class=use_obs_class,
-#'                    class_order=c('primary','metastasis'),class_srt=30,
+#'                    class_order=c('primary','metastasis'),
+#'                    class_srt=30,
 #'                    main_ac = ms_tab[use_driver,'gene_label'],
 #'                    main_exp=ms_tab[use_driver,'geneSymbol'],
-#'                    pdf_file=sprintf('%s/categoryValue_demo1.pdf',analysis.par$out.dir.PLOT))
+#'                    pdf_file=sprintf('%s/categoryValue_demo1.pdf',
+#'                    analysis.par$out.dir.PLOT))
 #'}
 #' @export
 draw.categoryValue <- function(ac_val=NULL,exp_val=NULL,use_obs_class=NULL,category_color=NULL,
@@ -4701,8 +5080,8 @@ draw.categoryValue <- function(ac_val=NULL,exp_val=NULL,use_obs_class=NULL,categ
   c1 <- 0
   if(is.null(ac_val)==FALSE){c1 <- c1+1}
   if(is.null(exp_val)==FALSE){c1 <- c1+1}
+  labelWidth <- max(strwidth(class_order,'inches',cex=class_cex)*sin(class_srt*pi/180))
   if(is.null(pdf_file)==FALSE){
-    labelWidth <- max(strwidth(class_order,'inches',cex=class_cex)*sin(class_srt*pi/180))
     hh <- 5+1.5+labelWidth
     if(c1==1) pdf(pdf_file,width=1.5+3,height=hh)
     if(c1==2) pdf(pdf_file,width=1.5+3*2,height=hh)
@@ -4777,8 +5156,10 @@ get_label_manual <- function(x){
 #' names(edge_score) <- paste0('G',1:100)
 #' analysis.par <- list()
 #' analysis.par$out.dir.PLOT <- getwd()
-#' draw.targetNet(source_label=source_label,source_z=source_z,edge_score=edge_score,
-#'                pdf_file=sprintf('%s/targetNet.pdf',analysis.par$out.dir.PLOT))
+#' draw.targetNet(source_label=source_label,source_z=source_z,
+#'                edge_score=edge_score,
+#'                pdf_file=sprintf('%s/targetNet.pdf',
+#'                analysis.par$out.dir.PLOT))
 #'}
 #' @export
 draw.targetNet <- function(source_label="",source_z=NULL,edge_score=NULL,label_cex=0.7,pdf_file=NULL){
@@ -4856,10 +5237,12 @@ draw.targetNet <- function(source_label="",source_z=NULL,edge_score=NULL,label_c
 #' source2_z <- -2.36
 #' edge_score2 <- (sample(1:240,size=120,replace=TRUE)-120)/120
 #' names(edge_score2) <- sample(paste0('G',1:1000),size=120)
-#' draw.targetNet.TWO(source1_label=source1_label,source2_label=source2_label,
+#' draw.targetNet.TWO(source1_label=source1_label,
+#'                source2_label=source2_label,
 #'                source1_z=source1_z,source2_z=source2_z,
 #'                edge_score1=edge_score1,edge_score2=edge_score2,
-#'                total_possible_target=paste0('G',1:1000),show_test=TRUE,label_cex=0.6)
+#'                total_possible_target=paste0('G',1:1000),
+#'                show_test=TRUE,label_cex=0.6)
 #' \dontrun{
 #' source1_label <- 'test1'
 #' source1_z <- 1.96
@@ -4871,11 +5254,13 @@ draw.targetNet <- function(source_label="",source_z=NULL,edge_score=NULL,label_c
 #' names(edge_score2) <- sample(paste0('G',1:1000),size=120)
 #' analysis.par <- list()
 #' analysis.par$out.dir.PLOT <- getwd()
-#' #' draw.targetNet.TWO(source1_label=source1_label,source2_label=source2_label,
+#' draw.targetNet.TWO(source1_label=source1_label,
+#'                source2_label=source2_label,
 #'                source1_z=source1_z,source2_z=source2_z,
 #'                edge_score1=edge_score1,edge_score2=edge_score2,
 #'                total_possible_target=paste0('G',1:1000),show_test=TRUE,
-#'                pdf_file=sprintf('%s/targetNetTWO.pdf',analysis.par$out.dir.PLOT))
+#'                pdf_file=sprintf('%s/targetNetTWO.pdf',
+#'                analysis.par$out.dir.PLOT))
 #' }
 #' @export
 draw.targetNet.TWO <- function(source1_label="",source2_label="",
@@ -5058,7 +5443,7 @@ plot.spByGene <- function(net,driver_list=NULL,target_list=NULL,transfer_tab=NUL
                           vertex.frame.color="white",vertex.label.color="black",edge.color='black',
                           layout='auto',...){
   n1 <- names(V(net))
-  cc <- brewer.pal(11,'Set3')
+  cc <- RColorBrewer::brewer.pal(11,'Set3')
   c1 <- ifelse(n1 %in% driver_list,cc[3],ifelse(n1 %in% target_list,cc[1],cc[9]))
   names(c1) <- n1
   d1 <- degree(net,mode='out')

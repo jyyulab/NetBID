@@ -58,41 +58,81 @@ This plot function input the expression/activity matrix, with each row as one ge
 }
 \examples{
 analysis.par <- list()
-analysis.par$out.dir.DATA <- system.file('demo/driver/DATA/',package = "NetBID2-R")
+analysis.par$out.dir.DATA <- system.file('demo1/driver/DATA/',package = "NetBID2")
 NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 ms_tab <- analysis.par$final_ms_tab
 exp_mat <- exprs(analysis.par$cal.eset) ## expression,the rownames matches originalID in ms_tab
 ac_mat <- exprs(analysis.par$merge.ac.eset) ## ac,the rownames matches originalID_label in ms_tab
 phe_info <- pData(analysis.par$cal.eset) ## phenotype information
-draw.heatmap(mat=exp_mat,use_genes=ms_tab[rownames(sig_driver),'originalID'],use_gene_label=ms_tab[rownames(sig_driver),'gene_label'],
-            use_samples=colnames(exp_mat),use_sample_label=phe_info[colnames(exp_mat),'geo_accession'],
-            phenotype_info=phe_info,use_phe=c('Sex','tumor type'),main='Expression for Top drivers',scale='row',
-            cluster_rows=TRUE,cluster_columns=TRUE,clustering_distance_rows='pearson',clustering_distance_columns='pearson',
+sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
+                               logFC_col='logFC.metastasis2primary_DA',
+                               Pv_col='P.Value.metastasis2primary_DA',
+                               logFC_thre=0.01,Pv_thre=0.1,
+                               main='Volcano Plot for metastasis2primary_DA',
+                               show_label=FALSE,
+                               label_type = 'origin',label_cex = 0.5)
+sig_driver <- sig_driver[1:10,]
+draw.heatmap(mat=exp_mat,use_genes=ms_tab[rownames(sig_driver),'originalID'],
+            use_gene_label=ms_tab[rownames(sig_driver),'gene_label'],
+            use_samples=colnames(exp_mat),
+            use_sample_label=phe_info[colnames(exp_mat),'geo_accession'],
+            phenotype_info=phe_info,use_phe=c('Sex','tumor type'),
+            main='Expression for Top drivers',scale='row',
+            cluster_rows=TRUE,cluster_columns=TRUE,
+            clustering_distance_rows='pearson',
+            clustering_distance_columns='pearson',
             row_names_gp = gpar(fontsize = 12))
-draw.heatmap(mat=ac_mat,use_genes=ms_tab[rownames(sig_driver),'originalID_label'],use_gene_label=ms_tab[rownames(sig_driver),'gene_label'],
-             use_samples=colnames(exp_mat),use_sample_label=phe_info[colnames(exp_mat),'geo_accession'],
-             phenotype_info=phe_info,use_phe=c('Sex','tumor type'),main='Activity for Top drivers',scale='row',
-             cluster_rows=FALSE,cluster_columns=TRUE,clustering_distance_rows='pearson',clustering_distance_columns='pearson',
+draw.heatmap(mat=ac_mat,use_genes=ms_tab[rownames(sig_driver),'originalID_label'],
+             use_gene_label=ms_tab[rownames(sig_driver),'gene_label'],
+             use_samples=colnames(exp_mat),
+             use_sample_label=phe_info[colnames(exp_mat),'geo_accession'],
+             phenotype_info=phe_info,use_phe=c('Sex','tumor type'),
+             main='Activity for Top drivers',scale='row',
+             cluster_rows=FALSE,cluster_columns=TRUE,
+             clustering_distance_rows='pearson',
+             clustering_distance_columns='pearson',
              row_names_gp = gpar(fontsize = 6))
 
 \dontrun{
 analysis.par <- list()
-analysis.par$out.dir.DATA <- system.file('demo/driver/DATA/',package = "NetBID2-R")
+analysis.par$out.dir.DATA <- system.file('demo1/driver/DATA/',package = "NetBID2")
 NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 ms_tab <- analysis.par$final_ms_tab
 exp_mat <- exprs(analysis.par$cal.eset) ## expression,the rownames matches originalID in ms_tab
 ac_mat <- exprs(analysis.par$merge.ac.eset) ## ac,the rownames matches originalID_label in ms_tab
 phe_info <- pData(analysis.par$cal.eset) ## phenotype information
 analysis.par$out.dir.PLOT <- getwd() ## directory for saving the pdf files
-draw.heatmap(mat=exp_mat,use_genes=ms_tab[rownames(sig_driver),'originalID'],use_gene_label=ms_tab[rownames(sig_driver),'gene_label'],
-            use_samples=colnames(exp_mat),use_sample_label=phe_info[colnames(exp_mat),'geo_accession'],
-            phenotype_info=phe_info,use_phe=c('Sex','tumor type'),main='Expression for Top drivers',scale='row',
-            cluster_rows=TRUE,cluster_columns=TRUE,clustering_distance_rows='pearson',clustering_distance_columns='pearson',
-            row_names_gp = gpar(fontsize = 12),pdf_file=sprintf('\%s/heatmap_demo1.pdf',analysis.par$out.dir.PLOT))
-draw.heatmap(mat=ac_mat,use_genes=ms_tab[rownames(sig_driver),'originalID_label'],use_gene_label=ms_tab[rownames(sig_driver),'gene_label'],
-             use_samples=colnames(exp_mat),use_sample_label=phe_info[colnames(exp_mat),'geo_accession'],
-             phenotype_info=phe_info,use_phe=c('Sex','tumor type'),main='Activity for Top drivers',scale='row',
-             cluster_rows=FALSE,cluster_columns=TRUE,clustering_distance_rows='pearson',clustering_distance_columns='pearson',
-             row_names_gp = gpar(fontsize = 6),pdf_file=sprintf('\%s/heatmap_demo2.pdf',analysis.par$out.dir.PLOT))
+sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
+                               logFC_col='logFC.metastasis2primary_DA',
+                               Pv_col='P.Value.metastasis2primary_DA',
+                               logFC_thre=0.01,Pv_thre=0.1,
+                               main='Volcano Plot for metastasis2primary_DA',
+                               show_label=FALSE,
+                               label_type = 'origin',label_cex = 0.5)
+draw.heatmap(mat=exp_mat,use_genes=ms_tab[rownames(sig_driver),'originalID'],
+            use_gene_label=ms_tab[rownames(sig_driver),'gene_label'],
+            use_samples=colnames(exp_mat),
+            use_sample_label=phe_info[colnames(exp_mat),'geo_accession'],
+            phenotype_info=phe_info,use_phe=c('Sex','tumor type'),
+            main='Expression for Top drivers',scale='row',
+            cluster_rows=TRUE,cluster_columns=TRUE,
+            clustering_distance_rows='pearson',
+            clustering_distance_columns='pearson',
+            row_names_gp = gpar(fontsize = 12),
+            pdf_file=sprintf('\%s/heatmap_demo1.pdf',
+            analysis.par$out.dir.PLOT))
+draw.heatmap(mat=ac_mat,use_genes=ms_tab[rownames(sig_driver),'originalID_label'],
+             use_gene_label=ms_tab[rownames(sig_driver),'gene_label'],
+             use_samples=colnames(exp_mat),
+             use_sample_label=phe_info[colnames(exp_mat),'geo_accession'],
+             phenotype_info=phe_info,
+             use_phe=c('Sex','tumor type'),
+             main='Activity for Top drivers',scale='row',
+             cluster_rows=FALSE,cluster_columns=TRUE,
+             clustering_distance_rows='pearson',
+             clustering_distance_columns='pearson',
+             row_names_gp = gpar(fontsize = 6),
+             pdf_file=sprintf('\%s/heatmap_demo2.pdf',
+             analysis.par$out.dir.PLOT))
 }
 }
