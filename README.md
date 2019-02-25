@@ -26,8 +26,8 @@ install.packages('/research/projects/yu3grp/Network_JY/yu3grp/NetBID2/NetBID2_0.
 
 # Notes
 
-## the documents for some functions are not available yet (just write a blank page)
-## add demos in network/ and driver/, which allow users to test the second and third part of the demos separately
+* the documents for some functions are not available yet (just write a blank page)
+* add demos in network/ and driver/, which allow users to test the second and third part of the demos separately
 
 # Demo scripts
 ## demo scripts for network generation, in demo/ directory 
