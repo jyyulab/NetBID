@@ -24,9 +24,12 @@ or directly install:
 
 install.packages('/research/projects/yu3grp/Network_JY/yu3grp/NetBID2/NetBID2_0.1.0.tar.gz')
 
+# Notes
 
-# the documents for some functions are not available yet (just write a blank page)
+## the documents for some functions are not available yet (just write a blank page)
+## add demos in network/ and driver/, which allow users to test the second and third part of the demos separately
 
+# Demo scripts
 ## demo scripts for network generation, in demo/ directory 
 pipeline_network_demo1.R
 * Step1: load in gene expression datasets for network construction (exp-load)

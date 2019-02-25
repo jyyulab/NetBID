@@ -2,11 +2,30 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{NetBID2.loadRData}
 \alias{NetBID2.loadRData}
-\title{Automatically load RData for NetBID2.}
+\title{Automatically load RData for NetBID2. Suggested in the NetBID2 pipeline analysis but not required.}
 \usage{
 NetBID2.loadRData(network.par = NULL, analysis.par = NULL,
   step = "exp-load")
 }
+\arguments{
+\item{network.par}{list, store all related datasets during network generation part.}
+
+\item{analysis.par}{list, store all related datasets during driver analysis part.}
+
+\item{step}{character, name for the step.}
+}
 \description{
-Automatically load RData for NetBID2.
+\code{NetBID2.loadRData} is a function strongly suggested to control the pipeline analysis in NetBID2.
+}
+\details{
+Users could save two complicate list object, network.par in the network generation part and analysis.par in the driver analysis part,
+into the data directory (network.par$out.dir.DATA or analysis.par$out.dir.DATA), with the name of the RData marked by \code{step} name.
+The two lists could make user to save the whole related dataset in each step \code{NetBID2.saveRData} and easy to get them back by using \code{NetBID2.loadRData}.
+The RData saved from each step could be used to run the following analysis without repeating the former steps.
+}
+\examples{
+analysis.par <- list()
+analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
+NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+
 }

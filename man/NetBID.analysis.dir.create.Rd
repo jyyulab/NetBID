@@ -2,11 +2,46 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{NetBID.analysis.dir.create}
 \alias{NetBID.analysis.dir.create}
-\title{Create directory for the driver analysis part. Suggested not required.}
+\title{Create directory for the driver analysis part. Suggested but not required.}
 \usage{
 NetBID.analysis.dir.create(project_main_dir = NULL, prject_name = NULL,
   network_dir = NULL, network_project_name = NULL)
 }
+\arguments{
+\item{project_main_dir}{character, main directory for the project in the driver analysis part.}
+
+\item{prject_name}{character, project name.}
+
+\item{network_dir}{character, main directory for the project in the network generation part.}
+
+\item{network_project_name}{character, the name of the network for use (SJAR.project_name in SJ.SJAracne.prepare)}
+}
+\value{
+a list called analysis.par, including main.dir,project.name, out.dir, out.dir.QC, out.dir.DATA, out.dir.PLOT
+}
 \description{
-Create directory for the driver analysis part. Suggested not required.
+\code{NetBID.analysis.dir.create} will generate a working directory structure for the driver analysis part in NetBID2.
+This function aims to assist researchers to organize the working directory. It is suggested but not required.
+}
+\details{
+This function need to input the main directory for the analysis project with the project name,
+and need to input the project directory for the network generation with the network_project_name represents the name of the network for use (SJAR.project_name in SJ.SJAracne.prepare)
+It will generate three sub-directories, QC/ for the QC-related plots, DATA/ for saving the RData, and PLOT/ for saving visulization plots.
+Such organization is suggested but not required to use all functions in NetBID2.
+This function will return a variable called \code{analysis.par}.
+This variable is strongly suggested to use in the driver analysis part of NetBID2.
+It will be used to store all related datasets during calculation.
+}
+\examples{
+
+\dontrun{
+network.dir <- sprintf('\%s/demo1/network/',system.file(package = "NetBID2")) # use demo
+network.project.name <- 'project_2019-02-14' #
+project_main_dir <- 'demo1/'
+project_name <- 'driver_test'
+analysis.par  <- NetBID.analysis.dir.create(project_main_dir=project_main_dir,
+                                            prject_name=project_name,
+                                            network_dir=network.dir,
+                                            network_project_name=network.project.name)
+}
 }

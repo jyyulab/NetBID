@@ -7,6 +7,17 @@
 load.exp.GEO(out.dir = network.par$out.dir.DATA, GSE = NULL,
   GPL = NULL, getGPL = TRUE, update = TRUE)
 }
+\arguments{
+\item{out.dir}{character}
+
+\item{GSE}{character}
+
+\item{GPL}{character}
+
+\item{getGPL}{logical}
+
+\item{update}{logical}
+}
 \description{
-Load gene expression set from GEO
+\code{load.exp.GEO} is a function to get GEO dataset, save into eSet and save to RData. If the RData exists, user could choose to directly load from it.
 }

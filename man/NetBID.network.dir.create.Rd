@@ -2,10 +2,33 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{NetBID.network.dir.create}
 \alias{NetBID.network.dir.create}
-\title{Create directory for the network generation part Suggested not required.}
+\title{Create directory for the network generation part. Suggested but not required.}
 \usage{
 NetBID.network.dir.create(project_main_dir = NULL, prject_name = NULL)
 }
+\arguments{
+\item{project_main_dir}{character, main directory for the project.}
+
+\item{prject_name}{character, project name.}
+}
+\value{
+a list called network.par, including main.dir,project.name, out.dir, out.dir.QC, out.dir.DATA, out.dir.SJAR
+}
 \description{
-Create directory for the network generation part Suggested not required.
+\code{NetBID.network.dir.create} will generate a working directory structure for the network generation part in NetBID2.
+This function aims to assist researchers to organize the working directory. It is suggested but not required.
+}
+\details{
+This function need to input the main directory for the project with the project name.
+It will generate three sub-directories, QC/ for the QC-related plots, DATA/ for saving the RData, and SJAR/ for running SJAracne.
+Such organization is suggested but not required to use all functions in NetBID2.
+This function will return a variable called \code{network.par}.
+This variable is strongly suggested to use in the network generation part of NetBID2.
+It will be used to store all related datasets during calculation.
+}
+\examples{
+
+\dontrun{
+NetBID.network.dir.create(project_main_dir='demo1/',project_name='network_test')
+}
 }

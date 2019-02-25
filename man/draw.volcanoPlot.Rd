@@ -57,12 +57,15 @@ analysis.par <- list()
 analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
 NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 ms_tab <- analysis.par$final_ms_tab
-sig_driver1 <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
-                               logFC_col='logFC.metastasis2primary_DA',
-                               Pv_col='P.Value.metastasis2primary_DA',
-                               logFC_thre=0.01,Pv_thre=0.1,
-                               main='Volcano Plot for metastasis2primary_DA',show_label=TRUE,
-                               label_cex = 1)
+sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
+                               logFC_col='logFC.G4.Vs.others_DA',
+                               Pv_col='P.Value.G4.Vs.others_DA',
+                               logFC_thre=0.4,
+                               Pv_thre=1e-7,
+                               main='Volcano Plot for G4.Vs.others_DA',
+                               show_label=FALSE,
+                               label_type = 'origin',
+                               label_cex = 0.5)
 
 \dontrun{
 analysis.par <- list()
@@ -70,38 +73,20 @@ analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBI
 NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 ms_tab <- analysis.par$final_ms_tab
 analysis.par$out.dir.PLOT <- getwd() ## directory for saving the pdf files
-sig_driver1 <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
-                               logFC_col='logFC.metastasis2primary_DA',
-                               Pv_col='P.Value.metastasis2primary_DA',
-                               logFC_thre=0.01,Pv_thre=0.1,
-                               main='Volcano Plot for metastasis2primary_DA',
-                               show_label=TRUE,
-                               pdf_file=sprintf('\%s/vocalno_showlabel_distribute.pdf',
-                               analysis.par$out.dir.PLOT),
-                               label_cex = 1)
-sig_driver2 <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
-                               logFC_col='logFC.metastasis2primary_DA',
-                               Pv_col='P.Value.metastasis2primary_DA',
-                               logFC_thre=0.02,Pv_thre=0.1,
-                               main='Volcano Plot for metastasis2primary_DA',
-                               show_label=TRUE,
-                               label_type = 'origin',label_cex = 0.5,
-                               pdf_file=sprintf('\%s/vocalno_showlabel_origin.pdf',
-                               analysis.par$out.dir.PLOT))
-sig_driver3 <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
-                               logFC_col='logFC.metastasis2primary_DA',
-                               Pv_col='P.Value.metastasis2primary_DA',
-                               logFC_thre=0.01,Pv_thre=0.1,
-                               main='Volcano Plot for metastasis2primary_DA',
+sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
+                               logFC_col='logFC.G4.Vs.others_DA',
+                               Pv_col='P.Value.G4.Vs.others_DA',
+                               logFC_thre=0.4,
+                               Pv_thre=1e-7,
+                               main='Volcano Plot for G4.Vs.others_DA',
                                show_label=FALSE,
-                               label_type = 'origin',label_cex = 0.5,
-                               pdf_file=sprintf('\%s/vocalno_nolabel_DA.pdf',
-                               analysis.par$out.dir.PLOT))
+                               label_type = 'origin',
+                               label_cex = 0.5)
 sig_gene <- draw.volcanoPlot(dat=ms_tab,label_col='geneSymbol',
-                               logFC_col='logFC.metastasis2primary_DE',
-                               Pv_col='P.Value.metastasis2primary_DE',
-                               logFC_thre=0.5,Pv_thre=0.1,
-                               main='Volcano Plot for metastasis2primary_DE',
+                               logFC_col='logFC.G4.Vs.others_DE',
+                               Pv_col='P.Value.G4.Vs.others_DE',
+                               logFC_thre=2,Pv_thre=1e-3,
+                               main='Volcano Plot for G4.Vs.others_DE',
                                show_label=FALSE,
                                pdf_file=sprintf('\%s/vocalno_nolabel_DE.pdf',
                                analysis.par$out.dir.PLOT))

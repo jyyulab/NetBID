@@ -2,7 +2,6 @@
 ############# preparations ###############
 
 library(NetBID2)
-main.dir <- system.file(package = "NetBID2")
 
 ######## global parameters
 # currently some steps will be run on server, the fist two parameters is used for changing the path (local to server)
@@ -19,12 +18,12 @@ RP.SJAR.pre_cmd  <- sprintf("export SJARACNE_PATH=%s \nexport PYTHON_PATH=%s \n%
 db.preload(use_level='gene',use_spe='human',update=FALSE)
 
 ######### write in paramters
-project_main_dir <- 'demo1/' ### user definied !!!!
+project_main_dir <- 'test/' ### user definied !!!!
 current_date <- format(Sys.time(), "%Y-%m-%d") ## current date for project running
 project_name <- sprintf('project_%s',current_date) ## recommend to add time tag
 
 ## network.par is very essential in the analysis!!
-rm(network.par)
+if(exists('network.par')==TRUE) rm(network.par)
 network.par  <- NetBID.network.dir.create(project_main_dir=project_main_dir,prject_name=project_name)
 
 ########### !!!!!!!!!! pipelines !!!!!!!!!! ############
@@ -163,7 +162,9 @@ use_list  <- get.TF_SIG.list(use_genes,use_gene_type=use_gene_type)
 phe <- pData(network.par$net.eset)
 use.samples <- rownames(phe) ## use all samples, or choose to use some samples
 prj.name <- network.par$project.name # can use other names, if need to run different use samples
-result_info <- SJ.SJAracne.prepare(eset=network.par$net.eset,use.samples=use.samples,TF_list=use_list$tf,SIG_list=use_list$sig,
+result_info <- SJ.SJAracne.prepare(eset=network.par$net.eset,use.samples=use.samples,
+                                   TF_list=use_list$tf,SIG_list=use_list$sig,
+                                   IQR.thre = 0.5,IQR.loose_thre = 0.1,
                                    SJAR.project_name=prj.name,SJAR.main_dir=network.par$out.dir.SJAR,mem=10240) ## memory shoud be definied !!!
 
 # check result_info$bash.tf result_info$bash.sig; and run on cluster !!!

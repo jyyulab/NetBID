@@ -4,7 +4,7 @@
 \alias{gs.preload}
 \title{Load MSigDB for NetBID2 into R workspace.}
 \usage{
-gs.preload(use_spe = "Homo sapiens", update = FALSE,
+gs.preload(use_spe = "Homo sapiens", update = FALSE, main.dir = NULL,
   db.dir = sprintf("\%s/db/", main.dir))
 }
 \arguments{
@@ -12,6 +12,8 @@ gs.preload(use_spe = "Homo sapiens", update = FALSE,
 Default is 'Homo sapiens'}
 
 \item{update}{logical,whether to update if previous RData has been generated, default FALSE}
+
+\item{main.dir}{character, main file path for NetBID2, if NULL, will set to system.file(package = "NetBID2"). Default is NULL.}
 
 \item{db.dir}{character, file path for saving the RData, default is \code{db} directory under \code{main.dir} when setting for \code{main.dir}.}
 }
@@ -28,7 +30,6 @@ The function could automatically download information from MSigDB by the functio
 with specified species name.
 }
 \examples{
-main.dir <- system.file(package = "NetBID2")
 gs.preload(use_spe='Homo sapiens',update=FALSE)
 gs.preload(use_spe='Mus musculus',update=FALSE)
 print(all_gs2gene_info)

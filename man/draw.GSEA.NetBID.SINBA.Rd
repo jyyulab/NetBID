@@ -122,12 +122,14 @@ analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBI
 NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 ms_tab <- analysis.par$final_ms_tab
 sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
-                               logFC_col='logFC.metastasis2primary_DA',
-                               Pv_col='P.Value.metastasis2primary_DA',
-                               logFC_thre=0.01,Pv_thre=0.1,
-                               main='Volcano Plot for metastasis2primary_DA',
+                               logFC_col='logFC.G4.Vs.others_DA',
+                               Pv_col='P.Value.G4.Vs.others_DA',
+                               logFC_thre=0.4,
+                               Pv_thre=1e-7,
+                               main='Volcano Plot for G4.Vs.others_DA',
                                show_label=FALSE,
-                               label_type = 'origin',label_cex = 0.5)
+                               label_type = 'origin',
+                               label_cex = 0.5)
 driver_list <- rownames(sig_driver)
 ## choose seed driver and partner driver list
 seed_driver <- driver_list[1]
@@ -143,17 +145,17 @@ ac_combine_mat <- cal.Activity(all_target=merge_target,
                                cal_mat=exprs(analysis.par$cal.eset),
                                es.method='weightedmean')
 ## get DA for the combined drivers
-comp_name <- 'metastasis2primary'
-G0  <- rownames(phe_info)[which(phe_info$`tumor type`=='primary')]
+comp_name <- 'G4.Vs.others'
+G0  <- rownames(phe_info)[which(phe_info$`subgroup`!='G4')]
 # get sample list for G0
-G1  <- rownames(phe_info)[which(phe_info$`tumor type`=='metastasis')]
+G1  <- rownames(phe_info)[which(phe_info$`subgroup`=='G4')]
 # get sample list for G1
 DA_driver_combine <- getDE.limma.2G(eset=generate.eset(ac_combine_mat),
                                     G1=G1,G0=G0,
-                                    G1_name='metastasis',G0_name='primary')
+                                    G1_name='G4',G0_name='others')
 ## or use: DA_driver_combine <- getDE.BID.2G(eset=generate.eset(ac_combine_mat),
                                     G1=G1,G0=G0,
-                                    G1_name='metastasis',G0_name='primary')
+                                    G1_name='G4',G0_name='others')
 ## prepare for SINBA input
 ori_part_Z <- analysis.par$DA[[comp_name]][part_driver,'Z-statistics']
 ori_seed_Z <- analysis.par$DA[[comp_name]][seed_driver,'Z-statistics']

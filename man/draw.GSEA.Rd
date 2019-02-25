@@ -42,6 +42,8 @@ logical value indicating whether the plot has been successfully generated
 \details{
 This is a plot function to draw GSEA for a gene set or a driver by input differentiated expression profile.
 User could input the annotation text for the significance or the function could display the significance calculated by Kolmogorov-Smirnov tests.
+ATTENTION: when user input the \code{use_direction}, the rank profile will be duplicated (here Zero cross at the middle) and
+genes with negative direction (-1 in the use_direction list) will be put in the mirror position of the original place.
 }
 \examples{
 analysis.par <- list()
@@ -49,46 +51,48 @@ analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBI
 NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 ms_tab <- analysis.par$final_ms_tab
 sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
-                               logFC_col='logFC.metastasis2primary_DA',
-                               Pv_col='P.Value.metastasis2primary_DA',
-                               logFC_thre=0.01,Pv_thre=0.1,
-                               main='Volcano Plot for metastasis2primary_DA',
+                               logFC_col='logFC.G4.Vs.others_DA',
+                               Pv_col='P.Value.G4.Vs.others_DA',
+                               logFC_thre=0.4,
+                               Pv_thre=1e-7,
+                               main='Volcano Plot for G4.Vs.others_DA',
                                show_label=FALSE,
-                               label_type = 'origin',label_cex = 0.5)
+                               label_type = 'origin',
+                               label_cex = 0.5)
 driver_list <- rownames(sig_driver)
 DE_profile <- analysis.par$DE[[1]]$`Z-statistics`;
 names(DE_profile) <- rownames(analysis.par$DE[[1]])
 use_driver <- driver_list[1]
 use_target_genes <- analysis.par$merge.network$target_list[[use_driver]]$target
 use_target_direction <- sign(analysis.par$merge.network$target_list[[use_driver]]$spearman) ## 1/-1
-annot <- sprintf('P-value: \%s',signif(ms_tab[use_driver,'P.Value.metastasis2primary_DA'],2))
+annot <- sprintf('P-value: \%s',signif(ms_tab[use_driver,'P.Value.G4.Vs.others_DA'],2))
+
 ## draw for the driver
-draw.GSEA(rank_profile=DE_profile,use_genes=use_target_genes,
+draw.GSEA(rank_profile=DE_profile,
+          use_genes=use_target_genes,
           use_direction=use_target_direction,
           main=sprintf('GSEA plot for driver \%s',
           ms_tab[use_driver,'gene_label']),
           annotation=annot,annotation_cex=1.2,
-          left_annotation='high in metastasis',
-          right_annotation='high in primary')
-## draw for the gene set
-use_genes <- unique(analysis.par$merge.network$network_dat$target.symbol)
-transfer_tab <- get_IDtransfer2symbol2type(from_type = 'ensembl_transcript_id',
-                use_genes=use_genes,dataset='hsapiens_gene_ensembl')
-## get transfer table !!!
-DE_profile_symbol <- DE_profile
-names(DE_profile_symbol) <- get_name_transfertab(names(DE_profile),
-                           transfer_tab = transfer_tab)
+          left_annotation='high in G4',
+          right_annotation='high in others')
+draw.GSEA(rank_profile=DE_profile,
+          use_genes=use_target_genes,
+          use_direction=NULL,
+          main=sprintf('GSEA plot for driver \%s',
+          ms_tab[use_driver,'gene_label']),
+          annotation=NULL,annotation_cex=1.2,
+          left_annotation='high in G4',
+          right_annotation='high in others')
 
-main.dir <- system.file(package = "NetBID2")
+## draw for the gene set
 gs.preload(use_spe='Homo sapiens',update=FALSE)
-use_gs_id <- 'REACTOME_CD28_DEPENDENT_PI3K_AKT_SIGNALING'
-use_target_genes <- all_gs2gene[['CP:REACTOME']][[use_gs_id]]
-draw.GSEA(rank_profile=DE_profile_symbol,
-         use_genes=use_target_genes,use_direction=NULL,
-         main=sprintf('GSEA plot for \%s',use_gs_id),
-         annotation=NULL,annotation_cex=1.2,
-         left_annotation='high in metastasis',
-         right_annotation='high in primary')
+use_target_genes <- all_gs2gene[[1]][[1]]
+draw.GSEA(rank_profile=DE_profile,
+         use_genes=use_target_genes,
+         main=sprintf('GSEA plot for \%s',names(all_gs2gene[[1]][1])),
+         left_annotation='high in G4',
+         right_annotation='high in others')
 
 \dontrun{
 #' analysis.par <- list()
@@ -96,19 +100,21 @@ analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBI
 NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 ms_tab <- analysis.par$final_ms_tab
 sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
-                               logFC_col='logFC.metastasis2primary_DA',
-                               Pv_col='P.Value.metastasis2primary_DA',
-                               logFC_thre=0.01,Pv_thre=0.1,
-                               main='Volcano Plot for metastasis2primary_DA',
+                               logFC_col='logFC.G4.Vs.others_DA',
+                               Pv_col='P.Value.G4.Vs.others_DA',
+                               logFC_thre=0.4,
+                               Pv_thre=1e-7,
+                               main='Volcano Plot for G4.Vs.others_DA',
                                show_label=FALSE,
-                               label_type = 'origin',label_cex = 0.5)
+                               label_type = 'origin',
+                               label_cex = 0.5)
 driver_list <- rownames(sig_driver)
 DE_profile <- analysis.par$DE[[1]]$`Z-statistics`;
 names(DE_profile) <- rownames(analysis.par$DE[[1]])
-use_driver <- driver_list[3]
+use_driver <- driver_list[1]
 use_target_genes <- analysis.par$merge.network$target_list[[use_driver]]$target
 use_target_direction <- sign(analysis.par$merge.network$target_list[[use_driver]]$spearman) ## 1/-1
-annot <- sprintf('P-value: \%s',signif(ms_tab[use_driver,'P.Value.metastasis2primary_DA'],2))
+annot <- sprintf('P-value: \%s',signif(ms_tab[use_driver,'P.Value.G4.Vs.others_DA'],2))
 analysis.par$out.dir.PLOT <- getwd() ## directory for saving the pdf files
 draw.GSEA(rank_profile=DE_profile,use_genes=use_target_genes,
           use_direction=use_target_direction,
@@ -116,25 +122,17 @@ draw.GSEA(rank_profile=DE_profile,use_genes=use_target_genes,
           pdf_file = sprintf('\%s/GSEA_driver.pdf',
           analysis.par$out.dir.PLOT),
           annotation=annot,annotation_cex=1.2,
-          left_annotation='high in metastasis',
-          right_annotation='high in primary')
+          left_annotation='high in G4',
+          right_annotation='high in others')
+
 ## draw for the gene set
-use_genes <- unique(analysis.par$merge.network$network_dat$target.symbol)
-transfer_tab <- get_IDtransfer2symbol2type(from_type = 'ensembl_transcript_id',
-                                          use_genes=use_genes,
-                                          dataset='hsapiens_gene_ensembl')
-## get transfer table !!!
-DE_profile_symbol <- DE_profile
-names(DE_profile_symbol) <- get_name_transfertab(names(DE_profile),
-                                                 transfer_tab = transfer_tab)
-use_gs_id <- 'REACTOME_CD28_DEPENDENT_PI3K_AKT_SIGNALING'
-use_target_genes <- all_gs2gene[['CP:REACTOME']][[use_gs_id]]
-analysis.par$out.dir.PLOT <- getwd() ## directory for saving the pdf files
-draw.GSEA(rank_profile=DE_profile_symbol,use_genes=use_target_genes,use_direction=NULL,
-          main=sprintf('GSEA plot for \%s',use_gs_id),
-          annotation=NULL,annotation_cex=1.2,
-          pdf_file = sprintf('\%s/GSEA_gs.pdf',analysis.par$out.dir.PLOT),
-          left_annotation='high in metastasis',
-          right_annotation='high in primary')
+gs.preload(use_spe='Homo sapiens',update=FALSE)
+use_target_genes <- all_gs2gene[[1]][[1]]
+draw.GSEA(rank_profile=DE_profile,
+         use_genes=use_target_genes,
+         main=sprintf('GSEA plot for \%s',names(all_gs2gene[[1]][1])),
+         pdf_file = sprintf('\%s/GSEA_GS_each.pdf',analysis.par$out.dir.PLOT),
+         left_annotation='high in G4',
+         right_annotation='high in others')
 }
 }

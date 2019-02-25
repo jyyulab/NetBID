@@ -59,13 +59,14 @@ analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBI
 NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 ms_tab <- analysis.par$final_ms_tab
 sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
-                               logFC_col='logFC.metastasis2primary_DA',
-                               Pv_col='P.Value.metastasis2primary_DA',
-                               logFC_thre=0.01,Pv_thre=0.1,
-                               main='Volcano Plot for metastasis2primary_DA',
+                               logFC_col='logFC.G4.Vs.others_DA',
+                               Pv_col='P.Value.G4.Vs.others_DA',
+                               logFC_thre=0.4,
+                               Pv_thre=1e-7,
+                               main='Volcano Plot for G4.Vs.others_DA',
                                show_label=FALSE,
-                               label_type = 'origin',label_cex = 0.5)
-main.dir <- system.file(package = "NetBID2")
+                               label_type = 'origin',
+                               label_cex = 0.5)
 gs.preload(use_spe='Homo sapiens',update=FALSE)
 res1 <- funcEnrich.Fisher(input_list=ms_tab[rownames(sig_driver),'geneSymbol'],
                                bg_list=ms_tab[,'geneSymbol'],

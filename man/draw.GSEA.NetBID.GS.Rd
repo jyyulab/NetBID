@@ -70,8 +70,8 @@ User could choose to display the annotated genes by selecting black color or red
 }
 \examples{
 \dontrun{
-main.dir <- system.file(package = "NetBID2")
 db.preload(use_level='transcript',use_spe='human',update=FALSE)
+
 ## get all_gs2gene
 
 analysis.par <- list()
@@ -79,24 +79,12 @@ analysis.par$out.dir.DATA <- system.file('demo','gene set/DATA/',package = "NetB
 NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 
 ms_tab <- analysis.par$final_ms_tab
-comp <- 'metastasis2primary'
+comp <- 'G4.Vs.others'
 DE <- analysis.par$DE[[comp]]
 analysis.par$out.dir.PLOT <- getwd()
-## directory for saving the pdf files
-exp_mat <- exprs(analysis.par$cal.eset) ## expression,the rownames must be the originalID
 
-## get transfer tab
-use_genes <- rownames(exp_mat)
-transfer_tab <- get_IDtransfer(from_type = 'ensembl_transcript_id',
-                               to_type='external_gene_name',
-                               use_genes=use_genes,
-                               dataset='hsapiens_gene_ensembl')
-                               ## get transfer table !!!
-## get expression matrix for the transfered gene name
-exp_mat_gene <- exprs(update.eset.feature(use_eset=generate.eset(exp_mat=exp_mat),
-                                         use_feature_info = transfer_tab,
-                                         from_feature = 'ensembl_transcript_id',
-                                         to_feature = 'external_gene_name'))
+## directory for saving the pdf files
+exp_mat_gene <- exprs(analysis.par$cal.eset)
 
 ## calculate activity for all genesets
 use_gs2gene <- merge_gs(all_gs2gene=all_gs2gene,
@@ -105,25 +93,29 @@ ac_gs <- cal.Activity.GS(use_gs2gene = use_gs2gene,cal_mat = exp_mat_gene)
 
 ## get DA for the gene set
 phe_info <- pData(analysis.par$cal.eset)
-G0  <- rownames(phe_info)[which(phe_info$`tumor type`=='primary')]
+G0  <- rownames(phe_info)[which(phe_info$`subgroup`!='G4')]
 # get sample list for G0
-G1  <- rownames(phe_info)[which(phe_info$`tumor type`=='metastasis')]
+G1  <- rownames(phe_info)[which(phe_info$`subgroup`=='G4')]
 # get sample list for G1
 DA_gs <- getDE.limma.2G(eset=generate.eset(ac_gs),G1=G1,G0=G0,
-                        G1_name='metastasis',G0_name='primary')
+                        G1_name='G4',G0_name='others')
 ## or use: DA_gs <- getDE.BID.2G(eset=generate.eset(ac_gs),G1=G1,G0=G0,
-                        G1_name='metastasis',G0_name='primary')
+                        G1_name='G4',G0_name='others')
 ## draw vocalno plot for top sig-GS
-sig_gs <- draw.volcanoPlot(dat=cbind(DA_gs,names=rownames(DA_gs),
-                          stringsAsFactors=FALSE),
-                          label_col='names',logFC_col='logFC',
-                          Pv_col='P.Value',logFC_thre=0,Pv_thre=0.1,
-                          main='Volcano Plot for gene sets',show_label=TRUE,
-                          label_type = 'distribute',label_cex = 0.5,
-                          pdf_file=sprintf('\%s/vocalno_GS_DA.pdf',
-                          analysis.par$out.dir.PLOT))
+sig_gs <- draw.volcanoPlot(dat=DA_gs,
+                           label_col='ID',
+                           logFC_col='logFC',
+                           Pv_col='P.Value',
+                           logFC_thre=0.25,
+                           Pv_thre=1e-4,
+                           main='Volcano Plot for gene sets',
+                           show_label=TRUE,
+                           label_type = 'distribute',
+                           label_cex = 0.5,
+                           pdf_file=sprintf('\%s/vocalno_GS_DA.pdf',
+                           analysis.par$out.dir.PLOT))
 ## GSEA plot for the significant gene sets
-draw.GSEA.NetBID.GS(DE=DE,name_col='symbol',
+draw.GSEA.NetBID.GS(DE=DE,name_col='ID',
                     profile_col='t',profile_trend='pos2neg',
                     sig_gs_list = sig_gs$names,
                     gs_DA_Z=DA_gs[sig_gs$names,'Z-statistics'],

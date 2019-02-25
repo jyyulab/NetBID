@@ -84,23 +84,24 @@ analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBI
 NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 ms_tab <- analysis.par$final_ms_tab
 sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
-                               logFC_col='logFC.metastasis2primary_DA',
-                               Pv_col='P.Value.metastasis2primary_DA',
-                               logFC_thre=0.01,Pv_thre=0.1,
-                               main='Volcano Plot for metastasis2primary_DA',
+                               logFC_col='logFC.G4.Vs.others_DA',
+                               Pv_col='P.Value.G4.Vs.others_DA',
+                               logFC_thre=0.4,
+                               Pv_thre=1e-7,
+                               main='Volcano Plot for G4.Vs.others_DA',
                                show_label=FALSE,
-                               label_type = 'origin',label_cex = 0.5)
-main.dir <- system.file(package = "NetBID2")
+                               label_type = 'origin',
+                               label_cex = 0.5)
 gs.preload(use_spe='Homo sapiens',update=FALSE)
 use_genes <- unique(analysis.par$merge.network$network_dat$target.symbol)
-transfer_tab <- get_IDtransfer2symbol2type(from_type = 'ensembl_transcript_id',
+transfer_tab <- get_IDtransfer2symbol2type(from_type = 'external_gene_name',
                                            use_genes=use_genes,
                                            dataset='hsapiens_gene_ensembl')
 ## get transfer table !!!
 draw.bubblePlot(driver_list=rownames(sig_driver),
                show_label=ms_tab[rownames(sig_driver),'gene_label'],
-               Z_val=ms_tab[rownames(sig_driver),'Z.metastasis2primary_DA'],
-               driver_type=ms_tab[rownames(sig_driver),'transcript_biotype'],
+               Z_val=ms_tab[rownames(sig_driver),'Z.G4.Vs.others_DA'],
+               driver_type=ms_tab[rownames(sig_driver),'gene_biotype'],
                target_list=analysis.par$merge.network$target_list,
                transfer2symbol2type=transfer_tab,
                bg_list=ms_tab[,'geneSymbol'],min_gs_size=5,
@@ -116,31 +117,36 @@ analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBI
 NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 ms_tab <- analysis.par$final_ms_tab
 sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
-                               logFC_col='logFC.metastasis2primary_DA',
-                               Pv_col='P.Value.metastasis2primary_DA',
-                               logFC_thre=0.01,Pv_thre=0.1,
-                               main='Volcano Plot for metastasis2primary_DA',
+                               logFC_col='logFC.G4.Vs.others_DA',
+                               Pv_col='P.Value.G4.Vs.others_DA',
+                               logFC_thre=0.4,
+                               Pv_thre=1e-7,
+                               main='Volcano Plot for G4.Vs.others_DA',
                                show_label=FALSE,
-                               label_type = 'origin',label_cex = 0.5)
-main.dir <- system.file(package = "NetBID2")
+                               label_type = 'origin',
+                               label_cex = 0.5)
 gs.preload(use_spe='Homo sapiens',update=FALSE)
 use_genes <- unique(analysis.par$merge.network$network_dat$target.symbol)
-transfer_tab <- get_IDtransfer2symbol2type(from_type = 'ensembl_transcript_id',
+transfer_tab <- get_IDtransfer2symbol2type(from_type = 'external_gene_name',
                                            use_genes=use_genes,
                                            dataset='hsapiens_gene_ensembl')
 ## get transfer table !!!
 analysis.par$out.dir.PLOT <- getwd() ## directory for saving the pdf files
+mark_gene <- c('KCNA1','EOMES','KHDRBS2','RBM24','UNC5D') ## marker for Group4
 draw.bubblePlot(driver_list=rownames(sig_driver),
                show_label=ms_tab[rownames(sig_driver),'gene_label'],
-               Z_val=ms_tab[rownames(sig_driver),'Z.metastasis2primary_DA'],
-               driver_type=ms_tab[rownames(sig_driver),'transcript_biotype'],
+               Z_val=ms_tab[rownames(sig_driver),'Z.G4.Vs.others_DA'],
+               driver_type=ms_tab[rownames(sig_driver),'gene_biotype'],
                target_list=analysis.par$merge.network$target_list,
                transfer2symbol2type=transfer_tab,
                bg_list=ms_tab[,'geneSymbol'],
-               min_gs_size=5,max_gs_size=500,use_gs=c('H'),
+               min_gs_size=5,max_gs_size=500,
+               use_gs=use_gs=c('CP:KEGG','CP:BIOCARTA','H'),
                top_geneset_number=30,top_driver_number=50,
                pdf_file = sprintf('\%s/bubblePlot.pdf',
                analysis.par$out.dir.PLOT),
-               main='Bubbleplot for top driver targets')
+               main='Bubbleplot for top driver targets',
+               mark_gene=ms_tab[which(ms_tab$geneSymbol \%in\% mark_gene),
+               'originalID_label'])
 }
 }

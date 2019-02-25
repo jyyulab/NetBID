@@ -1,3 +1,18 @@
+
+#' @import Biobase limma tximport arrayQualityMetrics igraph biomaRt openxlsx msigdbr
+#' @importFrom GEOquery getGEO
+#' @importFrom RColorBrewer brewer.pal
+#' @importFrom plot3D scatter3D
+#' @importFrom vsn meanSdPlot
+#' @importFrom plotrix draw.ellipse
+#' @importFrom impute impute.knn
+#' @importFrom umap umap
+#' @importFrom rhdf5 H5Fopen H5Fclose
+#' @importFrom plyr ddply
+#' @importFrom DESeq2 DESeqDataSetFromTximport DESeq
+#' @importFrom ComplexHeatmap Heatmap
+
+##   ‘MCMCglmm’ ‘arm’ ‘reshape’
 ############################# NetBID2 Functions
 ######## pre-request packages
 # R >= 3.4.0
@@ -26,6 +41,7 @@ library(umap) ## for umap visualization
 library(rhdf5) ## for read in MICA results
 #source('pipeline_functions_bid.R')
 
+####
 #' Load database files used for NetBID2 into R workspace.
 #'
 #' \code{db.preload} returns the TF (transcription factors) and Sig (signaling factors) list (tf_sigs)
@@ -44,28 +60,32 @@ library(rhdf5) ## for read in MICA results
 #' @param SIG_list a character vector,input the list of SIG names, if NULL, will use pre-defined list in the package, default NULL
 #' @param input_attr_type character, input the type for the list of TF_list, SIG_list. If no input for TF_list, SIG_list, just leave it to NULL, default NULL.
 #' See biomaRt \url{https://bioconductor.org/packages/release/bioc/vignettes/biomaRt/inst/doc/biomaRt.html} for more details.
+#' @param main.dir character, main file path for NetBID2, if NULL, will set to \code{system.file(package = "NetBID2")}. Default is NULL.
 #' @param db.dir character, file path for saving the RData, default is \code{db} directory under \code{main.dir} when setting for \code{main.dir}.
 #'
 #' @return Reture TRUE if success and FALSE if not. Will load two variables into R workspace, tf_sigs and db_info.
 #'
 #' @examples
-#' main.dir <- system.file(package = "NetBID2")
 #' db.preload(use_level='gene',use_spe='human',update=FALSE)
 #'
 #' \dontrun{
-#' main.dir <- system.file(package = "NetBID2") ## must specify a main directory
 #' db.preload(use_level='transcript',use_spe='human',update=FALSE)
 #' db.preload(use_level='gene',use_spe='mouse',update=FALSE)
 #' }
 #' @export
 db.preload <- function(use_level='transcript',use_spe='human',update = FALSE,
                        TF_list=NULL,SIG_list=NULL,input_attr_type='external_gene_name',
+                       main.dir=NULL,
                        db.dir=sprintf("%s/db/",main.dir)){
   ## load annotation info, including: TF/Sig list, gene info
-  if(is.null(main.dir) & is.null(db.dir)){message('db.dir or main.dir required, please check and re-try !');return(FALSE)}
-  if(is.null(main.dir)==FALSE & is.null(db.dir)==TRUE){
+  if(is.null(main.dir)==TRUE){
+    main.dir <- system.file(package = "NetBID2")
+    message(sprintf('main.dir not set, will use package directory: %s',main.dir))
+  }
+  if(is.null(db.dir)==TRUE){
     db.dir <- sprintf("%s/db/",main.dir)
   }
+  message(sprintf('Will use directory %s as the db.dir',db.dir))
   use_spe <- toupper(use_spe)
   output.db.dir <- sprintf('%s/%s',db.dir,use_spe)
   if(!file.exists(output.db.dir)){
@@ -97,7 +117,7 @@ db.preload <- function(use_level='transcript',use_spe='human',update = FALSE,
     attributes <- listAttributes(mart)
     ensembl.attr.transcript <- c('ensembl_transcript_id_version','ensembl_gene_id_version',
                                  'external_transcript_name','external_gene_name',
-                                 'transcript_biotype','gene_biotype',
+                                 'gene_biotype','gene_biotype',
                                  'chromosome_name','strand','start_position','end_position','band','transcript_start','transcript_end',
                                  'description','phenotype_description','hgnc_symbol','entrezgene','refseq_mrna')
     ensembl.attr.gene <- c('ensembl_gene_id_version','external_gene_name',
@@ -181,13 +201,52 @@ db.preload <- function(use_level='transcript',use_spe='human',update = FALSE,
   return(TRUE)
 }
 
-#' Get transcription factor (TF) and signaling factor (SIG) list
+#' Get transcription factor (TF) and signaling factor (SIG) list for the input gene/transcript type
+#'
+#' \code{get.TF_SIG.list} is a gene ID conversion function to get the TF/SIG list
+#' for the input gene list with selected gene/transcript type.
+#'
+#' @param use_genes a vector of characters, all possible genes used in network generation.
+#' If NULL, will not filter the TF/SIG list by this gene list. Default is NULL.
+#' @param use_gene_type character, attribute name from the biomaRt package, such as 'ensembl_gene_id','ensembl_gene_id_version'
+#' 'ensembl_transcript_id','ensembl_transcript_id_version','refseq_mrna'. Full list could be obtained by
+#' \code{listAttributes(mart)$name}, where \code{mart} is the output of \code{useMart} function.
+#' The type must be the gene type for the input \code{use_genes}. Default is 'ensembl_gene_id'.
+#' @param dataset character, name for the dataset used for ID conversion, such as 'hsapiens_gene_ensembl'.
+#' If NULL, will use \code{db_info[1]} if run \code{db.preload} brefore. Default is NULL.
+#'
+#' @examples
+#' db.preload(use_level='transcript',use_spe='human',update=FALSE)
+#' use_genes <- c("ENST00000210187","ENST00000216083","ENST00000216127",
+#'              "ENST00000216416","ENST00000217233","ENST00000221418",
+#'              "ENST00000504956","ENST00000507468")
+#' res_list  <- get.TF_SIG.list(use_gene_type = 'ensembl_transcript_id',
+#'                                use_genes=use_genes,
+#'                                dataset='hsapiens_gene_ensembl')
+#' print(res_list)
+#'
+#' @return This function will return a list containing two parts,
+#' for $tf saving the TF list for the input gene type and $sig saving the SIG list.
+#'
+#' \dontrun{
+#' }
+#'
 #' @export
-get.TF_SIG.list <- function(use_genes,use_gene_type='ensembl_gene_id',dataset=db_info[1]){
+get.TF_SIG.list <- function(use_genes=NULL,
+                            use_gene_type='ensembl_gene_id',
+                            dataset=db_info[1]){
+  if(is.null(tf_sigs)==TRUE){
+    message('tf_sigs not loaded yet, please run db.preload() before processing !');return(FALSE);
+  }
   n1 <- names(tf_sigs$tf)[-1]
   if(use_gene_type %in% n1){
-    TF_list <- unique(intersect(use_genes,tf_sigs$tf[[use_gene_type]]))
-    SIG_list <- unique(intersect(use_genes,tf_sigs$sig[[use_gene_type]]))
+    if(is.null(use_genes)==TRUE){
+      TF_list <- unique(tf_sigs$tf[[use_gene_type]])
+      SIG_list <- unique(tf_sigs$sig[[use_gene_type]])
+    }else{
+      TF_list <- unique(intersect(use_genes,tf_sigs$tf[[use_gene_type]]))
+      SIG_list <- unique(intersect(use_genes,tf_sigs$sig[[use_gene_type]]))
+    }
   }else{
     mart <- useMart(biomart="ensembl", dataset=dataset) ## get mart for id conversion !!!! db_info is saved in db RData
     #filters <- listFilters(mart)
@@ -253,6 +312,111 @@ get_IDtransfer <- function(from_type=NULL,to_type=NULL,use_genes=NULL,dataset=db
   return(transfer_tab)
 }
 
+#' Gene ID conversion related functions.
+#'
+#' \code{get_IDtransfer_betweenSpecies} will generate a transfer table for ID conversion between species.
+#'
+#' @param from_spe character, input the species name (e.g 'human', 'mouse', 'rat') that the \code{use_genes} belong to, default is 'human'
+#' @param to_spe character, input the species name (e.g 'human', 'mouse', 'rat') that need to transfered to, default is 'mouse'
+#' @param from_type character, attribute name from the biomaRt package, such as 'ensembl_gene_id','ensembl_gene_id_version'
+#' 'ensembl_transcript_id','ensembl_transcript_id_version','refseq_mrna'. Full list could be obtained by
+#' \code{listAttributes(mart)$name}, where \code{mart} is the output of \code{useMart} function.
+#' The type must be the gene type for the input \code{use_genes}.
+#' @param to_type character, character, attribute name from the biomaRt package, the gene type will be convereted to.
+#' @param use_genes a vector of characters, gene list used for ID conversion. Must be the genes with \code{from_type} in \code{from_spe}.
+#'
+#' @return
+#' \code{get_IDtransfer_betweenSpecies} will return a data.frame for the transfer table.
+#'
+#' @examples
+#' use_genes <- c("ENST00000210187","ENST00000216083","ENST00000216127",
+#'              "ENST00000216416","ENST00000217233","ENST00000221418")
+#' transfer_tab <- get_IDtransfer_betweenSpecies(from_spe='human',
+#'                                to_spe='mouse',
+#'                                from_type = 'ensembl_transcript_id',
+#'                                to_type='external_gene_name',
+#'                                use_genes=use_genes)
+#'                                ## get transfer table !!!
+#' transfer_tab <- get_IDtransfer_betweenSpecies(from_spe='human',
+#'                                to_spe='mouse',
+#'                                from_type = 'ensembl_transcript_id',
+#'                                to_type='ensembl_transcript_id_version',
+#'                                use_genes=use_genes)
+#'                                ## get transfer table !!!
+#' \dontrun{
+#' }
+#' @export
+get_IDtransfer_betweenSpecies <- function(from_spe='human',to_spe='mouse',
+                                          from_type=NULL,to_type=NULL,
+                                          use_genes=NULL){
+  from_spe <- toupper(from_spe)
+  to_spe <- toupper(to_spe)
+  ensembl <- useMart("ensembl")
+  all_ds  <- listDatasets(ensembl)
+  w1 <- grep(sprintf("^%s GENES",from_spe),toupper(all_ds$description))
+  if(length(w1)==1){
+    from_spe_ds <- all_ds[w1,1]
+    mart1 <- useMart(biomart="ensembl", dataset=from_spe_ds) ## get id for input spe
+  }
+  if(length(w1)==0){
+    message(sprintf('Check input from_spe parameter: %s, not included in the ensembl database',from_spe))
+    return(FALSE)
+  }
+  if(length(w1)>1){
+    w2 <- paste(all_ds[w1,2],collapse=';')
+    message(sprintf('Check input from_spe parameter: %s, more than one species match in ensembl database : %s,
+                    please check and re-try',from_spe,w2))
+    return(FALSE)
+  }
+  w1 <- grep(sprintf("^%s GENES",to_spe),toupper(all_ds$description))
+  if(length(w1)==1){
+    to_spe_ds <- all_ds[w1,1]
+    mart2 <- useMart(biomart="ensembl", dataset=to_spe_ds) ## get id for input spe
+  }
+  if(length(w1)==0){
+    message(sprintf('Check input to_spe parameter: %s, not included in the ensembl database',to_spe))
+    return(FALSE)
+  }
+  if(length(w1)>1){
+    w2 <- paste(all_ds[w1,2],collapse=';')
+    message(sprintf('Check input to_spe parameter: %s, more than one species match in ensembl database : %s,
+                    please check and re-try',to_spe,w2))
+    return(FALSE)
+  }
+  #### mart1 mart2
+  attributes <- listAttributes(mart1)
+  if(!from_type %in% attributes$name){
+    message(sprintf('%s not in the attributes for %s, please check and re-try !',from_type,db_info[1]));return(FALSE)
+  }
+  attributes <- listAttributes(mart2)
+  if(!to_type %in% attributes$name){
+    message(sprintf('%s not in the attributes for %s, please check and re-try !',to_type,db_info[1]));return(FALSE)
+  }
+  ## get homolog between from_spe to to_spe
+  cn1 <- gsub('(.*)_gene_ensembl','\\1',from_spe_ds)
+  cn2 <- attributes$name ## attribute names in mart2
+  cn3 <- cn2[grep(sprintf('%s_homolog_associated_gene_name',cn1),cn2)]
+  if(length(cn3)!=1){
+    message('No homolog info found in Biomart, sorry !');return(FALSE)
+  }
+  tmp1 <- getBM(attributes=c(from_type,'external_gene_name'),values=use_genes,
+                mart=mart1,filters=from_type)
+  tmp2 <- getBM(attributes=c(cn3,'external_gene_name'),values=TRUE,
+                mart=mart2,filters=sprintf('with_%s_homolog',cn1))
+  colnames(tmp1) <- sprintf('%s_%s',colnames(tmp1),from_spe)
+  colnames(tmp2) <- sprintf('%s_%s',colnames(tmp2),to_spe)
+  tmp3 <- merge(tmp1,tmp2,by.x=sprintf('external_gene_name_%s',from_spe),by.y=sprintf('%s_%s',cn3,to_spe))
+  transfer_tab <- tmp3[,c(2,3,1)]
+  if(to_type != 'external_gene_name'){
+    tmp4 <- getBM(attributes=c(to_type,'external_gene_name'),values=tmp3[,3],
+                  mart=mart2,filters='external_gene_name')
+    colnames(tmp4) <- sprintf('%s_%s',colnames(tmp4),to_spe)
+    tmp5 <- merge(tmp3,tmp4)
+    transfer_tab <- tmp5[,c(3,4,2,1)]
+  }
+  return(transfer_tab)
+}
+
 
 #' Gene ID conversion related functions.
 #' \code{get_IDtransfer2symbol2type} will generate the transfer table for the original ID to the gene symbol and gene biotype (at gene level)
@@ -293,7 +457,7 @@ get_IDtransfer2symbol2type <- function(from_type=NULL,use_genes=NULL,dataset=db_
     message(sprintf('%s not in the attributes for %s, please check and re-try !',from_type,db_info[1]));return(FALSE)
   }
   if(use_level=='gene') tmp1 <- getBM(attributes=c(from_type,c('external_gene_name','gene_biotype')),values=use_genes,mart=mart,filters=from_type)
-  if(use_level=='transcript') tmp1 <- getBM(attributes=c(from_type,c('external_gene_name','transcript_biotype')),values=use_genes,mart=mart,filters=from_type)
+  if(use_level=='transcript') tmp1 <- getBM(attributes=c(from_type,c('external_gene_name','gene_biotype')),values=use_genes,mart=mart,filters=from_type)
   w1 <- apply(tmp1,1,function(x)length(which(is.na(x)==TRUE | x=="")))
   transfer_tab <- tmp1[which(w1==0),]
   return(transfer_tab)
@@ -334,8 +498,13 @@ get_IDtransfer2symbol2type <- function(from_type=NULL,use_genes=NULL,dataset=db_
 get_name_transfertab <- function(use_genes=NULL,transfer_tab=NULL,from_type=NULL,to_type=NULL){
   if(is.null(from_type)==TRUE){from_type=colnames(transfer_tab)[1];}
   if(is.null(to_type)==TRUE){to_type=colnames(transfer_tab)[2];}
+  transfer_tab <- unique(transfer_tab[,c(from_type,to_type)])
   x <- use_genes;
   t1 <- unique(transfer_tab[which(transfer_tab[,from_type] %in% x),])
+  c1 <- unique(t1[,from_type])
+  if(length(c1)<nrow(t1)){
+    message('Gene ID in from type contain multiple items!');return(FALSE)
+  }
   rownames(t1) <- t1[,from_type]
   x1 <- t1[x,to_type]
   w1 <- which(is.na(x1)==TRUE)
@@ -343,7 +512,28 @@ get_name_transfertab <- function(use_genes=NULL,transfer_tab=NULL,from_type=NULL
   x1
 }
 
-#' Create directory for the network generation part Suggested not required.
+#' Create directory for the network generation part. Suggested but not required.
+#'
+#' \code{NetBID.network.dir.create} will generate a working directory structure for the network generation part in NetBID2.
+#' This function aims to assist researchers to organize the working directory. It is suggested but not required.
+#'
+#' This function need to input the main directory for the project with the project name.
+#' It will generate three sub-directories, QC/ for the QC-related plots, DATA/ for saving the RData, and SJAR/ for running SJAracne.
+#' Such organization is suggested but not required to use all functions in NetBID2.
+#' This function will return a variable called \code{network.par}.
+#' This variable is strongly suggested to use in the network generation part of NetBID2.
+#' It will be used to store all related datasets during calculation.
+#'
+#' @param project_main_dir character, main directory for the project.
+#' @param prject_name character, project name.
+#'
+#' @return a list called network.par, including main.dir,project.name, out.dir, out.dir.QC, out.dir.DATA, out.dir.SJAR
+
+#' @examples
+#'
+#' \dontrun{
+#' NetBID.network.dir.create(project_main_dir='demo1/',project_name='network_test')
+#' }
 #' @export
 NetBID.network.dir.create <- function(project_main_dir=NULL,prject_name=NULL){
   if(exists('network.par')==TRUE){message('network.par is occupied in the current session,please manually run: rm(network.par) and re-try, otherwise will not change !');
@@ -377,7 +567,38 @@ NetBID.network.dir.create <- function(project_main_dir=NULL,prject_name=NULL){
   return(network.par)
 }
 
-#' Create directory for the driver analysis part. Suggested not required.
+#' Create directory for the driver analysis part. Suggested but not required.
+#'
+#' \code{NetBID.analysis.dir.create} will generate a working directory structure for the driver analysis part in NetBID2.
+#' This function aims to assist researchers to organize the working directory. It is suggested but not required.
+#'
+#' This function need to input the main directory for the analysis project with the project name,
+#' and need to input the project directory for the network generation with the network_project_name represents the name of the network for use (SJAR.project_name in SJ.SJAracne.prepare)
+#' It will generate three sub-directories, QC/ for the QC-related plots, DATA/ for saving the RData, and PLOT/ for saving visulization plots.
+#' Such organization is suggested but not required to use all functions in NetBID2.
+#' This function will return a variable called \code{analysis.par}.
+#' This variable is strongly suggested to use in the driver analysis part of NetBID2.
+#' It will be used to store all related datasets during calculation.
+#'
+#' @param project_main_dir character, main directory for the project in the driver analysis part.
+#' @param prject_name character, project name.
+#' @param network_dir character, main directory for the project in the network generation part.
+#' @param network_project_name character, the name of the network for use (SJAR.project_name in SJ.SJAracne.prepare)
+#'
+#' @return a list called analysis.par, including main.dir,project.name, out.dir, out.dir.QC, out.dir.DATA, out.dir.PLOT
+#'
+#' @examples
+#'
+#' \dontrun{
+#' network.dir <- sprintf('%s/demo1/network/',system.file(package = "NetBID2")) # use demo
+#' network.project.name <- 'project_2019-02-14' #
+#' project_main_dir <- 'demo1/'
+#' project_name <- 'driver_test'
+#' analysis.par  <- NetBID.analysis.dir.create(project_main_dir=project_main_dir,
+#'                                             prject_name=project_name,
+#'                                             network_dir=network.dir,
+#'                                             network_project_name=network.project.name)
+#' }
 #' @export
 NetBID.analysis.dir.create <- function(project_main_dir=NULL,prject_name=NULL,network_dir=NULL, network_project_name=NULL){
   if(exists('analysis.par')==TRUE){message('analysis.par is occupied in the current session,please manually run: rm(analysis.par) and re-try, otherwise will not change !');
@@ -470,7 +691,26 @@ check_analysis.par <- function(analysis.par,step='pre-load'){
   return(TRUE)
 }
 
-#' Automatically save RData for NetBID2.
+#' Automatically save RData for NetBID2. Suggested in the NetBID2 pipeline analysis but not required.
+#'
+#' \code{NetBID2.saveRData} is a function strongly suggested to control the pipeline analysis in NetBID2.
+#'
+#' Users could save two complicate list object, network.par in the network generation part and analysis.par in the driver analysis part,
+#' into the data directory (network.par$out.dir.DATA or analysis.par$out.dir.DATA), with the name of the RData marked by \code{step} name.
+#' The two lists could make user to save the whole related dataset in each step \code{NetBID2.saveRData} and easy to get them back by using \code{NetBID2.loadRData}.
+#' The RData saved from each step could be used to run the following analysis without repeating the former steps.
+#'
+#' @param network.par list, store all related datasets during network generation part.
+#' @param analysis.par list, store all related datasets during driver analysis part.
+#' @param step character, name for the step.
+#'
+#' @examples
+#' \dontrun{
+#' analysis.par <- list()
+#' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
+#' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' NetBID2.saveRData(analysis.par=analysis.par,step='ms-tab_test')
+#' }
 #' @export
 NetBID2.saveRData <- function(network.par=NULL,analysis.par=NULL,step='exp-load'){
   if(is.null(network.par)==FALSE & is.null(analysis.par)==FALSE){
@@ -488,7 +728,24 @@ NetBID2.saveRData <- function(network.par=NULL,analysis.par=NULL,step='exp-load'
   }
 }
 
-#' Automatically load RData for NetBID2.
+#' Automatically load RData for NetBID2. Suggested in the NetBID2 pipeline analysis but not required.
+#'
+#' \code{NetBID2.loadRData} is a function strongly suggested to control the pipeline analysis in NetBID2.
+#'
+#' Users could save two complicate list object, network.par in the network generation part and analysis.par in the driver analysis part,
+#' into the data directory (network.par$out.dir.DATA or analysis.par$out.dir.DATA), with the name of the RData marked by \code{step} name.
+#' The two lists could make user to save the whole related dataset in each step \code{NetBID2.saveRData} and easy to get them back by using \code{NetBID2.loadRData}.
+#' The RData saved from each step could be used to run the following analysis without repeating the former steps.
+#'
+#' @param network.par list, store all related datasets during network generation part.
+#' @param analysis.par list, store all related datasets during driver analysis part.
+#' @param step character, name for the step.
+#'
+#' @examples
+#' analysis.par <- list()
+#' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
+#' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+#'
 #' @export
 NetBID2.loadRData <- function(network.par=NULL,analysis.par=NULL,step='exp-load'){
   if(is.null(network.par)==FALSE & is.null(analysis.par)==FALSE){
@@ -507,6 +764,16 @@ NetBID2.loadRData <- function(network.par=NULL,analysis.par=NULL,step='exp-load'
 }
 
 #' Load gene expression set from GEO
+#'
+#' \code{load.exp.GEO} is a function to get GEO dataset, save into eSet and save to RData. If the RData exists, user could choose to directly load from it.
+#'
+#' @param out.dir character
+#' @param GSE character
+#' @param GPL character
+#' @param getGPL logical
+#' @param update logical
+#'
+#'
 #' @export
 load.exp.GEO <- function(out.dir=network.par$out.dir.DATA,GSE = NULL,GPL = NULL,getGPL=TRUE,update = TRUE){
   if(is.null(out.dir)==TRUE){
@@ -629,8 +896,9 @@ generate.eset <- function(exp_mat=NULL, phenotype_info=NULL, feature_info=NULL, 
 }
 
 #' Merge two expression set.
+#' @usage merge_eset(eset1,eset2,group1,group2,phe1,phe2,use_col = NULL,remove_batch = TRUE)
 #' @export
-merge.eset <- function(eset1,eset2,group1,group2,phe1,phe2,
+merge_eset <- function(eset1,eset2,group1,group2,phe1,phe2,
                        use_col = NULL,
                        remove_batch = TRUE) {
   mat1 <- exprs(eset1)
@@ -953,7 +1221,7 @@ getDE.BID.2G <-function(eset,G1=NULL, G0=NULL,G1_name=NULL,G0_name=NULL,verbose=
   exp_mat <- exp_mat[,c(G1,G0)]
   d<-data.frame(id=rownames(exp_mat),exp_mat,stringsAsFactors=FALSE)
   comp <- factor(c(rep(1,length.out=length(G1)),rep(0,length.out=length(G0))))
-  de<-plyr::ddply(d,'id','combRowEvid.2grps',comp=comp,family=gaussian,method='Bayesian',n.iter=5000,nitt=25000,burnin=5000,thin=1,pooling=c('full'),logTransformed=TRUE,restand=FALSE,average.method=c('geometric'))
+  de<- ddply(d,'id','combRowEvid.2grps',comp=comp,family=gaussian,method='Bayesian',n.iter=5000,nitt=25000,burnin=5000,thin=1,pooling=c('full'),logTransformed=TRUE,restand=FALSE,average.method=c('geometric'))
   names(de)<-gsub('.full',"",names(de))
   de$P.Value<-de$pval
   de$adj.P.Val<-p.adjust(de$P.Value,'fdr')
@@ -966,11 +1234,13 @@ getDE.BID.2G <-function(eset,G1=NULL, G0=NULL,G1_name=NULL,G0_name=NULL,verbose=
   de <- de[order(de$P.Value),]
   tT <- de
   new_mat <- exp_mat
-  exp_G1 <- rowMeans(new_mat[rownames(tT),G1])
-  exp_G0 <- rowMeans(new_mat[rownames(tT),G0])
+  tT <- tT[rownames(new_mat),]
+  exp_G1 <- rowMeans(new_mat[,G1])
+  exp_G0 <- rowMeans(new_mat[,G0])
   tT <- cbind(tT,'Ave.G0'=exp_G0,'Ave.G1'=exp_G1)
   if(is.null(G0_name)==FALSE) colnames(tT) <- gsub('Ave.G0',paste0('Ave.',G0_name),colnames(tT))
   if(is.null(G1_name)==FALSE) colnames(tT) <- gsub('Ave.G1',paste0('Ave.',G1_name),colnames(tT))
+  tT <- tT[order(tT$P.Value),]
   return(tT)
 }
 
@@ -1053,7 +1323,7 @@ combinePvalVector <-
            twosided = TRUE) {
     #remove NA pvalues
     pvals <- pvals[!is.na(pvals) & !is.null(pvals)]
-    pvals[which(pvals==0)] <- .Machine$double.xmin*sign(pvals)
+    pvals[which(abs(pvals)<=0)] <- .Machine$double.xmin
     if (sum(is.na(pvals)) >= 1) {
       stat <- NA
       pval <- NA
@@ -1119,10 +1389,11 @@ combinePvalVector <-
     return(c(`Z-statistics` = stat, `P.Value` = pval))
   }
 
-########################### ms table related functions
 #' merge activity matrix for TF and SIG
+#' @param TF_AC TF activity eset
+#' @param SIG_AC SIG activity eset
 #' @export
-merge.TF_SIG.AC <- function(TF_AC=NULL,SIG_AC=NULL){
+merge_TF_SIG.AC <- function(TF_AC=NULL,SIG_AC=NULL){
   mat_TF <- exprs(TF_AC)
   mat_SIG <- exprs(SIG_AC)
   funcType <- c(rep('TF',nrow(mat_TF)),rep('SIG',nrow(mat_SIG)))
@@ -1131,13 +1402,15 @@ merge.TF_SIG.AC <- function(TF_AC=NULL,SIG_AC=NULL){
   mat_combine <- rbind(mat_TF,mat_SIG[,colnames(mat_TF)])
   rownames(mat_combine) <- rn_label
   eset_combine <- generate.eset(exp_mat=mat_combine,phenotype_info=pData(TF_AC)[colnames(mat_combine),],
-                                feature_info=NULL,annotation_info='activity in net-dataset')
+                                feature_info=NULL,annotation_info='activity in dataset')
   return(eset_combine)
 }
 
 #' merge target network for TF and SIG
+#' @param TF_network TF network
+#' @param SIG_network SIG network
 #' @export
-merge.TF_SIG.network <- function(TF_network=NULL,SIG_network=NULL){
+merge_TF_SIG.network <- function(TF_network=NULL,SIG_network=NULL){
   s_TF  <- names(TF_network$target_list)
   s_SIG <- names(SIG_network$target_list)
   funcType <- c(rep('TF',length(s_TF)),rep('SIG',length(s_SIG)))
@@ -1367,12 +1640,12 @@ out2excel <- function(all_ms_tab,out.xls,mark_gene=NULL,mark_col,workbook_name='
 #' @param use_spe character, input the species name (e.g 'Homo sapiens', 'Mus musculus'). Full list of available species name could be found by \code{msigdbr_show_species()}.
 #' Default is 'Homo sapiens'
 #' @param update logical,whether to update if previous RData has been generated, default FALSE
+#' @param main.dir character, main file path for NetBID2, if NULL, will set to system.file(package = "NetBID2"). Default is NULL.
 #' @param db.dir character, file path for saving the RData, default is \code{db} directory under \code{main.dir} when setting for \code{main.dir}.
 #'
 #' @return Reture TRUE if success and FALSE if not. Will load two variables into R workspace, all_gs2gene and all_gs2gene_info
 #'
 #' @examples
-#' main.dir <- system.file(package = "NetBID2")
 #' gs.preload(use_spe='Homo sapiens',update=FALSE)
 #' gs.preload(use_spe='Mus musculus',update=FALSE)
 #' print(all_gs2gene_info)
@@ -1385,10 +1658,18 @@ out2excel <- function(all_ms_tab,out.xls,mark_gene=NULL,mark_col,workbook_name='
 #' gs.preload(use_spe='Homo sapiens',update=TRUE)
 #' }
 #' @export
-gs.preload <- function(use_spe='Homo sapiens',update=FALSE,db.dir=sprintf("%s/db/",main.dir)){
+gs.preload <- function(use_spe='Homo sapiens',update=FALSE,
+                       main.dir=NULL,
+                       db.dir=sprintf("%s/db/",main.dir)){
   ## only support geneSymbol (because pipeline-generated master table will contain geneSymbol column)
-  if(is.null(db.dir)){message('db.dir required, please check and re-try !');return(FALSE)}
-  #db.dir <- sprintf("%s/db/",main.dir)
+  if(is.null(main.dir)==TRUE){
+    main.dir <- system.file(package = "NetBID2")
+    message(sprintf('main.dir not set, will use package directory: %s',main.dir))
+  }
+  if(is.null(db.dir)==TRUE){
+    db.dir <- sprintf("%s/db/",main.dir)
+  }
+  message(sprintf('Will use directory %s as the db.dir',db.dir))
   all_spe <- msigdbr_show_species()
   if(!use_spe %in% all_spe){
     message(sprintf('%s not in %s, please check and re-try !',use_spe,paste(all_spe,collapse=';')))
@@ -1458,10 +1739,10 @@ gs.preload <- function(use_spe='Homo sapiens',update=FALSE,db.dir=sprintf("%s/db
 
 #' @examples
 #' analysis.par <- list()
-#' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
+#' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
 #' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' phe_info <- pData(analysis.par$cal.eset)
-#' use_obs_class <- get_obs_label(phe_info = phe_info,'tumor type')
+#' use_obs_class <- get_obs_label(phe_info = phe_info,'subgroup')
 #' print(use_obs_class)
 #' \dontrun{
 #'}
@@ -1499,15 +1780,15 @@ get_jac <- function(pred_label, obs_label) {
 #' transfer Z statistics to color bar
 #' @export
 z2col <- function(x,n_len=60,sig_thre=0.01,col_min_thre=0.01,col_max_thre=3,
-                  blue_col=RColorBrewer::brewer.pal(9,'Set1')[2],
-                  red_col=RColorBrewer::brewer.pal(9,'Set1')[1]){
+                  blue_col=brewer.pal(9,'Set1')[2],
+                  red_col=brewer.pal(9,'Set1')[1]){
   ## create vector for z-score, can change sig threshold
   x[which(is.na(x)==TRUE)] <- 0
   x[which(x==Inf)]<-  max(x[which(x!=Inf)])+1
   x[which(x==-Inf)]<- min(x[which(x!=-Inf)])-1
   if(col_min_thre<0) col_min_thre<-0.01
   if(col_max_thre<0) col_max_thre<-3
-  #c1 <- RColorBrewer::brewer.pal(9,'Set1')
+  #c1 <- brewer.pal(9,'Set1')
   c2 <- colorRampPalette(c(blue_col,'white',red_col))(n_len)
   r1 <- 1.05*max(abs(x)) ## -r1~r1
   if(r1 < col_max_thre){
@@ -1535,7 +1816,7 @@ z2col <- function(x,n_len=60,sig_thre=0.01,col_min_thre=0.01,col_max_thre=3,
 #' Users could define some of the colors for part of the inputs.
 #'
 #' @param x a vector of characters.
-#' @param use_color a vector of characters, color bar used to generate the color vector for the input.Default is RColorBrewer::brewer.pal(12, 'Set3').
+#' @param use_color a vector of characters, color bar used to generate the color vector for the input.Default is brewer.pal(12, 'Set3').
 #' @param pre_define a vector of characters, pre-defined color code for some of the input characters. Default is NULL.
 #' @param user_inner logical, indicating whether to use inner pre-defined color code for some characters. Default is TRUE.
 #'
@@ -1547,7 +1828,7 @@ z2col <- function(x,n_len=60,sig_thre=0.01,col_min_thre=0.01,col_max_thre=3,
 #' get.class.color(c('ClassA','ClassB','ClassC','SHH','WNT','Group3','Group4'),
 #'                 use_inner=FALSE)
 #' get.class.color(c('ClassA','ClassB','ClassC','SHH','WNT','Group3','Group4'),
-#'                 use_inner=FALSE,use_color=RColorBrewer::brewer.pal(8, 'Set1'))
+#'                 use_inner=FALSE,use_color=brewer.pal(8, 'Set1'))
 #'
 #' pre_define <- c('blue', 'red', 'yellow', 'green','yellow', 'green')
 #'                 ## pre-defined colors for MB
@@ -1569,9 +1850,9 @@ get.class.color <- function(x,use_color=NULL,pre_define=NULL,use_inner=TRUE) {
   }
   if(is.null(use_color)==TRUE){
     if (length(intersect(x, names(pre_define))) == 0){
-      use_color <- RColorBrewer::brewer.pal(12, 'Set3')
+      use_color <- brewer.pal(12, 'Set3')
     }else{
-      use_color <- RColorBrewer::brewer.pal(12, 'Set3')[c(1,3,5,7,9,10,11)]
+      use_color <- brewer.pal(12, 'Set3')[c(1,3,5,7,9,10,11)]
     }
   }
   if (length(intersect(x, names(pre_define))) == 0) {
@@ -2339,54 +2620,39 @@ get_jac_MICA <- function(outdir, all_k, obs_label, prjname = NULL) {
 #'
 #' @examples
 #' analysis.par <- list()
-#' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
+#' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
 #' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
-#' sig_driver1 <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
-#'                                logFC_col='logFC.metastasis2primary_DA',
-#'                                Pv_col='P.Value.metastasis2primary_DA',
-#'                                logFC_thre=0.01,Pv_thre=0.1,
-#'                                main='Volcano Plot for metastasis2primary_DA',show_label=TRUE,
-#'                                label_cex = 1)
+#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
+#'                                logFC_col='logFC.G4.Vs.others_DA',
+#'                                Pv_col='P.Value.G4.Vs.others_DA',
+#'                                logFC_thre=0.4,
+#'                                Pv_thre=1e-7,
+#'                                main='Volcano Plot for G4.Vs.others_DA',
+#'                                show_label=FALSE,
+#'                                label_type = 'origin',
+#'                                label_cex = 0.5)
 #'
 #' \dontrun{
 #' analysis.par <- list()
-#' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
+#' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
 #' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
 #' analysis.par$out.dir.PLOT <- getwd() ## directory for saving the pdf files
-#' sig_driver1 <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
-#'                                logFC_col='logFC.metastasis2primary_DA',
-#'                                Pv_col='P.Value.metastasis2primary_DA',
-#'                                logFC_thre=0.01,Pv_thre=0.1,
-#'                                main='Volcano Plot for metastasis2primary_DA',
-#'                                show_label=TRUE,
-#'                                pdf_file=sprintf('%s/vocalno_showlabel_distribute.pdf',
-#'                                analysis.par$out.dir.PLOT),
-#'                                label_cex = 1)
-#' sig_driver2 <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
-#'                                logFC_col='logFC.metastasis2primary_DA',
-#'                                Pv_col='P.Value.metastasis2primary_DA',
-#'                                logFC_thre=0.02,Pv_thre=0.1,
-#'                                main='Volcano Plot for metastasis2primary_DA',
-#'                                show_label=TRUE,
-#'                                label_type = 'origin',label_cex = 0.5,
-#'                                pdf_file=sprintf('%s/vocalno_showlabel_origin.pdf',
-#'                                analysis.par$out.dir.PLOT))
-#' sig_driver3 <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
-#'                                logFC_col='logFC.metastasis2primary_DA',
-#'                                Pv_col='P.Value.metastasis2primary_DA',
-#'                                logFC_thre=0.01,Pv_thre=0.1,
-#'                                main='Volcano Plot for metastasis2primary_DA',
+#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
+#'                                logFC_col='logFC.G4.Vs.others_DA',
+#'                                Pv_col='P.Value.G4.Vs.others_DA',
+#'                                logFC_thre=0.4,
+#'                                Pv_thre=1e-7,
+#'                                main='Volcano Plot for G4.Vs.others_DA',
 #'                                show_label=FALSE,
-#'                                label_type = 'origin',label_cex = 0.5,
-#'                                pdf_file=sprintf('%s/vocalno_nolabel_DA.pdf',
-#'                                analysis.par$out.dir.PLOT))
+#'                                label_type = 'origin',
+#'                                label_cex = 0.5)
 #' sig_gene <- draw.volcanoPlot(dat=ms_tab,label_col='geneSymbol',
-#'                                logFC_col='logFC.metastasis2primary_DE',
-#'                                Pv_col='P.Value.metastasis2primary_DE',
-#'                                logFC_thre=0.5,Pv_thre=0.1,
-#'                                main='Volcano Plot for metastasis2primary_DE',
+#'                                logFC_col='logFC.G4.Vs.others_DE',
+#'                                Pv_col='P.Value.G4.Vs.others_DE',
+#'                                logFC_thre=2,Pv_thre=1e-3,
+#'                                main='Volcano Plot for G4.Vs.others_DE',
 #'                                show_label=FALSE,
 #'                                pdf_file=sprintf('%s/vocalno_nolabel_DE.pdf',
 #'                                analysis.par$out.dir.PLOT))
@@ -2496,25 +2762,27 @@ draw.volcanoPlot <- function(dat=NULL,label_col=NULL,logFC_col=NULL,Pv_col=NULL,
 #'
 #' @examples
 #' analysis.par <- list()
-#' analysis.par$out.dir.DATA <- system.file('demo/driver/DATA/',package = "NetBID2")
+#' analysis.par$out.dir.DATA <- system.file('demo1/driver/DATA/',package = "NetBID2")
 #' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
 #' exp_mat <- exprs(analysis.par$cal.eset) ## expression,the rownames matches originalID in ms_tab
 #' ac_mat <- exprs(analysis.par$merge.ac.eset) ## ac,the rownames matches originalID_label in ms_tab
 #' phe_info <- pData(analysis.par$cal.eset) ## phenotype information
 #' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
-#'                                logFC_col='logFC.metastasis2primary_DA',
-#'                                Pv_col='P.Value.metastasis2primary_DA',
-#'                                logFC_thre=0.01,Pv_thre=0.1,
-#'                                main='Volcano Plot for metastasis2primary_DA',
+#'                                logFC_col='logFC.G4.Vs.others_DA',
+#'                                Pv_col='P.Value.G4.Vs.others_DA',
+#'                                logFC_thre=0.4,
+#'                                Pv_thre=1e-7,
+#'                                main='Volcano Plot for G4.Vs.others_DA',
 #'                                show_label=FALSE,
-#'                                label_type = 'origin',label_cex = 0.5)
+#'                                label_type = 'origin',
+#'                                label_cex = 0.5)
 #' sig_driver <- sig_driver[1:10,]
 #' draw.heatmap(mat=exp_mat,use_genes=ms_tab[rownames(sig_driver),'originalID'],
 #'             use_gene_label=ms_tab[rownames(sig_driver),'gene_label'],
 #'             use_samples=colnames(exp_mat),
 #'             use_sample_label=phe_info[colnames(exp_mat),'geo_accession'],
-#'             phenotype_info=phe_info,use_phe=c('Sex','tumor type'),
+#'             phenotype_info=phe_info,use_phe=c('gender','pathology','subgroup'),
 #'             main='Expression for Top drivers',scale='row',
 #'             cluster_rows=TRUE,cluster_columns=TRUE,
 #'             clustering_distance_rows='pearson',
@@ -2524,16 +2792,16 @@ draw.volcanoPlot <- function(dat=NULL,label_col=NULL,logFC_col=NULL,Pv_col=NULL,
 #'              use_gene_label=ms_tab[rownames(sig_driver),'gene_label'],
 #'              use_samples=colnames(exp_mat),
 #'              use_sample_label=phe_info[colnames(exp_mat),'geo_accession'],
-#'              phenotype_info=phe_info,use_phe=c('Sex','tumor type'),
+#'              phenotype_info=phe_info,use_phe=c('gender','pathology','subgroup'),
 #'              main='Activity for Top drivers',scale='row',
-#'              cluster_rows=FALSE,cluster_columns=TRUE,
+#'              cluster_rows=TRUE,cluster_columns=TRUE,
 #'              clustering_distance_rows='pearson',
 #'              clustering_distance_columns='pearson',
 #'              row_names_gp = gpar(fontsize = 6))
 #'
 #' \dontrun{
 #' analysis.par <- list()
-#' analysis.par$out.dir.DATA <- system.file('demo/driver/DATA/',package = "NetBID2")
+#' analysis.par$out.dir.DATA <- system.file('demo1/driver/DATA/',package = "NetBID2")
 #' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
 #' exp_mat <- exprs(analysis.par$cal.eset) ## expression,the rownames matches originalID in ms_tab
@@ -2541,17 +2809,20 @@ draw.volcanoPlot <- function(dat=NULL,label_col=NULL,logFC_col=NULL,Pv_col=NULL,
 #' phe_info <- pData(analysis.par$cal.eset) ## phenotype information
 #' analysis.par$out.dir.PLOT <- getwd() ## directory for saving the pdf files
 #' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
-#'                                logFC_col='logFC.metastasis2primary_DA',
-#'                                Pv_col='P.Value.metastasis2primary_DA',
-#'                                logFC_thre=0.01,Pv_thre=0.1,
-#'                                main='Volcano Plot for metastasis2primary_DA',
+#'                                logFC_col='logFC.G4.Vs.others_DA',
+#'                                Pv_col='P.Value.G4.Vs.others_DA',
+#'                                logFC_thre=0.4,
+#'                                Pv_thre=1e-7,
+#'                                main='Volcano Plot for G4.Vs.others_DA',
 #'                                show_label=FALSE,
-#'                                label_type = 'origin',label_cex = 0.5)
+#'                                label_type = 'origin',
+#'                                label_cex = 0.5)
 #' draw.heatmap(mat=exp_mat,use_genes=ms_tab[rownames(sig_driver),'originalID'],
 #'             use_gene_label=ms_tab[rownames(sig_driver),'gene_label'],
 #'             use_samples=colnames(exp_mat),
 #'             use_sample_label=phe_info[colnames(exp_mat),'geo_accession'],
-#'             phenotype_info=phe_info,use_phe=c('Sex','tumor type'),
+#'             phenotype_info=phe_info,
+#'             use_phe=c('gender','pathology','subgroup'),
 #'             main='Expression for Top drivers',scale='row',
 #'             cluster_rows=TRUE,cluster_columns=TRUE,
 #'             clustering_distance_rows='pearson',
@@ -2564,9 +2835,9 @@ draw.volcanoPlot <- function(dat=NULL,label_col=NULL,logFC_col=NULL,Pv_col=NULL,
 #'              use_samples=colnames(exp_mat),
 #'              use_sample_label=phe_info[colnames(exp_mat),'geo_accession'],
 #'              phenotype_info=phe_info,
-#'              use_phe=c('Sex','tumor type'),
+#'              use_phe=c('gender','pathology','subgroup'),
 #'              main='Activity for Top drivers',scale='row',
-#'              cluster_rows=FALSE,cluster_columns=TRUE,
+#'              cluster_rows=TRUE,cluster_columns=TRUE,
 #'              clustering_distance_rows='pearson',
 #'              clustering_distance_columns='pearson',
 #'              row_names_gp = gpar(fontsize = 6),
@@ -2582,6 +2853,9 @@ draw.heatmap <- function(mat=NULL,use_genes=rownames(mat),use_gene_label=use_gen
                          show_row_names=TRUE,show_column_names=TRUE,...){
   names(use_gene_label) <- use_genes
   names(use_sample_label) <- use_samples
+  if(is.null(rownames(phenotype_info))==FALSE){
+    phenotype_info <- phenotype_info[colnames(mat),]
+  }
   use_genes <- intersect(use_genes,rownames(mat))
   use_samples <- intersect(use_samples,colnames(mat))
   use_mat <- mat[use_genes,use_samples]
@@ -2620,7 +2894,7 @@ draw.heatmap <- function(mat=NULL,use_genes=rownames(mat),use_gene_label=use_gen
       colnames(use_phe_info) <- gsub(' ','.',use_phe)
     }
     use_phe <- colnames(use_phe_info)
-    l2c <- get.class.color(unique(as.character(as.matrix(use_phe_info))),use_color=RColorBrewer::brewer.pal(12, 'Paired'))
+    l2c <- get.class.color(unique(as.character(as.matrix(use_phe_info))),use_color=brewer.pal(12, 'Paired'))
     use_col <- lapply(use_phe,function(x)l2c[unique(use_phe_info[,x])])
     names(use_col) <- use_phe
     ha_column <- HeatmapAnnotation(df = data.frame(use_phe_info),col = use_col)
@@ -2653,6 +2927,8 @@ draw.heatmap <- function(mat=NULL,use_genes=rownames(mat),use_gene_label=use_gen
 }
 
 ################################ Function enrichment related functions
+#' find.gsByGene
+#' @export
 find.gsByGene <- function(gene=NULL,use_gs=NULL){
   if(is.null(use_gs)==TRUE){
     all <- unlist(all_gs2gene,recursive = FALSE)
@@ -2752,17 +3028,18 @@ vec2list <- function(input_v,sep=NULL){
 #'
 #' @examples
 #' analysis.par <- list()
-#' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
+#' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
 #' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
 #' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
-#'                                logFC_col='logFC.metastasis2primary_DA',
-#'                                Pv_col='P.Value.metastasis2primary_DA',
-#'                                logFC_thre=0.01,Pv_thre=0.1,
-#'                                main='Volcano Plot for metastasis2primary_DA',
+#'                                logFC_col='logFC.G4.Vs.others_DA',
+#'                                Pv_col='P.Value.G4.Vs.others_DA',
+#'                                logFC_thre=0.4,
+#'                                Pv_thre=1e-7,
+#'                                main='Volcano Plot for G4.Vs.others_DA',
 #'                                show_label=FALSE,
-#'                                label_type = 'origin',label_cex = 0.5)
-#' main.dir <- system.file(package = "NetBID2")
+#'                                label_type = 'origin',
+#'                                label_cex = 0.5)
 #' gs.preload(use_spe='Homo sapiens',update=FALSE)
 #' res1 <- funcEnrich.Fisher(input_list=ms_tab[rownames(sig_driver),'geneSymbol'],
 #'                                bg_list=ms_tab[,'geneSymbol'],
@@ -2873,7 +3150,7 @@ funcEnrich.Fisher <- function(input_list=NULL,bg_list=NULL,
 #' @param gs_cex numeric, \code{cex} for the gene sets displayed on the plot. Default is 0.5
 #' @param gene_cex numeric, \code{cex} for the genes displayed on the plot. Default is 0.5
 #' @param main character, \code{main} for the title on the plot.
-#' @param bar_col character, color code for the bar on the plot. Default is RColorBrewer::brewer.pal(8,'RdBu')[7].
+#' @param bar_col character, color code for the bar on the plot. Default is brewer.pal(8,'RdBu')[7].
 #' @param eg_num numeric, example number of intersected genes shown on the plot. Default is 5.
 #' @param pdf_file character, file path for the pdf file to save the figure into pdf format.If NULL, will not generate pdf file. Default is NULL.
 #'
@@ -2881,21 +3158,22 @@ funcEnrich.Fisher <- function(input_list=NULL,bg_list=NULL,
 #'
 #' @examples
 #' analysis.par <- list()
-#' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
+#' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
 #' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
 #' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
-#'                                logFC_col='logFC.metastasis2primary_DA',
-#'                                Pv_col='P.Value.metastasis2primary_DA',
-#'                                logFC_thre=0.01,Pv_thre=0.1,
-#'                                main='Volcano Plot for metastasis2primary_DA',
+#'                                logFC_col='logFC.G4.Vs.others_DA',
+#'                                Pv_col='P.Value.G4.Vs.others_DA',
+#'                                logFC_thre=0.4,
+#'                                Pv_thre=1e-7,
+#'                                main='Volcano Plot for G4.Vs.others_DA',
 #'                                show_label=FALSE,
-#'                                label_type = 'origin',label_cex = 0.5)
-#' main.dir <- system.file(package = "NetBID2")
+#'                                label_type = 'origin',
+#'                                label_cex = 0.5)
 #' gs.preload(use_spe='Homo sapiens',update=FALSE)
 #' res1 <- funcEnrich.Fisher(input_list=ms_tab[rownames(sig_driver),'geneSymbol'],
 #'                           bg_list=ms_tab[,'geneSymbol'],
-#'                           use_gs=c('H'),Pv_thre=0.1,
+#'                           use_gs=use_gs=c('H','C5'),Pv_thre=0.1,
 #'                           Pv_adj = 'none')
 #' draw.funcEnrich.bar(funcEnrich_res=res1,top_number=5,
 #'                    main='Function Enrichment for Top drivers',
@@ -2906,17 +3184,18 @@ funcEnrich.Fisher <- function(input_list=NULL,bg_list=NULL,
 #'                    gs_cex=0.6,gene_cex=0.5)
 #' \dontrun{
 #' analysis.par <- list()
-#' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
+#' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
 #' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
 #' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
-#'                                logFC_col='logFC.metastasis2primary_DA',
-#'                                Pv_col='P.Value.metastasis2primary_DA',
-#'                                logFC_thre=0.01,Pv_thre=0.1,
-#'                                main='Volcano Plot for metastasis2primary_DA',
+#'                                logFC_col='logFC.G4.Vs.others_DA',
+#'                                Pv_col='P.Value.G4.Vs.others_DA',
+#'                                logFC_thre=0.4,
+#'                                Pv_thre=1e-7,
+#'                                main='Volcano Plot for G4.Vs.others_DA',
 #'                                show_label=FALSE,
-#'                                label_type = 'origin',label_cex = 0.5)
-#' main.dir <- system.file(package = "NetBID2")
+#'                                label_type = 'origin',
+#'                                label_cex = 0.5)
 #' gs.preload(use_spe='Homo sapiens',update=FALSE)
 #' res1 <- funcEnrich.Fisher(input_list=ms_tab[rownames(sig_driver),'geneSymbol'],
 #'                           bg_list=ms_tab[,'geneSymbol'],
@@ -2936,7 +3215,7 @@ funcEnrich.Fisher <- function(input_list=NULL,bg_list=NULL,
 draw.funcEnrich.bar <- function(funcEnrich_res=NULL,top_number=30,
                                 Pv_col='Ori_P',item_col='Intersected_items',
                                 Pv_thre=0.1,display_genes=FALSE,name_col='#Name',
-                                gs_cex=0.5,gene_cex=0.5,main="",bar_col=RColorBrewer::brewer.pal(8,'RdBu')[7],eg_num=5,
+                                gs_cex=0.5,gene_cex=0.5,main="",bar_col=brewer.pal(8,'RdBu')[7],eg_num=5,
                                 pdf_file=NULL){
   if(is.null(top_number)==TRUE) top_number <- nrow(funcEnrich_res)
   funcEnrich_res <- funcEnrich_res[which(funcEnrich_res[,Pv_col]<=Pv_thre),]
@@ -3000,17 +3279,18 @@ draw.funcEnrich.bar <- function(funcEnrich_res=NULL,top_number=30,
 #'
 #' @examples
 #' analysis.par <- list()
-#' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
+#' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
 #' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
 #' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
-#'                                logFC_col='logFC.metastasis2primary_DA',
-#'                                Pv_col='P.Value.metastasis2primary_DA',
-#'                                logFC_thre=0.01,Pv_thre=0.1,
-#'                                main='Volcano Plot for metastasis2primary_DA',
+#'                                logFC_col='logFC.G4.Vs.others_DA',
+#'                                Pv_col='P.Value.G4.Vs.others_DA',
+#'                                logFC_thre=0.4,
+#'                                Pv_thre=1e-7,
+#'                                main='Volcano Plot for G4.Vs.others_DA',
 #'                                show_label=FALSE,
-#'                                label_type = 'origin',label_cex = 0.5)
-#' main.dir <- system.file(package = "NetBID2")
+#'                                label_type = 'origin',
+#'                                label_cex = 0.5)
 #' gs.preload(use_spe='Homo sapiens',update=FALSE)
 #' res1 <- funcEnrich.Fisher(input_list=ms_tab[rownames(sig_driver),'geneSymbol'],
 #'                           bg_list=ms_tab[,'geneSymbol'],
@@ -3031,17 +3311,18 @@ draw.funcEnrich.bar <- function(funcEnrich_res=NULL,top_number=30,
 #'                         cluster_gs=FALSE,cluster_gene = FALSE)
 #' \dontrun{
 #' analysis.par <- list()
-#' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
+#' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
 #' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
 #' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
-#'                                logFC_col='logFC.metastasis2primary_DA',
-#'                                Pv_col='P.Value.metastasis2primary_DA',
-#'                                logFC_thre=0.01,Pv_thre=0.1,
-#'                                main='Volcano Plot for metastasis2primary_DA',
+#'                                logFC_col='logFC.G4.Vs.others_DA',
+#'                                Pv_col='P.Value.G4.Vs.others_DA',
+#'                                logFC_thre=0.4,
+#'                                Pv_thre=1e-7,
+#'                                main='Volcano Plot for G4.Vs.others_DA',
 #'                                show_label=FALSE,
-#'                                label_type = 'origin',label_cex = 0.5)
-#' main.dir <- system.file(package = "NetBID2")
+#'                                label_type = 'origin',
+#'                                label_cex = 0.5)
 #' gs.preload(use_spe='Homo sapiens',update=FALSE)
 #' res1 <- funcEnrich.Fisher(input_list=ms_tab[rownames(sig_driver),'geneSymbol'],
 #'                           bg_list=ms_tab[,'geneSymbol'],
@@ -3093,9 +3374,9 @@ draw.funcEnrich.cluster <- function(funcEnrich_res=NULL,top_number=30,Pv_col='Or
   gene_cluster <- cutree(h_gene,h=h)
   if(cluster_gs==FALSE){gs_cluster <- rep(1,length.out=nrow(mat1));names(gs_cluster)<-rownames(mat1);}
   if(cluster_gene==FALSE){gene_cluster <- rep(1,length.out=ncol(mat1));names(gene_cluster)<-colnames(mat1);}
-  cc1 <- colorRampPalette(RColorBrewer::brewer.pal(8,'Dark2'))(length(unique(gs_cluster)))
-  cc2 <- colorRampPalette(RColorBrewer::brewer.pal(9,'Pastel1'))(length(unique(gene_cluster)))
-  cc3 <- colorRampPalette(RColorBrewer::brewer.pal(9,'Reds')[3:9])(100)
+  cc1 <- colorRampPalette(brewer.pal(8,'Dark2'))(length(unique(gs_cluster)))
+  cc2 <- colorRampPalette(brewer.pal(9,'Pastel1'))(length(unique(gene_cluster)))
+  cc3 <- colorRampPalette(brewer.pal(9,'Reds')[3:9])(100)
   # get gs order
   if(cluster_gs==TRUE) gs_cluster <- gs_cluster[h_gs$order]
   tmp2 <- vec2list(gs_cluster,sep=NULL)
@@ -3223,27 +3504,28 @@ draw.funcEnrich.cluster <- function(funcEnrich_res=NULL,top_number=30,Pv_col='Or
 #'
 #' @examples
 #' analysis.par <- list()
-#' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
+#' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
 #' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
 #' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
-#'                                logFC_col='logFC.metastasis2primary_DA',
-#'                                Pv_col='P.Value.metastasis2primary_DA',
-#'                                logFC_thre=0.01,Pv_thre=0.1,
-#'                                main='Volcano Plot for metastasis2primary_DA',
+#'                                logFC_col='logFC.G4.Vs.others_DA',
+#'                                Pv_col='P.Value.G4.Vs.others_DA',
+#'                                logFC_thre=0.4,
+#'                                Pv_thre=1e-7,
+#'                                main='Volcano Plot for G4.Vs.others_DA',
 #'                                show_label=FALSE,
-#'                                label_type = 'origin',label_cex = 0.5)
-#' main.dir <- system.file(package = "NetBID2")
+#'                                label_type = 'origin',
+#'                                label_cex = 0.5)
 #' gs.preload(use_spe='Homo sapiens',update=FALSE)
 #' use_genes <- unique(analysis.par$merge.network$network_dat$target.symbol)
-#' transfer_tab <- get_IDtransfer2symbol2type(from_type = 'ensembl_transcript_id',
+#' transfer_tab <- get_IDtransfer2symbol2type(from_type = 'external_gene_name',
 #'                                            use_genes=use_genes,
 #'                                            dataset='hsapiens_gene_ensembl')
 #' ## get transfer table !!!
 #' draw.bubblePlot(driver_list=rownames(sig_driver),
 #'                show_label=ms_tab[rownames(sig_driver),'gene_label'],
-#'                Z_val=ms_tab[rownames(sig_driver),'Z.metastasis2primary_DA'],
-#'                driver_type=ms_tab[rownames(sig_driver),'transcript_biotype'],
+#'                Z_val=ms_tab[rownames(sig_driver),'Z.G4.Vs.others_DA'],
+#'                driver_type=ms_tab[rownames(sig_driver),'gene_biotype'],
 #'                target_list=analysis.par$merge.network$target_list,
 #'                transfer2symbol2type=transfer_tab,
 #'                bg_list=ms_tab[,'geneSymbol'],min_gs_size=5,
@@ -3255,36 +3537,41 @@ draw.funcEnrich.cluster <- function(funcEnrich_res=NULL,top_number=30,Pv_col='Or
 #'  ## in real case, user could set cex larger or input pdf file name
 #' \dontrun{
 #' analysis.par <- list()
-#' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
+#' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
 #' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
 #' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
-#'                                logFC_col='logFC.metastasis2primary_DA',
-#'                                Pv_col='P.Value.metastasis2primary_DA',
-#'                                logFC_thre=0.01,Pv_thre=0.1,
-#'                                main='Volcano Plot for metastasis2primary_DA',
+#'                                logFC_col='logFC.G4.Vs.others_DA',
+#'                                Pv_col='P.Value.G4.Vs.others_DA',
+#'                                logFC_thre=0.4,
+#'                                Pv_thre=1e-7,
+#'                                main='Volcano Plot for G4.Vs.others_DA',
 #'                                show_label=FALSE,
-#'                                label_type = 'origin',label_cex = 0.5)
-#' main.dir <- system.file(package = "NetBID2")
+#'                                label_type = 'origin',
+#'                                label_cex = 0.5)
 #' gs.preload(use_spe='Homo sapiens',update=FALSE)
 #' use_genes <- unique(analysis.par$merge.network$network_dat$target.symbol)
-#' transfer_tab <- get_IDtransfer2symbol2type(from_type = 'ensembl_transcript_id',
+#' transfer_tab <- get_IDtransfer2symbol2type(from_type = 'external_gene_name',
 #'                                            use_genes=use_genes,
 #'                                            dataset='hsapiens_gene_ensembl')
 #' ## get transfer table !!!
 #' analysis.par$out.dir.PLOT <- getwd() ## directory for saving the pdf files
+#' mark_gene <- c('KCNA1','EOMES','KHDRBS2','RBM24','UNC5D') ## marker for Group4
 #' draw.bubblePlot(driver_list=rownames(sig_driver),
 #'                show_label=ms_tab[rownames(sig_driver),'gene_label'],
-#'                Z_val=ms_tab[rownames(sig_driver),'Z.metastasis2primary_DA'],
-#'                driver_type=ms_tab[rownames(sig_driver),'transcript_biotype'],
+#'                Z_val=ms_tab[rownames(sig_driver),'Z.G4.Vs.others_DA'],
+#'                driver_type=ms_tab[rownames(sig_driver),'gene_biotype'],
 #'                target_list=analysis.par$merge.network$target_list,
 #'                transfer2symbol2type=transfer_tab,
 #'                bg_list=ms_tab[,'geneSymbol'],
-#'                min_gs_size=5,max_gs_size=500,use_gs=c('H'),
+#'                min_gs_size=5,max_gs_size=500,
+#'                use_gs=use_gs=c('CP:KEGG','CP:BIOCARTA','H'),
 #'                top_geneset_number=30,top_driver_number=50,
 #'                pdf_file = sprintf('%s/bubblePlot.pdf',
 #'                analysis.par$out.dir.PLOT),
-#'                main='Bubbleplot for top driver targets')
+#'                main='Bubbleplot for top driver targets',
+#'                mark_gene=ms_tab[which(ms_tab$geneSymbol %in% mark_gene),
+#'                'originalID_label'])
 #' }
 #' @export
 draw.bubblePlot <- function(driver_list=NULL,show_label=driver_list,Z_val=NULL,driver_type=NULL,
@@ -3306,11 +3593,11 @@ draw.bubblePlot <- function(driver_list=NULL,show_label=driver_list,Z_val=NULL,d
   driver_list <- driver_list[order(Z_val[driver_list],decreasing=TRUE)]
   ## get target gene for driver_list
   transfer_tab <- transfer2symbol2type
-  rownames(transfer_tab) <- transfer_tab[,1]
+  #rownames(transfer_tab) <- transfer_tab[,1]
   target_gene <- lapply(driver_list,function(x){
     x1 <- target_list[[x]]$target
     x1 <- x1[which(x1 %in% transfer_tab[,1])]
-    x2 <- transfer_tab[x1,]
+    x2 <- transfer_tab[which(transfer_tab[,1] %in% x1),]
     x3 <- x2[which(x2[,3]=='protein_coding'),]
     target <- unique(x2[,2])
     target_pc <- unique(x3[,2])
@@ -3448,6 +3735,8 @@ draw.bubblePlot <- function(driver_list=NULL,show_label=driver_list,Z_val=NULL,d
 #'
 #' This is a plot function to draw GSEA for a gene set or a driver by input differentiated expression profile.
 #' User could input the annotation text for the significance or the function could display the significance calculated by Kolmogorov-Smirnov tests.
+#' ATTENTION: when user input the \code{use_direction}, the rank profile will be duplicated (here Zero cross at the middle) and
+#' genes with negative direction (-1 in the use_direction list) will be put in the mirror position of the original place.
 #'
 #' @param rank_profile a vector of numerics. The ranking profile for the differentiated values in a specific sample condition comparison.
 #' The names of the vector must be the gene names. The value in the vector could be the logFC or t-statistics.
@@ -3468,70 +3757,74 @@ draw.bubblePlot <- function(driver_list=NULL,show_label=driver_list,Z_val=NULL,d
 
 #' @examples
 #' analysis.par <- list()
-#' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
+#' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
 #' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
 #' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
-#'                                logFC_col='logFC.metastasis2primary_DA',
-#'                                Pv_col='P.Value.metastasis2primary_DA',
-#'                                logFC_thre=0.01,Pv_thre=0.1,
-#'                                main='Volcano Plot for metastasis2primary_DA',
+#'                                logFC_col='logFC.G4.Vs.others_DA',
+#'                                Pv_col='P.Value.G4.Vs.others_DA',
+#'                                logFC_thre=0.4,
+#'                                Pv_thre=1e-7,
+#'                                main='Volcano Plot for G4.Vs.others_DA',
 #'                                show_label=FALSE,
-#'                                label_type = 'origin',label_cex = 0.5)
+#'                                label_type = 'origin',
+#'                                label_cex = 0.5)
 #' driver_list <- rownames(sig_driver)
 #' DE_profile <- analysis.par$DE[[1]]$`Z-statistics`;
 #' names(DE_profile) <- rownames(analysis.par$DE[[1]])
 #' use_driver <- driver_list[1]
 #' use_target_genes <- analysis.par$merge.network$target_list[[use_driver]]$target
 #' use_target_direction <- sign(analysis.par$merge.network$target_list[[use_driver]]$spearman) ## 1/-1
-#' annot <- sprintf('P-value: %s',signif(ms_tab[use_driver,'P.Value.metastasis2primary_DA'],2))
+#' annot <- sprintf('P-value: %s',signif(ms_tab[use_driver,'P.Value.G4.Vs.others_DA'],2))
+#'
 #' ## draw for the driver
-#' draw.GSEA(rank_profile=DE_profile,use_genes=use_target_genes,
+#' draw.GSEA(rank_profile=DE_profile,
+#'           use_genes=use_target_genes,
 #'           use_direction=use_target_direction,
 #'           main=sprintf('GSEA plot for driver %s',
 #'           ms_tab[use_driver,'gene_label']),
 #'           annotation=annot,annotation_cex=1.2,
-#'           left_annotation='high in metastasis',
-#'           right_annotation='high in primary')
-#' ## draw for the gene set
-#' use_genes <- unique(analysis.par$merge.network$network_dat$target.symbol)
-#' transfer_tab <- get_IDtransfer2symbol2type(from_type = 'ensembl_transcript_id',
-#'                 use_genes=use_genes,dataset='hsapiens_gene_ensembl')
-#' ## get transfer table !!!
-#' DE_profile_symbol <- DE_profile
-#' names(DE_profile_symbol) <- get_name_transfertab(names(DE_profile),
-#'                            transfer_tab = transfer_tab)
+#'           left_annotation='high in G4',
+#'           right_annotation='high in others')
+#' draw.GSEA(rank_profile=DE_profile,
+#'           use_genes=use_target_genes,
+#'           use_direction=NULL,
+#'           main=sprintf('GSEA plot for driver %s',
+#'           ms_tab[use_driver,'gene_label']),
+#'           annotation=NULL,annotation_cex=1.2,
+#'           left_annotation='high in G4',
+#'           right_annotation='high in others')
 #'
-#' main.dir <- system.file(package = "NetBID2")
+#' ## draw for the gene set
 #' gs.preload(use_spe='Homo sapiens',update=FALSE)
-#' use_gs_id <- 'REACTOME_CD28_DEPENDENT_PI3K_AKT_SIGNALING'
-#' use_target_genes <- all_gs2gene[['CP:REACTOME']][[use_gs_id]]
-#' draw.GSEA(rank_profile=DE_profile_symbol,
-#'          use_genes=use_target_genes,use_direction=NULL,
-#'          main=sprintf('GSEA plot for %s',use_gs_id),
-#'          annotation=NULL,annotation_cex=1.2,
-#'          left_annotation='high in metastasis',
-#'          right_annotation='high in primary')
+#' use_target_genes <- all_gs2gene[[1]][[1]]
+#' draw.GSEA(rank_profile=DE_profile,
+#'          use_genes=use_target_genes,
+#'          main=sprintf('GSEA plot for %s',names(all_gs2gene[[1]][1])),
+#'          left_annotation='high in G4',
+#'          right_annotation='high in others')
 #'
 #' \dontrun{
 #' #' analysis.par <- list()
-#' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
+#' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
 #' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
 #' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
-#'                                logFC_col='logFC.metastasis2primary_DA',
-#'                                Pv_col='P.Value.metastasis2primary_DA',
-#'                                logFC_thre=0.01,Pv_thre=0.1,
-#'                                main='Volcano Plot for metastasis2primary_DA',
+#'                                logFC_col='logFC.G4.Vs.others_DA',
+#'                                Pv_col='P.Value.G4.Vs.others_DA',
+#'                                logFC_thre=0.4,
+#'                                Pv_thre=1e-7,
+#'                                main='Volcano Plot for G4.Vs.others_DA',
 #'                                show_label=FALSE,
-#'                                label_type = 'origin',label_cex = 0.5)
+#'                                label_type = 'origin',
+#'                                label_cex = 0.5)
 #' driver_list <- rownames(sig_driver)
 #' DE_profile <- analysis.par$DE[[1]]$`Z-statistics`;
 #' names(DE_profile) <- rownames(analysis.par$DE[[1]])
-#' use_driver <- driver_list[3]
+#' use_driver <- driver_list[1]
 #' use_target_genes <- analysis.par$merge.network$target_list[[use_driver]]$target
 #' use_target_direction <- sign(analysis.par$merge.network$target_list[[use_driver]]$spearman) ## 1/-1
-#' annot <- sprintf('P-value: %s',signif(ms_tab[use_driver,'P.Value.metastasis2primary_DA'],2))
+#' annot <- sprintf('P-value: %s',signif(ms_tab[use_driver,'P.Value.G4.Vs.others_DA'],2))
 #' analysis.par$out.dir.PLOT <- getwd() ## directory for saving the pdf files
 #' draw.GSEA(rank_profile=DE_profile,use_genes=use_target_genes,
 #'           use_direction=use_target_direction,
@@ -3539,26 +3832,18 @@ draw.bubblePlot <- function(driver_list=NULL,show_label=driver_list,Z_val=NULL,d
 #'           pdf_file = sprintf('%s/GSEA_driver.pdf',
 #'           analysis.par$out.dir.PLOT),
 #'           annotation=annot,annotation_cex=1.2,
-#'           left_annotation='high in metastasis',
-#'           right_annotation='high in primary')
+#'           left_annotation='high in G4',
+#'           right_annotation='high in others')
+#'
 #' ## draw for the gene set
-#' use_genes <- unique(analysis.par$merge.network$network_dat$target.symbol)
-#' transfer_tab <- get_IDtransfer2symbol2type(from_type = 'ensembl_transcript_id',
-#'                                           use_genes=use_genes,
-#'                                           dataset='hsapiens_gene_ensembl')
-#' ## get transfer table !!!
-#' DE_profile_symbol <- DE_profile
-#' names(DE_profile_symbol) <- get_name_transfertab(names(DE_profile),
-#'                                                  transfer_tab = transfer_tab)
-#' use_gs_id <- 'REACTOME_CD28_DEPENDENT_PI3K_AKT_SIGNALING'
-#' use_target_genes <- all_gs2gene[['CP:REACTOME']][[use_gs_id]]
-#' analysis.par$out.dir.PLOT <- getwd() ## directory for saving the pdf files
-#' draw.GSEA(rank_profile=DE_profile_symbol,use_genes=use_target_genes,use_direction=NULL,
-#'           main=sprintf('GSEA plot for %s',use_gs_id),
-#'           annotation=NULL,annotation_cex=1.2,
-#'           pdf_file = sprintf('%s/GSEA_gs.pdf',analysis.par$out.dir.PLOT),
-#'           left_annotation='high in metastasis',
-#'           right_annotation='high in primary')
+#' gs.preload(use_spe='Homo sapiens',update=FALSE)
+#' use_target_genes <- all_gs2gene[[1]][[1]]
+#' draw.GSEA(rank_profile=DE_profile,
+#'          use_genes=use_target_genes,
+#'          main=sprintf('GSEA plot for %s',names(all_gs2gene[[1]][1])),
+#'          pdf_file = sprintf('%s/GSEA_GS_each.pdf',analysis.par$out.dir.PLOT),
+#'          left_annotation='high in G4',
+#'          right_annotation='high in others')
 #'}
 #' @export
 draw.GSEA <- function(rank_profile=NULL,use_genes=NULL,use_direction=NULL,main="",pdf_file=NULL,
@@ -3598,11 +3883,19 @@ draw.GSEA <- function(rank_profile=NULL,use_genes=NULL,use_direction=NULL,main="
   segments(-(pp[2]-pp[1])/100,y1,0,y1,lwd=1.5)
   mtext(side=2,line = 2,'Ranked list metric (PreRanked)',cex=1.2)
   mtext(side=1,line = 3,'Rank in Ordered Dataset',cex=1.2)
-  axis(side=1,at=x1,labels=get_label_manual(x1))
+  if(is.null(use_direction)==FALSE){
+    axis(side=1,at=x1,labels=get_label_manual(x1/2))
+  }else{
+    axis(side=1,at=x1,labels=get_label_manual(x1))
+  }
   # get zero cross
   w1 <- which.min(abs(rank_profile))
   abline(v=w1,lty=2,col='grey')
-  text(w1,-mm/4,sprintf('Zero cross at %d',w1),adj=0.5)
+  if(is.null(use_direction)==FALSE){
+    text(w1,-mm/4,sprintf('Zero cross at %s',round(w1/2)),adj=0.5)
+  }else{
+    text(w1,-mm/4,sprintf('Zero cross at %d',w1),adj=0.5)
+  }
   legend(w1,pp[3]-(pp[4]-pp[3])/4,lty=1,lwd=2,c('Enrichment profile','Hits','Ranking metric scores'),
          col=c('green','black','grey'),xpd=TRUE,horiz=TRUE,xjust=0.5,cex=1.2)
   pm <- par()$usr
@@ -3611,10 +3904,17 @@ draw.GSEA <- function(rank_profile=NULL,use_genes=NULL,use_direction=NULL,main="
   use_col <- z2col(rank_profile,sig_thre = 0,n_len = 30,blue_col='blue',red_col='red')
   image(x=as.matrix(1:r_len),col=use_col,bty='n',xaxt='n',yaxt='n',xlim=c(pm[1],pm[2])/r_len)
   abline(v=use_pos/r_len,col='grey')
-  ## mark gene position
+  ## mark gene position; brewer.pal(9,'Reds')[6]; brewer.pal(9,'Blues')[6]
   par(mar=c(0,6,0,2))
   plot(1,col='white',xlab="",ylab="",bty='n',xlim=c(1,r_len),xaxt='n',yaxt='n')
-  abline(v=use_pos)
+  if(is.null(use_direction)==FALSE){
+    use_pos_P <- which(names(rank_profile) %in% use_genes[grep('POS',use_genes)])
+    use_pos_N <- which(names(rank_profile) %in% use_genes[grep('NEG',use_genes)])
+    abline(v=use_pos_P,col=brewer.pal(9,'Reds')[6])
+    abline(v=use_pos_N,col=brewer.pal(9,'Blues')[6])
+  }else{
+    abline(v=use_pos)
+  }
   ## GSEA ES
   par(mar=c(0,6,5,2))
   # get ES score
@@ -3644,6 +3944,7 @@ draw.GSEA <- function(rank_profile=NULL,use_genes=NULL,use_direction=NULL,main="
   layout(1);
   return(TRUE)
 }
+
 ## get enrichment score
 get_ES <- function(rank_profile=NULL,use_genes=NULL,weighted.score.type=1){
   gene.list <- names(rank_profile)
@@ -3750,64 +4051,80 @@ get_z2p <- function(x){
 
 #' @examples
 #' analysis.par <- list()
-#' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
+#' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
 #' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
-#' comp <- 'metastasis2primary'
+#' comp <- 'G4.Vs.others'
 #' DE <- analysis.par$DE[[comp]]
 #' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
-#'                                logFC_col='logFC.metastasis2primary_DA',
-#'                                Pv_col='P.Value.metastasis2primary_DA',
-#'                                logFC_thre=0.01,Pv_thre=0.1,
-#'                                main='Volcano Plot for metastasis2primary_DA',show_label=FALSE,
-#'                                label_type = 'origin',label_cex = 0.5)
-#' driver_list <- rownames(sig_driver)
-#' draw.GSEA.NetBID(DE=DE,profile_col='t',profile_trend='neg2pos',
-#'                  driver_list = driver_list,
-#'                  show_label=ms_tab[driver_list,'gene_label'],
-#'                  driver_DA_Z=ms_tab[driver_list,'Z.metastasis2primary_DA'],
-#'                  driver_DE_Z=ms_tab[driver_list,'Z.metastasis2primary_DE'],
-#'                  target_list=analysis.par$merge.network$target_list,
-#'                  top_driver_number=5,target_nrow=2,target_col='RdBu',
-#'                  left_annotation = 'test_left',right_annotation = 'test_right',
-#'                  main='test',target_col_type='DE',Z_sig_thre=1.64,profile_sig_thre = 1.64)
-#' \dontrun{
-#' analysis.par <- list()
-#' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
-#' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
-#' ms_tab <- analysis.par$final_ms_tab
-#' comp <- 'metastasis2primary'
-#' DE <- analysis.par$DE[[comp]]
-#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
-#'                                logFC_col='logFC.metastasis2primary_DA',
-#'                                Pv_col='P.Value.metastasis2primary_DA',
-#'                                logFC_thre=0.01,Pv_thre=0.1,
-#'                                main='Volcano Plot for metastasis2primary_DA',
+#'                                logFC_col='logFC.G4.Vs.others_DA',
+#'                                Pv_col='P.Value.G4.Vs.others_DA',
+#'                                logFC_thre=0.4,
+#'                                Pv_thre=1e-7,
+#'                                main='Volcano Plot for G4.Vs.others_DA',
 #'                                show_label=FALSE,
-#'                                label_type = 'origin',label_cex = 0.5)
+#'                                label_type = 'origin',
+#'                                label_cex = 0.5)
 #' driver_list <- rownames(sig_driver)
-#' analysis.par$out.dir.PLOT <- getwd() ## directory for saving the pdf files
-#' draw.GSEA.NetBID(DE=DE,profile_col='t',profile_trend='neg2pos',
+#' draw.GSEA.NetBID(DE=DE,profile_col='t',
+#'                  name_col='ID',
+#'                  profile_trend='neg2pos',
 #'                  driver_list = driver_list,
 #'                  show_label=ms_tab[driver_list,'gene_label'],
-#'                  driver_DA_Z=ms_tab[driver_list,'Z.metastasis2primary_DA'],
-#'                  driver_DE_Z=ms_tab[driver_list,'Z.metastasis2primary_DE'],
+#'                  driver_DA_Z=ms_tab[driver_list,'Z.G4.Vs.others_DA'],
+#'                  driver_DE_Z=ms_tab[driver_list,'Z.G4.Vs.others_DE'],
 #'                  target_list=analysis.par$merge.network$target_list,
-#'                  top_driver_number=30,
+#'                  top_driver_number=5,
 #'                  target_nrow=2,target_col='RdBu',
 #'                  left_annotation = 'test_left',
 #'                  right_annotation = 'test_right',
 #'                  main='test',target_col_type='DE',
-#'                  Z_sig_thre=1.64,profile_sig_thre = 1.64,
+#'                  Z_sig_thre=1.64,
+#'                  profile_sig_thre = 1.64)
+#' \dontrun{
+#' analysis.par <- list()
+#' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
+#' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' ms_tab <- analysis.par$final_ms_tab
+#' comp <- 'G4.Vs.others'
+#' DE <- analysis.par$DE[[comp]]
+#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
+#'                                logFC_col='logFC.G4.Vs.others_DA',
+#'                                Pv_col='P.Value.G4.Vs.others_DA',
+#'                                logFC_thre=0.4,
+#'                                Pv_thre=1e-7,
+#'                                main='Volcano Plot for G4.Vs.others_DA',
+#'                                show_label=FALSE,
+#'                                label_type = 'origin',
+#'                                label_cex = 0.5)
+#' driver_list <- rownames(sig_driver)
+#' analysis.par$out.dir.PLOT <- getwd() ## directory for saving the pdf files
+#' draw.GSEA.NetBID(DE=DE,profile_col='logFC',profile_trend='neg2pos',
+#'                  driver_list = driver_list,
+#'                  show_label=ms_tab[driver_list,'gene_label'],
+#'                  driver_DA_Z=ms_tab[driver_list,'Z.G4.Vs.others_DA'],
+#'                  driver_DE_Z=ms_tab[driver_list,'Z.G4.Vs.others_DE'],
+#'                  target_list=analysis.par$merge.network$target_list,
+#'                  top_driver_number=30,
+#'                  target_nrow=2,
+#'                  target_col='RdBu',
+#'                  left_annotation = 'test_left',
+#'                  right_annotation = 'test_right',
+#'                  main='test',
+#'                  target_col_type='DE',
+#'                  Z_sig_thre=1.64,
+#'                  profile_sig_thre = 1.64,
 #'                  pdf_file=sprintf('%s/NetBID_GSEA_demo1.pdf',
 #'                  analysis.par$out.dir.PLOT))
 #'draw.GSEA.NetBID(DE=DE,profile_col='t',profile_trend='neg2pos',
 #'                  driver_list = driver_list,
 #'                  show_label=ms_tab[driver_list,'gene_label'],
-#'                  driver_DA_Z=ms_tab[driver_list,'Z.metastasis2primary_DA'],
-#'                  driver_DE_Z=ms_tab[driver_list,'Z.metastasis2primary_DE'],
+#'                  driver_DA_Z=ms_tab[driver_list,'Z.G4.Vs.others_DA'],
+#'                  driver_DE_Z=ms_tab[driver_list,'Z.G4.Vs.others_DE'],
 #'                  target_list=analysis.par$merge.network$target_list,
-#'                  top_driver_number=30,target_nrow=1,target_col='RdBu',
+#'                  top_driver_number=30,
+#'                  target_nrow=1,
+#'                  target_col='RdBu',
 #'                  left_annotation = 'test_left',
 #'                  right_annotation = 'test_right',
 #'                  main='test',target_col_type='PN',
@@ -3846,10 +4163,11 @@ draw.GSEA.NetBID <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_tren
     DE <- cbind(DE[,setdiff(colnames(DE),'name')],name=rownames(DE),stringsAsFactors=FALSE)
     name_col <- 'name'
   }
+  w1 <- which(is.na(DE[,profile_col])==FALSE)
+  DE <- DE[w1,]
+  if(profile_trend=='pos2neg') DE <- DE[order(DE[,profile_col],decreasing = TRUE),] else DE <- DE[order(DE[,profile_col],decreasing = FALSE),]
   DE_profile <- DE[,profile_col]
-  #names(DE_profile) <- rownames(DE)
   DE_profile_name <- DE[,name_col]
-  if(profile_trend=='pos2neg') DE_profile <- sort(DE_profile,decreasing = TRUE) else DE_profile <- sort(DE_profile)
   n_gene <- length(DE_profile)
   if(target_nrow==2){
     n_driver <- length(driver_list)*2
@@ -3883,11 +4201,11 @@ draw.GSEA.NetBID <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_tren
   pp <- par()$usr; rr <- (pp[2]-pp[1])/n_gene
   polygon(x=c(pp[1],c(1:n_gene)*rr+pp[1],pp[2]),y=c(0,DE_profile,0),col='grey',border='grey',xpd=TRUE,lwd=0.3)
   if(profile_trend=='pos2neg'){
-    if(is.null(left_annotation)==FALSE) text(pp[1]+(pp[2]-pp[1])/100,mm[2]*0.8,adj=0,left_annotation,col=RColorBrewer::brewer.pal(9,'Reds')[6],xpd=TRUE,cex=1.2)
-    if(is.null(right_annotation)==FALSE) text(pp[2]-(pp[2]-pp[1])/100,mm[1]*0.8,adj=1,right_annotation,col=RColorBrewer::brewer.pal(9,'Blues')[6],xpd=TRUE,cex=1.2)
+    if(is.null(left_annotation)==FALSE) text(pp[1]+(pp[2]-pp[1])/100,mm[2]*0.8,adj=0,left_annotation,col=brewer.pal(9,'Reds')[6],xpd=TRUE,cex=1.2)
+    if(is.null(right_annotation)==FALSE) text(pp[2]-(pp[2]-pp[1])/100,mm[1]*0.8,adj=1,right_annotation,col=brewer.pal(9,'Blues')[6],xpd=TRUE,cex=1.2)
   }else{
-    if(is.null(left_annotation)==FALSE) text(pp[1]+(pp[2]-pp[1])/100,mm[1]*0.8,adj=0,left_annotation,col=RColorBrewer::brewer.pal(9,'Reds')[6],xpd=TRUE,cex=1.2)
-    if(is.null(right_annotation)==FALSE) text(pp[2]-(pp[2]-pp[1])/100,mm[2]*0.8,adj=1,right_annotation,col=RColorBrewer::brewer.pal(9,'Blues')[6],xpd=TRUE,cex=1.2)
+    if(is.null(left_annotation)==FALSE) text(pp[1]+(pp[2]-pp[1])/100,mm[1]*0.8,adj=0,left_annotation,col=brewer.pal(9,'Reds')[6],xpd=TRUE,cex=1.2)
+    if(is.null(right_annotation)==FALSE) text(pp[2]-(pp[2]-pp[1])/100,mm[2]*0.8,adj=1,right_annotation,col=brewer.pal(9,'Blues')[6],xpd=TRUE,cex=1.2)
   }
   #segments(pp[1],pp[1],pp[2],pp[1],lwd=0.5)
   #segments(pp[1],min(y1),pp[1],max(y1),lwd=1.5)
@@ -3911,7 +4229,7 @@ draw.GSEA.NetBID <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_tren
   # add columns
   use_target_list <- target_list[driver_list]
   if(target_col_type=='DE'){
-    cc <- z2col(DE_profile,sig_thre=profile_sig_thre,n_len=100,red_col = RColorBrewer::brewer.pal(9,'Reds')[5:9],blue_col=RColorBrewer::brewer.pal(9,'Blues')[5:9],
+    cc <- z2col(DE_profile,sig_thre=profile_sig_thre,n_len=100,red_col = brewer.pal(9,'Reds')[5:9],blue_col=brewer.pal(9,'Blues')[5:9],
                 col_max_thre=max(abs(DE_profile)))
     #names(cc) <- DE_profile_name
     cc[which(cc=='white')] <- 'light grey'
@@ -3930,7 +4248,7 @@ draw.GSEA.NetBID <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_tren
         }else{
           segments(x0=w1,x1=w1,y0=yy1[i],y1=yy1[i+1],lwd=1.5,
                    col=z2col(t1$spearman,sig_thre=0,col_max_thre=1,col_min_thre=0.01,
-                             red_col = RColorBrewer::brewer.pal(9,'Reds')[7:9],blue_col=RColorBrewer::brewer.pal(9,'Blues')[7:9]))
+                             red_col = brewer.pal(9,'Reds')[7:9],blue_col=brewer.pal(9,'Blues')[7:9]))
         }
       }
     }
@@ -3949,7 +4267,7 @@ draw.GSEA.NetBID <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_tren
           if(target_col_type=='DE'){
             segments(x0=w1,x1=w1,y0=yy1[2*i],y1=yy1[2*i+1],col=cc[w0],lwd=1.5)
           }else{
-            segments(x0=w1,x1=w1,y0=yy1[2*i],y1=yy1[2*i+1],col=RColorBrewer::brewer.pal(9,'Reds')[6],lwd=1.5)
+            segments(x0=w1,x1=w1,y0=yy1[2*i],y1=yy1[2*i+1],col=brewer.pal(9,'Reds')[6],lwd=1.5)
           }
         }
       }
@@ -3962,7 +4280,7 @@ draw.GSEA.NetBID <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_tren
           if(target_col_type=='DE'){
             segments(x0=w1,x1=w1,y0=yy1[2*i-1],y1=yy1[2*i],col=cc[w0],lwd=1.5)
           }else{
-            segments(x0=w1,x1=w1,y0=yy1[2*i-1],y1=yy1[2*i],col=RColorBrewer::brewer.pal(9,'Blues')[6],lwd=1.5)
+            segments(x0=w1,x1=w1,y0=yy1[2*i-1],y1=yy1[2*i],col=brewer.pal(9,'Blues')[6],lwd=1.5)
           }
         }
       }
@@ -3981,9 +4299,9 @@ draw.GSEA.NetBID <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_tren
   mm_min <- min(min(abs(driver_DA_Z[driver_list]),na.rm=TRUE)*0.9,min(abs(driver_DE_Z[driver_list]),na.rm=TRUE)*0.9)
   mm_min <- max(mm_min,Z_sig_thre)
   mm_max <- max(max(abs(driver_DA_Z[driver_list]),na.rm=TRUE)*1.1,max(abs(driver_DE_Z[driver_list]),na.rm=TRUE)*1.1)
-  c1 <- z2col(driver_DA_Z[driver_list],sig_thre=Z_sig_thre,n_len=100,red_col = RColorBrewer::brewer.pal(9,'Reds')[7],blue_col=RColorBrewer::brewer.pal(9,'Blues')[7],
+  c1 <- z2col(driver_DA_Z[driver_list],sig_thre=Z_sig_thre,n_len=100,red_col = brewer.pal(9,'Reds')[7],blue_col=brewer.pal(9,'Blues')[7],
               col_min_thre=mm_min,col_max_thre=mm_max)
-  c2 <- z2col(driver_DE_Z[driver_list],sig_thre=Z_sig_thre,n_len=100,red_col = RColorBrewer::brewer.pal(9,'Reds')[7],blue_col=RColorBrewer::brewer.pal(9,'Blues')[7],
+  c2 <- z2col(driver_DE_Z[driver_list],sig_thre=Z_sig_thre,n_len=100,red_col = brewer.pal(9,'Reds')[7],blue_col=brewer.pal(9,'Blues')[7],
               col_min_thre=mm_min,col_max_thre=mm_max)
   for(i in 1:length(driver_list)){
     z1 <- driver_DA_Z[driver_list[i]]
@@ -4020,9 +4338,9 @@ draw.GSEA.NetBID <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_tren
     tt <- pp[2]-(pp[1]+pp[2])*0.55
     for(i in 1:length(driver_list)){
       rect(xleft=(pp[1]+pp[2])*0.55,xright=(pp[1]+pp[2])*0.55+target_size[i,1]/mm*tt,
-           ybottom=yy22[i],ytop=yy22[i]+dyy*0.35,col=RColorBrewer::brewer.pal(9,'Reds')[5],border=NA)
+           ybottom=yy22[i],ytop=yy22[i]+dyy*0.35,col=brewer.pal(9,'Reds')[5],border=NA)
       rect(xleft=(pp[1]+pp[2])*0.55,xright=(pp[1]+pp[2])*0.55+target_size[i,2]/mm*tt,
-           ytop=yy22[i],ybottom=yy22[i]-dyy*0.35,col=RColorBrewer::brewer.pal(9,'Blues')[5],border=NA)
+           ytop=yy22[i],ybottom=yy22[i]-dyy*0.35,col=brewer.pal(9,'Blues')[5],border=NA)
     }
     segments(x0=(pp[1]+pp[2])*0.55,x1=pp[2],y0=pp[4],y1=pp[4],xpd=TRUE)
     sst <- round(seq(0,mm,length.out=3))
@@ -4096,8 +4414,8 @@ draw.GSEA.NetBID <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_tren
 
 #' @examples
 #' \dontrun{
-#' main.dir <- system.file(package = "NetBID2")
 #' db.preload(use_level='transcript',use_spe='human',update=FALSE)
+#'
 #' ## get all_gs2gene
 #'
 #' analysis.par <- list()
@@ -4105,24 +4423,12 @@ draw.GSEA.NetBID <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_tren
 #' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 #'
 #' ms_tab <- analysis.par$final_ms_tab
-#' comp <- 'metastasis2primary'
+#' comp <- 'G4.Vs.others'
 #' DE <- analysis.par$DE[[comp]]
 #' analysis.par$out.dir.PLOT <- getwd()
-#' ## directory for saving the pdf files
-#' exp_mat <- exprs(analysis.par$cal.eset) ## expression,the rownames must be the originalID
 #'
-#' ## get transfer tab
-#' use_genes <- rownames(exp_mat)
-#' transfer_tab <- get_IDtransfer(from_type = 'ensembl_transcript_id',
-#'                                to_type='external_gene_name',
-#'                                use_genes=use_genes,
-#'                                dataset='hsapiens_gene_ensembl')
-#'                                ## get transfer table !!!
-#' ## get expression matrix for the transfered gene name
-#' exp_mat_gene <- exprs(update.eset.feature(use_eset=generate.eset(exp_mat=exp_mat),
-#'                                          use_feature_info = transfer_tab,
-#'                                          from_feature = 'ensembl_transcript_id',
-#'                                          to_feature = 'external_gene_name'))
+#' ## directory for saving the pdf files
+#' exp_mat_gene <- exprs(analysis.par$cal.eset)
 #'
 #' ## calculate activity for all genesets
 #' use_gs2gene <- merge_gs(all_gs2gene=all_gs2gene,
@@ -4131,25 +4437,29 @@ draw.GSEA.NetBID <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_tren
 #'
 #' ## get DA for the gene set
 #' phe_info <- pData(analysis.par$cal.eset)
-#' G0  <- rownames(phe_info)[which(phe_info$`tumor type`=='primary')]
+#' G0  <- rownames(phe_info)[which(phe_info$`subgroup`!='G4')]
 #' # get sample list for G0
-#' G1  <- rownames(phe_info)[which(phe_info$`tumor type`=='metastasis')]
+#' G1  <- rownames(phe_info)[which(phe_info$`subgroup`=='G4')]
 #' # get sample list for G1
 #' DA_gs <- getDE.limma.2G(eset=generate.eset(ac_gs),G1=G1,G0=G0,
-#'                         G1_name='metastasis',G0_name='primary')
+#'                         G1_name='G4',G0_name='others')
 #' ## or use: DA_gs <- getDE.BID.2G(eset=generate.eset(ac_gs),G1=G1,G0=G0,
-#'                         G1_name='metastasis',G0_name='primary')
+#'                         G1_name='G4',G0_name='others')
 #' ## draw vocalno plot for top sig-GS
-#' sig_gs <- draw.volcanoPlot(dat=cbind(DA_gs,names=rownames(DA_gs),
-#'                           stringsAsFactors=FALSE),
-#'                           label_col='names',logFC_col='logFC',
-#'                           Pv_col='P.Value',logFC_thre=0,Pv_thre=0.1,
-#'                           main='Volcano Plot for gene sets',show_label=TRUE,
-#'                           label_type = 'distribute',label_cex = 0.5,
-#'                           pdf_file=sprintf('%s/vocalno_GS_DA.pdf',
-#'                           analysis.par$out.dir.PLOT))
+#' sig_gs <- draw.volcanoPlot(dat=DA_gs,
+#'                            label_col='ID',
+#'                            logFC_col='logFC',
+#'                            Pv_col='P.Value',
+#'                            logFC_thre=0.25,
+#'                            Pv_thre=1e-4,
+#'                            main='Volcano Plot for gene sets',
+#'                            show_label=TRUE,
+#'                            label_type = 'distribute',
+#'                            label_cex = 0.5,
+#'                            pdf_file=sprintf('%s/vocalno_GS_DA.pdf',
+#'                            analysis.par$out.dir.PLOT))
 #' ## GSEA plot for the significant gene sets
-#' draw.GSEA.NetBID.GS(DE=DE,name_col='symbol',
+#' draw.GSEA.NetBID.GS(DE=DE,name_col='ID',
 #'                     profile_col='t',profile_trend='pos2neg',
 #'                     sig_gs_list = sig_gs$names,
 #'                     gs_DA_Z=DA_gs[sig_gs$names,'Z-statistics'],
@@ -4194,6 +4504,8 @@ draw.GSEA.NetBID.GS <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_t
   gs_DA_Z <- gs_DA_Z[sig_gs_list]
   ###################
   ## calculate layout
+  w1 <- which(is.na(DE[,profile_col])==FALSE)
+  DE <- DE[w1,]
   if(profile_trend=='pos2neg') DE <- DE[order(DE[,profile_col],decreasing = TRUE),] else DE <- DE[order(DE[,profile_col],decreasing = FALSE),]
   DE_profile <- DE[,profile_col]
   DE_profile_name <- DE[,name_col]
@@ -4232,11 +4544,11 @@ draw.GSEA.NetBID.GS <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_t
   pp <- par()$usr; rr <- (pp[2]-pp[1])/n_gene
   polygon(x=c(pp[1],c(1:n_gene)*rr+pp[1],pp[2]),y=c(0,DE_profile,0),col='grey',border='grey',xpd=TRUE,lwd=0.3)
   if(profile_trend=='pos2neg'){
-    if(is.null(left_annotation)==FALSE) text(pp[1]+(pp[2]-pp[1])/100,mm[2]*0.8,adj=0,left_annotation,col=RColorBrewer::brewer.pal(9,'Reds')[6],xpd=TRUE,cex=1.2)
-    if(is.null(right_annotation)==FALSE) text(pp[2]-(pp[2]-pp[1])/100,mm[1]*0.8,adj=1,right_annotation,col=RColorBrewer::brewer.pal(9,'Blues')[6],xpd=TRUE,cex=1.2)
+    if(is.null(left_annotation)==FALSE) text(pp[1]+(pp[2]-pp[1])/100,mm[2]*0.8,adj=0,left_annotation,col=brewer.pal(9,'Reds')[6],xpd=TRUE,cex=1.2)
+    if(is.null(right_annotation)==FALSE) text(pp[2]-(pp[2]-pp[1])/100,mm[1]*0.8,adj=1,right_annotation,col=brewer.pal(9,'Blues')[6],xpd=TRUE,cex=1.2)
   }else{
-    if(is.null(left_annotation)==FALSE) text(pp[1]+(pp[2]-pp[1])/100,mm[1]*0.8,adj=0,left_annotation,col=RColorBrewer::brewer.pal(9,'Reds')[6],xpd=TRUE,cex=1.2)
-    if(is.null(right_annotation)==FALSE) text(pp[2]-(pp[2]-pp[1])/100,mm[2]*0.8,adj=1,right_annotation,col=RColorBrewer::brewer.pal(9,'Blues')[6],xpd=TRUE,cex=1.2)
+    if(is.null(left_annotation)==FALSE) text(pp[1]+(pp[2]-pp[1])/100,mm[1]*0.8,adj=0,left_annotation,col=brewer.pal(9,'Reds')[6],xpd=TRUE,cex=1.2)
+    if(is.null(right_annotation)==FALSE) text(pp[2]-(pp[2]-pp[1])/100,mm[2]*0.8,adj=1,right_annotation,col=brewer.pal(9,'Blues')[6],xpd=TRUE,cex=1.2)
   }
   axis(side=2,at=y1,labels=y1)
   mtext(side=2,line = 2.5,profile_col,cex=1)
@@ -4254,7 +4566,7 @@ draw.GSEA.NetBID.GS <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_t
   segments(x0=pp[1],x1=pp[2],y0=yy2,y1=yy2,lwd=1.2,col='dark grey')
   # add columns
   use_target_list <- use_gs2gene[sig_gs_list]
-  cc <- z2col(DE_profile,sig_thre=profile_sig_thre,n_len=100,red_col = RColorBrewer::brewer.pal(9,'Reds')[5:9],blue_col=RColorBrewer::brewer.pal(9,'Blues')[5:9],
+  cc <- z2col(DE_profile,sig_thre=profile_sig_thre,n_len=100,red_col = brewer.pal(9,'Reds')[5:9],blue_col=brewer.pal(9,'Blues')[5:9],
               col_max_thre=max(abs(DE_profile)))
   cc[which(cc=='white')] <- 'light grey'
   for(i in 1:length(sig_gs_list)){
@@ -4279,7 +4591,7 @@ draw.GSEA.NetBID.GS <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_t
   mm_min <- min(abs(gs_DA_Z[sig_gs_list]),na.rm=TRUE)*0.9
   mm_min <- max(mm_min,Z_sig_thre)
   mm_max <- max(abs(gs_DA_Z[sig_gs_list]),na.rm=TRUE)*1.1
-  c1 <- z2col(gs_DA_Z[sig_gs_list],sig_thre=Z_sig_thre,n_len=100,red_col = RColorBrewer::brewer.pal(9,'Reds')[7],blue_col=RColorBrewer::brewer.pal(9,'Blues')[7],
+  c1 <- z2col(gs_DA_Z[sig_gs_list],sig_thre=Z_sig_thre,n_len=100,red_col = brewer.pal(9,'Reds')[7],blue_col=brewer.pal(9,'Blues')[7],
               col_min_thre=mm_min,col_max_thre=mm_max)
   for(i in 1:length(sig_gs_list)){
     z1 <- gs_DA_Z[sig_gs_list[i]]
@@ -4397,16 +4709,18 @@ draw.GSEA.NetBID.GS <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_t
 #' @examples
 #' \dontrun{
 #' analysis.par <- list()
-#' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
+#' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
 #' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
 #' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
-#'                                logFC_col='logFC.metastasis2primary_DA',
-#'                                Pv_col='P.Value.metastasis2primary_DA',
-#'                                logFC_thre=0.01,Pv_thre=0.1,
-#'                                main='Volcano Plot for metastasis2primary_DA',
+#'                                logFC_col='logFC.G4.Vs.others_DA',
+#'                                Pv_col='P.Value.G4.Vs.others_DA',
+#'                                logFC_thre=0.4,
+#'                                Pv_thre=1e-7,
+#'                                main='Volcano Plot for G4.Vs.others_DA',
 #'                                show_label=FALSE,
-#'                                label_type = 'origin',label_cex = 0.5)
+#'                                label_type = 'origin',
+#'                                label_cex = 0.5)
 #' driver_list <- rownames(sig_driver)
 #' ## choose seed driver and partner driver list
 #' seed_driver <- driver_list[1]
@@ -4422,17 +4736,17 @@ draw.GSEA.NetBID.GS <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_t
 #'                                cal_mat=exprs(analysis.par$cal.eset),
 #'                                es.method='weightedmean')
 #' ## get DA for the combined drivers
-#' comp_name <- 'metastasis2primary'
-#' G0  <- rownames(phe_info)[which(phe_info$`tumor type`=='primary')]
+#' comp_name <- 'G4.Vs.others'
+#' G0  <- rownames(phe_info)[which(phe_info$`subgroup`!='G4')]
 #' # get sample list for G0
-#' G1  <- rownames(phe_info)[which(phe_info$`tumor type`=='metastasis')]
+#' G1  <- rownames(phe_info)[which(phe_info$`subgroup`=='G4')]
 #' # get sample list for G1
 #' DA_driver_combine <- getDE.limma.2G(eset=generate.eset(ac_combine_mat),
 #'                                     G1=G1,G0=G0,
-#'                                     G1_name='metastasis',G0_name='primary')
+#'                                     G1_name='G4',G0_name='others')
 #' ## or use: DA_driver_combine <- getDE.BID.2G(eset=generate.eset(ac_combine_mat),
 #'                                     G1=G1,G0=G0,
-#'                                     G1_name='metastasis',G0_name='primary')
+#'                                     G1_name='G4',G0_name='others')
 #' ## prepare for SINBA input
 #' ori_part_Z <- analysis.par$DA[[comp_name]][part_driver,'Z-statistics']
 #' ori_seed_Z <- analysis.par$DA[[comp_name]][seed_driver,'Z-statistics']
@@ -4523,15 +4837,17 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profil
     DE <- cbind(DE[,setdiff(colnames(DE),'name')],name=rownames(DE),stringsAsFactors=FALSE)
     name_col <- 'name'
   }
+  w1 <- which(is.na(DE[,profile_col])==FALSE)
+  DE <- DE[w1,]
+  if(profile_trend=='pos2neg') DE <- DE[order(DE[,profile_col],decreasing = TRUE),] else DE <- DE[order(DE[,profile_col],decreasing = FALSE),]
+  DE_profile <- DE[,profile_col]
   DE_profile_name <- DE[,name_col]
   ##############################################
   ## calculate layout
-  DE_profile <- DE[,profile_col]
-  ##
+
   target_list <- lapply(target_list,function(x)x[which(x$target %in% DE_profile_name),])
   target_list_merge <- lapply(target_list_merge,function(x)x[which(x$target %in% DE_profile_name),])
 
-  if(profile_trend=='pos2neg') DE_profile <- sort(DE_profile,decreasing = TRUE) else DE_profile <- sort(DE_profile)
   n_gene <- length(DE_profile)
   if(target_nrow==2){
     n_driver <- length(partner_driver_list)*4+2
@@ -4565,11 +4881,11 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profil
   pp <- par()$usr; rr <- (pp[2]-pp[1])/n_gene
   polygon(x=c(pp[1],c(1:n_gene)*rr+pp[1],pp[2]),y=c(0,DE_profile,0),col='grey',border='grey',xpd=TRUE,lwd=0.3)
   if(profile_trend=='pos2neg'){
-    if(is.null(left_annotation)==FALSE) text(pp[1]+(pp[2]-pp[1])/100,mm[2]*0.8,adj=0,left_annotation,col=RColorBrewer::brewer.pal(9,'Reds')[6],xpd=TRUE,cex=1.2)
-    if(is.null(right_annotation)==FALSE) text(pp[2]-(pp[2]-pp[1])/100,mm[1]*0.8,adj=1,right_annotation,col=RColorBrewer::brewer.pal(9,'Blues')[6],xpd=TRUE,cex=1.2)
+    if(is.null(left_annotation)==FALSE) text(pp[1]+(pp[2]-pp[1])/100,mm[2]*0.8,adj=0,left_annotation,col=brewer.pal(9,'Reds')[6],xpd=TRUE,cex=1.2)
+    if(is.null(right_annotation)==FALSE) text(pp[2]-(pp[2]-pp[1])/100,mm[1]*0.8,adj=1,right_annotation,col=brewer.pal(9,'Blues')[6],xpd=TRUE,cex=1.2)
   }else{
-    if(is.null(left_annotation)==FALSE) text(pp[1]+(pp[2]-pp[1])/100,mm[1]*0.8,adj=0,left_annotation,col=RColorBrewer::brewer.pal(9,'Reds')[6],xpd=TRUE,cex=1.2)
-    if(is.null(right_annotation)==FALSE) text(pp[2]-(pp[2]-pp[1])/100,mm[2]*0.8,adj=1,right_annotation,col=RColorBrewer::brewer.pal(9,'Blues')[6],xpd=TRUE,cex=1.2)
+    if(is.null(left_annotation)==FALSE) text(pp[1]+(pp[2]-pp[1])/100,mm[1]*0.8,adj=0,left_annotation,col=brewer.pal(9,'Reds')[6],xpd=TRUE,cex=1.2)
+    if(is.null(right_annotation)==FALSE) text(pp[2]-(pp[2]-pp[1])/100,mm[2]*0.8,adj=1,right_annotation,col=brewer.pal(9,'Blues')[6],xpd=TRUE,cex=1.2)
   }
   axis(side=2,at=y1,labels=y1)
   mtext(side=2,line = 2.5,profile_col,cex=1)
@@ -4586,8 +4902,8 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profil
   yy2 <- yy1[seq(from=1,to=length(yy1),by=target_nrow*2)] # separate each driver combine
   yy4 <- yy2+(yy1[2]-yy1[1])*target_nrow
 
-  rect(xleft = pp[1],xright=pp[2],ybottom = yy1[length(yy1)-target_nrow],ytop=yy1[length(yy1)],border=NA,col=get_transparent(RColorBrewer::brewer.pal(11,'Set3')[2],0.3)) ## for seed rows
-  rect(xleft = pp[1],xright=pp[2],ybottom = yy2,ytop=yy4,border=NA,col=get_transparent(RColorBrewer::brewer.pal(11,'Set3')[2],0.2)) ## for combine rows
+  rect(xleft = pp[1],xright=pp[2],ybottom = yy1[length(yy1)-target_nrow],ytop=yy1[length(yy1)],border=NA,col=get_transparent(brewer.pal(11,'Set3')[2],0.3)) ## for seed rows
+  rect(xleft = pp[1],xright=pp[2],ybottom = yy2,ytop=yy4,border=NA,col=get_transparent(brewer.pal(11,'Set3')[2],0.2)) ## for combine rows
 
   segments(x0=pp[1],x1=pp[2],y0=yy1,y1=yy1,lwd=0.2,col='light grey')
   segments(x0=pp[1],x1=pp[2],y0=yy3,y1=yy3,lwd=1,col='dark grey')
@@ -4603,7 +4919,7 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profil
   use_merge_target_list <- target_list_merge[partner_driver_list]
 
   if(target_col_type=='DE'){
-    cc <- z2col(DE_profile,sig_thre=profile_sig_thre,n_len=100,red_col = RColorBrewer::brewer.pal(9,'Reds')[5:9],blue_col=RColorBrewer::brewer.pal(9,'Blues')[5:9],
+    cc <- z2col(DE_profile,sig_thre=profile_sig_thre,n_len=100,red_col = brewer.pal(9,'Reds')[5:9],blue_col=brewer.pal(9,'Blues')[5:9],
                 col_max_thre=max(abs(DE_profile)))
     #names(cc) <- names(DE_profile)
     cc[which(cc=='white')] <- 'light grey'
@@ -4621,7 +4937,7 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profil
                  col=cc[w0])
       }else{
         segments(x0=w1,x1=w1,y0=yy1[length(yy1)-1],y1=yy1[length(yy1)],lwd=1.5,
-                 col=c(RColorBrewer::brewer.pal(9,'Blues')[5],'white',RColorBrewer::brewer.pal(9,'Reds')[5])[sign(t1$spearman)+2])
+                 col=c(brewer.pal(9,'Blues')[5],'white',brewer.pal(9,'Reds')[5])[sign(t1$spearman)+2])
       }
     }
     # for each partner driver
@@ -4637,7 +4953,7 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profil
                    col=cc[w0])
         }else{
           segments(x0=w1,x1=w1,y0=yy1[2*i],y1=yy11[2*i+1],lwd=1.5,
-                   col=c(RColorBrewer::brewer.pal(9,'Blues')[5],'white',RColorBrewer::brewer.pal(9,'Reds')[5])[sign(t1$spearman)+2])
+                   col=c(brewer.pal(9,'Blues')[5],'white',brewer.pal(9,'Reds')[5])[sign(t1$spearman)+2])
         }
       }
     }
@@ -4655,7 +4971,7 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profil
         if(target_col_type=='DE'){
           segments(x0=w1,x1=w1,y0=yy1[2*i-1],y1=yy11[2*i],lwd=1.5,col=cc[w0])
         }else{
-          segments(x0=w1,x1=w1,y0=yy1[2*i-1],y1=yy11[2*i],lwd=1.5,col=c(RColorBrewer::brewer.pal(9,'Blues')[5],'white',RColorBrewer::brewer.pal(9,'Reds')[5])[sign(t1$spearman)+2])
+          segments(x0=w1,x1=w1,y0=yy1[2*i-1],y1=yy11[2*i],lwd=1.5,col=c(brewer.pal(9,'Blues')[5],'white',brewer.pal(9,'Reds')[5])[sign(t1$spearman)+2])
         }
       }
       points(w1_over,rep((yy11[2*i]+yy1[2*i])/2,length.out=length(w1_over)),pch='*',col='black')
@@ -4676,7 +4992,7 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profil
         if(target_col_type=='DE'){
           segments(x0=w1,x1=w1,y0=yy1[length(yy1)-1],y1=yy1[length(yy1)],col=cc[w0],lwd=1.5)
         }else{
-          segments(x0=w1,x1=w1,y0=yy1[length(yy1)-1],y1=yy1[length(yy1)],col=RColorBrewer::brewer.pal(9,'Reds')[9],lwd=1.5)
+          segments(x0=w1,x1=w1,y0=yy1[length(yy1)-1],y1=yy1[length(yy1)],col=brewer.pal(9,'Reds')[9],lwd=1.5)
         }
       }
     }
@@ -4689,7 +5005,7 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profil
         if(target_col_type=='DE'){
           segments(x0=w1,x1=w1,y0=yy1[length(yy1)-2],y1=yy1[length(yy1)-1],col=cc[w0],lwd=1.5)
         }else{
-          segments(x0=w1,x1=w1,y0=yy1[length(yy1)-2],y1=yy1[length(yy1)-1],col=RColorBrewer::brewer.pal(9,'Blues')[9],lwd=1.5)
+          segments(x0=w1,x1=w1,y0=yy1[length(yy1)-2],y1=yy1[length(yy1)-1],col=brewer.pal(9,'Blues')[9],lwd=1.5)
         }
       }
     }
@@ -4707,7 +5023,7 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profil
           if(target_col_type=='DE'){
             segments(x0=w1,x1=w1,y0=yy1[4*i],y1=yy11[4*i+1],col=cc[w0],lwd=1.5)
           }else{
-            segments(x0=w1,x1=w1,y0=yy1[4*i],y1=yy11[4*i+1],col=RColorBrewer::brewer.pal(9,'Reds')[5],lwd=1.5)
+            segments(x0=w1,x1=w1,y0=yy1[4*i],y1=yy11[4*i+1],col=brewer.pal(9,'Reds')[5],lwd=1.5)
           }
         }
       }
@@ -4720,7 +5036,7 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profil
           if(target_col_type=='DE'){
             segments(x0=w1,x1=w1,y0=yy1[4*i-1],y1=yy11[4*i],col=cc[w0],lwd=1.5)
           }else{
-            segments(x0=w1,x1=w1,y0=yy1[4*i-1],y1=yy11[4*i],col=RColorBrewer::brewer.pal(9,'Blues')[5],lwd=1.5)
+            segments(x0=w1,x1=w1,y0=yy1[4*i-1],y1=yy11[4*i],col=brewer.pal(9,'Blues')[5],lwd=1.5)
           }
         }
       }
@@ -4742,7 +5058,7 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profil
           if(target_col_type=='DE'){
             segments(x0=w1,x1=w1,y0=yy1[4*i-2],y1=yy11[4*i-1],col=cc[w0],lwd=1.5)
           }else{
-            segments(x0=w1,x1=w1,y0=yy1[4*i-2],y1=yy11[4*i-1],col=RColorBrewer::brewer.pal(9,'Reds')[5],lwd=1.5)
+            segments(x0=w1,x1=w1,y0=yy1[4*i-2],y1=yy11[4*i-1],col=brewer.pal(9,'Reds')[5],lwd=1.5)
           }
         }
       }
@@ -4756,7 +5072,7 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profil
           if(target_col_type=='DE'){
             segments(x0=w1,x1=w1,y0=yy1[4*i-3],y1=yy11[4*i-2],col=cc[w0],lwd=1.5)
           }else{
-            segments(x0=w1,x1=w1,y0=yy1[4*i-3],y1=yy11[4*i-2],col=RColorBrewer::brewer.pal(9,'Blues')[5],lwd=1.5)
+            segments(x0=w1,x1=w1,y0=yy1[4*i-3],y1=yy11[4*i-2],col=brewer.pal(9,'Blues')[5],lwd=1.5)
           }
         }
       }
@@ -4788,13 +5104,13 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profil
   mm_min <- max(mm_min,Z_sig_thre)
   mm_max <- max(max(abs(driver_DA_Z[partner_driver_list]),na.rm=TRUE)*1.1,max(abs(driver_DE_Z[partner_driver_list]),na.rm=TRUE)*1.1,
                 max(abs(diff_Z[partner_driver_list]),na.rm=TRUE)*1.1,max(abs(DA_Z_merge[partner_driver_list]),na.rm=TRUE)*1.1)
-  c1 <- z2col(driver_DA_Z[driver_list],sig_thre=Z_sig_thre,n_len=100,red_col = RColorBrewer::brewer.pal(9,'Reds')[7],blue_col=RColorBrewer::brewer.pal(9,'Blues')[7],
+  c1 <- z2col(driver_DA_Z[driver_list],sig_thre=Z_sig_thre,n_len=100,red_col = brewer.pal(9,'Reds')[7],blue_col=brewer.pal(9,'Blues')[7],
               col_min_thre=mm_min,col_max_thre=mm_max)
-  c2 <- z2col(driver_DE_Z[driver_list],sig_thre=Z_sig_thre,n_len=100,red_col = RColorBrewer::brewer.pal(9,'Reds')[7],blue_col=RColorBrewer::brewer.pal(9,'Blues')[7],
+  c2 <- z2col(driver_DE_Z[driver_list],sig_thre=Z_sig_thre,n_len=100,red_col = brewer.pal(9,'Reds')[7],blue_col=brewer.pal(9,'Blues')[7],
               col_min_thre=mm_min,col_max_thre=mm_max)
-  c3 <- z2col(diff_Z[partner_driver_list],sig_thre=Z_sig_thre,n_len=100,red_col = RColorBrewer::brewer.pal(9,'Reds')[7],blue_col=RColorBrewer::brewer.pal(9,'Blues')[7],
+  c3 <- z2col(diff_Z[partner_driver_list],sig_thre=Z_sig_thre,n_len=100,red_col = brewer.pal(9,'Reds')[7],blue_col=brewer.pal(9,'Blues')[7],
               col_min_thre=mm_min,col_max_thre=mm_max)
-  c4 <- z2col(DA_Z_merge[partner_driver_list],sig_thre=Z_sig_thre,n_len=100,red_col = RColorBrewer::brewer.pal(9,'Reds')[7],blue_col=RColorBrewer::brewer.pal(9,'Blues')[7],
+  c4 <- z2col(DA_Z_merge[partner_driver_list],sig_thre=Z_sig_thre,n_len=100,red_col = brewer.pal(9,'Reds')[7],blue_col=brewer.pal(9,'Blues')[7],
               col_min_thre=mm_min,col_max_thre=mm_max)
 
   # for seed driver
@@ -4877,9 +5193,9 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profil
     mm <- max(merge_target_size)
     i <- length(yy1)-1
     rect(xleft=xleft,xright=xleft+target_size[1,1]/mm*tt,
-         ybottom=yy1[i],ytop=yy1[i]+dyy22/2*0.35,col=RColorBrewer::brewer.pal(9,'Reds')[5],border=NA)
+         ybottom=yy1[i],ytop=yy1[i]+dyy22/2*0.35,col=brewer.pal(9,'Reds')[5],border=NA)
     rect(xleft=xleft,xright=xleft+target_size[1,2]/mm*tt,
-         ytop=yy1[i],ybottom=yy1[i]-dyy22/2*0.35,col=RColorBrewer::brewer.pal(9,'Blues')[5],border=NA)
+         ytop=yy1[i],ybottom=yy1[i]-dyy22/2*0.35,col=brewer.pal(9,'Blues')[5],border=NA)
   }else{
     target_size <- rowSums(target_size)
     merge_target_size <- rowSums(merge_target_size)
@@ -4893,14 +5209,14 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profil
     mm <- max(merge_target_size)
     for(i in 1:length(partner_driver_list)){
       rect(xleft=xleft,xright=xleft+target_size[i+1,1]/mm*tt,
-           ybottom=yy33[2*i],ytop=yy33[2*i]+dyy33*0.35,col=RColorBrewer::brewer.pal(9,'Reds')[5],border=NA)
+           ybottom=yy33[2*i],ytop=yy33[2*i]+dyy33*0.35,col=brewer.pal(9,'Reds')[5],border=NA)
       rect(xleft=xleft,xright=xleft+target_size[i+1,2]/mm*tt,
-           ytop=yy33[2*i],ybottom=yy33[2*i]-dyy33*0.35,col=RColorBrewer::brewer.pal(9,'Blues')[5],border=NA)
+           ytop=yy33[2*i],ybottom=yy33[2*i]-dyy33*0.35,col=brewer.pal(9,'Blues')[5],border=NA)
       # merge
       rect(xleft=xleft,xright=xleft+merge_target_size[i,1]/mm*tt,
-           ybottom=yy33[2*i-1],ytop=yy33[2*i-1]+dyy33*0.35,col=RColorBrewer::brewer.pal(9,'Reds')[5],border=NA)
+           ybottom=yy33[2*i-1],ytop=yy33[2*i-1]+dyy33*0.35,col=brewer.pal(9,'Reds')[5],border=NA)
       rect(xleft=xleft,xright=xleft+merge_target_size[i,2]/mm*tt,
-           ytop=yy33[2*i-1],ybottom=yy33[2*i-1]-dyy33*0.35,col=RColorBrewer::brewer.pal(9,'Blues')[5],border=NA)
+           ytop=yy33[2*i-1],ybottom=yy33[2*i-1]-dyy33*0.35,col=brewer.pal(9,'Blues')[5],border=NA)
     }
     segments(x0=xleft,x1=pp[2],y0=pp[4],y1=pp[4],xpd=TRUE)
     sst <- round(seq(0,mm,length.out=3))
@@ -5010,16 +5326,18 @@ merge_target_list <- function(driver1=NULL,driver2=NULL,target_list=NULL){
 
 #' @examples
 #' analysis.par <- list()
-#' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
+#' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
 #' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
 #' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
-#'                                logFC_col='logFC.metastasis2primary_DA',
-#'                                Pv_col='P.Value.metastasis2primary_DA',
-#'                                logFC_thre=0.01,Pv_thre=0.1,
-#'                                main='Volcano Plot for metastasis2primary_DA',
+#'                                logFC_col='logFC.G4.Vs.others_DA',
+#'                                Pv_col='P.Value.G4.Vs.others_DA',
+#'                                logFC_thre=0.4,
+#'                                Pv_thre=1e-7,
+#'                                main='Volcano Plot for G4.Vs.others_DA',
 #'                                show_label=FALSE,
-#'                                label_type = 'origin',label_cex = 0.5)
+#'                                label_type = 'origin',
+#'                                label_cex = 0.5)
 #' driver_list <- rownames(sig_driver)
 #' use_driver <- driver_list[3]
 #' exp_mat <- exprs(analysis.par$cal.eset)
@@ -5027,37 +5345,39 @@ merge_target_list <- function(driver1=NULL,driver2=NULL,target_list=NULL){
 #' ac_mat  <- exprs(analysis.par$merge.ac.eset)
 #' ## activity,the rownames could match originalID_label
 #' phe_info <- pData(analysis.par$cal.eset)
-#' use_obs_class <- get_obs_label(phe_info = phe_info,'tumor type')
+#' use_obs_class <- get_obs_label(phe_info = phe_info,'subgroup')
 #' draw.categoryValue(ac_val=ac_mat[use_driver,],
 #'                    exp_val=exp_mat[ms_tab[use_driver,'originalID'],],
 #'                    use_obs_class=use_obs_class,
-#'                    class_order=c('primary','metastasis'),
+#'                    class_order=c('WNT','SHH','G4'),
 #'                    class_srt=30,
 #'                    main_ac = ms_tab[use_driver,'gene_label'],
 #'                    main_exp=ms_tab[use_driver,'geneSymbol'])
 #' \dontrun{
 #' analysis.par <- list()
-#' analysis.par$out.dir.DATA <- system.file('demo','driver/DATA/',package = "NetBID2")
+#' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
 #' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
 #' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
-#'                                logFC_col='logFC.metastasis2primary_DA',
-#'                                Pv_col='P.Value.metastasis2primary_DA',
-#'                                logFC_thre=0.01,Pv_thre=0.1,
-#'                                main='Volcano Plot for metastasis2primary_DA',
+#'                                logFC_col='logFC.G4.Vs.others_DA',
+#'                                Pv_col='P.Value.G4.Vs.others_DA',
+#'                                logFC_thre=0.4,
+#'                                Pv_thre=1e-7,
+#'                                main='Volcano Plot for G4.Vs.others_DA',
 #'                                show_label=FALSE,
-#'                                label_type = 'origin',label_cex = 0.5)
+#'                                label_type = 'origin',
+#'                                label_cex = 0.5)
 #' driver_list <- rownames(sig_driver)
 #' use_driver <- driver_list[3]
 #' exp_mat <- exprs(analysis.par$cal.eset) ## expression,the rownames could match originalID
 #' ac_mat  <- exprs(analysis.par$merge.ac.eset) ## activity,the rownames could match originalID_label
 #' phe_info <- pData(analysis.par$cal.eset)
-#' use_obs_class <- get_obs_label(phe_info = phe_info,'tumor type')
+#' use_obs_class <- get_obs_label(phe_info = phe_info,'subgroup')
 #' analysis.par$out.dir.PLOT <- getwd() ## directory for saving the pdf files
 #' draw.categoryValue(ac_val=ac_mat[use_driver,],
 #'                    exp_val=exp_mat[ms_tab[use_driver,'originalID'],],
 #'                    use_obs_class=use_obs_class,
-#'                    class_order=c('primary','metastasis'),
+#'                    class_order=c('WNT','SHH','G4'),
 #'                    class_srt=30,
 #'                    main_ac = ms_tab[use_driver,'gene_label'],
 #'                    main_exp=ms_tab[use_driver,'geneSymbol'],
@@ -5174,7 +5494,7 @@ draw.targetNet <- function(source_label="",source_z=NULL,edge_score=NULL,label_c
   g1 <- names(edge_score)
   ec <- z2col(edge_score*100,sig_thre=0,n_len=length(edge_score));names(ec) <- names(edge_score)
   ec <- get_transparent(ec,alpha=0.8)
-  ew <- 2*(abs(edge_score)-min(abs(edge_score)))/(max(abs(edge_score))-min(abs(edge_score)))+0.5; names(ew) <- names(edge_score)
+  ew <- 2*label_cex*(abs(edge_score)-min(abs(edge_score)))/(max(abs(edge_score))-min(abs(edge_score)))+label_cex/2; names(ew) <- names(edge_score)
   t2xy <- function(tt,radius=1) {
     t2p <- pi*2 * tt
     list(x = radius * cos(t2p), y = radius * sin(t2p))
@@ -5184,11 +5504,13 @@ draw.targetNet <- function(source_label="",source_z=NULL,edge_score=NULL,label_c
   par(mai=c(1,1,1,1))
   plot(1,xlim=c(-1,1),ylim=c(-1,1),bty='n',col='white',xlab="",ylab="",xaxt='n',yaxt='n')
   pp <- par()$usr
-  tt <- seq(-0.5,0.5,length.out=length(g1)+1)[-1];p1<-t2xy(tt,radius=0.8);
+  tt <- seq(-0.5,0.5,length.out=length(g1)+1)[-1];
+  p1<-t2xy(tt,radius=0.8);
   for(i in 1:length(p1$x)) text(p1$x[i],p1$y[i],g1[i],cex=label_cex,srt=180*atan(p1$y[i]/p1$x[i])/pi,adj=ifelse(p1$x[i]>0,0,1),xpd=TRUE)
-  p1<-t2xy(tt,radius=0.78);#segments(x0=0,y0=0,x1=p1$x,y1=p1$y,col=ec[g1],lwd=1);
-  p2<-t2xy(tt,radius=0.77);arrows(x0=0,y0=0,x1=p2$x,y1=p2$y,col=ec,lwd=ew,angle=10,length=0.1);
-  points(p1$x,p1$y,pch=16,col='dark grey')
+  p2<-t2xy(tt,radius=0.8-label_cex/15);
+  p3<-t2xy(tt,radius=0.8-label_cex/20);
+  arrows(x0=0,y0=0,x1=p2$x,y1=p2$y,col=ec,lwd=1,angle=10,length=0.1*label_cex);
+  points(p3$x,p3$y,pch=16,col='dark grey',cex=label_cex)
   geneWidth <- strwidth(source_label,'inches',cex=0.8)
   if(is.null(source_z)==TRUE)
     points(0,0,col='light grey',cex=geneWidth*18,pch=16)
@@ -5283,8 +5605,8 @@ draw.targetNet.TWO <- function(source1_label="",source2_label="",
   g2  <- setdiff(names(edge_score2),names(edge_score1))
   ec1 <- z2col(edge_score1*100,sig_thre=0,n_len=length(edge_score1));names(ec1) <- names(edge_score1)
   ec2 <- z2col(edge_score2*100,sig_thre=0,n_len=length(edge_score2));names(ec2) <- names(edge_score2)
-  ew1 <- 2*(abs(edge_score1)-min(abs(edge_score1)))/(max(abs(edge_score1))-min(abs(edge_score1)))+0.5; names(ew1) <- names(edge_score1)
-  ew2 <- 2*(abs(edge_score2)-min(abs(edge_score2)))/(max(abs(edge_score2))-min(abs(edge_score2)))+0.5; names(ew2) <- names(edge_score2)
+  ew1 <- 2*label_cex*(abs(edge_score1)-min(abs(edge_score1)))/(max(abs(edge_score1))-min(abs(edge_score1)))+label_cex/2; names(ew1) <- names(edge_score1)
+  ew2 <- 2*label_cex*(abs(edge_score2)-min(abs(edge_score2)))/(max(abs(edge_score2))-min(abs(edge_score2)))+label_cex/2; names(ew2) <- names(edge_score2)
   t2xy <- function(tt,radius=1) {
     t2p <- pi*2 * tt + init.angle * pi/180
     list(x = radius * cos(t2p), y = radius * sin(t2p))
@@ -5296,25 +5618,30 @@ draw.targetNet.TWO <- function(source1_label="",source2_label="",
   if(length(g1)>0){
     tt <- seq(-0.225,0.225,length.out=length(g1));init.angle <- -180;p1<-t2xy(tt,radius=0.8);
     for(i in 1:length(p1$x)) text(p1$x[i],p1$y[i],g1[i],cex=label_cex,srt=180*atan(p1$y[i]/p1$x[i])/pi,adj=ifelse(p1$x[i]>0,0,1),xpd=TRUE)
-    p1<-t2xy(tt,radius=0.78);
-    #segments(x0=-0.2,y0=0,x1=p1$x,y1=p1$y,col=ec1[g1],lwd=1)
-    p2<-t2xy(tt,radius=0.76);arrows(x0=-0.2,y0=0,x1=p1$x,y1=p1$y,col=ec1[g1],lwd=ew1[g1],angle=10,length=0.1);
-    points(p1$x,p1$y,pch=16,col='dark grey')
+    #p1<-t2xy(tt,radius=0.78);
+    #p2<-t2xy(tt,radius=0.76);
+    p1<-t2xy(tt,radius=0.8-label_cex/15);
+    p2<-t2xy(tt,radius=0.8-label_cex/20);
+    arrows(x0=-0.2,y0=0,x1=p1$x,y1=p1$y,col=ec1[g1],lwd=ew1[g1],angle=10,length=0.1*label_cex);
+    points(p1$x,p1$y,pch=16,col='dark grey',cex=label_cex)
   }
   if(length(g2)>0){
-    tt <- seq(-0.225,0.225,length.out=length(g2));init.angle <- 0;p1<-t2xy(tt,radius=0.8);
+    tt <- seq(-0.225,0.225,length.out=length(g2));init.angle <- 0;
+    p1<-t2xy(tt,radius=0.8);
     for(i in 1:length(p1$x)) text(p1$x[i],p1$y[i],g2[i],cex=label_cex,srt=180*atan(p1$y[i]/p1$x[i])/pi,adj=ifelse(p1$x[i]>0,0,1),xpd=TRUE)
-    p1<-t2xy(tt,radius=0.78);
-    #segments(x0=0.2,y0=0,x1=p1$x,y1=p1$y,col=ec2[g2],lwd=1)
-    p2<-t2xy(tt,radius=0.76);arrows(x0=0.2,y0=0,x1=p1$x,y1=p1$y,col=ec2[g2],lwd=ew2[g2],angle=10,length=0.1)
-    points(p1$x,p1$y,pch=16,col='dark grey')
+    #p1<-t2xy(tt,radius=0.78);
+    #p2<-t2xy(tt,radius=0.76);
+    p1<-t2xy(tt,radius=0.8-label_cex/15);
+    p2<-t2xy(tt,radius=0.8-label_cex/20);
+    arrows(x0=0.2,y0=0,x1=p1$x,y1=p1$y,col=ec2[g2],lwd=ew2[g2],angle=10,length=0.1*label_cex)
+    points(p1$x,p1$y,pch=16,col='dark grey',cex=label_cex)
   }
   if(length(g12)>0){
     tt <- seq(min(0.1*length(g12),0.7),-min(0.1*length(g12),0.7),length.out=length(g12));
     #segments(x0=-0.2,y0=0,x1=0,y1=tt,col=ec1[g12],lwd=ew1[g12])
     #segments(x0=0.2,y0=0,x1=0,y1=tt,col=ec2[g12],lwd=ew2[g12])
-    arrows(x0=-0.2,y0=0,x1=0,y1=tt,col=ec1[g12],lwd=ew1[g12],angle=10,length=0.1)
-    arrows(x0=0.2,y0=0,x1=0,y1=tt,col=ec2[g12],lwd=ew2[g12],angle=10,length=0.1)
+    arrows(x0=-0.2,y0=0,x1=0,y1=tt,col=ec1[g12],lwd=ew1[g12],angle=10,length=0.1*label_cex)
+    arrows(x0=0.2,y0=0,x1=0,y1=tt,col=ec2[g12],lwd=ew2[g12],angle=10,length=0.1*label_cex)
     boxtext(0,tt,labels=g12,col.bg=get_transparent('light grey',0.3),cex=label_cex)
     #text(0,tt,g12,adj=0.5,cex=label_cex)
   }
@@ -5443,7 +5770,7 @@ plot.spByGene <- function(net,driver_list=NULL,target_list=NULL,transfer_tab=NUL
                           vertex.frame.color="white",vertex.label.color="black",edge.color='black',
                           layout='auto',...){
   n1 <- names(V(net))
-  cc <- RColorBrewer::brewer.pal(11,'Set3')
+  cc <- brewer.pal(11,'Set3')
   c1 <- ifelse(n1 %in% driver_list,cc[3],ifelse(n1 %in% target_list,cc[1],cc[9]))
   names(c1) <- n1
   d1 <- degree(net,mode='out')
@@ -5487,7 +5814,39 @@ get_net2target_list <- function(net_dat=NULL) {
   return(all_target)
 }
 
-#' get network information by input network file from SJAracne
+#' Generate data structure to save network information by input network file generated by SJAracne
+#'
+#' \code{get.SJAracne.network} is a function to read in network file generated by SJAracne
+#' (consensus_network_ncol_.txt file in the result directory)
+#'
+#' This function aims to read in network files generated by SJAracne and save the network information into three lists,
+#' \code{network_dat} is a data.frame to save all the information in the network file;
+#' \code{target_list} is a list for containing the target genes' information for the drivers. The names for the list is the driver name
+#' and each object in the list is a data.frame to save the target genes.
+#' \code{igraph_obj} is an igraph object to save the network, it is a directed, weighted network.
+#' The function will set two edge attributes to the igraph_obj, \code{weight} is the MI values and \code{sign} is the sign for the spearman value
+#' to indicate positive regulation (1) or negative regulation (-1).
+#'
+#' @param network_file character, file path for the network file. Must use the file (consensus_network_ncol_.txt) in the result directory.
+#' The directory may like: SJAR/<project_name>/output_tf_sjaracne_<project_name>_out_.final/consensus_network_ncol_.txt
+#'
+#' @return This function will return a list containing three items, \code{network_dat}, \code{target_list} and \code{igraph_obj}.
+#'
+#' @examples
+#' if(exists('analysis.par')==TRUE) rm(analysis.par)
+#' network.dir <- sprintf('%s/demo1/network/',system.file(package = "NetBID2")) # use demo
+#' network.project.name <- 'project_2019-02-14' # demo project name
+#' project_main_dir <- 'test/'
+#' project_name <- 'test_driver'
+#' analysis.par  <- NetBID.analysis.dir.create(project_main_dir=project_main_dir,
+#'                                             prject_name=project_name,
+#'                                             network_dir=network.dir,
+#'                                             network_project_name=network.project.name)
+#' analysis.par$tf.network  <- get.SJAracne.network(network_file=analysis.par$tf.network.file)
+#' analysis.par$sig.network <- get.SJAracne.network(network_file=analysis.par$sig.network.file)
+#'
+#' \dontrun{
+#' }
 #' @export
 get.SJAracne.network <- function(network_file=NULL){
   if(is.null(network_file)){
@@ -5495,9 +5854,145 @@ get.SJAracne.network <- function(network_file=NULL){
   }
   net_dat      <- read.delim(file=network_file,stringsAsFactors = FALSE)
   target_list  <- get_net2target_list(net_dat)
-  igraph_obj <- graph_from_data_frame(net_dat[,c('source','target','MI')],directed=TRUE)
+  igraph_obj   <- graph_from_data_frame(net_dat[,c('source','target')],directed=TRUE) ## add edge weight ???
+  igraph_obj   <- set_edge_attr(igraph_obj,'weight',index=E(igraph_obj),value=net_dat[,'MI'])
+  igraph_obj   <- set_edge_attr(igraph_obj,'sign',index=E(igraph_obj),value=sign(net_dat[,'spearman']))
   return(list(network_dat=net_dat,target_list=target_list,igraph_obj=igraph_obj))
 }
+
+#' Update the network information in the structured network list dataset
+#'
+#' \code{update.SJAracne.network} is a function to update the network information by input threshold for statistics or input gene list for use.
+#'
+#' This function aims to update the network list dataset generated by \code{get.SJAracne.network}
+#' and return the list dataset passed the filtration with the same data structure.
+#'
+#' @param network_list list,the network list dataset generated by \code{get.SJAracne.network},
+#' contains \code{network_dat}, \code{target_list} and \code{igraph_obj}.
+#' @param all_possible_drivers a vector of characters,all possible driver list used to filter the network file.
+#' If NULL, will set to the possible drivers from \code{network_list}. Default is NULL.
+#' @param all_possible_targets a vector of characters,all possible target list used to filter the network file.
+#' If NULL, will set to the possible targets \code{network_list}. Default is NULL.
+#' @param force_all_drivers logical, whether or not to include all genes in the \code{all_possible_drivers} in the final network.
+#' For \code{network_dat} and \code{target_list}, if \code{force_all_drivers} is set to TRUE, genes in \code{all_possible_drivers}
+#' will not be filtered by the following statistical thresholds.
+#' For \code{igraph_obj}, if \code{force_all_drivers} is set to TRUE, all genes in \code{all_possible_drivers},
+#' even not exist in the original network file will be include in the vertice of the igraph object.
+#' Default is TRUE.
+#' @param force_all_targets logical, whether or not to include all genes in the \code{all_possible_targets} in the final network.
+#' For \code{network_dat} and \code{target_list}, if \code{all_possible_targets} is set to TRUE, genes in \code{all_possible_targets}
+#' will not be filtered by the following statistical thresholds.
+#' For \code{igraph_obj}, if \code{force_all_targets} is set to TRUE, all genes in \code{all_possible_targets},
+#' even not exist in the original network file will be include in the vertice of the igraph object.
+#' Default is TRUE.
+#' @param min_MI numeric, minimum threshold for MI. Default is 0.
+#' @param max_p.value numeric, maximum threshold for p.value. Default is 1.
+#' @param min_spearman_value numeric, minimum threshold for spearman absolute value. Default is 0.
+#' @param min_pearson_value numeric, minimum threshold for pearson absolute value. Default is 0.
+#' @param spearman_sign_use a vector of numeric value, 1 indicates positve values in spearman will be used. -1 indicates negative values will be used.
+#' If only want to include positive values, set \code{spearman_sign_use} to 1.
+#' Default is c(1,-1).
+#' @param pearson_sign_use a vector of numeric value, 1 indicates positve values in pearson will be used. -1 indicates negative values will be used.
+#' If only want to include positive values, set \code{pearson_sign_use} to 1.
+#' Default is c(1,-1).
+#' @param directed logical, whether the network in igraph is directed or not. Default is TRUE.
+#' @param weighted logical, whether to add the edge weight in the igraph object. Default is TRUE.
+#'
+#' @return This function will return a list containing three items, \code{network_dat}, \code{target_list} and \code{igraph_obj}.
+#'
+#' @examples
+#' if(exists('analysis.par')==TRUE) rm(analysis.par)
+#' network.dir <- sprintf('%s/demo1/network/',system.file(package = "NetBID2")) # use demo
+#' network.project.name <- 'project_2019-02-14' # demo project name
+#' project_main_dir <- 'test/'
+#' project_name <- 'test_driver'
+#' analysis.par  <- NetBID.analysis.dir.create(project_main_dir=project_main_dir,
+#'                                             prject_name=project_name,
+#'                                             network_dir=network.dir,
+#'                                             network_project_name=network.project.name)
+#' analysis.par$tf.network  <- get.SJAracne.network(network_file=analysis.par$tf.network.file)
+#' analysis.par$sig.network <- get.SJAracne.network(network_file=analysis.par$sig.network.file)
+#' all_possible_drivers <- c(names(analysis.par$tf.network$target_list)[1:1000],
+#'                            'addition_driver_1','addition_driver_2')
+#' tf.network.update <- update.SJAracne.network(network_list=analysis.par$tf.network,
+#'                                              all_possible_drivers=all_possible_drivers,
+#'                                              force_all_drivers=TRUE,
+#'                                              force_all_targets=FALSE,
+#'                                              pearson_sign_use=1)
+#' print(intersect(c('addition_driver_1','addition_driver_2'),
+#'       names(V(tf.network.update$igraph_obj)))) ## check
+#' \dontrun{
+#' }
+#' @export
+update.SJAracne.network <- function(network_list=NULL,
+                                    all_possible_drivers=NULL,
+                                    all_possible_targets=NULL,
+                                    force_all_drivers=TRUE,
+                                    force_all_targets=TRUE,
+                                    min_MI=0,max_p.value=1,
+                                    min_spearman_value=0,
+                                    min_pearson_value=0,
+                                    spearman_sign_use=c(1,-1),
+                                    pearson_sign_use=c(1,-1),
+                                    directed=TRUE,weighted=TRUE
+                                    ){
+  n1 <- names(network_list)
+  n2 <- c('network_dat','target_list','igraph_obj')
+  if(length(setdiff(n2,n1))>0){
+    message(sprintf('%s not included in the network_list, please chech and re-try !',paste(setdiff(n2,n1),collapse=';')));
+    return(FALSE)
+  }
+  ori_net_dat <- network_list$network_dat
+  net_dat <- ori_net_dat
+  if(is.null(all_possible_drivers)==TRUE) all_possible_drivers <- unique(net_dat$source)
+  if(is.null(all_possible_targets)==TRUE) all_possible_targets <- unique(net_dat$target)
+  # basic statistics filter
+  w1 <- which(net_dat$MI>=min_MI & net_dat$p.value<=max_p.value
+              & abs(net_dat$pearson)>=min_pearson_value &
+                abs(net_dat$spearman)>=min_spearman_value)
+  all_w1 <- w1 ## use rows
+  # sign choose
+  if(!1 %in% spearman_sign_use){ ## do not use the positive ones
+    w1 <- which(net_dat$spearman<=0)
+    all_w1 <- setdiff(all_w1,w1)
+  }
+  if(!-1 %in% spearman_sign_use){ ## do not use the negative ones
+    w1 <- which(net_dat$spearman>=0)
+    all_w1 <- setdiff(all_w1,w1)
+  }
+  if(!1 %in% pearson_sign_use){ ## do not use the positive ones
+    w1 <- which(net_dat$pearson<=0)
+    all_w1 <- setdiff(all_w1,w1)
+  }
+  if(!-1 %in% pearson_sign_use){ ## do not use the negative ones
+    w1 <- which(net_dat$pearson>=0)
+    all_w1 <- setdiff(all_w1,w1)
+  }
+  # nodes filter
+  all_possible_nodes <- unique(c(unique(net_dat$source),unique(net_dat$target))) ## original all possible
+  if(force_all_drivers==TRUE){
+    w1 <- which(net_dat$source %in% all_possible_drivers)
+    all_w1 <- unique(c(all_w1,w1))
+    all_possible_nodes <- unique(c(all_possible_nodes,all_possible_drivers))
+  }
+  if(force_all_targets==TRUE){
+    w1 <- which(net_dat$target %in% all_possible_targets)
+    all_w1 <- unique(c(all_w1,w1))
+    all_possible_nodes <- unique(c(all_possible_nodes,all_possible_targets))
+  }
+  message(sprintf('%d from %d edges are kept in the network !',length(all_w1),nrow(ori_net_dat)))
+  message(sprintf('%d nodes will be used to generate the igraph!',length(all_possible_nodes)))
+  # keep all genes in all* to be in the igraph
+  net_dat <- net_dat[which(net_dat$source %in% all_possible_drivers & net_dat$target %in% all_possible_targets),] ## filter by all
+  igraph_obj   <- graph_from_data_frame(net_dat[,c('source','target')],directed=directed,vertices = all_possible_nodes) ##
+  if(weighted==TRUE) igraph_obj <- set_edge_attr(igraph_obj,'weight',index=E(igraph_obj),value=net_dat[,'MI'])
+  target_list  <- get_net2target_list(net_dat)
+  return(list(network_dat=net_dat,target_list=target_list,igraph_obj=igraph_obj))
+}
+
+
+
+
 
 #' QC plot for the network
 #' @export
@@ -5639,9 +6134,10 @@ SJ.SJAracne.prepare <-
     # filter genes with count=0
     d <- d[!apply(d == 0, 1, all), ]
     # filter genes with IQR
-    choose1 <- IQR.filter(d, rownames(d),thre = 0.5,loose_thre=0.1,loose_gene=unique(c(TF_list,SIG_list)))
+    choose1 <- IQR.filter(d, rownames(d),thre = IQR.thre,loose_thre=IQR.loose_thre,loose_gene=unique(c(TF_list,SIG_list)))
     d <- d[choose1, ]
     use.genes <- rownames(d)
+    use.genes <- use.genes[which(is.na(use.genes)==FALSE)]
     # write exp data to exp format
     expdata <- data.frame(cbind(isoformId = fData(eset)[use.genes, ], geneSymbol = fData(eset)[use.genes, ], d))
     #
@@ -5834,3 +6330,1299 @@ SJ.SJAracne.step <- function(out.dir.SJAR) {
   return(TRUE)
 }
 ####
+
+
+#combRowEvid.2grps
+#d: dataframe as below: (first column is the annotation)
+#			geneSymbol  DMSO_1 DMSO_2 DMSO_3    DEX_1    DEX_2    DEX_3
+#P0112072    PRKAR2B 0.50099 1.2108 1.0524 -0.34881 -0.13441 -0.87112
+#P0112073    PRKAR2B 1.84579 2.0356 2.6025  1.62954  1.88281  1.29604
+#comp as below:
+# [1] 0 0 0 1 1 1
+# Levels: 0 1
+#d<-d[1,]
+combRowEvid.2grps<-function(d,comp,family=gaussian,method=c('MLE','Bayesian'),pooling=c('full','no','partial'),n.iter=1000,
+                            prior.V.scale=0.02,prior.R.nu=1,prior.G.nu=2,nitt = 13000,burnin =3000,thin=10,
+                            restand=TRUE,logTransformed=TRUE,log.base=2,average.method=c('geometric','arithmetic'),pseudoCount=0
+){
+
+  if(!all(comp %in% c(1,0))){
+    stop('comp only takes 1 or 0 !!! \n')
+  }
+
+  if(missing(pooling))
+    pooling<-c('full','no','partial')
+  else
+    pooling<-tolower(pooling)
+
+  pooling<-match.arg(pooling,several.ok=T)
+
+
+  if (is.character(family))
+    family <- get(family, mode = "function", envir = parent.frame())
+  if (is.function(family))
+    family <- family()
+  if (!family$family %in% c('gaussian','binomial', 'poisson')) {
+    print(family)
+    stop("Only Gaussian Poisson, and Binomial are supported!!! \n")
+  }
+
+  if(missing(method))
+    method<-'Bayesian'
+  if(grepl('Bayes',method,ignore.case = T)) method<-'Bayesian'
+  if(grepl('MLE|MaxLikelihood',method,ignore.case = T)) method<-'MLE'
+  method<-match.arg(method)
+
+
+  #remove NAs
+  nna<-apply(!is.na(d),2,all)
+  d<-d[,nna]
+  #comp<-comp[nna[-1]]
+
+  #d<-d[1,]
+  #cat(dim(d),'\n')
+  #cat(d[1,1],'\n')
+  d<-data.frame(t(d[,-1]))
+  #cat(dim(d),'\n')
+
+
+
+
+  dat<-data.frame(
+    response=
+      c(unlist(d[comp==levels(comp)[1],]),unlist(d[comp==levels(comp)[2],]))
+    ,
+    treatment=
+      factor(c(rep(levels(comp)[1],sum(comp==levels(comp)[1])*ncol(d)),rep(levels(comp)[2],sum(comp==levels(comp)[2])*ncol(d))))
+    ,
+    probe=
+      factor(c(rep(colnames(d),each=sum(comp==levels(comp)[1])),rep(colnames(d),each=sum(comp==levels(comp)[2]))))
+  )
+
+
+  #calculate FC
+  FC.val<-FC(dat$response,dat$treatment,logTransformed=logTransformed,log.base=log.base,average.method='geometric',pseudoCount=pseudoCount)
+
+  AveExp<-mean(dat$response)
+  n.levels<-nlevels(dat$probe)
+
+  rs<-c(FC=FC.val,AveExp=AveExp,n.levels=as.integer(n.levels))
+
+  #cat(rs,'\n')
+
+  if('arithmetic' %in% average.method){
+    FC.ari<-FC(dat$response,dat$treatment,logTransformed=logTransformed,log.base=log.base,average.method='arithmetic',pseudoCount=0)
+    rs<-c(FC.ari_raw=FC.ari,rs)
+  }
+
+
+  #re-standarize the input data
+  if(restand & sd(dat$response)>0)
+    dat$response<-0.5*(dat$response-mean(dat$response))/sd(dat$response)
+
+  #MLE approach to estimate parameters
+  if(method=='MLE'){
+    if(family$family=='gaussian'){
+      #comlete pooling
+      if('full'%in%pooling){
+        M.full<-glm(response ~ treatment, data=dat)
+        sum.tmp<-summary(M.full)
+        rs.full<-c(
+          coef.full=sum.tmp$coef[2,1],
+          se.full=sum.tmp$coef[2,2],
+          t.full=sum.tmp$coef[2,3],
+          pval.full=sum.tmp$coef[2,4],
+          #z.full=sign(sum.tmp$coef[2,1])*abs(qnorm(sum.tmp$coef[2,4]/2)),
+          df.full=sum.tmp$df.residual,
+          AIC.full=sum.tmp$aic,
+          BIC.full=AIC(M.full,k=log(nrow(dat))),
+          Dev.full=sum.tmp$deviance
+        )
+        rs<-c(rs,rs.full)
+      }
+
+      #no pooling
+      if('no'%in%pooling){
+        if(n.levels>1)
+          M.no<-glm(response ~ treatment + probe, data=dat)
+        else
+          M.no<-glm(response ~ treatment, data=dat)
+
+        sum.tmp<-summary(M.no)
+        rs.no<-c(
+          coef.no=sum.tmp$coef[2,1],
+          se.no=sum.tmp$coef[2,2],
+          t.no=sum.tmp$coef[2,3],
+          pval.no=sum.tmp$coef[2,4],
+          #z.no=sign(coef.no)*abs(qnorm(pval.no/2)),
+          df.no=sum.tmp$df.residual,
+          AIC.no=sum.tmp$aic,
+          BIC.no=AIC(M.no,k=log(nrow(dat))),
+          Dev.no=sum.tmp$deviance
+        )
+        rs<-c(rs,rs.no)
+      }
+
+
+      #partial pooling with multilevel model of varing slopes and intercepts
+      if('partial'%in%pooling){
+        if(n.levels>1){
+          #consider sd==0 case
+          if(sd(dat$response)==0)
+          {
+            dat$response<-rnorm(nrow(dat),mean(dat$response),sd(dat$response)+0.001)
+          }
+          M.partial<-glmer(response ~ treatment + (treatment + 1 | probe), data=dat)
+          sum.tmp<-summary(M.partial)
+          t.partial<-sum.tmp$coef[2,3]
+          df.partial<-as.numeric(	sum.tmp$devcomp$dims['n']-	sum.tmp$devcomp$dims['p']-	sum.tmp$devcomp$dims['q'])
+          pval.partial<-2*pt(abs(t.partial),lower.tail=FALSE,df=df.partial)
+          z.partial<-sign(t.partial)*abs(qnorm(pval.partial/2))
+          #########################################
+          #Another way to calculate pvalue
+          #########################################
+          #M.null<-glmer(response ~ (treatment + 1 | probe), data=dat)
+          #anova(M.partial, M.null)
+          rs.partial<-c(
+            coef.partial=sum.tmp$coef[2,1],
+            se.partial=sum.tmp$coef[2,2],
+            t.partial=t.partial,
+            pval.partial=pval.partial,
+            z.partial=z.partial,
+            df.partial=df.partial,
+            AIC.partial=as.numeric(sum.tmp$AICtab[1]),
+            BIC.partial=as.numeric(sum.tmp$AICtab[2]),
+            REMLDev.partial=-as.numeric(sum.tmp$AICtab[5]),
+            logLik=-as.numeric(sum.tmp$AICtab[3]),
+            Dev.partial=-as.numeric(sum.tmp$AICtab[4])
+          )
+        }else{
+          M.partial<-glm(response ~ treatment, data=dat)
+          sum.tmp<-summary(M.partial)
+          t.partial<-sum.tmp$coef[2,3]
+          df.partial<-sum.tmp$df.residual
+          pval.partial<-2*pt(abs(t.partial),lower.tail=FALSE,df=df.partial)
+          z.partial<-sign(t.partial)*abs(qnorm(pval.partial/2))
+          rs.partial<-c(
+            coef.partial=sum.tmp$coef[2,1],
+            se.partial=sum.tmp$coef[2,2],
+            t.partial=t.partial,
+            pval.partial=pval.partial,
+            z.partial=z.partial,
+            df.partial=df.partial,
+            AIC.partial=sum.tmp$aic,
+            BIC.partial=AIC(M.partial,k=log(nrow(dat))),
+            REMLDev.partial=sum.tmp$deviance,
+            logLik=logLik(M.partial),
+            Dev.partial=sum.tmp$deviance
+          )
+        }
+        rs<-c(rs,rs.partial)
+      }
+    }else if(family$family=='binomial'){
+      if('full'%in%pooling){
+        M.full<-glm(treatment ~ response, data=dat, family=family)
+        sum.tmp<-summary(M.full)
+        rs.full<-c(
+          coef.full=sum.tmp$coef[2,1],
+          se.full=sum.tmp$coef[2,2],
+          z.full=sum.tmp$coef[2,3],
+          pval.full=sum.tmp$coef[2,4],
+          df.full=sum.tmp$df.residual,
+          AIC.full=sum.tmp$aic,
+          BIC.full=AIC(M.full,k=log(nrow(dat))),
+          Dev.full=sum.tmp$deviance
+        )
+        rs<-c(rs,rs.full)
+      }
+      if('no'%in%pooling){
+        if(n.levels>1)
+          M.no<-glm(treatment ~ response + probe, data=dat, family=family)
+        else
+          M.no<-glm(treatment ~ response, data=dat, family=family)
+
+        sum.tmp<-summary(M.no)
+        rs.no<-c(
+          coef.no=sum.tmp$coef[2,1],
+          se.no=sum.tmp$coef[2,2],
+          pval.no=sum.tmp$coef[2,4],
+          z.no=sum.tmp$coef[2,3],
+          df.no=sum.tmp$df.residual,
+          AIC.no=sum.tmp$aic,
+          BIC.no=AIC(M.no,k=log(nrow(dat))),
+          Dev.no=sum.tmp$deviance
+        )
+        rs<-c(rs,rs.no)
+      }
+
+      if('partial'%in%pooling){
+        if(n.levels>1){
+          M.partial<-glmer(treatment ~ response + (response + 1 | probe), data=dat, family=family)
+          sum.tmp<-summary(M.partial)
+          t.partial<-sum.tmp$coef[2,3]
+          df.partial<-as.numeric(sum.tmp$devcomp$dims['n']-sum.tmp$devcomp$dims['p']-sum.tmp$devcomp$dims['q'])
+          pval.partial<-2*pt(abs(sum.tmp$coef[2,3]),lower.tail=FALSE,df=df.partial)
+          z.partial<-sign(t.partial)*abs(qnorm(pval.partial/2))
+          rs.partial<-c(
+            coef.partial=sum.tmp$coef[2,1],
+            se.partial=sum.tmp$coef[2,2],
+            t.partial=t.partial,
+            pval.partial=pval.partial,
+            z.partial=z.partial,
+            df.partial=df.partial,
+            AIC.partial=as.numeric(sum.tmp$AICtab[1]),
+            BIC.partial=as.numeric(sum.tmp$AICtab[2]),
+            Dev.partial=as.numeric(sum.tmp$AICtab[4])
+          )
+        }else{
+          M.partial<-glm(treatment ~ response, data=dat, family=family)
+          sum.tmp<-summary(M.partial)
+          t.partial<-sum.tmp$coef[2,3]
+          df.partial<-sum.tmp$df.residual
+          pval.partial<-2*pt(abs(t.partial),lower.tail=FALSE,df=df.partial)
+          z.partial<-sign(t.partial)*abs(qnorm(pval.partial/2))
+          rs.partial<-c(
+            coef.partial=sum.tmp$coef[2,1],
+            se.partial=sum.tmp$coef[2,2],
+            t.partial=t.partial,
+            pval.partial=pval.partial,
+            z.partial=z.partial,
+            df.partial=df.partial,
+            AIC.partial=sum.tmp$aic,
+            BIC.partial=AIC(M.partial,k=log(nrow(dat))),
+            Dev.partial=sum.tmp$deviance
+          )
+        }
+        rs<-c(rs,rs.partial)
+      }
+
+
+    }else if(family$family=='poisson'){
+      #comlete pooling
+      if('full'%in%pooling){
+        M.full<-glm(response ~ treatment, data=dat,family='poisson')
+        sum.tmp<-summary(M.full)
+        rs.full<-c(
+          coef.full=sum.tmp$coef[2,1],
+          se.full=sum.tmp$coef[2,2],
+          t.full=sum.tmp$coef[2,3],
+          pval.full=sum.tmp$coef[2,4],
+          #z.full=sign(sum.tmp$coef[2,1])*abs(qnorm(sum.tmp$coef[2,4]/2)),
+          df.full=sum.tmp$df.residual,
+          AIC.full=sum.tmp$aic,
+          BIC.full=AIC(M.full,k=log(nrow(dat))),
+          Dev.full=sum.tmp$deviance
+        )
+        rs<-c(rs,rs.full)
+      }
+
+      #no pooling
+      if('no'%in%pooling){
+        if(n.levels>1)
+          M.no<-glm(response ~ treatment + probe, data=dat,family='poisson')
+        else
+          M.no<-glm(response ~ treatment, data=dat,family='poisson')
+
+        sum.tmp<-summary(M.no)
+        rs.no<-c(
+          coef.no=sum.tmp$coef[2,1],
+          se.no=sum.tmp$coef[2,2],
+          t.no=sum.tmp$coef[2,3],
+          pval.no=sum.tmp$coef[2,4],
+          #z.no=sign(coef.no)*abs(qnorm(pval.no/2)),
+          df.no=sum.tmp$df.residual,
+          AIC.no=sum.tmp$aic,
+          BIC.no=AIC(M.no,k=log(nrow(dat))),
+          Dev.no=sum.tmp$deviance
+        )
+        rs<-c(rs,rs.no)
+      }
+
+      #partial pooling with multilevel model of varing slopes and intercepts
+      if('partial'%in%pooling){
+        if(n.levels>1){
+          M.partial<-glmer(response ~ treatment + (treatment + 1 | probe), data=dat,family='poisson')
+          sum.tmp<-summary(M.partial)
+          t.partial<-sum.tmp$coef[2,3]
+          df.partial<-as.numeric(sum.tmp$devcomp$dims['n']-sum.tmp$devcomp$dims['p']-sum.tmp$devcomp$dims['q'])
+          pval.partial<-2*pt(abs(sum.tmp$coef[2,3]),lower.tail=FALSE,df=df.partial)
+          z.partial<-sign(t.partial)*abs(qnorm(pval.partial/2))
+          rs.partial<-c(
+            coef.partial=sum.tmp$coef[2,1],
+            se.partial=sum.tmp$coef[2,2],
+            t.partial=t.partial,
+            pval.partial=pval.partial,
+            z.partial=z.partial,
+            df.partial=df.partial,
+            AIC.partial=as.numeric(sum.tmp$AICtab[1]),
+            BIC.partial=as.numeric(sum.tmp$AICtab[2]),
+            #REMLDev.partial=-as.numeric(sum.tmp$AICtab[5]),
+            logLik=-as.numeric(sum.tmp$AICtab[3]),
+            Dev.partial=-as.numeric(sum.tmp$AICtab[4])
+          )
+        }else{
+          M.partial<-glm(response ~ treatment, data=dat,family='poisson')
+          sum.tmp<-summary(M.partial)
+          t.partial<-sum.tmp$coef[2,3]
+          df.partial<-sum.tmp$df.residual
+          pval.partial<-2*pt(abs(t.partial),lower.tail=FALSE,df=df.partial)
+          z.partial<-sign(t.partial)*abs(qnorm(pval.partial/2))
+          rs.partial<-c(
+            coef.partial=sum.tmp$coef[2,1],
+            se.partial=sum.tmp$coef[2,2],
+            t.partial=t.partial,
+            pval.partial=pval.partial,
+            z.partial=z.partial,
+            df.partial=df.partial,
+            AIC.partial=sum.tmp$aic,
+            BIC.partial=AIC(M.partial,k=log(nrow(dat))),
+            #REMLDev.partial=sum.tmp$deviance,
+            logLik=logLik(M.partial),
+            Dev.partial=sum.tmp$deviance
+          )
+        }
+        rs<-c(rs,rs.partial)
+      }
+
+    }
+    else{
+      stop('Only liner model with gaussian or poisson distrn and binomial family model are supported !!! \n')
+    }
+  }
+
+  #Bayesian approach
+  else if(method=='Bayesian'){
+    require(arm)
+    require(MCMCglmm)
+
+    if(family$family=='gaussian'){
+      if('full'%in%pooling){
+        #comlete pooling
+        #				M.full<-bayesglm(response ~ treatment, data=dat,n.iter = n.iter)
+        if(sd(dat$response)>0){
+          M.full<-bayesglm(response ~ treatment, data=dat)
+          sum.tmp<-summary(M.full)
+
+          rs.full<-c(
+            coef.full=sum.tmp$coef[2,1],
+            se.full=sum.tmp$coef[2,2],
+            t.full=sum.tmp$coef[2,3],
+            pval.full=sum.tmp$coef[2,4],
+            z.full=sign(sum.tmp$coef[2,1])*abs(qnorm(sum.tmp$coef[2,4]/2)),
+            df.full=sum.tmp$df.residual-sum.tmp$df[1],
+            AIC.full=sum.tmp$aic,
+            BIC.full=AIC(M.full,k=log(nrow(dat))),
+            Dev.full=sum.tmp$deviance
+          )
+        }else{
+          rs.full<-c(
+            coef.full=0,
+            se.full=0,
+            t.full=0,
+            pval.full=1,
+            z.full=0,
+            df.full=NA,
+            AIC.full=NA,
+            BIC.full=NA,
+            Dev.full=NA
+          )
+        }
+        rs<-c(rs,rs.full)
+      }
+
+      if('no'%in%pooling){
+        #no pooling
+        if(n.levels>1)
+          #					M.no<-bayesglm(response ~ treatment + probe, data=dat, n.iter=n.iter)
+          M.no<-bayesglm(response ~ treatment + probe, data=dat)
+        else
+          #M.no<-bayesglm(response ~ treatment, data=dat, n.iter=n.iter)
+          M.no<-bayesglm(response ~ treatment, data=dat)
+        sum.tmp<-summary(M.no)
+
+        rs.no<-c(
+          coef.no=sum.tmp$coef[2,1],
+          se.no=sum.tmp$coef[2,2],
+          t.no=sum.tmp$coef[2,3],
+          pval.no=sum.tmp$coef[2,4],
+          #z.no=sign(coef.no)*abs(qnorm(pval.no/2)),
+          df.no=sum.tmp$df.residual-sum.tmp$df[1],
+          AIC.no=sum.tmp$aic,
+          BIC.no=AIC(M.no,k=log(nrow(dat))),
+          Dev.no=sum.tmp$deviance
+        )
+        rs<-c(rs,rs.no)
+
+      }
+
+      if('partial'%in%pooling){
+        #partial pooling with multilevel model of varing slopes and intercepts
+        prior<-list(R = list(V = prior.V.scale, nu=prior.R.nu), G = list(G1 = list(V = diag(2)*prior.V.scale, nu = prior.G.nu )))
+
+        if(n.levels>1){
+          M.partial<-MCMCglmm(response ~ treatment, random=~idh(treatment+1):probe, data=dat, prior=prior,verbose=FALSE, nitt=nitt, burnin = burnin,thin=thin)
+          df.partial<-nrow(dat)-(n.levels+1)*2
+        }else{
+          prior<-list(R = list(V = prior.V.scale, nu=prior.R.nu))
+
+          M.partial<-MCMCglmm(response ~ treatment, data=dat, prior=prior,verbose=FALSE, nitt=nitt, burnin = burnin,thin=thin)
+
+          df.partial<-nrow(dat)-2
+
+          #cat(n.levels,df.partial,'\n')
+        }
+        sum.tmp<-summary(M.partial)
+        t.partial<-sum.tmp$sol[2,1]/sd(M.partial$Sol[,2])
+        pval.partial<-2*pt(-abs(t.partial),df=df.partial)
+        if(is.na(pval.partial))
+          pval.partial<-sum.tmp$sol[2,5]
+        z.partial<-sign(t.partial)*abs(qnorm(pval.partial/2))
+        rs.partial<-c(
+          coef.partial=sum.tmp$sol[2,1],
+          'l-95% CI.partial'=sum.tmp$sol[2,2],
+          'u-95% CI.partial'=sum.tmp$sol[2,3],
+          t.partial=t.partial,
+          pval.partial=pval.partial,
+          z.partial=z.partial,
+          df.partial=df.partial,
+          #pMCMC
+          pvalMCMC.partial=sum.tmp$sol[2,5],
+          #z.partial=sign(sum.tmp$sol[2,1])*abs(qnorm(sum.tmp$sol[2,5]/2)),
+          #effective sample size
+          n.effet.partial=sum.tmp$sol[2,4],
+          n.MCMC.partial=sum.tmp$cstats[3],
+          #Standard Deviation
+          sd.partial=sd(M.partial$Sol[,2]),
+          #only DIC saved, set AIC, BIC as DIC
+          DIC.partial=sum.tmp$DIC,
+          Dev.partial=mean(M.partial$Deviance)
+        )
+        rs<-c(rs,rs.partial)
+      }
+
+    }else if(family$family=='binomial'){
+
+      if(family$link=='logit')
+        prior.scale<-2.5
+      else if(family$link=='probit')
+        prior.scale<-2.5*1.6
+
+      if('full'%in%pooling){
+        #M.full<-bayesglm(treatment ~ response, data=dat, family=family, n.iter = n.iter, prior.scale = prior.scale)
+        M.full<-bayesglm(treatment ~ response, data=dat, family=family, prior.scale = prior.scale)
+        sum.tmp<-summary(M.full)
+        rs.full<-c(
+          coef.full=sum.tmp$coef[2,1],
+          se.full=sum.tmp$coef[2,2],
+          z.full=sum.tmp$coef[2,3],
+          pval.full=sum.tmp$coef[2,4],
+          #a bug in bayeglm for summary, fix: total obs - rank of the model
+          df.full=sum.tmp$df.residual-sum.tmp$df[1],
+          AIC.full=sum.tmp$aic,
+          BIC.full=AIC(M.full,k=log(nrow(dat))),
+          Dev.full=sum.tmp$deviance
+        )
+        rs<-c(rs,rs.full)
+      }
+
+      if('no'%in%pooling){
+        if(n.levels>1)
+          #M.no<-bayesglm(treatment ~ response + probe, data=dat, family=family, n.iter=n.iter,prior.scale = prior.scale)
+          M.no<-bayesglm(treatment ~ response + probe, data=dat, family=family,prior.scale = prior.scale)
+        else
+          #M.no<-bayesglm(treatment ~ response, data=dat, family=family, n.iter=n.iter,prior.scale = prior.scale)
+          M.no<-bayesglm(treatment ~ response, data=dat, family=family, prior.scale = prior.scale)
+
+        sum.tmp<-summary(M.no)
+        rs.no<-c(
+          coef.no=sum.tmp$coef[2,1],
+          se.no=sum.tmp$coef[2,2],
+          pval.no=sum.tmp$coef[2,4],
+          z.no=sum.tmp$coef[2,3],
+          df.no=sum.tmp$df.residual-sum.tmp$df[1],
+          AIC.no=sum.tmp$aic,
+          BIC.no=AIC(M.no,k=log(nrow(dat))),
+          Dev.no=sum.tmp$deviance
+        )
+        rs<-c(rs,rs.no)
+      }
+      if('partial'%in%pooling){
+        #categorial=logit, ordinal=probit
+        if(family$link=='logit'){
+          glmm.family<-'categorial'
+          if(n.levels>1){
+            prior<-list(R = list(V = prior.V.scale, nu=n.levels), G = list(G1 = list(V = diag(2)*prior.V.scale, nu = n.levels+1)))
+          }else{
+            prior<-list(R = list(V = prior.V.scale, nu=n.levels))
+          }
+        }
+        else if(family$link=='probit'){
+          glmm.family<-'ordinal'
+          if(n.levels>1){
+            prior<-list(R = list(V = prior.V.scale, nu=n.levels+1), G = list(G1 = list(V = diag(2)*prior.V.scale, nu = n.levels+1)))
+          }else{
+            prior<-list(R = list(V = prior.V.scale, nu=n.levels+1))
+          }
+        }
+        else
+          stop('For multilevel model with Binomial family and Bayeisan method, only logit and probit model are supported!!! \n')
+
+        #			coef.scale<-ifelse(family$link=='logit', 2.5^2, (2.5*1.6)^2)
+        #			intercept.scale<-ifelse(family$link=='logit', 10^2, (10*1.6)^2)
+        #			scale<-var(dat$treatment)/var(dat$response)
+        ################################# prior to be modified #################################
+        #alpha.mu=rep(0,2),alpha.V=diag(2)*25^2)))
+        #########################################################################################
+        sd.threshold<-prior.scale*4
+        #coef.sign<- -sign(logFC)
+        #				while(sd.threshold>prior.scale*2){
+        if(n.levels>1){
+          M.partial<-MCMCglmm(treatment~response, random=~idh(1+response):probe,family=glmm.family, prior=prior, data=dat, verbose=FALSE, nitt = nitt, burnin = burnin,thin=thin)
+          df.partial<-nrow(dat)-(n.levels+1)*2
+        }else{
+          M.partial<-MCMCglmm(treatment~response,family=glmm.family, prior=prior, data=dat, verbose=FALSE, nitt = nitt, burnin = burnin,thin=thin)
+          df.partial<-nrow(dat)-2
+        }
+        sum.tmp<-summary(M.partial)
+        t.partial<-sum.tmp$sol[2,1]/sd(M.partial$Sol[,2])
+        pval.partial<-2*pt(-abs(t.partial),df=df.partial)
+        z.partial<-sign(t.partial)*abs(qnorm(pval.partial/2))
+        rs.partial<-c(
+          coef.partial=sum.tmp$sol[2,1],
+          'l-95% CI.partial'=sum.tmp$sol[2,2],
+          'u-95% CI.partial'=sum.tmp$sol[2,3],
+          t.partial=t.partial,
+          pval.partial=pval.partial,
+          z.partial=z.partial,
+          df.partial=df.partial,
+          #pMCMC
+          pvalMCMC.partial=sum.tmp$sol[2,5],
+          #						z.partial=sign(sum.tmp$sol[2,1])*abs(qnorm(sum.tmp$sol[2,5]/2)),
+          #effective sample size
+          n.effet.partial=sum.tmp$sol[2,4],
+          n.MCMC.partial=sum.tmp$cstats[3],
+          #Standard Deviation
+          sd.partial=sd(M.partial$Sol[,2]),
+          #only DIC saved, set AIC, BIC as DIC
+          DIC.partial=sum.tmp$DIC,
+          Dev.partial=mean(M.partial$Deviance)
+        )
+        #coef.sign<-sign(rs.partial['coef.partial'])
+        sd.threshold<-as.double(rs.partial['sd.partial'])
+        #				}
+        rs<-c(rs,rs.partial)
+      }
+    }else if(family$family=='poisson'){
+      if('full'%in%pooling){
+        #comlete pooling
+        #M.full<-bayesglm(response ~ treatment, data=dat,n.iter = n.iter,family='poisson')
+        M.full<-bayesglm(response ~ treatment, data=dat,family='poisson')
+
+        sum.tmp<-summary(M.full)
+        rs.full<-c(
+          coef.full=sum.tmp$coef[2,1],
+          se.full=sum.tmp$coef[2,2],
+          t.full=sum.tmp$coef[2,3],
+          pval.full=sum.tmp$coef[2,4],
+          #z.full=sign(sum.tmp$coef[2,1])*abs(qnorm(sum.tmp$coef[2,4]/2)),
+          df.full=sum.tmp$df.residual-sum.tmp$df[1],
+          AIC.full=sum.tmp$aic,
+          BIC.full=AIC(M.full,k=log(nrow(dat))),
+          Dev.full=sum.tmp$deviance
+        )
+        rs<-c(rs,rs.full)
+      }
+
+      if('no'%in%pooling){
+        #no pooling
+        if(n.levels>1)
+          #M.no<-bayesglm(response ~ treatment + probe, data=dat, n.iter=n.iter,family='poisson')
+          M.no<-bayesglm(response ~ treatment + probe, data=dat,family='poisson')
+        else
+          #M.no<-bayesglm(response ~ treatment, data=dat, n.iter=n.iter,family='poisson')
+          M.no<-bayesglm(response ~ treatment, data=dat,family='poisson')
+        sum.tmp<-summary(M.no)
+        rs.no<-c(
+          coef.no=sum.tmp$coef[2,1],
+          se.no=sum.tmp$coef[2,2],
+          t.no=sum.tmp$coef[2,3],
+          pval.no=sum.tmp$coef[2,4],
+          #z.no=sign(coef.no)*abs(qnorm(pval.no/2)),
+          df.no=sum.tmp$df.residual-sum.tmp$df[1],
+          AIC.no=sum.tmp$aic,
+          BIC.no=AIC(M.no,k=log(nrow(dat))),
+          Dev.no=sum.tmp$deviance
+        )
+        rs<-c(rs,rs.no)
+      }
+
+      if('partial'%in%pooling){
+        #partial pooling with multilevel model of varing slopes and intercepts
+        prior<-list(R = list(V = prior.V.scale, nu=prior.R.nu), G = list(G1 = list(V = diag(2)*prior.V.scale, nu = prior.G.nu )))
+
+        if(n.levels>1){
+          M.partial<-MCMCglmm(response ~ treatment, random=~idh(treatment+1):probe, data=dat, prior=prior,verbose=FALSE, nitt=nitt, burnin = burnin,thin=thin,family='poisson')
+          df.partial<-nrow(dat)-(n.levels+1)*2
+        }
+        else{
+          prior<-list(R = list(V = prior.V.scale, nu=prior.R.nu))
+          M.partial<-MCMCglmm(response ~ treatment, data=dat, prior=prior,verbose=FALSE, nitt=nitt, burnin = burnin,thin=thin,family='poisson')
+          df.partial<-nrow(dat)-2
+        }
+        sum.tmp<-summary(M.partial)
+        t.partial<-sum.tmp$sol[2,1]/sd(M.partial$Sol[,2])
+        pval.partial<-2*pt(-abs(t.partial),df=df.partial)
+        z.partial<-sign(t.partial)*abs(qnorm(pval.partial/2))
+        rs.partial<-c(
+          coef.partial=sum.tmp$sol[2,1],
+          'l-95% CI.partial'=sum.tmp$sol[2,2],
+          'u-95% CI.partial'=sum.tmp$sol[2,3],
+          t.partial=t.partial,
+          pval.partial=pval.partial,
+          z.partial=z.partial,
+          df.partial=df.partial,
+          #pMCMC
+          pvalMCMC.partial=sum.tmp$sol[2,5],
+          #					z.partial=sign(sum.tmp$sol[2,1])*abs(qnorm(sum.tmp$sol[2,5]/2)),
+          n.effet.partial=sum.tmp$sol[2,4],
+          n.MCMC.partial=sum.tmp$cstats[3],
+          #Standard Deviation
+          sd.partial=sd(M.partial$Sol[,2]),
+          #only DIC saved, set AIC, BIC as DIC
+          DIC.partial=sum.tmp$DIC,
+          Dev.partial=mean(M.partial$Deviance)
+        )
+        rs<-c(rs,rs.partial)
+      }
+    }else{
+      stop('Only liner model and binomial family model are supported !!! \n')
+    }
+  }
+
+  #taking care of extreme cases where se or sd is zero
+  w1 <- grep('^t|^z',names(rs))
+  w2 <- grep('^se|^sd',names(rs))
+  w3 <- grep('^pval',names(rs))
+  if(rs[w2]==0 & is.na(rs[w1[1]])==TRUE){
+    rs[w1]<-0
+    rs[w3]<-1
+  }
+  rs
+}
+
+
+
+#comparsion of mult-igroups
+#only support linear Gausian model so far
+combRowEvid.multgrps<-function(d,comp,family=gaussian,method=c('MLE','Bayesian'),pooling=c('full','no','partial'), n.iter=1000,
+                               prior.V.scale=0.02, prior.R.nu=1, prior.G.nu=2, nitt = 13000, burnin = 3000,thin=10,restand=TRUE,logTransformed=TRUE,log.base=2,pseudoCount=0){
+
+  require(reshape)
+  if(missing(pooling))
+    pooling<-c('full','no','partial')
+  else
+    pooling<-tolower(pooling)
+
+  pooling<-match.arg(pooling,several.ok=T)
+
+  if (is.character(family))
+    family <- get(family, mode = "function", envir = parent.frame())
+  if (is.function(family))
+    family <- family()
+  #	if (!family$family %in% c('gaussian','binomial', 'poisson')) {
+  if (!family$family %in% c('gaussian')) {
+    print(family)
+    #stop("Only Gaussian Poisson, and Binomial are supported!!! \n")
+    stop("Only Gaussian model is supported!!! \n")
+  }
+
+  if(missing(method))
+    method<-'Bayesian'
+  if(grepl('Bayes',method,ignore.case = T)) method<-'Bayesian'
+  if(grepl('MLE|MaxLikelihood',method,ignore.case = T)) method<-'MLE'
+  method<-match.arg(method)
+
+  d<-reshape::melt(t(d[,-1]))
+
+  dat<-data.frame(response=d$value,treatment=rep(comp,nlevels(d$X2)),probe=d$X2)
+
+  AveExp<-mean(dat$response)
+  n.levels<-nlevels(dat$probe)
+  n.treatments<-nlevels(dat$treatment)
+  rs<-c(AveExp=AveExp,n.levels=as.integer(n.levels))
+
+  #re-standarize the input data
+  if(restand & sd(dat$response)>0)
+    dat$response<-0.5*(dat$response-mean(dat$response))/sd(dat$response)
+
+  #MLE approach to estimate parameters
+  if(method=='MLE'){
+    if(family$family=='gaussian'){
+      #comlete pooling
+      if('full'%in%pooling){
+        M.full<-glm(response ~ as.ordered(treatment), data=dat)
+        sum.tmp<-summary(M.full)
+        rs.full<-c(
+          coef.full=sum.tmp$coef[-1,1],
+          se.full=sum.tmp$coef[-1,2],
+          t.full=sum.tmp$coef[-1,3],
+          pval.full=sum.tmp$coef[-1,4],
+          #z.full=sign(sum.tmp$coef[2,1])*abs(qnorm(sum.tmp$coef[2,4]/2)),
+          df.full=sum.tmp$df.residual,
+          AIC.full=sum.tmp$aic,
+          BIC.full=AIC(M.full,k=log(nrow(dat))),
+          Dev.full=sum.tmp$deviance
+        )
+        rs<-c(rs,rs.full)
+      }
+      #no pooling
+      if('no'%in%pooling){
+        if(n.levels>1)
+          M.no<-glm(response ~ treatment + probe, data=dat)
+        else
+          M.no<-glm(response ~ treatment, data=dat)
+
+        sum.tmp<-summary(M.no)
+        rs.no<-c(
+          coef.no=sum.tmp$coef[2:n.treatments,1],
+          se.no=sum.tmp$coef[2:n.treatments,2],
+          t.no=sum.tmp$coef[2:n.treatments,3],
+          pval.no=sum.tmp$coef[2:n.treatments,4],
+          #z.no=sign(coef.no)*abs(qnorm(pval.no/2)),
+          df.no=sum.tmp$df.residual,
+          AIC.no=sum.tmp$aic,
+          BIC.no=AIC(M.no,k=log(nrow(dat))),
+          Dev.no=sum.tmp$deviance
+        )
+        rs<-c(rs,rs.no)
+      }
+
+
+      #partial pooling with multilevel model of varing slopes and intercepts
+      if('partial'%in%pooling){
+        if(n.levels>1){
+          #consider sd==0 case
+          if(sd(dat$response)==0)
+          {
+            dat$response<-rnorm(nrow(dat),mean(dat$response),sd(dat$response)+0.001)
+          }
+          M.partial<-glmer(response ~ treatment + (treatment + 1 | probe), data=dat)
+          sum.tmp<-summary(M.partial)
+
+          t.partial<-sum.tmp$coef[-1,3]
+          df.partial<-as.numeric(sum.tmp$devcomp$dims['n']-sum.tmp$devcomp$dims['p']-sum.tmp$devcomp$dims['q'])
+          pval.partial<-2*pt(abs(t.partial),lower.tail=FALSE,df=df.partial)
+          z.partial<-sign(t.partial)*abs(qnorm(pval.partial/2))
+          #########################################
+          #Another way to calculate pvalue
+          #########################################
+          #M.null<-glmer(response ~ (treatment + 1 | probe), data=dat)
+          #anova(M.partial, M.null)
+          rs.partial<-c(
+            coef.partial=sum.tmp$coef[-1,1],
+            se.partial=sum.tmp$coef[-1,2],
+            t.partial=t.partial,
+            pval.partial=pval.partial,
+            z.partial=z.partial,
+            df.partial=df.partial,
+            AIC.partial=as.numeric(sum.tmp$AICtab[1]),
+            BIC.partial=as.numeric(sum.tmp$AICtab[2]),
+            REMLDev.partial=-as.numeric(sum.tmp$AICtab[5]),
+            logLik=-as.numeric(sum.tmp$AICtab[3]),
+            Dev.partial=-as.numeric(sum.tmp$AICtab[4])
+          )
+        }else{
+          M.partial<-glm(response ~ treatment, data=dat)
+          sum.tmp<-summary(M.partial)
+          t.partial<-sum.tmp$coef[-1,3]
+          df.partial<-sum.tmp$df.residual
+          pval.partial<-2*pt(abs(t.partial),lower.tail=FALSE,df=df.partial)
+          z.partial<-sign(t.partial)*abs(qnorm(pval.partial/2))
+          rs.partial<-c(
+            coef.partial=sum.tmp$coef[-1,1],
+            se.partial=sum.tmp$coef[-1,2],
+            t.partial=t.partial,
+            pval.partial=pval.partial,
+            z.partial=z.partial,
+            df.partial=df.partial,
+            AIC.partial=sum.tmp$aic,
+            BIC.partial=AIC(M.partial,k=log(nrow(dat))),
+            REMLDev.partial=sum.tmp$deviance,
+            logLik=logLik(M.partial),
+            Dev.partial=sum.tmp$deviance
+          )
+        }
+        rs<-c(rs,rs.partial)
+      }
+
+    }else if(family$family=='binomial'){
+      if('full'%in%pooling){
+        M.full<-glm(treatment ~ response, data=dat, family=family)
+        sum.tmp<-summary(M.full)
+        rs.full<-c(
+          coef.full=sum.tmp$coef[2,1],
+          se.full=sum.tmp$coef[2,2],
+          z.full=sum.tmp$coef[2,3],
+          pval.full=sum.tmp$coef[2,4],
+          df.full=sum.tmp$df.residual,
+          AIC.full=sum.tmp$aic,
+          BIC.full=AIC(M.full,k=log(nrow(dat))),
+          Dev.full=sum.tmp$deviance
+        )
+        rs<-c(rs,rs.full)
+      }
+      if('no'%in%pooling){
+        if(n.levels>1)
+          M.no<-glm(treatment ~ response + probe, data=dat, family=family)
+        else
+          M.no<-glm(treatment ~ response, data=dat, family=family)
+
+        sum.tmp<-summary(M.no)
+        rs.no<-c(
+          coef.no=sum.tmp$coef[2,1],
+          se.no=sum.tmp$coef[2,2],
+          pval.no=sum.tmp$coef[2,4],
+          z.no=sum.tmp$coef[2,3],
+          df.no=sum.tmp$df.residual,
+          AIC.no=sum.tmp$aic,
+          BIC.no=AIC(M.no,k=log(nrow(dat))),
+          Dev.no=sum.tmp$deviance
+        )
+        rs<-c(rs,rs.no)
+      }
+
+      if('partial'%in%pooling){
+        if(n.levels>1){
+          M.partial<-glmer(treatment ~ response + (response + 1 | probe), data=dat, family=family)
+          sum.tmp<-summary(M.partial)
+          t.partial<-sum.tmp$coef[2,3]
+          df.partial<-as.numeric(sum.tmp$devcomp$dims['n']-sum.tmp$devcomp$dims['p']-sum.tmp$devcomp$dims['q'])
+          pval.partial<-2*pt(abs(sum.tmp$coef[2,3]),lower.tail=FALSE,df=df.partial)
+          z.partial<-sign(t.partial)*abs(qnorm(pval.partial/2))
+          rs.partial<-c(
+            coef.partial=sum.tmp$coef[2,1],
+            se.partial=sum.tmp$coef[2,2],
+            t.partial=t.partial,
+            pval.partial=pval.partial,
+            z.partial=z.partial,
+            df.partial=df.partial,
+            AIC.partial=as.numeric(sum.tmp$AICtab[1]),
+            BIC.partial=as.numeric(sum.tmp$AICtab[2]),
+            Dev.partial=as.numeric(sum.tmp$AICtab[4])
+          )
+        }else{
+          M.partial<-glm(treatment ~ response, data=dat, family=family)
+          sum.tmp<-summary(M.partial)
+          t.partial<-sum.tmp$coef[2,3]
+          df.partial<-sum.tmp$df.residual
+          pval.partial<-2*pt(abs(t.partial),lower.tail=FALSE,df=df.partial)
+          z.partial<-sign(t.partial)*abs(qnorm(pval.partial/2))
+          rs.partial<-c(
+            coef.partial=sum.tmp$coef[2,1],
+            se.partial=sum.tmp$coef[2,2],
+            t.partial=t.partial,
+            pval.partial=pval.partial,
+            z.partial=z.partial,
+            df.partial=df.partial,
+            AIC.partial=sum.tmp$aic,
+            BIC.partial=AIC(M.partial,k=log(nrow(dat))),
+            Dev.partial=sum.tmp$deviance
+          )
+        }
+        rs<-c(rs,rs.partial)
+      }
+
+
+    }else if(family$family=='poisson'){
+      #comlete pooling
+      if('full'%in%pooling){
+        M.full<-glm(response ~ treatment, data=dat,family='poisson')
+        sum.tmp<-summary(M.full)
+        rs.full<-c(
+          coef.full=sum.tmp$coef[2,1],
+          se.full=sum.tmp$coef[2,2],
+          t.full=sum.tmp$coef[2,3],
+          pval.full=sum.tmp$coef[2,4],
+          #z.full=sign(sum.tmp$coef[2,1])*abs(qnorm(sum.tmp$coef[2,4]/2)),
+          df.full=sum.tmp$df.residual,
+          AIC.full=sum.tmp$aic,
+          BIC.full=AIC(M.full,k=log(nrow(dat))),
+          Dev.full=sum.tmp$deviance
+        )
+        rs<-c(rs,rs.full)
+      }
+
+      #no pooling
+      if('no'%in%pooling){
+        if(n.levels>1)
+          M.no<-glm(response ~ treatment + probe, data=dat,family='poisson')
+        else
+          M.no<-glm(response ~ treatment, data=dat,family='poisson')
+
+        sum.tmp<-summary(M.no)
+        rs.no<-c(
+          coef.no=sum.tmp$coef[2,1],
+          se.no=sum.tmp$coef[2,2],
+          t.no=sum.tmp$coef[2,3],
+          pval.no=sum.tmp$coef[2,4],
+          #z.no=sign(coef.no)*abs(qnorm(pval.no/2)),
+          df.no=sum.tmp$df.residual,
+          AIC.no=sum.tmp$aic,
+          BIC.no=AIC(M.no,k=log(nrow(dat))),
+          Dev.no=sum.tmp$deviance
+        )
+        rs<-c(rs,rs.no)
+      }
+
+      #partial pooling with multilevel model of varing slopes and intercepts
+      if('partial'%in%pooling){
+        if(n.levels>1){
+          M.partial<-glmer(response ~ treatment + (treatment + 1 | probe), data=dat,family='poisson')
+          sum.tmp<-summary(M.partial)
+          t.partial<-sum.tmp$coef[2,3]
+          df.partial<-as.numeric(sum.tmp$devcomp$dims['n']-sum.tmp$devcomp$dims['p']-sum.tmp$devcomp$dims['q'])
+          pval.partial<-2*pt(abs(sum.tmp$coef[2,3]),lower.tail=FALSE,df=df.partial)
+          z.partial<-sign(t.partial)*abs(qnorm(pval.partial/2))
+          rs.partial<-c(
+            coef.partial=sum.tmp$coef[2,1],
+            se.partial=sum.tmp$coef[2,2],
+            t.partial=t.partial,
+            pval.partial=pval.partial,
+            z.partial=z.partial,
+            df.partial=df.partial,
+            AIC.partial=as.numeric(sum.tmp$AICtab[1]),
+            BIC.partial=as.numeric(sum.tmp$AICtab[2]),
+            #REMLDev.partial=-as.numeric(sum.tmp$AICtab[5]),
+            logLik=-as.numeric(sum.tmp$AICtab[3]),
+            Dev.partial=-as.numeric(sum.tmp$AICtab[4])
+          )
+        }else{
+          M.partial<-glm(response ~ treatment, data=dat,family='poisson')
+          sum.tmp<-summary(M.partial)
+          t.partial<-sum.tmp$coef[2,3]
+          df.partial<-sum.tmp$df.residual
+          pval.partial<-2*pt(abs(t.partial),lower.tail=FALSE,df=df.partial)
+          z.partial<-sign(t.partial)*abs(qnorm(pval.partial/2))
+          rs.partial<-c(
+            coef.partial=sum.tmp$coef[2,1],
+            se.partial=sum.tmp$coef[2,2],
+            t.partial=t.partial,
+            pval.partial=pval.partial,
+            z.partial=z.partial,
+            df.partial=df.partial,
+            AIC.partial=sum.tmp$aic,
+            BIC.partial=AIC(M.partial,k=log(nrow(dat))),
+            #REMLDev.partial=sum.tmp$deviance,
+            logLik=logLik(M.partial),
+            Dev.partial=sum.tmp$deviance
+          )
+        }
+        rs<-c(rs,rs.partial)
+      }
+
+    }
+    else{
+      stop('Only liner model with gaussian or poisson distrn and binomial family model are supported !!! \n')
+    }
+  }
+
+  #Bayesian approach
+  else if(method=='Bayesian'){
+    require(arm)
+    require(MCMCglmm)
+    if(family$family=='gaussian'){
+      if('full'%in%pooling){
+        #comlete pooling
+        #M.full<-bayesglm(response ~ treatment, data=dat,n.iter = n.iter)
+        M.full<-bayesglm(response ~ treatment, data=dat)
+        sum.tmp<-summary(M.full)
+
+        rs.full<-c(
+          coef.full=sum.tmp$coef[-1,1],
+          se.full=sum.tmp$coef[-1,2],
+          t.full=sum.tmp$coef[-1,3],
+          pval.full=sum.tmp$coef[-1,4],
+          #z.full=sign(sum.tmp$coef[2,1])*abs(qnorm(sum.tmp$coef[2,4]/2)),
+          df.full=sum.tmp$df.residual-sum.tmp$df[1],
+          AIC.full=sum.tmp$aic,
+          BIC.full=AIC(M.full,k=log(nrow(dat))),
+          Dev.full=sum.tmp$deviance
+        )
+        rs<-c(rs,rs.full)
+      }
+
+      if('no'%in%pooling){
+        #no pooling
+        if(n.levels>1)
+          #					M.no<-bayesglm(response ~ treatment + probe, data=dat, n.iter=n.iter)
+          M.no<-bayesglm(response ~ treatment + probe, data=dat)
+        else
+          #					M.no<-bayesglm(response ~ treatment, data=dat, n.iter=n.iter)
+          M.no<-bayesglm(response ~ treatment, data=dat)
+        sum.tmp<-summary(M.no)
+        rs.no<-c(
+          coef.no=sum.tmp$coef[2:n.treatments,1],
+          se.no=sum.tmp$coef[2:n.treatments,2],
+          t.no=sum.tmp$coef[2:n.treatments,3],
+          pval.no=sum.tmp$coef[2:n.treatments,4],
+          #z.no=sign(coef.no)*abs(qnorm(pval.no/2)),
+          df.no=sum.tmp$df.residual-sum.tmp$df[1],
+          AIC.no=sum.tmp$aic,
+          BIC.no=AIC(M.no,k=log(nrow(dat))),
+          Dev.no=sum.tmp$deviance
+        )
+        rs<-c(rs,rs.no)
+      }
+
+      if('partial'%in%pooling){
+        #partial pooling with multilevel model of varing slopes and intercepts
+        prior<-list(R = list(V = prior.V.scale, nu=prior.R.nu), G = list(G1 = list(V = diag(nlevels(dat$treatment))*prior.V.scale, nu = prior.G.nu )))
+        if(n.levels>1){
+          M.partial<-MCMCglmm(response ~ treatment, random=~idh(treatment+1):probe, data=dat, prior=prior,verbose=FALSE, nitt=nitt, burnin = burnin,thin=thin)
+          df.partial<-nrow(dat)-(n.levels+1)*n.treatments
+        }else{
+          M.partial<-MCMCglmm(response ~ treatment, data=dat, prior=prior,verbose=FALSE, nitt=nitt, burnin = burnin,thin=thin)
+          df.partial<-nrow(dat)-n.treatments
+        }
+        sum.tmp<-summary(M.partial)
+        sd.partial<-apply(M.partial$Sol[,-1],2,sd)
+        t.partial<-sum.tmp$sol[-1,1]/sd.partial
+        pval.partial<-2*pt(-abs(t.partial),df=df.partial)
+        z.partial<-sign(t.partial)*abs(qnorm(pval.partial/2))
+
+        rs.partial<-c(
+          coef.partial=sum.tmp$sol[-1,1],
+          'l-95% CI.partial'=sum.tmp$sol[-1,2],
+          'u-95% CI.partial'=sum.tmp$sol[-1,3],
+          t.partial=t.partial,
+          pval.partial=pval.partial,
+          z.partial=z.partial,
+          df.partial=df.partial,
+          #pMCMC
+          pvalMCMC.partial=sum.tmp$sol[-1,5],
+          #effective sample size
+          n.effet.partial=sum.tmp$sol[-1,4],
+          n.MCMC.partial=sum.tmp$cstats[3],
+          #Standard Deviation
+          sd.partial=sd.partial,
+          #only DIC saved, set AIC, BIC as DIC
+          DIC.partial=sum.tmp$DIC,
+          Dev.partial=mean(M.partial$Deviance)
+        )
+        rs<-c(rs,rs.partial)
+      }
+    }else if(family$family=='binomial'){
+
+      if(family$link=='logit')
+        prior.scale<-2.5
+      else if(family$link=='probit')
+        prior.scale<-2.5*1.6
+
+      if('full'%in%pooling){
+        #M.full<-bayesglm(treatment ~ response, data=dat, family=family, n.iter = n.iter, prior.scale = prior.scale)
+        M.full<-bayesglm(treatment ~ response, data=dat, family=family, prior.scale = prior.scale)
+        sum.tmp<-summary(M.full)
+        rs.full<-c(
+          coef.full=sum.tmp$coef[2,1],
+          se.full=sum.tmp$coef[2,2],
+          z.full=sum.tmp$coef[2,3],
+          pval.full=sum.tmp$coef[2,4],
+          #a bug in bayeglm for summary, fix: total obs - rank of the model
+          df.full=sum.tmp$df.residual-sum.tmp$df[1],
+          AIC.full=sum.tmp$aic,
+          BIC.full=AIC(M.full,k=log(nrow(dat))),
+          Dev.full=sum.tmp$deviance
+        )
+        rs<-c(rs,rs.full)
+      }
+
+      if('no'%in%pooling){
+        if(n.levels>1)
+          #M.no<-bayesglm(treatment ~ response + probe, data=dat, family=family, n.iter=n.iter,prior.scale = prior.scale)
+          M.no<-bayesglm(treatment ~ response + probe, data=dat, family=family,prior.scale = prior.scale)
+        else
+          #					M.no<-bayesglm(treatment ~ response, data=dat, family=family, n.iter=n.iter,prior.scale = prior.scale)
+          M.no<-bayesglm(treatment ~ response, data=dat, family=family,prior.scale = prior.scale)
+
+        sum.tmp<-summary(M.no)
+        rs.no<-c(
+          coef.no=sum.tmp$coef[2,1],
+          se.no=sum.tmp$coef[2,2],
+          pval.no=sum.tmp$coef[2,4],
+          z.no=sum.tmp$coef[2,3],
+          df.no=sum.tmp$df.residual-sum.tmp$df[1],
+          AIC.no=sum.tmp$aic,
+          BIC.no=AIC(M.no,k=log(nrow(dat))),
+          Dev.no=sum.tmp$deviance
+        )
+        rs<-c(rs,rs.no)
+      }
+      if('partial'%in%pooling){
+        #categorial=logit, ordinal=probit
+        if(family$link=='logit'){
+          glmm.family<-'categorial'
+          prior<-list(R = list(V = prior.V.scale, nu=n.levels), G = list(G1 = list(V = diag(2)*prior.V.scale, nu = n.levels+1)))
+        }
+        else if(family$link=='probit'){
+          glmm.family<-'ordinal'
+          prior<-list(R = list(V = prior.V.scale, nu=n.levels+1), G = list(G1 = list(V = diag(2)*prior.V.scale, nu = n.levels+1)))
+        }
+        else
+          stop('For multilevel model with Binomial family and Bayeisan method, only logit and probit model are supported!!! \n')
+
+        #			coef.scale<-ifelse(family$link=='logit', 2.5^2, (2.5*1.6)^2)
+        #			intercept.scale<-ifelse(family$link=='logit', 10^2, (10*1.6)^2)
+        #			scale<-var(dat$treatment)/var(dat$response)
+        ################################# prior to be modified #################################
+        #alpha.mu=rep(0,2),alpha.V=diag(2)*25^2)))
+        #########################################################################################
+        sd.threshold<-prior.scale*4
+        #coef.sign<- -sign(logFC)
+        #				while(sd.threshold>prior.scale*2){
+        if(n.levels>1){
+          M.partial<-MCMCglmm(treatment~response, random=~idh(1+response):probe,family=glmm.family, prior=prior, data=dat, verbose=FALSE, nitt = nitt, burnin = burnin,thin=thin)
+          df.partial<-nrow(dat)-(n.levels+1)*2
+        }else{
+          M.partial<-MCMCglmm(treatment~response,family=glmm.family, prior=prior, data=dat, verbose=FALSE, nitt = nitt, burnin = burnin,thin=thin)
+          df.partial<-nrow(dat)-2
+        }
+        sum.tmp<-summary(M.partial)
+        t.partial<-sum.tmp$sol[2,1]/sd(M.partial$Sol[,2])
+        pval.partial<-2*pt(-abs(t.partial),df=df.partial)
+        z.partial<-sign(t.partial)*abs(qnorm(pval.partial/2))
+        rs.partial<-c(
+          coef.partial=sum.tmp$sol[2,1],
+          'l-95% CI.partial'=sum.tmp$sol[2,2],
+          'u-95% CI.partial'=sum.tmp$sol[2,3],
+          t.partial=t.partial,
+          pval.partial=pval.partial,
+          z.partial=z.partial,
+          df.partial=df.partial,
+          #pMCMC
+          pvalMCMC.partial=sum.tmp$sol[2,5],
+          #						z.partial=sign(sum.tmp$sol[2,1])*abs(qnorm(sum.tmp$sol[2,5]/2)),
+          #effective sample size
+          n.effet.partial=sum.tmp$sol[2,4],
+          n.MCMC.partial=sum.tmp$cstats[3],
+          #Standard Deviation
+          sd.partial=sd(M.partial$Sol[,2]),
+          #only DIC saved, set AIC, BIC as DIC
+          DIC.partial=sum.tmp$DIC,
+          Dev.partial=mean(M.partial$Deviance)
+        )
+        #coef.sign<-sign(rs.partial['coef.partial'])
+        sd.threshold<-as.double(rs.partial['sd.partial'])
+        #				}
+        rs<-c(rs,rs.partial)
+      }
+    }else if(family$family=='poisson'){
+      if('full'%in%pooling){
+        #comlete pooling
+        #M.full<-bayesglm(response ~ treatment, data=dat,n.iter = n.iter,family='poisson')
+        M.full<-bayesglm(response ~ treatment, data=dat,family='poisson')
+        sum.tmp<-summary(M.full)
+        rs.full<-c(
+          coef.full=sum.tmp$coef[2,1],
+          se.full=sum.tmp$coef[2,2],
+          t.full=sum.tmp$coef[2,3],
+          pval.full=sum.tmp$coef[2,4],
+          #z.full=sign(sum.tmp$coef[2,1])*abs(qnorm(sum.tmp$coef[2,4]/2)),
+          df.full=sum.tmp$df.residual-sum.tmp$df[1],
+          AIC.full=sum.tmp$aic,
+          BIC.full=AIC(M.full,k=log(nrow(dat))),
+          Dev.full=sum.tmp$deviance
+        )
+        rs<-c(rs,rs.full)
+      }
+
+      if('no'%in%pooling){
+        #no pooling
+        if(n.levels>1)
+          #					M.no<-bayesglm(response ~ treatment + probe, data=dat, n.iter=n.iter,family='poisson')
+          M.no<-bayesglm(response ~ treatment + probe, data=dat, family='poisson')
+        else
+          #					M.no<-bayesglm(response ~ treatment, data=dat, n.iter=n.iter,family='poisson')
+          M.no<-bayesglm(response ~ treatment, data=dat,family='poisson')
+        sum.tmp<-summary(M.no)
+        rs.no<-c(
+          coef.no=sum.tmp$coef[2,1],
+          se.no=sum.tmp$coef[2,2],
+          t.no=sum.tmp$coef[2,3],
+          pval.no=sum.tmp$coef[2,4],
+          #z.no=sign(coef.no)*abs(qnorm(pval.no/2)),
+          df.no=sum.tmp$df.residual-sum.tmp$df[1],
+          AIC.no=sum.tmp$aic,
+          BIC.no=AIC(M.no,k=log(nrow(dat))),
+          Dev.no=sum.tmp$deviance
+        )
+        rs<-c(rs,rs.no)
+      }
+
+      if('partial'%in%pooling){
+        #partial pooling with multilevel model of varing slopes and intercepts
+        prior<-list(R = list(V = prior.V.scale, nu=prior.R.nu), G = list(G1 = list(V = diag(2)*prior.V.scale, nu = prior.G.nu )))
+        if(n.levels>1){
+          M.partial<-MCMCglmm(response ~ treatment, random=~idh(treatment+1):probe, data=dat, prior=prior,verbose=FALSE, nitt=nitt, burnin = burnin,thin=thin,family='poisson')
+          df.partial<-nrow(dat)-(n.levels+1)*2
+        }
+        else{
+          M.partial<-MCMCglmm(response ~ treatment, data=dat, prior=prior,verbose=FALSE, nitt=nitt, burnin = burnin,thin=thin,family='poisson')
+          df.partial<-nrow(dat)-2
+        }
+        sum.tmp<-summary(M.partial)
+        t.partial<-sum.tmp$sol[2,1]/sd(M.partial$Sol[,2])
+        pval.partial<-2*pt(-abs(t.partial),df=df.partial)
+        z.partial<-sign(t.partial)*abs(qnorm(pval.partial/2))
+        rs.partial<-c(
+          coef.partial=sum.tmp$sol[2,1],
+          'l-95% CI.partial'=sum.tmp$sol[2,2],
+          'u-95% CI.partial'=sum.tmp$sol[2,3],
+          t.partial=t.partial,
+          pval.partial=pval.partial,
+          z.partial=z.partial,
+          df.partial=df.partial,
+          #pMCMC
+          pvalMCMC.partial=sum.tmp$sol[2,5],
+          #					z.partial=sign(sum.tmp$sol[2,1])*abs(qnorm(sum.tmp$sol[2,5]/2)),
+          n.effet.partial=sum.tmp$sol[2,4],
+          n.MCMC.partial=sum.tmp$cstats[3],
+          #Standard Deviation
+          sd.partial=sd(M.partial$Sol[,2]),
+          #only DIC saved, set AIC, BIC as DIC
+          DIC.partial=sum.tmp$DIC,
+          Dev.partial=mean(M.partial$Deviance)
+        )
+        rs<-c(rs,rs.partial)
+      }
+    }else{
+      stop('Only liner model and binomial family model are supported !!! \n')
+    }
+  }
+  rs
+}
+##
+#fold change function
+#positive: class1/class0
+#negative: class0/class1
+FC <- function(x,cl,logTransformed = TRUE,
+           log.base = 2,average.method = c('geometric', 'arithmetic'),
+           pseudoCount = 0) {
+    x.class0 <- x[(cl == 0)] + pseudoCount
+    x.class1 <- x[(cl == 1)] + pseudoCount
+    if (missing(average.method))
+      average.method <- 'geometric'
+    if (logTransformed) {
+      if (is.na(log.base) | log.base < 0)
+        stop('You must specify log.bsae !\n')
+      logFC <- mean(x.class1) - mean(x.class0)
+      FC.val <- sign(logFC) * log.base ^ abs(logFC)
+    } else{
+      logFC <-
+        ifelse(average.method == 'arithmetic',
+               log(mean(x.class1)) - log(mean(x.class0)),
+               mean(log(x.class1) - mean(log(x.class0))))
+      FC.val <- sign(logFC) * exp(abs(logFC))
+    }
+    FC.val[FC.val == 0 | is.na(FC.val)] <- 1
+    FC.val
+  }

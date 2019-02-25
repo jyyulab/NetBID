@@ -6,8 +6,8 @@
 \usage{
 db.preload(use_level = "transcript", use_spe = "human",
   update = FALSE, TF_list = NULL, SIG_list = NULL,
-  input_attr_type = "external_gene_name", db.dir = sprintf("\%s/db/",
-  main.dir))
+  input_attr_type = "external_gene_name", main.dir = NULL,
+  db.dir = sprintf("\%s/db/", main.dir))
 }
 \arguments{
 \item{use_level}{character, either 'transcript' or 'gene', default is 'gene'}
@@ -22,6 +22,8 @@ db.preload(use_level = "transcript", use_spe = "human",
 
 \item{input_attr_type}{character, input the type for the list of TF_list, SIG_list. If no input for TF_list, SIG_list, just leave it to NULL, default NULL.
 See biomaRt \url{https://bioconductor.org/packages/release/bioc/vignettes/biomaRt/inst/doc/biomaRt.html} for more details.}
+
+\item{main.dir}{character, main file path for NetBID2, if NULL, will set to \code{system.file(package = "NetBID2")}. Default is NULL.}
 
 \item{db.dir}{character, file path for saving the RData, default is \code{db} directory under \code{main.dir} when setting for \code{main.dir}.}
 }
@@ -40,11 +42,9 @@ analysis level (transcript or gene level) and optionally input TF list or SIG li
 from biomart and save into RData under the db/ directory with specified species name and analysis level.
 }
 \examples{
-main.dir <- system.file(package = "NetBID2")
 db.preload(use_level='gene',use_spe='human',update=FALSE)
 
 \dontrun{
-main.dir <- system.file(package = "NetBID2") ## must specify a main directory
 db.preload(use_level='transcript',use_spe='human',update=FALSE)
 db.preload(use_level='gene',use_spe='mouse',update=FALSE)
 }
