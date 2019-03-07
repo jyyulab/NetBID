@@ -7,15 +7,17 @@
 or transcript symbol and transcript biotype (at transcript level).}
 \usage{
 get_IDtransfer2symbol2type(from_type = NULL, use_genes = NULL,
-  dataset = db_info[1], use_level = "gene")
+  dataset = NULL, use_level = "gene")
 }
 \arguments{
-\item{from_type}{character, attribute name from the biomaRt package, such as 'ensembl_gene_id','ensembl_gene_id_version'
-'ensembl_transcript_id','ensembl_transcript_id_version','refseq_mrna'. Full list could be obtained by
+\item{from_type}{character, attribute name from the biomaRt package,
+such as 'ensembl_gene_id', 'ensembl_gene_id_version', 'ensembl_transcript_id', 'ensembl_transcript_id_version', 'refseq_mrna'.
+Full list could be obtained by
 \code{listAttributes(mart)$name}, where \code{mart} is the output of \code{useMart} function.
 The type must be the gene type for the input \code{use_genes}.}
 
-\item{use_genes}{a vector of characters, gene list used for ID conversion.}
+\item{use_genes}{a vector of characters, gene list used for ID conversion.
+If NULL, will output all possible genes in transfer table. Default is NULL.}
 
 \item{dataset}{character, name for the dataset used for ID conversion, such as 'hsapiens_gene_ensembl'.
 If NULL, will use \code{db_info[1]} if run \code{db.preload} brefore. Default is NULL.}
@@ -40,7 +42,8 @@ transfer_tab <- get_IDtransfer(from_type = 'ensembl_transcript_id',
 res1 <- get_name_transfertab(use_genes,transfer_tab=transfer_tab)
 transfer_tab_withtype <- get_IDtransfer2symbol2type(from_type = 'ensembl_transcript_id',
                                                    use_genes=use_genes,
-                                                   dataset='hsapiens_gene_ensembl')
+                                                   dataset='hsapiens_gene_ensembl',
+                                                   use_level='transcript')
                                                    ## get transfer table !!!
 \dontrun{
 }

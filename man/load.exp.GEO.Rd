@@ -2,22 +2,40 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{load.exp.GEO}
 \alias{load.exp.GEO}
-\title{Load gene expression set from GEO}
+\title{Load gene expression set from GEO database}
 \usage{
 load.exp.GEO(out.dir = network.par$out.dir.DATA, GSE = NULL,
-  GPL = NULL, getGPL = TRUE, update = TRUE)
+  GPL = NULL, getGPL = TRUE, update = FALSE)
 }
 \arguments{
-\item{out.dir}{character}
+\item{out.dir}{character, the file path to save the RData or if the RData has already generated, load from it.
+Default is network.par$out.dir.DATA if follow the NetBID2 suggested pipeline.}
 
-\item{GSE}{character}
+\item{GSE}{character, the GSE ID to download.}
 
-\item{GPL}{character}
+\item{GPL}{character, the GPL ID to download.}
 
-\item{getGPL}{logical}
+\item{getGPL}{logical, whether to download the GPL file or not. Default is TRUE.}
 
-\item{update}{logical}
+\item{update}{logical, whether to update the RData if the data is already in the out.dir.Default is FALSE}
+}
+\value{
+ExpressionSet class object if success.
 }
 \description{
-\code{load.exp.GEO} is a function to get GEO dataset, save into eSet and save to RData. If the RData exists, user could choose to directly load from it.
+\code{load.exp.GEO} is a function to get GEO dataset, save into ExpressionSet class object and save to RData.
+If the RData exists, user could choose to directly load from it.
+}
+\details{
+This function aims to provide simple way to get expression set from GEO database and manage the related RData.
+}
+\examples{
+
+\dontrun{
+net_eset <- load.exp.GEO(out.dir='test/',
+                         GSE='GSE116028',
+                         GPL='GPL6480',
+                         getGPL=TRUE,
+                         update=FALSE)
+}
 }

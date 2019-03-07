@@ -2,11 +2,38 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{generate.eset}
 \alias{generate.eset}
-\title{Generate expression set.}
+\title{Generate expression Set object}
 \usage{
 generate.eset(exp_mat = NULL, phenotype_info = NULL,
   feature_info = NULL, annotation_info = "")
 }
+\arguments{
+\item{exp_mat}{data matrix, the expression data matrix with each row a gene/transcript and each column a sample.}
+
+\item{phenotype_info}{data.frame, the phenotype information for the samples in \code{exp_mat},
+the rownames must match the colnames of \code{exp_mat}. If NULL, will generate a single column dataframe.
+Default is NULL.}
+
+\item{feature_info}{data.frame,the feature information for the genes/transcripts/probes in \code{exp_mat},
+the rownames must match the rownames of \code{exp_mat}. If NULL, will generate a single column dataframe.
+Default is NULL.}
+
+\item{annotation_info}{character, the annotation for the eSet. Default is "".}
+}
+\value{
+an ExressionSet object.
+}
 \description{
-Generate expression set.
+\code{generate.eset} is a function to generate eSet object by input expression matrix (required),
+phenotype and feature information (optional).
+}
+\details{
+This function aims to assist the generation of eSet object,
+especially for sometimes only expression matrix is available.
+}
+\examples{
+mat1 <- matrix(rnorm(10000),nrow=1000,ncol=10)
+colnames(mat1) <- paste0('Sample',1:ncol(mat1))
+rownames(mat1) <- paste0('Gene',1:nrow(mat1))
+eset <- generate.eset(exp_mat=mat1)
 }

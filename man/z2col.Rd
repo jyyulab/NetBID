@@ -2,12 +2,34 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{z2col}
 \alias{z2col}
-\title{transfer Z statistics to color bar}
+\title{Get the color for the input Z statistics.}
 \usage{
 z2col(x, n_len = 60, sig_thre = 0.01, col_min_thre = 0.01,
   col_max_thre = 3, blue_col = brewer.pal(9, "Set1")[2],
   red_col = brewer.pal(9, "Set1")[1])
 }
+\arguments{
+\item{x}{a vector of numeric values. The input Z statistics.}
+
+\item{n_len}{integer, number of unique colors. Default is 60.}
+
+\item{sig_thre}{numeric, the threshold for significance (absolute Z statistics), values do not pass the threshold will be colored in 'white'.}
+
+\item{col_min_thre}{numeric, the threshold for the lowest values used to generate the color bar. Default is 0.01.}
+
+\item{col_max_thre}{numeric, the threshold for the maximum values used to generate the color bar. Default is 3.}
+
+\item{blue_col}{a vector of characters, the blue colors used for the negative values in Z statistics. Default is brewer.pal(9,'Set1')[2].}
+
+\item{red_col}{a vector of characters, the red lors used for the negative values in Z statistics. Default is brewer.pal(9,'Set1')[1].}
+}
+\value{
+a vector of color characters
+}
 \description{
-transfer Z statistics to color bar
+\code{z2col} is a function to transfer the input Z statistics to a color bar.
+}
+\examples{
+t1 <- sort(rnorm(mean=0,sd=2,n=100))
+image(as.matrix(t1),col=z2col(t1))
 }

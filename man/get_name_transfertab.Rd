@@ -12,13 +12,19 @@ get_name_transfertab(use_genes = NULL, transfer_tab = NULL,
 
 \item{transfer_tab}{data.frame, the transfer table for ID conversion, could be obtained by \code{get_IDtransfer}.}
 
-\item{from_type}{character, attribute name from the biomaRt package, such as 'ensembl_gene_id','ensembl_gene_id_version'
-'ensembl_transcript_id','ensembl_transcript_id_version','refseq_mrna'. Full list could be obtained by
+\item{from_type}{character, attribute name from the biomaRt package,
+such as 'ensembl_gene_id',
+'ensembl_gene_id_version'
+'ensembl_transcript_id',
+'ensembl_transcript_id_version',
+'refseq_mrna'.
+Full list could be obtained by
 \code{listAttributes(mart)$name}, where \code{mart} is the output of \code{useMart} function.
 The type must be the gene type for the input \code{use_genes}.
  If NULL, will use the first column in the transfer table.}
 
-\item{to_type}{character, character, attribute name from the biomaRt package, the gene type will be convereted to.
+\item{to_type}{character, character, attribute name from the biomaRt package,
+the gene type will be convereted to.
 If NULL, will use the second column in the transfer table.}
 }
 \value{

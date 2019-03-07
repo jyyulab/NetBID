@@ -6,8 +6,9 @@
 \usage{
 draw.targetNet.TWO(source1_label = "", source2_label = "",
   source1_z = NULL, source2_z = NULL, edge_score1 = NULL,
-  edge_score2 = NULL, label_cex = 0.7, pdf_file = NULL,
-  total_possible_target = NULL, show_test = FALSE)
+  edge_score2 = NULL, arrow1_direction = "out",
+  arrow2_direction = "out", label_cex = 0.7, source_cex = 1,
+  pdf_file = NULL, total_possible_target = NULL, show_test = FALSE)
 }
 \arguments{
 \item{source1_label}{the label for the first(left) driver displayed on the plot.}
@@ -27,7 +28,13 @@ The names for the vector is the gene labels displayed on the plot.}
 \item{edge_score2}{a vector of numeric values, indicating the correlation between the second driver and the target genes.
 Similar with \code{edge_score1}}
 
+\item{arrow1_direction}{character, the arrow direction for source1, choose from 'in' or 'out'. Default is 'out'.}
+
+\item{arrow2_direction}{character, the arrow direction for source2, choose from 'in' or 'out'. Default is 'out'.}
+
 \item{label_cex}{numeric, \code{cex} for the target genes displayed on the plot. Default is 0.7.}
+
+\item{source_cex}{numeric, \code{cex} for the source genes displayed on the plot. Default is 1.}
 
 \item{pdf_file}{character, file path for the pdf file to save the figure into pdf format.If NULL, will not generate pdf file. Default is NULL.}
 
@@ -63,6 +70,7 @@ draw.targetNet.TWO(source1_label=source1_label,
                edge_score1=edge_score1,edge_score2=edge_score2,
                total_possible_target=paste0('G',1:1000),
                show_test=TRUE,label_cex=0.6)
+
 \dontrun{
 source1_label <- 'test1'
 source1_z <- 1.96

@@ -2,10 +2,31 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{RNASeqCount.normalize.scale}
 \alias{RNASeqCount.normalize.scale}
-\title{Simple function to normalize for RNASeq Count}
+\title{Simple function to normalize RNASeq Read Count data.}
 \usage{
-RNASeqCount.normalize.scale(d, total = NULL, pseudoCount = 1)
+RNASeqCount.normalize.scale(mat, total = NULL, pseudoCount = 1)
+}
+\arguments{
+\item{mat}{matrix, the original input matrix for the read data, each row is a gene/transcript with each column a sample.}
+
+\item{total}{integer, total read counts, if NULL will use the mean of the column sum. Default is NULL.}
+
+\item{pseudoCount}{integer, pseudo count to add for all read counts to avoid -Inf in following log transformation.
+Default is 1.}
+}
+\value{
+a matrix containing the normalized RNASeq count.
 }
 \description{
-Simple function to normalize for RNASeq Count
+\code{RNASeqCount.normalize.scale} is a simple version function to normalize the RNASeq read count data.
+}
+\details{
+Strongly suggest to follow the DESeq2 pipeline to process the RNASeq datasets.
+\code{load.exp.RNASeq.demo} and \code{load.exp.RNASeq.demoSalmon} is included in NetBID2 but may not suit for all conditions.
+}
+\examples{
+mat1 <- matrix(rnbinom(10000, mu = 10, size = 1),nrow=1000,ncol=10)
+colnames(mat1) <- paste0('Sample1',1:ncol(mat1))
+rownames(mat1) <- paste0('Gene',1:nrow(mat1))
+norm_mat1 <- RNASeqCount.normalize.scale(mat1)
 }

@@ -30,7 +30,7 @@ The rownames should match the colnames of mat. Default is NULL.}
 
 \item{use_phe}{a list of characters, selected phenotype for display,must be the subset of colnames of phenotype_info.Default is NULL.}
 
-\item{main}{character, title for the plot. Default is "".}
+\item{main}{character, title for the draw. Default is "".}
 
 \item{scale}{character, indicating if the values should be centered and scaled in either the row direction or the column direction, or none.
 The default is "none".}
@@ -59,7 +59,7 @@ This plot function input the expression/activity matrix, with each row as one ge
 \examples{
 analysis.par <- list()
 analysis.par$out.dir.DATA <- system.file('demo1/driver/DATA/',package = "NetBID2")
-NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
 ms_tab <- analysis.par$final_ms_tab
 exp_mat <- exprs(analysis.par$cal.eset) ## expression,the rownames matches originalID in ms_tab
 ac_mat <- exprs(analysis.par$merge.ac.eset) ## ac,the rownames matches originalID_label in ms_tab
@@ -98,7 +98,7 @@ draw.heatmap(mat=ac_mat,use_genes=ms_tab[rownames(sig_driver),'originalID_label'
 \dontrun{
 analysis.par <- list()
 analysis.par$out.dir.DATA <- system.file('demo1/driver/DATA/',package = "NetBID2")
-NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
 ms_tab <- analysis.par$final_ms_tab
 exp_mat <- exprs(analysis.par$cal.eset) ## expression,the rownames matches originalID in ms_tab
 ac_mat <- exprs(analysis.par$merge.ac.eset) ## ac,the rownames matches originalID_label in ms_tab

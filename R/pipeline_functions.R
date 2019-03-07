@@ -1,5 +1,5 @@
 
-#' @import Biobase limma tximport arrayQualityMetrics igraph biomaRt openxlsx msigdbr
+#' @import Biobase limma tximport igraph biomaRt openxlsx msigdbr ConsensusClusterPlus
 #' @importFrom GEOquery getGEO
 #' @importFrom RColorBrewer brewer.pal
 #' @importFrom plot3D scatter3D
@@ -11,6 +11,9 @@
 #' @importFrom plyr ddply
 #' @importFrom DESeq2 DESeqDataSetFromTximport DESeq
 #' @importFrom ComplexHeatmap Heatmap
+#' @importFrom reshape melt
+#' @importFrom graphics plot
+#' @importFrom aricode clustComp
 
 ##   ‘MCMCglmm’ ‘arm’ ‘reshape’
 ############################# NetBID2 Functions
@@ -60,7 +63,8 @@ library(rhdf5) ## for read in MICA results
 #' @param SIG_list a character vector,input the list of SIG names, if NULL, will use pre-defined list in the package, default NULL
 #' @param input_attr_type character, input the type for the list of TF_list, SIG_list. If no input for TF_list, SIG_list, just leave it to NULL, default NULL.
 #' See biomaRt \url{https://bioconductor.org/packages/release/bioc/vignettes/biomaRt/inst/doc/biomaRt.html} for more details.
-#' @param main.dir character, main file path for NetBID2, if NULL, will set to \code{system.file(package = "NetBID2")}. Default is NULL.
+#' @param main.dir character, main file path for NetBID2,
+#' if NULL, will set to \code{system.file(package = "NetBID2")}. Default is NULL.
 #' @param db.dir character, file path for saving the RData, default is \code{db} directory under \code{main.dir} when setting for \code{main.dir}.
 #'
 #' @return Reture TRUE if success and FALSE if not. Will load two variables into R workspace, tf_sigs and db_info.
@@ -208,12 +212,19 @@ db.preload <- function(use_level='transcript',use_spe='human',update = FALSE,
 #'
 #' @param use_genes a vector of characters, all possible genes used in network generation.
 #' If NULL, will not filter the TF/SIG list by this gene list. Default is NULL.
-#' @param use_gene_type character, attribute name from the biomaRt package, such as 'ensembl_gene_id','ensembl_gene_id_version'
-#' 'ensembl_transcript_id','ensembl_transcript_id_version','refseq_mrna'. Full list could be obtained by
+#' @param use_gene_type character, attribute name from the biomaRt package,
+#' such as 'ensembl_gene_id', 'ensembl_gene_id_version', 'ensembl_transcript_id', 'ensembl_transcript_id_version', 'refseq_mrna'.
+#' Full list could be obtained by
 #' \code{listAttributes(mart)$name}, where \code{mart} is the output of \code{useMart} function.
+#' (e.g mart <- useMart('ensembl',db_info[1]))
 #' The type must be the gene type for the input \code{use_genes}. Default is 'ensembl_gene_id'.
-#' @param dataset character, name for the dataset used for ID conversion, such as 'hsapiens_gene_ensembl'.
+#' @param dataset character, name for the dataset used for ID conversion,
+#' such as 'hsapiens_gene_ensembl'.
 #' If NULL, will use \code{db_info[1]} if run \code{db.preload} brefore. Default is NULL.
+#'
+#'
+#' @return This function will return a list containing two parts,
+#' for $tf saving the TF list for the input gene type and $sig saving the SIG list.
 #'
 #' @examples
 #' db.preload(use_level='transcript',use_spe='human',update=FALSE)
@@ -225,16 +236,16 @@ db.preload <- function(use_level='transcript',use_spe='human',update = FALSE,
 #'                                dataset='hsapiens_gene_ensembl')
 #' print(res_list)
 #'
-#' @return This function will return a list containing two parts,
-#' for $tf saving the TF list for the input gene type and $sig saving the SIG list.
-#'
 #' \dontrun{
 #' }
 #'
 #' @export
 get.TF_SIG.list <- function(use_genes=NULL,
                             use_gene_type='ensembl_gene_id',
-                            dataset=db_info[1]){
+                            dataset=NULL){
+  if(is.null(dataset)==TRUE){
+    dataset <- db_info[1]
+  }
   if(is.null(tf_sigs)==TRUE){
     message('tf_sigs not loaded yet, please run db.preload() before processing !');return(FALSE);
   }
@@ -252,7 +263,7 @@ get.TF_SIG.list <- function(use_genes=NULL,
     #filters <- listFilters(mart)
     attributes <- listAttributes(mart)
     if(!use_gene_type %in% attributes$name){
-      message(sprintf('%s not in the attributes for %s, please check and re-try !',use_gene_type,db_info[1]));return(FALSE)
+      message(sprintf('%s not in the attributes for %s, please check and re-try !',use_gene_type,dataset));return(FALSE)
     }
     tmp1 <- getBM(attributes=c(n1[1],use_gene_type),values=tf_sigs$tf[n1[1]][[1]],mart=mart,filters=n1[1])
     TF_list <- tmp1[,2]
@@ -269,12 +280,17 @@ get.TF_SIG.list <- function(use_genes=NULL,
 #'
 #' \code{get_IDtransfer} will generate a transfer table for ID conversion by input the from-gene type and to-gene type.
 #'
-#' @param from_type character, attribute name from the biomaRt package, such as 'ensembl_gene_id','ensembl_gene_id_version'
-#' 'ensembl_transcript_id','ensembl_transcript_id_version','refseq_mrna'. Full list could be obtained by
+#' @param from_type character, attribute name from the biomaRt package,
+#' such as 'ensembl_gene_id', 'ensembl_gene_id_version', 'ensembl_transcript_id', 'ensembl_transcript_id_version', 'refseq_mrna'.
+#' Full list could be obtained by
 #' \code{listAttributes(mart)$name}, where \code{mart} is the output of \code{useMart} function.
 #' The type must be the gene type for the input \code{use_genes}.
-#' @param to_type character, character, attribute name from the biomaRt package, the gene type will be convereted to.
+#' @param to_type character, character, attribute name from the biomaRt package,
+#' the gene type will be convereted to.
+#' @param add_type character, character, attribute name from the biomaRt package,
+#' additional type in the final table
 #' @param use_genes a vector of characters, gene list used for ID conversion.
+#' If NULL, will extract all possible genes.
 #' @param dataset character, name for the dataset used for ID conversion, such as 'hsapiens_gene_ensembl'.
 #' If NULL, will use \code{db_info[1]} if run \code{db.preload} brefore. Default is NULL.
 #'
@@ -297,16 +313,32 @@ get.TF_SIG.list <- function(use_genes=NULL,
 #' \dontrun{
 #' }
 #' @export
-get_IDtransfer <- function(from_type=NULL,to_type=NULL,use_genes=NULL,dataset=db_info[1]){
+get_IDtransfer <- function(from_type=NULL,to_type=NULL,add_type=NULL,use_genes=NULL,dataset=NULL){
+  if(is.null(dataset)==TRUE){
+    if(exists('db_info')==FALSE){
+      message('db_info not found, please run db.preload() first!');return(FALSE);
+    }
+    dataset <- db_info[1]
+  }
   mart <- useMart(biomart="ensembl", dataset=dataset) ## get mart for id conversion !!!! db_info is saved in db RData
   attributes <- listAttributes(mart)
+
   if(!from_type %in% attributes$name){
-    message(sprintf('%s not in the attributes for %s, please check and re-try !',from_type,db_info[1]));return(FALSE)
+    message(sprintf('%s not in the attributes for %s, please check and re-try !',from_type,dataset));return(FALSE)
   }
   if(!to_type %in% attributes$name){
-    message(sprintf('%s not in the attributes for %s, please check and re-try !',to_type,db_info[1]));return(FALSE)
+    message(sprintf('%s not in the attributes for %s, please check and re-try !',to_type,dataset));return(FALSE)
   }
-  tmp1 <- getBM(attributes=c(from_type,to_type),values=use_genes,mart=mart,filters=from_type)
+  if(is.null(use_genes)==TRUE | length(use_genes)>100){
+    tmp1 <- getBM(attributes=c(from_type,to_type,add_type),values=1,mart=mart,filters='strand')
+    tmp2 <- getBM(attributes=c(from_type,to_type,add_type),values=-1,mart=mart,filters='strand')
+    tmp1 <- rbind(tmp1,tmp2)
+    if(is.null(use_genes)==FALSE){
+      tmp1 <- tmp1[which(tmp1[,1] %in% use_genes),]
+    }
+  }else{
+    tmp1 <- getBM(attributes=c(from_type,to_type,add_type),values=use_genes,mart=mart,filters=from_type)
+  }
   w1 <- apply(tmp1,1,function(x)length(which(is.na(x)==TRUE | x=="")))
   transfer_tab <- tmp1[which(w1==0),]
   return(transfer_tab)
@@ -318,12 +350,18 @@ get_IDtransfer <- function(from_type=NULL,to_type=NULL,use_genes=NULL,dataset=db
 #'
 #' @param from_spe character, input the species name (e.g 'human', 'mouse', 'rat') that the \code{use_genes} belong to, default is 'human'
 #' @param to_spe character, input the species name (e.g 'human', 'mouse', 'rat') that need to transfered to, default is 'mouse'
-#' @param from_type character, attribute name from the biomaRt package, such as 'ensembl_gene_id','ensembl_gene_id_version'
-#' 'ensembl_transcript_id','ensembl_transcript_id_version','refseq_mrna'. Full list could be obtained by
+#' @param from_type character, attribute name from the biomaRt package,
+#' such as 'ensembl_gene_id',
+#' 'ensembl_gene_id_version'
+#' 'ensembl_transcript_id',
+#' 'ensembl_transcript_id_version',
+#' 'refseq_mrna'.
+#' Full list could be obtained by
 #' \code{listAttributes(mart)$name}, where \code{mart} is the output of \code{useMart} function.
 #' The type must be the gene type for the input \code{use_genes}.
 #' @param to_type character, character, attribute name from the biomaRt package, the gene type will be convereted to.
 #' @param use_genes a vector of characters, gene list used for ID conversion. Must be the genes with \code{from_type} in \code{from_spe}.
+#' If NULL, will output all possible genes in transfer table. Default is NULL.
 #'
 #' @return
 #' \code{get_IDtransfer_betweenSpecies} will return a data.frame for the transfer table.
@@ -344,6 +382,10 @@ get_IDtransfer <- function(from_type=NULL,to_type=NULL,use_genes=NULL,dataset=db
 #'                                use_genes=use_genes)
 #'                                ## get transfer table !!!
 #' \dontrun{
+#' transfer_tab <- get_IDtransfer_betweenSpecies(from_spe='human',
+#'                                to_spe='mouse',
+#'                                from_type='refseq_mrna',
+#'                                to_type='refseq_mrna')
 #' }
 #' @export
 get_IDtransfer_betweenSpecies <- function(from_spe='human',to_spe='mouse',
@@ -386,11 +428,11 @@ get_IDtransfer_betweenSpecies <- function(from_spe='human',to_spe='mouse',
   #### mart1 mart2
   attributes <- listAttributes(mart1)
   if(!from_type %in% attributes$name){
-    message(sprintf('%s not in the attributes for %s, please check and re-try !',from_type,db_info[1]));return(FALSE)
+    message(sprintf('%s not in the attributes for %s, please check and re-try !',from_type,from_spe));return(FALSE)
   }
   attributes <- listAttributes(mart2)
   if(!to_type %in% attributes$name){
-    message(sprintf('%s not in the attributes for %s, please check and re-try !',to_type,db_info[1]));return(FALSE)
+    message(sprintf('%s not in the attributes for %s, please check and re-try !',to_type,to_spe));return(FALSE)
   }
   ## get homolog between from_spe to to_spe
   cn1 <- gsub('(.*)_gene_ensembl','\\1',from_spe_ds)
@@ -399,8 +441,7 @@ get_IDtransfer_betweenSpecies <- function(from_spe='human',to_spe='mouse',
   if(length(cn3)!=1){
     message('No homolog info found in Biomart, sorry !');return(FALSE)
   }
-  tmp1 <- getBM(attributes=c(from_type,'external_gene_name'),values=use_genes,
-                mart=mart1,filters=from_type)
+  tmp1 <- get_IDtransfer(from_type=from_type,to_type='external_gene_name',use_genes=use_genes,dataset=from_spe_ds)
   tmp2 <- getBM(attributes=c(cn3,'external_gene_name'),values=TRUE,
                 mart=mart2,filters=sprintf('with_%s_homolog',cn1))
   colnames(tmp1) <- sprintf('%s_%s',colnames(tmp1),from_spe)
@@ -408,8 +449,7 @@ get_IDtransfer_betweenSpecies <- function(from_spe='human',to_spe='mouse',
   tmp3 <- merge(tmp1,tmp2,by.x=sprintf('external_gene_name_%s',from_spe),by.y=sprintf('%s_%s',cn3,to_spe))
   transfer_tab <- tmp3[,c(2,3,1)]
   if(to_type != 'external_gene_name'){
-    tmp4 <- getBM(attributes=c(to_type,'external_gene_name'),values=tmp3[,3],
-                  mart=mart2,filters='external_gene_name')
+    tmp4 <- get_IDtransfer(from_type='external_gene_name',to_type=to_type,use_genes=tmp3[,3],dataset=to_spe_ds)
     colnames(tmp4) <- sprintf('%s_%s',colnames(tmp4),to_spe)
     tmp5 <- merge(tmp3,tmp4)
     transfer_tab <- tmp5[,c(3,4,2,1)]
@@ -422,11 +462,13 @@ get_IDtransfer_betweenSpecies <- function(from_spe='human',to_spe='mouse',
 #' \code{get_IDtransfer2symbol2type} will generate the transfer table for the original ID to the gene symbol and gene biotype (at gene level)
 #' or transcript symbol and transcript biotype (at transcript level).
 #'
-#' @param from_type character, attribute name from the biomaRt package, such as 'ensembl_gene_id','ensembl_gene_id_version'
-#' 'ensembl_transcript_id','ensembl_transcript_id_version','refseq_mrna'. Full list could be obtained by
+#' @param from_type character, attribute name from the biomaRt package,
+#' such as 'ensembl_gene_id', 'ensembl_gene_id_version', 'ensembl_transcript_id', 'ensembl_transcript_id_version', 'refseq_mrna'.
+#' Full list could be obtained by
 #' \code{listAttributes(mart)$name}, where \code{mart} is the output of \code{useMart} function.
 #' The type must be the gene type for the input \code{use_genes}.
 #' @param use_genes a vector of characters, gene list used for ID conversion.
+#' If NULL, will output all possible genes in transfer table. Default is NULL.
 #' @param dataset character, name for the dataset used for ID conversion, such as 'hsapiens_gene_ensembl'.
 #' If NULL, will use \code{db_info[1]} if run \code{db.preload} brefore. Default is NULL.
 #' @param use_level character, either 'transcript' or 'gene', default is 'gene'
@@ -444,22 +486,25 @@ get_IDtransfer_betweenSpecies <- function(from_spe='human',to_spe='mouse',
 #' res1 <- get_name_transfertab(use_genes,transfer_tab=transfer_tab)
 #' transfer_tab_withtype <- get_IDtransfer2symbol2type(from_type = 'ensembl_transcript_id',
 #'                                                    use_genes=use_genes,
-#'                                                    dataset='hsapiens_gene_ensembl')
+#'                                                    dataset='hsapiens_gene_ensembl',
+#'                                                    use_level='transcript')
 #'                                                    ## get transfer table !!!
 #' \dontrun{
 #' }
 #' @export
-get_IDtransfer2symbol2type <- function(from_type=NULL,use_genes=NULL,dataset=db_info[1],use_level='gene'){
+get_IDtransfer2symbol2type <- function(from_type=NULL,use_genes=NULL,dataset=NULL,use_level='gene'){
+  if(is.null(dataset)==TRUE){
+    dataset <- db_info[1]
+  }
   message(sprintf('Your setting is at %s level',use_level))
   mart <- useMart(biomart="ensembl", dataset=dataset) ## get mart for id conversion !!!! db_info is saved in db RData
   attributes <- listAttributes(mart)
   if(!from_type %in% attributes$name){
-    message(sprintf('%s not in the attributes for %s, please check and re-try !',from_type,db_info[1]));return(FALSE)
+    message(sprintf('%s not in the attributes for %s, please check and re-try !',from_type,dataset));return(FALSE)
   }
-  if(use_level=='gene') tmp1 <- getBM(attributes=c(from_type,c('external_gene_name','gene_biotype')),values=use_genes,mart=mart,filters=from_type)
-  if(use_level=='transcript') tmp1 <- getBM(attributes=c(from_type,c('external_gene_name','gene_biotype')),values=use_genes,mart=mart,filters=from_type)
-  w1 <- apply(tmp1,1,function(x)length(which(is.na(x)==TRUE | x=="")))
-  transfer_tab <- tmp1[which(w1==0),]
+  if(use_level=='gene') tmp1 <- get_IDtransfer(from_type=from_type,to_type='external_gene_name',add_type='gene_biotype',use_genes=use_genes,dataset=dataset)
+  if(use_level=='transcript')   tmp1 <- get_IDtransfer(from_type=from_type,to_type='external_gene_name',add_type='transcript_biotype',use_genes=use_genes,dataset=dataset)
+  transfer_tab <- tmp1
   return(transfer_tab)
 }
 
@@ -469,12 +514,18 @@ get_IDtransfer2symbol2type <- function(from_type=NULL,use_genes=NULL,dataset=db_
 #'
 #' @param use_genes a vector of characters, gene list used for ID conversion.
 #' @param transfer_tab data.frame, the transfer table for ID conversion, could be obtained by \code{get_IDtransfer}.
-#' @param from_type character, attribute name from the biomaRt package, such as 'ensembl_gene_id','ensembl_gene_id_version'
-#' 'ensembl_transcript_id','ensembl_transcript_id_version','refseq_mrna'. Full list could be obtained by
+#' @param from_type character, attribute name from the biomaRt package,
+#' such as 'ensembl_gene_id',
+#' 'ensembl_gene_id_version'
+#' 'ensembl_transcript_id',
+#' 'ensembl_transcript_id_version',
+#' 'refseq_mrna'.
+#' Full list could be obtained by
 #' \code{listAttributes(mart)$name}, where \code{mart} is the output of \code{useMart} function.
 #' The type must be the gene type for the input \code{use_genes}.
 #'  If NULL, will use the first column in the transfer table.
-#' @param to_type character, character, attribute name from the biomaRt package, the gene type will be convereted to.
+#' @param to_type character, character, attribute name from the biomaRt package,
+#'  the gene type will be convereted to.
 #'  If NULL, will use the second column in the transfer table.
 #'
 #' @return
@@ -583,7 +634,11 @@ NetBID.network.dir.create <- function(project_main_dir=NULL,prject_name=NULL){
 #' @param project_main_dir character, main directory for the project in the driver analysis part.
 #' @param prject_name character, project name.
 #' @param network_dir character, main directory for the project in the network generation part.
-#' @param network_project_name character, the name of the network for use (SJAR.project_name in SJ.SJAracne.prepare)
+#' @param network_project_name character, the project name of the network for use (SJAR.project_name in SJ.SJAracne.prepare or SJAracne.prepare);
+#' This parameter is optional. If previously has not follow the NetBID2 suggested pipeline, could leave this to NULL
+#' but set the real path to tf.network.file and sig.network.file if want to follow the driver analysis part of NetBID2 suggested pipeline.
+#' @param tf.network.file character, file path of the TF network (XXX/consensus_network_ncol_.txt). Optional, if do not set network_project_name.
+#' @param sig.network.file character, file path of the SIG network (XXX/consensus_network_ncol_.txt). Optional, if do not set network_project_name.
 #'
 #' @return a list called analysis.par, including main.dir,project.name, out.dir, out.dir.QC, out.dir.DATA, out.dir.PLOT
 #'
@@ -600,13 +655,17 @@ NetBID.network.dir.create <- function(project_main_dir=NULL,prject_name=NULL){
 #'                                             network_project_name=network.project.name)
 #' }
 #' @export
-NetBID.analysis.dir.create <- function(project_main_dir=NULL,prject_name=NULL,network_dir=NULL, network_project_name=NULL){
+NetBID.analysis.dir.create <- function(project_main_dir=NULL,prject_name=NULL,
+                                       network_dir=NULL,
+                                       network_project_name=NULL,
+                                       tf.network.file=NULL,
+                                       sig.network.file=NULL){
   if(exists('analysis.par')==TRUE){message('analysis.par is occupied in the current session,please manually run: rm(analysis.par) and re-try, otherwise will not change !');
     return(analysis.par)}
   if(is.null(project_main_dir)==TRUE){message('project_main_dir required, please input and re-try!');return(FALSE)}
   if(is.null(prject_name)==TRUE){message('prject_name required, please input and re-try!');return(FALSE)}
   if(is.null(network_dir)==TRUE){message('network_dir required, please input and re-try!');return(FALSE)}
-  if(is.null(network_project_name)==TRUE){message('network_project_name required, please input and re-try!');return(FALSE)}
+  #if(is.null(network_project_name)==TRUE){message('network_project_name required, please input and re-try!');return(FALSE)}
   analysis.par <- list()
   analysis.par$main.dir <- project_main_dir
   analysis.par$project.name <- prject_name
@@ -627,10 +686,28 @@ NetBID.analysis.dir.create <- function(project_main_dir=NULL,prject_name=NULL,ne
   if (!dir.exists(analysis.par$out.dir.PLOT)) {
     dir.create(analysis.par$out.dir.PLOT, recursive = TRUE) ## directory for Result Plots
   }
-  analysis.par$tf.network.file  <- sprintf('%s/SJAR/%s/output_tf_sjaracne_%s_out_.final/consensus_network_ncol_.txt',
-                                           network_dir,network_project_name,network_project_name)
-  analysis.par$sig.network.file <- sprintf('%s/SJAR/%s/output_sig_sjaracne_%s_out_.final/consensus_network_ncol_.txt',
-                                           network_dir,network_project_name,network_project_name)
+  analysis.par$tf.network.file <- NULL
+  analysis.par$sig.network.file <- NULL
+  if(is.null(tf.network.file)==FALSE){
+    analysis.par$tf.network.file  <- tf.network.file
+  }else{
+    tf_net1 <- sprintf('%s/SJAR/%s/output_tf_sjaracne_%s_out_.final/consensus_network_ncol_.txt',
+                      network_dir,network_project_name,network_project_name) ## old version of sjaracne
+    if(file.exists(tf_net1)) analysis.par$tf.network.file <- tf_net1
+    tf_net2 <- sprintf('%s/SJAR/SJARACNE_%s_TF/SJARACNE_out.final/consensus_network_ncol_.txt',
+                      network_dir,network_project_name) ## new version of sjaracne
+    if(file.exists(tf_net2)) analysis.par$tf.network.file <- tf_net2
+  }
+  if(is.null(tf.network.file)==FALSE){
+    analysis.par$sig.network.file <- sig.network.file
+  }else{
+    sig_net1 <- sprintf('%s/SJAR/%s/output_sig_sjaracne_%s_out_.final/consensus_network_ncol_.txt',
+                       network_dir,network_project_name,network_project_name) ## old version of sjaracne
+    if(file.exists(sig_net1)) analysis.par$sig.network.file <- sig_net1
+    sig_net2 <- sprintf('%s/SJAR/SJARACNE_%s_SIG/SJARACNE_out.final/consensus_network_ncol_.txt',
+                       network_dir,network_project_name) ## new version of sjaracne
+    if(file.exists(sig_net2)) analysis.par$sig.network.file <- sig_net2
+  }
   if(file.exists(analysis.par$tf.network.file)){
     message(sprintf('TF network file found in %s',analysis.par$tf.network.file))
   }else{
@@ -693,11 +770,11 @@ check_analysis.par <- function(analysis.par,step='pre-load'){
 
 #' Automatically save RData for NetBID2. Suggested in the NetBID2 pipeline analysis but not required.
 #'
-#' \code{NetBID2.saveRData} is a function strongly suggested to control the pipeline analysis in NetBID2.
+#' \code{NetBID.saveRData} is a function strongly suggested to control the pipeline analysis in NetBID2.
 #'
 #' Users could save two complicate list object, network.par in the network generation part and analysis.par in the driver analysis part,
 #' into the data directory (network.par$out.dir.DATA or analysis.par$out.dir.DATA), with the name of the RData marked by \code{step} name.
-#' The two lists could make user to save the whole related dataset in each step \code{NetBID2.saveRData} and easy to get them back by using \code{NetBID2.loadRData}.
+#' The two lists could make user to save the whole related dataset in each step \code{NetBID.saveRData} and easy to get them back by using \code{NetBID.loadRData}.
 #' The RData saved from each step could be used to run the following analysis without repeating the former steps.
 #'
 #' @param network.par list, store all related datasets during network generation part.
@@ -708,11 +785,11 @@ check_analysis.par <- function(analysis.par,step='pre-load'){
 #' \dontrun{
 #' analysis.par <- list()
 #' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
-#' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
-#' NetBID2.saveRData(analysis.par=analysis.par,step='ms-tab_test')
+#' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' NetBID.saveRData(analysis.par=analysis.par,step='ms-tab_test')
 #' }
 #' @export
-NetBID2.saveRData <- function(network.par=NULL,analysis.par=NULL,step='exp-load'){
+NetBID.saveRData <- function(network.par=NULL,analysis.par=NULL,step='exp-load'){
   if(is.null(network.par)==FALSE & is.null(analysis.par)==FALSE){
     message('Can not save network.par and analysis.par at once, please only use one !');return(FALSE)
   }
@@ -730,11 +807,11 @@ NetBID2.saveRData <- function(network.par=NULL,analysis.par=NULL,step='exp-load'
 
 #' Automatically load RData for NetBID2. Suggested in the NetBID2 pipeline analysis but not required.
 #'
-#' \code{NetBID2.loadRData} is a function strongly suggested to control the pipeline analysis in NetBID2.
+#' \code{NetBID.loadRData} is a function strongly suggested to control the pipeline analysis in NetBID2.
 #'
 #' Users could save two complicate list object, network.par in the network generation part and analysis.par in the driver analysis part,
 #' into the data directory (network.par$out.dir.DATA or analysis.par$out.dir.DATA), with the name of the RData marked by \code{step} name.
-#' The two lists could make user to save the whole related dataset in each step \code{NetBID2.saveRData} and easy to get them back by using \code{NetBID2.loadRData}.
+#' The two lists could make user to save the whole related dataset in each step \code{NetBID.saveRData} and easy to get them back by using \code{NetBID.loadRData}.
 #' The RData saved from each step could be used to run the following analysis without repeating the former steps.
 #'
 #' @param network.par list, store all related datasets during network generation part.
@@ -744,10 +821,10 @@ NetBID2.saveRData <- function(network.par=NULL,analysis.par=NULL,step='exp-load'
 #' @examples
 #' analysis.par <- list()
 #' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
-#' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
 #'
 #' @export
-NetBID2.loadRData <- function(network.par=NULL,analysis.par=NULL,step='exp-load'){
+NetBID.loadRData <- function(network.par=NULL,analysis.par=NULL,step='exp-load'){
   if(is.null(network.par)==FALSE & is.null(analysis.par)==FALSE){
     message('Can not load network.par and analysis.par at once, please only use one !');return(FALSE)
   }
@@ -763,19 +840,32 @@ NetBID2.loadRData <- function(network.par=NULL,analysis.par=NULL,step='exp-load'
   }
 }
 
-#' Load gene expression set from GEO
+#' Load gene expression set from GEO database
 #'
-#' \code{load.exp.GEO} is a function to get GEO dataset, save into eSet and save to RData. If the RData exists, user could choose to directly load from it.
+#' \code{load.exp.GEO} is a function to get GEO dataset, save into ExpressionSet class object and save to RData.
+#' If the RData exists, user could choose to directly load from it.
 #'
-#' @param out.dir character
-#' @param GSE character
-#' @param GPL character
-#' @param getGPL logical
-#' @param update logical
+#' This function aims to provide simple way to get expression set from GEO database and manage the related RData.
 #'
+#' @param out.dir character, the file path to save the RData or if the RData has already generated, load from it.
+#' Default is network.par$out.dir.DATA if follow the NetBID2 suggested pipeline.
+#' @param GSE character, the GSE ID to download.
+#' @param GPL character, the GPL ID to download.
+#' @param getGPL logical, whether to download the GPL file or not. Default is TRUE.
+#' @param update logical, whether to update the RData if the data is already in the out.dir.Default is FALSE
 #'
+#' @return ExpressionSet class object if success.
+#' @examples
+#'
+#' \dontrun{
+#' net_eset <- load.exp.GEO(out.dir='test/',
+#'                          GSE='GSE116028',
+#'                          GPL='GPL6480',
+#'                          getGPL=TRUE,
+#'                          update=FALSE)
+#' }
 #' @export
-load.exp.GEO <- function(out.dir=network.par$out.dir.DATA,GSE = NULL,GPL = NULL,getGPL=TRUE,update = TRUE){
+load.exp.GEO <- function(out.dir=network.par$out.dir.DATA,GSE = NULL,GPL = NULL,getGPL=TRUE,update = FALSE){
   if(is.null(out.dir)==TRUE){
     message('out.dir required, please re-try')
     return(FALSE)
@@ -785,7 +875,7 @@ load.exp.GEO <- function(out.dir=network.par$out.dir.DATA,GSE = NULL,GPL = NULL,
     return(FALSE)
   }
   expRData_dir <- sprintf('%s/%s_%s.RData', out.dir, GSE,GPL)
-  if (file.exists(expRData_dir) & update == TRUE) {
+  if (file.exists(expRData_dir) & update == FALSE) {
     message(sprintf('RData exist in %s and update==TRUE, will directly load from RData .',expRData_dir))
     load(expRData_dir)
   } else{
@@ -802,8 +892,33 @@ load.exp.GEO <- function(out.dir=network.par$out.dir.DATA,GSE = NULL,GPL = NULL,
 }
 
 #' Load gene expression set from Salmon output (demo version).
+#'
+#' \code{load.exp.RNASeq.demoSalmon} is a function to read in salmon results and convert to eSet/DESeqDataSet class object.
+#'
+#' This function assist to read in RNASeq results from salmon.
+#' Due to the complicated condition (e.g reference sequence) in running salmon, this function is just a demo version that may not suit for all conditions.
+#'
+#' @param salmon_dir character, the main file directory to save the salmon results.
+#' @param tx2gene data.frame or NULL, this parameter will be passed to \code{tximport}, check for detail.
+#' If NULL, will read the transcript name in one of the salmon output
+#' (this only works when using e.g gencode.v29.transcripts.fa from GENCODE as reference).
+#' @param use_phenotype_info data.frame, phenotype information dataframe, must contain the columns \code{use_sample_col} and \code{use_design_col}.
+#' @param use_sample_col character, the column name to indicate which column in \code{use_phenotype_info} should be used as the sample name.
+#' @param use_design_col character, the column name to indicate which column in \code{use_phenotype_info} should be used as the design feature of the samples.
+#' @param return_type character, the class of the return object, choose from 'eset','dds'. 'eset' is the ExpressionSet class object,
+#' 'dds' is the DESeqDataSet class object.
+#' Default is 'eset'
+#' @param merge_level character, choose from 'gene' and 'transcript',
+#' if choose 'gene' and original salmon results is mapped to the transcriptome,
+#' expression matrix will be merged to gene level.
+#' (this only works when using e.g gencode.v29.transcripts.fa from GENCODE as reference).
 #' @export
-load.exp.RNASeq.demoSalmon <- function(salmon_dir = "",tx2gene=NULL,use_phenotype_info = NULL,use_sample_col=NULL,use_design_col=NULL,return_type='eset',merge_level='gene') {
+load.exp.RNASeq.demoSalmon <- function(salmon_dir = "",tx2gene=NULL,
+                                       use_phenotype_info = NULL,
+                                       use_sample_col=NULL,
+                                       use_design_col=NULL,
+                                       return_type='eset',
+                                       merge_level='gene') {
   files <- file.path(salmon_dir, list.files(salmon_dir), "quant.sf")
   sample_name <- gsub('(.*)_salmon', '\\1', list.files(salmon_dir))
   names(files) <- sample_name
@@ -819,20 +934,55 @@ load.exp.RNASeq.demoSalmon <- function(salmon_dir = "",tx2gene=NULL,use_phenotyp
       tx2gene <- data.frame('transcript' = gene_info,'gene' = gen1[,1],stringsAsFactors = FALSE)
     }
   }
-  eset <- load.exp.RNASeq.demo(files,type='salmon',tx2gene=tx2gene,use_phenotype_info=use_phenotype_info,use_sample_col=use_sample_col,use_design_col=use_design_col,
-                               return_type=return_type,merge_level=merge_level)
+  eset <- load.exp.RNASeq.demo(files,type='salmon',
+                               tx2gene=tx2gene,
+                               use_phenotype_info=use_phenotype_info,
+                               use_sample_col=use_sample_col,
+                               use_design_col=use_design_col,
+                               return_type=return_type,
+                               merge_level=merge_level)
   return(eset)
 }
 
-#' Load gene expression set from RNASeq (demo version).
+#' Load gene expression set from RNASeq results (demo version).
+#'
+#' \code{load.exp.RNASeq.demo} is a function to read in RNASeq results and convert to eSet/DESeqDataSet class object.
+#'
+#' This function assist to read in RNASeq results from different resources.
+#' Due to the complicated condition (e.g reference sequence) in running RNASeq,
+#' this function is just a demo version that may not suit for all conditions.
+#'
+#' @param files a vector of characters,filenames for the transcript-level abundances, will be passed to \code{tximport}.
+#' Check for detail.
+#' @param type character, he type of software used to generate the abundances, will be passed to \code{tximport}.
+#' Check for detail.
+#' @param tx2gene data.frame or NULL, this parameter will be passed to \code{tximport}, check for detail.
+#' @param use_phenotype_info data.frame, phenotype information dataframe, must contain the columns \code{use_sample_col} and \code{use_design_col}.
+#' @param use_sample_col character, the column name to indicate which column in \code{use_phenotype_info} should be used as the sample name.
+#' @param use_design_col character, the column name to indicate which column in \code{use_phenotype_info} should be used as the design feature of the samples.
+#' @param return_type character, the class of the return object, choose from 'eset','dds'. 'eset' is the ExpressionSet class object,
+#' 'dds' is the DESeqDataSet class object.
+#' Default is 'eset'
+#' @param merge_level character, choose from 'gene' and 'transcript',
+#' if choose 'gene' and original salmon results is mapped to the transcriptome,
+#' expression matrix will be merged to gene level.
+#' (this only works when using e.g gencode.v29.transcripts.fa from GENCODE as reference).
 #' @export
-load.exp.RNASeq.demo <- function(files,type='salmon',tx2gene=NULL,use_phenotype_info = NULL,use_sample_col=NULL,use_design_col=NULL, return_type='eset',merge_level='gene') {
+load.exp.RNASeq.demo <- function(files,type='salmon',
+                                 tx2gene=NULL,
+                                 use_phenotype_info = NULL,
+                                 use_sample_col=NULL,
+                                 use_design_col=NULL,
+                                 return_type='eset',
+                                 merge_level='gene') {
   n1 <- colnames(use_phenotype_info)
   if(!use_sample_col %in% n1){
-    message(sprintf('%s not in the colnames of use_phenotype_info, please check and re-try !',use_sample_col));return(FALSE)
+    message(sprintf('%s not in the colnames of use_phenotype_info,
+                    please check and re-try !',use_sample_col));return(FALSE)
   }
   if(!use_design_col %in% n1){
-    message(sprintf('%s not in the colnames of use_phenotype_info, please check and re-try !',use_design_col));return(FALSE)
+    message(sprintf('%s not in the colnames of use_phenotype_info,
+                    please check and re-try !',use_design_col));return(FALSE)
   }
   # get intersected samples
   rownames(use_phenotype_info) <- use_phenotype_info[,use_sample_col]
@@ -861,7 +1011,30 @@ load.exp.RNASeq.demo <- function(files,type='salmon',tx2gene=NULL,use_phenotype_
   }
 }
 
-#' Generate expression set.
+#' Generate expression Set object
+#'
+#' \code{generate.eset} is a function to generate eSet object by input expression matrix (required),
+#' phenotype and feature information (optional).
+#'
+#' This function aims to assist the generation of eSet object,
+#' especially for sometimes only expression matrix is available.
+#'
+#' @param exp_mat data matrix, the expression data matrix with each row a gene/transcript and each column a sample.
+#' @param phenotype_info data.frame, the phenotype information for the samples in \code{exp_mat},
+#' the rownames must match the colnames of \code{exp_mat}. If NULL, will generate a single column dataframe.
+#' Default is NULL.
+#' @param feature_info data.frame,the feature information for the genes/transcripts/probes in \code{exp_mat},
+#' the rownames must match the rownames of \code{exp_mat}. If NULL, will generate a single column dataframe.
+#' Default is NULL.
+#' @param annotation_info character, the annotation for the eSet. Default is "".
+#'
+#' @return an ExressionSet object.
+#'
+#' @examples
+#' mat1 <- matrix(rnorm(10000),nrow=1000,ncol=10)
+#' colnames(mat1) <- paste0('Sample',1:ncol(mat1))
+#' rownames(mat1) <- paste0('Gene',1:nrow(mat1))
+#' eset <- generate.eset(exp_mat=mat1)
 #' @export
 generate.eset <- function(exp_mat=NULL, phenotype_info=NULL, feature_info=NULL, annotation_info="") {
   if(is.null(exp_mat)){
@@ -876,11 +1049,11 @@ generate.eset <- function(exp_mat=NULL, phenotype_info=NULL, feature_info=NULL, 
     feature_info <- data.frame(gene = rownames(exp_mat), stringsAsFactors = FALSE)
     rownames(feature_info) <- rownames(exp_mat)
   }
-  if(class(phenotype_info)=='character'){
+  if(class(phenotype_info)=='character' | is.null(dim(phenotype_info))==TRUE){
     phenotype_info <- data.frame(group = phenotype_info, stringsAsFactors = FALSE)
     rownames(phenotype_info) <- colnames(exp_mat)
   }
-  if(class(feature_info)=='character'){
+  if(class(feature_info)=='character' | is.null(dim(feature_info))==TRUE){
     feature_info <- data.frame(gene = feature_info, stringsAsFactors = FALSE)
     rownames(feature_info) <- rownames(exp_mat)
   }
@@ -895,22 +1068,59 @@ generate.eset <- function(exp_mat=NULL, phenotype_info=NULL, feature_info=NULL, 
   return(eset)
 }
 
-#' Merge two expression set.
-#' @usage merge_eset(eset1,eset2,group1,group2,phe1,phe2,use_col = NULL,remove_batch = TRUE)
+#' Merge two ExpressionSet class object.
+#'
+#' \code{merge_eset} is a function to merge two ExpressionSet class objects.
+#' If the genes in two objects are same, the expression matrix will be directly merged, otherwise,
+#' Z-transformation is performed before merging.
+#'
+#' @param eset1 ExpressionSet class, the first dataset to merge.
+#' @param eset2 ExpressionSet class, the second dataset to merge.
+#' @param group1 character, name for the first group.
+#' @param group2 character, name for the second group.
+#' @param use_col a vector of characters, the column names in the phenotype information to be kept in the merged ExpressionSet.
+#' If NULL, will use the intersected column names between the two datasets. Default is NULL.
+#' @param group_col_name, character, name for the column indicate the originate of the samples in the phenotype information dataframe in the merged ExpressionSet.
+#' Default is 'original_group'.
+#' @param remove_batch logical, indicate whether or not to remove batch effect between two sample set.
+#' Default is FALSE.
+#'
+#' @return an ExressionSet object.
+#' @examples
+#' mat1 <- matrix(rnorm(10000),nrow=1000,ncol=10)
+#' colnames(mat1) <- paste0('Sample1_',1:ncol(mat1))
+#' rownames(mat1) <- paste0('Gene',1:nrow(mat1))
+#' eset1 <- generate.eset(exp_mat=mat1)
+#' mat2 <- matrix(rnorm(10000),nrow=1000,ncol=10)
+#' colnames(mat2) <- paste0('Sample2_',1:ncol(mat1))
+#' rownames(mat2) <- paste0('Gene',1:nrow(mat1))
+#' eset2 <- generate.eset(exp_mat=mat2)
+#' new_eset <- merge_eset(eset1,eset2)
 #' @export
-merge_eset <- function(eset1,eset2,group1,group2,phe1,phe2,
+merge_eset <- function(eset1,eset2,
+                       group1=NULL,group2=NULL,
+                       group_col_name='original_group',
                        use_col = NULL,
-                       remove_batch = TRUE) {
+                       remove_batch = FALSE) {
   mat1 <- exprs(eset1)
   mat2 <- exprs(eset2)
   w1 <- intersect(rownames(mat1), rownames(mat2))
+  if(length(w1)==0){
+    message('No overlap genes between two eSet, please check and re-try!');return(FALSE);
+  }
+  if(length(w1)<nrow(mat1) & length(w1)<nrow(mat2)){
+    ## z-transformation
+    mat1 <- std(mat1)
+    mat2 <- std(mat2)
+  }
   rmat <- cbind(mat1[w1, ], mat2[w1, ])
-  choose1 <- apply(rmat <= quantile(rmat, probs = 0.05), 1, sum) <= ncol(rmat) * 0.90 ## low expressed genes
-  rmat <- rmat[choose1, ]
-  rmat <- normalizeQuantiles(rmat) ## limma quantile normalization
-  #rmat <- apply(rmat, 2, function(x) {
-  #    (x - mean(x, na.rm = TRUE)) / sd(x, na.rm = TRUE)
-  #})
+  #choose1 <- apply(rmat <= quantile(rmat, probs = 0.05), 1, sum) <= ncol(rmat) * 0.90 ## low expressed genes
+  #rmat <- rmat[choose1, ]
+  phe1 <- pData(eset1)
+  phe2 <- pData(eset2)
+  if(length(use_col)==0){
+    use_col <- intersect(colnames(phe1),colnames(phe2))
+  }
   if(length(use_col)>1)
     rphe <- rbind(phe1[colnames(mat1), use_col], phe2[colnames(mat2), use_col])
   if(length(use_col)==1){
@@ -918,23 +1128,59 @@ merge_eset <- function(eset1,eset2,group1,group2,phe1,phe2,
     rphe <- data.frame(rphe,stringsAsFactors=FALSE); colnames(rphe) <- use_col;
     rownames(rphe) <- colnames(rmat)
   }
-  rphe$original_group <- c(rep(group1, ncol(mat1)), rep(group2, ncol(mat2)))
+  if(is.null(group1)==TRUE) group1 <- 'group1'
+  if(is.null(group2)==TRUE) group2 <- 'group2'
+  rphe[[group_col_name]]<- c(rep(group1, ncol(mat1)), rep(group2, ncol(mat2)))
   if (remove_batch == TRUE) {
-    rmat <- removeBatchEffect(rmat,batch=rphe$original_group)
+    rmat <- removeBatchEffect(rmat,batch=rphe[[group_col_name]])
   }
   reset <- generate.eset(rmat,phenotype_info = rphe, annotation_info = 'combine')
   return(reset)
 }
 
-#' Update eset feature, mainly for gene ID conversion
+#' Update ExpressionSet feature information, mainly for gene ID conversion
 #'
-#' ID conversion, or merge transcript level to expression level, use_feature_info can be other dataframe info
-#' merge_method: mean median max min
-#' if multi-from --> one to: merge
-#' if one-from --> multi to: equal distribute.
+#' \code{update_eset.feature} is a function to update the feature information in the ExpressionSet object.
 #'
-#' @export
-update.eset.feature <- function(use_eset=NULL,use_feature_info=NULL,from_feature=NULL,to_feature=NULL,merge_method='median'){
+#' This function is designed mainly for gene ID conversion.
+#' User could input the transfer table for ID conversion, which could be obtained from the original feature table
+#' (if use \code{load.exp.GEO} and set getGPL==TRUE) or by running the function \code{get_IDtransfer}.
+#' The relationship betweeen the original ID and the target ID could be as follows:
+#' 1) one->one, just change the ID label.
+#' 2) multiple->one, the expression value for the target ID will be the merge of the original ID, with user-defined choice of merge_method.
+#' 3) one->mulitple, the expression value for the original ID will be distributed to the matched target IDs, with user-defined choice of distribute_method.
+#' warning message will be presented in this condition.
+#' 4) multiple-->multiple, the function will do distribute step 3) first and merge 2).
+#'
+#' @param use_eset ExpressionSet class object, the original ExpressionSet to update.
+#' @param use_feature_info data.frame, the transfer table for ID conversion.
+#' @param from_feature character,the column name in \code{use_feature_info},must be the same type of the rownames for the expression matrix in \code{use_eset}.
+#' @param to_feature character, the column in \code{use_feature_info}, the target ID will be convereted to.
+#' @param merge_method character, startegy to merge the expression value, choose from 'median','mean','max','min'. Default is "median".
+#' @param distribute_method character, strategy to distribute the expression value, choose from 'mean', 'equal'. Default is "equal".
+#'
+#' @return an ExressionSet object.
+#' @examples
+#' mat1 <- matrix(rnorm(10000),nrow=1000,ncol=10)
+#' colnames(mat1) <- paste0('Sample',1:ncol(mat1))
+#' rownames(mat1) <- paste0('Gene',1:nrow(mat1))
+#' eset <- generate.eset(exp_mat=mat1)
+#' test_transfer_table <- data.frame(
+#'                        'Gene'=c('Gene1','Gene1','Gene2','Gene3','Gene4'),
+#'                        'Transcript'=c('T11','T12','T2','T3','T3'))
+#' new_eset <- update_eset.feature(use_eset=eset,
+#'                                 use_feature_info=test_transfer_table,
+#'                                 from_feature='Gene',
+#'                                 to_feature='Transcript',
+#'                                 merge_method='median',
+#'                                 distribute_method='equal'
+#'                                 )
+#' print(exprs(eset)[test_transfer_table$Gene,])
+#' print(exprs(new_eset))
+#'
+#' @export update_eset.feature
+update_eset.feature <- function(use_eset=NULL,use_feature_info=NULL,from_feature=NULL,to_feature=NULL,
+                                merge_method='median',distribute_method='equal'){
   if(is.null(use_eset)){
     message('use_eset required, please re-try !');
     return(use_eset)
@@ -963,7 +1209,7 @@ update.eset.feature <- function(use_eset=NULL,use_feature_info=NULL,from_feature
     message(sprintf('Rownames of the expression matrix was not included in the %s column, please check and re-try !',from_feature))
     return(use_eset)
   }
-  message(sprintf('%d out of %d rows from original expression matrix will be keeped !',length(w1),length(g1)))
+  message(sprintf('%d transfer pairs related with %d rows from original expression matrix will be keeped !',length(w1),length(g1)))
   fc1 <- table(f1); tc1 <- table(t1); fw1 <- which(fc1>1); tw1 <- which(tc1>1); ## check duplicate records
   if(length(fw1)>0){
     message(sprintf('Original feature %s has %d items with duplicate records, will distribute the original values equal to all related items !
@@ -971,7 +1217,15 @@ update.eset.feature <- function(use_eset=NULL,use_feature_info=NULL,from_feature
     #return(use_eset)
     w2 <- which(f1 %in% names(fw1)) ## need to distribute
     w0 <- setdiff(1:length(f1),w2) ## do not need to distribute
-    v1 <- mat[f1[w2],]; rownames(v1) <- paste0(f1[w2],'-',t1[w2]);
+    if(distribute_method=='equal'){
+      v1 <- mat[f1[w2],]; ## distribute equal
+    }
+    if(distribute_method=='mean'){
+      v1 <- mat[f1[w2],]; ## distribute mean
+      tt <- as.numeric(table(f1[w2])[f1[w2]])
+      v1 <- v1/tt;
+    }
+    rownames(v1) <- paste0(f1[w2],'-',t1[w2]);
     f1[w2] <- paste0(f1[w2],'-',t1[w2]); # update transfer table
     mat <- rbind(v1,mat[f1[w0],]) # update mat table
     fc1 <- table(f1); tc1 <- table(t1); fw1 <- which(fc1>1); tw1 <- which(tc1>1); ## update f1, t1 and related values
@@ -994,36 +1248,67 @@ update.eset.feature <- function(use_eset=NULL,use_feature_info=NULL,from_feature
   return(new_eset)
 }
 
-#' Update eset phenotype
+#' Update ExpressionSet phenotype information, mainly for changing sample name and extract useful phenotype information for sample clustering.
 #'
-#' @export
-update.eset.phenotype <- function(use_eset=NULL,use_phenotype_info=NULL,use_sample_col=NULL,use_col='GEO-auto'){
+#' \code{update_eset.phenotype} is a function to update the phenotype information in the ExpressionSet object.
+#'
+#' This function is designed mainly for extracting useful phenotype information for samples.
+#' Especially for phenotype information directly get from GEO database.
+#'
+#' @param use_eset ExpressionSet class object, the original ExpressionSet to update.
+#' @param use_phenotype_info data.frame, the phenotype information dataframe.
+#' @param use_sample_col character,the column name in \code{use_phenotype_info}, which contains the sample name.
+#' @param use_col character, the columns in \code{use_phenotype_info} to be kept.
+#' If set to 'auto', wil extract columns with unique sample feature ranges from 2 to sample size-1.
+#' If set to 'GEO-auto', will extract columns: 'geo_accession','title','source_name_ch1',and columns end with ':ch1'.
+#' Default is "auto".
+#' @return an ExressionSet object.
+#' @examples
+#' \dontrun{
+#' net_eset <- load.exp.GEO(out.dir='test/',
+#'                          GSE='GSE116028',
+#'                          GPL='GPL6480',
+#'                          getGPL=TRUE,
+#'                          update=FALSE)
+#' net_eset <- update_eset.phenotype(use_eset=net_eset,
+#'                                   use_phenotype_info=pData(net_eset),
+#'                                   use_sample_col='geo_accession',
+#'                                   use_col='GEO-auto')
+#' }
+#' @export update_eset.phenotype
+update_eset.phenotype <- function(use_eset=NULL,use_phenotype_info=NULL,use_sample_col=NULL,use_col='auto'){
   if(is.null(use_eset)){
     message('use_eset required, please re-try !');
     return(use_eset)
   }
-  if(is.null(use_sample_col)){
-    message('use_sample_col required, please re-try !')
-    return(use_eset)
-  }
   if(is.null(use_phenotype_info)) use_phenotype_info <- pData(use_eset)
-  if(!use_sample_col %in% colnames(use_phenotype_info)){
-    message(sprintf('%s not in the colnames of use_phenotype_info, please re-try!',use_sample_col));return(use_eset)
+  if(is.null(use_sample_col)==FALSE){
+    if(!use_sample_col %in% colnames(use_phenotype_info)){
+      message(sprintf('%s not in the colnames of use_phenotype_info, please re-try!',use_sample_col));return(use_eset)
+    }
   }
   if(is.null(use_col)) use_col <- colnames(use_phenotype_info)
   mat <- exprs(use_eset)
   s1 <- colnames(mat) ## all samples
-  p1 <- use_phenotype_info[,use_sample_col] ## sample in the phenotype info
+  if(is.null(use_sample_col)==TRUE){
+    p1 <- rownames(use_phenotype_info)
+  }else{
+    p1 <- use_phenotype_info[,use_sample_col] ## sample in the phenotype info
+  }
   w1 <- which(p1 %in% s1); p1 <- p1[w1]; ## only consider samples in the colnames of expmat
   if(length(w1)==0){
-    message(sprintf('Colnames of the expression matrix was not included in the %s column, please check and re-try !',use_sample_col))
+    if(is.null(use_sample_col)==TRUE){
+      message('Colnames of the expression matrix was not included in the rownames of use_phenotype_info, please check and re-try !')
+    }else{
+      message(sprintf('Colnames of the expression matrix was not included in the %s column, please check and re-try !',use_sample_col))
+    }
     return(use_eset)
   }
   message(sprintf('%d out of %d samples from the expression matrix will be keeped !',length(w1),length(s1)))
   mat_new <- mat[,p1]
   use_phenotype_info <- use_phenotype_info[w1,]
+  n1 <- colnames(use_phenotype_info)
   if(use_col[1] == 'GEO-auto'){
-    n1 <- colnames(use_phenotype_info)
     w1 <- c('geo_accession','title','source_name_ch1',n1[grep(':ch1',n1)])
     p1 <- use_phenotype_info[,w1]
     colnames(p1)[4:ncol(p1)] <- gsub('(.*):ch1','\\1',colnames(p1)[4:ncol(p1)])
@@ -1032,19 +1317,47 @@ update.eset.phenotype <- function(use_eset=NULL,use_phenotype_info=NULL,use_samp
     p1 <- as.data.frame(apply(p1,2,function(x){if(class(x)=='factor'){as.character(x)}else{x}}),stringsAsFactors=FALSE)
     new_phenotype_info <- p1
   }else{
-    if(length(setdiff(use_col,n1))>0){
-      message(sprintf('%s not in use_phenotype_info, please re-try!',paste(setdiff(use_col,n1),collapse=';')));return(FALSE)
+    if(use_col[1] == 'auto'){
+      u1 <- apply(use_phenotype_info,2,function(x)length(unique(x)))
+      w1 <- which(u1>=2 & u1<=nrow(use_phenotype_info)-1)
+      if(length(w1)==0){
+        message('No column could match the auto criteria, please check and re-try!');return(FALSE)
+      }
+      new_phenotype_info <- use_phenotype_info[,w1]
+    }else{
+      if(length(setdiff(use_col,n1))>0){
+        message(sprintf('%s not in use_phenotype_info, please re-try!',paste(setdiff(use_col,n1),collapse=';')));return(FALSE)
+      }
+      p1 <- use_phenotype_info[,use_col]
+      p1 <- as.data.frame(apply(p1,2,function(x){if(class(x)=='factor'){as.character(x)}else{x}}),stringsAsFactors=FALSE)
+      new_phenotype_info <- p1
     }
-    p1 <- use_phenotype_info[,use_col]
-    p1 <- as.data.frame(apply(p1,2,function(x){if(class(x)=='factor'){as.character(x)}else{x}}),stringsAsFactors=FALSE)
-    new_phenotype_info <- p1
   }
+  #print(new_phenotype_info)
   new_eset <- generate.eset(exp_mat=mat_new, phenotype_info=new_phenotype_info, feature_info=fData(use_eset), annotation_info=annotation(use_eset))
   return(new_eset)
 }
 
-#' IQR filter
+#' IQR (interquartile range) filter for the genes in the expression matrix
 #'
+#' \code{IQR.filter} is a function to extract genes by their IQR value.
+#'
+#' This function aims to extract out most variable genes (defined by the IQR value).
+#' This step will be used to perform sample cluster and to prepare the input for SJAracne.
+#'
+#' @param exp_mat matrix, the gene expression matrix, with each row a gene/transcript/probe and each column a sample.
+#' @param use_genes a vector of characters, the gene list to report. Default is the rownames of \code{exp_mat}.
+#' @param thre numeric, the quantile threshold of IQR. Default is 0.5.
+#' @param loose_gene a vector of characters, the gene list that only need to pass the \code{loose_thre}.
+#' This parameter is designed for inputing possible drivers used in SJAracne. Default is NULL.
+#' @param loose_thre numeric,the quantile threshold of IQR for the genes in \code{loose_gene}. Default is 0.1.
+#' @return a vector with logical values indicate which genes should be kept.
+#' @examples
+#' mat1 <- matrix(rnorm(15000),nrow=1500,ncol=10)
+#' colnames(mat1) <- paste0('Sample',1:ncol(mat1))
+#' rownames(mat1) <- paste0('Gene',1:nrow(mat1))
+#' choose1 <- IQR.filter(mat1,thre=0.5,
+#'                      loose_gene=paste0('Gene',1:100))
 #' @export
 IQR.filter <- function(exp_mat,use_genes=rownames(exp_mat),thre = 0.5,loose_gene=NULL,loose_thre=0.1) {
   use_genes <- intersect(use_genes,rownames(exp_mat))
@@ -1060,12 +1373,30 @@ IQR.filter <- function(exp_mat,use_genes=rownames(exp_mat),thre = 0.5,loose_gene
   return(use_vec)
 }
 
-#' Simple function to normalize for RNASeq Count
+#' Simple function to normalize RNASeq Read Count data.
 #'
+#' \code{RNASeqCount.normalize.scale} is a simple version function to normalize the RNASeq read count data.
+#'
+#' Strongly suggest to follow the DESeq2 pipeline to process the RNASeq datasets.
+#' \code{load.exp.RNASeq.demo} and \code{load.exp.RNASeq.demoSalmon} is included in NetBID2 but may not suit for all conditions.
+#'
+#' @param mat matrix, the original input matrix for the read data, each row is a gene/transcript with each column a sample.
+#' @param total integer, total read counts, if NULL will use the mean of the column sum. Default is NULL.
+#' @param pseudoCount integer, pseudo count to add for all read counts to avoid -Inf in following log transformation.
+#' Default is 1.
+#'
+#' @return a matrix containing the normalized RNASeq count.
+#'
+#' @examples
+#' mat1 <- matrix(rnbinom(10000, mu = 10, size = 1),nrow=1000,ncol=10)
+#' colnames(mat1) <- paste0('Sample1',1:ncol(mat1))
+#' rownames(mat1) <- paste0('Gene',1:nrow(mat1))
+#' norm_mat1 <- RNASeqCount.normalize.scale(mat1)
 #' @export
-RNASeqCount.normalize.scale <- function(d,
+RNASeqCount.normalize.scale <- function(mat,
                                         total = NULL,
                                         pseudoCount = 1) {
+  d <- mat
   if (!is.data.frame(d))
     d <- data.frame(d)
   if (!all(d > 0))
@@ -1135,13 +1466,36 @@ std <- function(x) {
   (x - mean(x,na.rm=TRUE)) / sd(x,na.rm=TRUE)
 }
 
-#' calculate activity for network targets
-#' @param  es.method: mean, weighted mean, maxmean, absmean
+#' Calculate activity value for all possible drivers
+#'
+#' \code{cal.Activity} is a function to calculate activity for all possible drivers by
+#' input the target list for drivers and the expression matrix for target genes.
+#'
+#' @param target_list a list for the target gene information for the drivers.
+#' Each object in the list must be a data.frame and should contain one column ("target") to save the target genes.
+#' Strongly suggest to follow the NetBID2 pipeline, and the \code{target_list} could be automatically generated
+#' by \code{get_net2target_list} by running
+#' \code{get.SJAracne.network}.
+#' @param cal_mat numeric matrix,the expression matrix for all genes/transcripts for calculation.
+#' @param es.method character, strategy to calculate the activity for the driver,
+#' choose from mean, weighted mean, maxmean, absmean;
+#' in which the weighted in the weighted mean is the MI (mutual information) value * sign of correlation (use the spearman correlation sign).
+#' Default is 'mean'.
+#'
+#' @return the activity matrix with each row a driver and each column a sample (same sample order with cal_mat)
+#' @examples
+#' analysis.par <- list()
+#' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
+#' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' ac_mat <- cal.Activity(target_list=analysis.par$tf.network$target_list,
+#'                        cal_mat=exprs(analysis.par$cal.eset),
+#'                        es.method='weightedmean')
 #' @export
-cal.Activity <- function(all_target=NULL, cal_mat=NULL, es.method = 'mean') {
+cal.Activity <- function(target_list=NULL, cal_mat=NULL, es.method = 'mean') {
   ## mean, absmean, maxmean, weightedmean
   use_genes <- row.names(cal_mat)
-  #all_target <- all_target[intersect(use_genes, names(all_target))]
+  all_target <- target_list
+  #all_target <- all_target[intersect(use_genes, names(all_target))] ## if the driver is not included in cal_mat but its target genes are included, will also calculate activity
   ac.mat <-
     matrix(NA, ncol = ncol(cal_mat), nrow = length(all_target)) ## generate activity matrix, each col for sample, each row for source target
   #z-normalize each sample
@@ -1150,23 +1504,20 @@ cal.Activity <- function(all_target=NULL, cal_mat=NULL, es.method = 'mean') {
     x <- names(all_target)[i]
     x1 <- all_target[[x]]
     x2 <- unique(intersect(rownames(x1), use_genes)) ## filter target by cal genes
-    x1 <- x1[x2, ]
+    x1 <- x1[x2, ] ## target info
     target_num <- length(x2)
     if (target_num == 0)
       next
     if (target_num == 1){
-      ac.mat[i, ] <- cal_mat[x2,]
+      if (es.method == 'weightedmean') ac.mat[i, ] <- cal_mat[x2,]
+      if (es.method != 'weightedmean') ac.mat[i, ] <- cal_mat[x2,]*x1$MI * sign(x1$spearman)
       next
     }
     if (es.method != 'weightedmean')
       ac.mat[i, ] <- apply(cal_mat[x2,], 2, es, es.method)
     if (es.method == 'weightedmean') {
       weight <- x1$MI * sign(x1$spearman)
-      if (length(x2) == 1)
-        ac.mat[i, ] <-
-          sapply(cal_mat * weight, es, 'mean')[x2]
-      else
-        ac.mat[i, ] <- apply(cal_mat[x2,] * weight, 2, es, 'mean')
+      ac.mat[i, ] <- apply(cal_mat[x2,] * weight, 2, es, 'mean')
     }
   }
   rownames(ac.mat) <- names(all_target)
@@ -1174,8 +1525,27 @@ cal.Activity <- function(all_target=NULL, cal_mat=NULL, es.method = 'mean') {
   return(ac.mat)
 }
 
-#' calculate activity for gene sets
-#' @param  es.method: mean, absmean, maxmean
+#' Calculate activity value for gene sets.
+#'
+#' \code{cal.Activity.GS} is a function to calculate activity for all gene sets.
+#' @param use_gs2gene a list for geneset to genes, the name for the list is the gene set name and the content in each list is the vector for genes belong to that gene set.
+#' Default is all_gs2gene[c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG')] with all_gs2gene loaded by using \code{gs.preload}.
+#' @param cal_mat numeric matrix,the expression matrix for all genes/transcripts for calculation.
+#' @param es.method character, strategy to calculate the activity for the driver,
+#' choose from mean, absmean, maxmean;
+#' Default is 'mean'.
+#' @return the activity matrix with each row a gene set and each column a sample (same sample order with cal_mat)
+#' @examples
+#' analysis.par <- list()
+#' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
+#' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' gs.preload(use_spe='Homo sapiens',update=FALSE)
+#' use_gs2gene <- merge_gs(all_gs2gene=all_gs2gene,
+#'                         use_gs=c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG','C5'))
+#' exp_mat_gene <- exprs(analysis.par$cal.eset)
+#' ## each row is a gene symbol, if not, must convert ID first
+#' ac_gs <- cal.Activity.GS(use_gs2gene = use_gs2gene,
+#'                         cal_mat = exp_mat_gene)
 #' @export
 cal.Activity.GS <- function(use_gs2gene=all_gs2gene[c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG')], cal_mat=NULL, es.method = 'mean') {
   while(class(use_gs2gene[[1]])=='list'){
@@ -1208,7 +1578,37 @@ cal.Activity.GS <- function(use_gs2gene=all_gs2gene[c('H','CP:BIOCARTA','CP:REAC
   return(ac.mat)
 }
 
-#' Bayesian Inference to get differential expression/activity between case and control
+#' Get differential expression (DE)/differential activity (DA) between case and control sample groups by Bayesian Inference.
+#'
+#' \code{getDE.BID.2G} is a function aims to get DE/DA genes/drivers with detailed statistical information between case (G1) and control (G0) groups.
+#'
+#' @param eset ExpressionSet class object, the input gene expression or driver activity.
+#' @param G1 a vector of characters, the sample list used as the case.
+#' @param G0 a vecotr of characters, the sample list used as the control.
+#' @param G1_name character, the group name for the samples in G1, default is "G1".
+#' @param G0_name character, the group name for the samples in G0, default is "G0".
+#' @param verbose logical, whether or not to print verbose information during calculation.
+#' Default is TRUE.
+#'
+#' @return
+#' A dataframe for all genes with the columns as the output of \code{topTable} in limma.
+#'
+#' @examples
+#' analysis.par <- list()
+#' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
+#' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' phe_info <- pData(analysis.par$cal.eset)
+#' each_subtype <- 'G4'
+#' G0  <- rownames(phe_info)[which(phe_info$`subgroup`!=each_subtype)] # get sample list for G0
+#' G1  <- rownames(phe_info)[which(phe_info$`subgroup`==each_subtype)] # get sample list for G1
+#' DE_gene_BID <- getDE.BID.2G(eset=analysis.par$cal.eset,
+#'                                 G1=G1,G0=G0,
+#'                                 G1_name=each_subtype,
+#'                                 G0_name='other')
+#' DA_driver_BID <- getDE.BID.2G(eset=analysis.par$merge.ac.eset,
+#'                                 G1=G1,G0=G0,
+#'                                 G1_name=each_subtype,
+#'                                 G0_name='other')
 #' @export
 getDE.BID.2G <-function(eset,G1=NULL, G0=NULL,G1_name=NULL,G0_name=NULL,verbose=TRUE){
   if(verbose==TRUE){
@@ -1256,7 +1656,38 @@ get_class2design <- function(class_label){
   #return(design.mat)
 }
 
-#' Limma functions to get differential expression/activity between case and control
+#' Get differential expression (DE)/differential activity (DA) between case and control sample groups by limma related functions.
+#'
+#' \code{getDE.limma.2G} is a function aims to get DE/DA genes/drivers with detailed statistical information between case (G1) and control (G0) groups.
+#'
+#' @param eset ExpressionSet class object, the input gene expression or driver activity.
+#' @param G1 a vector of characters, the sample list used as the case.
+#' @param G0 a vecotr of characters, the sample list used as the control.
+#' @param G1_name character, the group name for the samples in G1, default is "G1".
+#' @param G0_name character, the group name for the samples in G0, default is "G0".
+#' @param verbose logical, whether or not to print verbose information during calculation.Default is TRUE.
+#' @param random_effect a vector of characters, vector or factor specifying a blocking variable.
+#' Default is NULL indicating no random effect will be considered.
+#'
+#' @return
+#' A dataframe for all genes with the columns as the output of \code{topTable} in limma.
+#'
+#' @examples
+#' analysis.par <- list()
+#' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
+#' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' phe_info <- pData(analysis.par$cal.eset)
+#' each_subtype <- 'G4'
+#' G0  <- rownames(phe_info)[which(phe_info$`subgroup`!=each_subtype)] # get sample list for G0
+#' G1  <- rownames(phe_info)[which(phe_info$`subgroup`==each_subtype)] # get sample list for G1
+#' DE_gene_limma <- getDE.limma.2G(eset=analysis.par$cal.eset,
+#'                                 G1=G1,G0=G0,
+#'                                 G1_name=each_subtype,
+#'                                 G0_name='other')
+#' DA_driver_limma <- getDE.limma.2G(eset=analysis.par$merge.ac.eset,
+#'                                 G1=G1,G0=G0,
+#'                                 G1_name=each_subtype,
+#'                                 G0_name='other')
 #' @export
 getDE.limma.2G <- function(eset=NULL, G1=NULL, G0=NULL,G1_name=NULL,G0_name=NULL,verbose=TRUE,random_effect=NULL) {
   if(verbose==TRUE){
@@ -1291,18 +1722,20 @@ getDE.limma.2G <- function(eset=NULL, G1=NULL, G0=NULL,G1_name=NULL,G0_name=NULL
   fit2 <- eBayes(fit2,trend=TRUE)
   #summary(decideTests(fit2, method="global"))
   ##
-  tT <- topTable(fit2, adjust = "fdr", number = Inf,coef=1)
+  tT <- topTable(fit2, adjust.method = "fdr", number = Inf,coef=1)
   tT <- tT[order(tT$P.Value, decreasing = FALSE), ]
   tT <- cbind(ID=rownames(tT),tT,stringsAsFactors=FALSE)
-  exp_G1 <- rowMeans(new_mat[rownames(tT),G1])
-  exp_G0 <- rowMeans(new_mat[rownames(tT),G0])
+  tT <- tT[rownames(new_mat),]
+  exp_G1 <- rowMeans(new_mat[,G1])
+  exp_G0 <- rowMeans(new_mat[,G0])
   w1 <- which(tT$P.Value<=0);
   if(length(w1)>0) tT$P.Value[w1] <- .Machine$double.xmin;
   z_val <- sapply(tT$P.Value*sign(tT$logFC),function(x)combinePvalVector(x,twosided = TRUE)[1])
   if(is.null(random_effect)==TRUE){
     tT <- cbind(tT,'Z-statistics'=z_val,'Ave.G0'=exp_G0,'Ave.G1'=exp_G1)
   }else{
-    tT <- cbind(tT,'Z-statistics'=z_val,'Ave.G0'=exp_G0,'Ave.G1'=exp_G1,'Ave.G0_RemoveRandomEffect'=fit@.Data[[1]][rownames(tT),'G0'],
+    tT <- cbind(tT,'Z-statistics'=z_val,'Ave.G0'=exp_G0,'Ave.G1'=exp_G1,
+                'Ave.G0_RemoveRandomEffect'=fit@.Data[[1]][rownames(tT),'G0'],
                 'Ave.G1_RemoveRandomEffect'=fit@.Data[[1]][rownames(tT),'G1'])
   }
   if(is.null(G0_name)==FALSE) colnames(tT) <- gsub('Ave.G0',paste0('Ave.',G0_name),colnames(tT))
@@ -1310,11 +1743,22 @@ getDE.limma.2G <- function(eset=NULL, G1=NULL, G0=NULL,G1_name=NULL,G0_name=NULL
   return(tT)
 }
 
-#' combine Pvalues by Fisher or Stouffer's method
-#' @param dat, a dataframe containing pvalue.cols
-#' @param sign.cols column labels indicating sign of stat, if NULL, use absolute values to calculate overall stat for Stouffer's method
-#' @param combine one pvalues vector, the signed version
-#' @param twosided For Fisher's method: if twosided, pvalues are transformed into single
+#' Combine Pvalues by Fisher or Stouffer's method
+#'
+#' \code{combinePvalVector} is a function to combine P-values by Stouffer of Fisher method.
+#'
+#' @param pvals, a vector of numeric values, the P-value values need to combine.
+#' The sign of the P-value will be added to indicate the direction of testing if signed is set to TRUE.
+#' @param method character, choose from Stouffer or Fisher, default is "Stouffer".
+#' @param signed logical, whether the sign of the pvals will be considered in calculation.
+#' Default is TRUE.
+#' @param twosided logical, whether the pvalues are from two-sided test or not.
+#' If not, pvalues must between 0 and 0.5.
+#' Default is TRUE.
+#' @return a vector contains the 'Z-statistics' and 'P.Value'
+#' @examples
+#' combinePvalVector(c(0.1,1e-3,1e-5))
+#' combinePvalVector(c(0.1,1e-3,-1e-5))
 #' @export
 combinePvalVector <-
   function(pvals,
@@ -1389,9 +1833,32 @@ combinePvalVector <-
     return(c(`Z-statistics` = stat, `P.Value` = pval))
   }
 
-#' merge activity matrix for TF and SIG
-#' @param TF_AC TF activity eset
-#' @param SIG_AC SIG activity eset
+#' Merge activity value ExpressionSet for TF (transcription factors) and Sig (signaling factors)
+#'
+#' \code{merge_TF_SIG.AC} is a function to merge the activity value ExpressionSet for TF (transcription factors) and Sig (signaling factors).
+#'
+#' This function aims to merge the driver activity ExpressionSet, by automatically add "_TF"/"_SIG" suffix for drivers.
+#'
+#' @param TF_AC ExpressionSet object containing the activity value for all TFs.
+#' @param SIG_AC ExpressionSet object containing the activity value for all SIGs.
+#'
+#' @return an ExpressionSet object
+#' @examples
+#' analysis.par <- list()
+#' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
+#' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' ac_mat_TF <- cal.Activity(target_list=analysis.par$tf.network$target_list,
+#'                        cal_mat=exprs(analysis.par$cal.eset),
+#'                        es.method='weightedmean')
+#' ac_mat_SIG <- cal.Activity(target_list=analysis.par$tf.network$target_list,
+#'                        cal_mat=exprs(analysis.par$cal.eset),
+#'                        es.method='weightedmean')
+#' analysis.par$ac.tf.eset  <- generate.eset(exp_mat=ac_mat_TF,
+#'                                           phenotype_info=pData(analysis.par$cal.eset))
+#' analysis.par$ac.sig.eset <- generate.eset(exp_mat=ac_mat_SIG,
+#'                                           phenotype_info=pData(analysis.par$cal.eset))
+#' analysis.par$merge.ac.eset <- merge_TF_SIG.AC(TF_AC=analysis.par$ac.tf.eset,
+#'                                           SIG_AC=analysis.par$ac.sig.eset)
 #' @export
 merge_TF_SIG.AC <- function(TF_AC=NULL,SIG_AC=NULL){
   mat_TF <- exprs(TF_AC)
@@ -1406,9 +1873,30 @@ merge_TF_SIG.AC <- function(TF_AC=NULL,SIG_AC=NULL){
   return(eset_combine)
 }
 
-#' merge target network for TF and SIG
-#' @param TF_network TF network
-#' @param SIG_network SIG network
+#' Merge target network for TF (transcription factors) and Sig (signaling factors).
+#'
+#' \code{merge_TF_SIG.network} is a function to merge the target network from TF and Sig.
+#'
+#' @param TF_network TF network obtained by \code{get.SJAracne.network}.
+#' @param SIG_network SIG network obtained by \code{get.SJAracne.network}.
+#' @return
+#' This function will return the same structure object as TF_network/SIG_network,
+#' which is a list containing three items, \code{network_dat},
+#' \code{target_list} and \code{igraph_obj}.
+#' @examples
+#' if(exists('analysis.par')==TRUE) rm(analysis.par)
+#' network.dir <- sprintf('%s/demo1/network/',system.file(package = "NetBID2")) # use demo
+#' network.project.name <- 'project_2019-02-14' # demo project name
+#' project_main_dir <- 'test/'
+#' project_name <- 'test_driver'
+#' analysis.par  <- NetBID.analysis.dir.create(project_main_dir=project_main_dir,
+#'                                             prject_name=project_name,
+#'                                             network_dir=network.dir,
+#'                                             network_project_name=network.project.name)
+#' analysis.par$tf.network  <- get.SJAracne.network(network_file=analysis.par$tf.network.file)
+#' analysis.par$sig.network <- get.SJAracne.network(network_file=analysis.par$sig.network.file)
+#' analysis.par$merge.network <- merge_TF_SIG.network(TF_network=analysis.par$tf.network,
+#'                                                    SIG_network=analysis.par$sig.network)
 #' @export
 merge_TF_SIG.network <- function(TF_network=NULL,SIG_network=NULL){
   s_TF  <- names(TF_network$target_list)
@@ -1427,10 +1915,84 @@ merge_TF_SIG.network <- function(TF_network=NULL,SIG_network=NULL){
   return(list(network_dat=net_dat,target_list=target_list_combine,igraph_obj=igraph_obj))
 }
 
-#' Generate master table by input of TF and SIG results.
+#' Generate final master table for drivers.
+#'
+#' \code{generate.masterTable.TF_SIG} is a function to automatically generate master tables
+#' by input TF (transcription factor)/Sig (signaling factor) results separately.
+#'
+#' This function is designed for automatically generate master table, with :
+#' DE (differentiated expression), DA_TF (differentiated activity for TF), DA_SIG (differentiated activity for SIG),
+#' TF_network (a list for the target gene information for the TF), SIG_network (a list for the target gene information for the SIG),
+#' and necessary additional information (main_id_type, tf_sigs, z_col and display_col).
+#' If results from TF/SIG have merged before, please use \code{generate.masterTable}.
+#'
+#' @param use_comp a vector of characters, the comparison name used to display in the master table.
+#' @param DE a list of DE results, the list name must contain the items in \code{use_comp}.
+#' @param DA_TF a list of TF DA results, the list name must contain the items in \code{use_comp}.
+#' @param DA_SIG a list of SIG DA results, the list name must contain the items in \code{use_comp}.
+#' @param TF_network a list for the target gene information for the TFs.
+#' Each object in the list must be a data.frame and should contain one column ("target") to save the target genes.
+#' Strongly suggest to follow the NetBID2 pipeline, and the \code{TF_network} could be automatically generated by \code{get_net2target_list} by
+#' running \code{get.SJAracne.network}.
+#' @param SIG_network a list for the target gene information for the SIGs.
+#' Each object in the list must be a data.frame and should contain one column ("target") to save the target genes.
+#' Strongly suggest to follow the NetBID2 pipeline, and the \code{TF_network} could be automatically generated by \code{get_net2target_list} by
+#' running \code{get.SJAracne.network}.
+#' @param main_id_type character, the main gene id type. The attribute name from the biomaRt package,
+#' such as 'ensembl_gene_id', 'ensembl_gene_id_version', 'ensembl_transcript_id', 'ensembl_transcript_id_version', 'refseq_mrna'. Full list could be obtained by
+#' \code{listAttributes(mart)$name}, where \code{mart} is the output of \code{useMart} function.
+#' @param tf_sigs list, which contain the detailed information for the TF and SIGs, this can be obtained by running \code{db.preload}.
+#' @param z_col character, column name in \code{DE}, \code{DA_TF}, \code{DA_SIG} that contains the Z statistics. Default is 'Z-statistics'.
+#' @param display_col character,column name in \code{DE}, \code{DA_TF}, \code{DA_SIG} to be kept in the master table. Default is c('logFC','P.Value').
+#' @return a data.frame that contains the information for all tested drivers
+#' The column "originalID" and "originalID_label" contain the ID same with the original dataset.
+#' @examples
+#' analysis.par <- list()
+#' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
+#' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' #analysis.par$final_ms_tab ## this is master table generated before
+#' ac_mat <- cal.Activity(target_list=analysis.par$tf.network$target_list,
+#'                        cal_mat=exprs(analysis.par$cal.eset),es.method='weightedmean')
+#' analysis.par$ac.tf.eset  <- generate.eset(exp_mat=ac_mat,
+#'                                           phenotype_info=pData(analysis.par$cal.eset))
+#' ac_mat <- cal.Activity(target_list=analysis.par$sig.network$target_list,
+#'                        cal_mat=exprs(analysis.par$cal.eset),es.method='weightedmean')
+#' analysis.par$ac.sig.eset  <- generate.eset(exp_mat=ac_mat,
+#'                                           phenotype_info=pData(analysis.par$cal.eset))
+#' phe_info <- pData(analysis.par$cal.eset)
+#' all_subgroup <- unique(phe_info$subgroup) ##
+#' for(each_subtype in all_subgroup){
+#'  comp_name <- sprintf('%s.Vs.others',each_subtype) ## each comparison must give a name !!!
+#'  G0  <- rownames(phe_info)[which(phe_info$`subgroup`!=each_subtype)] # get sample list for G0
+#'  G1  <- rownames(phe_info)[which(phe_info$`subgroup`==each_subtype)] # get sample list for G1
+#'  DE_gene_limma <- getDE.limma.2G(eset=analysis.par$cal.eset,G1=G1,G0=G0,
+#'                                  G1_name=each_subtype,G0_name='other')
+#'  analysis.par$DE[[comp_name]] <- DE_gene_limma
+#'  DA_driver_limma <- getDE.limma.2G(eset=analysis.par$ac.tf.eset,G1=G1,G0=G0,
+#'                                    G1_name=each_subtype,G0_name='other')
+#'  analysis.par$DA_TF[[comp_name]] <- DA_driver_limma
+#'  DA_driver_limma <- getDE.limma.2G(eset=analysis.par$ac.sig.eset,G1=G1,G0=G0,
+#'                                    G1_name=each_subtype,G0_name='other')
+#'  analysis.par$DA_SIG[[comp_name]] <- DA_driver_limma
+#' }
+#' all_comp <- names(analysis.par$DE) ## get all comparison name for output
+#' db.preload(use_level='gene',use_spe='human',update=FALSE);
+#' test_ms_tab <- generate.masterTable.TF_SIG(use_comp=all_comp,
+#'                                            DE=analysis.par$DE,
+#'                                            DA_TF=analysis.par$DA_TF,
+#'                                            DA_SIG=analysis.par$DA_SIG,
+#'                                            TF_network=analysis.par$tf.network$target_list,
+#'                                            SIG_network=analysis.par$sig.network$target_list,
+#'                                            tf_sigs=tf_sigs,
+#'                                            z_col='Z-statistics',
+#'                                            display_col=c('logFC','P.Value'),
+#'                                            main_id_type='external_gene_name')
 #' @export
-generate.masterTable.TF_SIG <- function(use_comp=NULL,DE=NULL,DA_TF=NULL,DA_SIG=NULL,TF_network=NULL,SIG_network=NULL,main_id_type=NULL,
-                                        tf_sigs=tf_sigs,z_col=NULL,display_col=NULL){
+generate.masterTable.TF_SIG <- function(use_comp=NULL,DE=NULL,DA_TF=NULL,DA_SIG=NULL,
+                                        TF_network=NULL,SIG_network=NULL,
+                                        main_id_type=NULL,
+                                        tf_sigs=tf_sigs,
+                                        z_col='Z-statistics',display_col=c('logFC','P.Value')){
   if(is.null(use_comp)){message('No input for use_comp, please check and re-try!');return(FALSE)}
   if(is.null(main_id_type)){message('No input for main_id_type, please check and re-try!');return(FALSE)}
   if(is.null(DE)){message('No input for DE, please check and re-try!');return(FALSE)}
@@ -1501,10 +2063,68 @@ generate.masterTable.TF_SIG <- function(use_comp=NULL,DE=NULL,DA_TF=NULL,DA_SIG=
   return(ms_tab)
 }
 
-#' Generate master
+#' Generate final master table for drivers.
+#'
+#' \code{generate.masterTable} is a function to automatically generate master tables
+#' by input the merged TF/SIG results.
+#'
+#' This function is designed for automatically generate master table, with :
+#' DE (differentiated expression), DA(differentiated activity for drivers),network (a list for the target gene information for the drivers),
+#' and necessary additional information (main_id_type, tf_sigs, z_col and display_col).
+#' If results from TF/SIG do not have merged before, please use \code{generate.masterTable.TF_SIG}.
+#'
+#' @param use_comp a vector of characters, the comparison name used to display in the master table.
+#' @param DE a list of DE results, the list name must contain the items in \code{use_comp}.
+#' @param DA a list of DA results, the list name must contain the items in \code{use_comp}.
+#' @param network a list for the target gene information for the drivers.
+#' Each object in the list must be a data.frame and should contain one column ("target") to save the target genes.
+#' Strongly suggest to follow the NetBID2 pipeline, and the \code{TF_network} could be automatically generated by \code{get_net2target_list} by
+#' running \code{get.SJAracne.network}.
+#' @param main_id_type character, the main gene id type. The attribute name from the biomaRt package,
+#' such as 'ensembl_gene_id', 'ensembl_gene_id_version', 'ensembl_transcript_id', 'ensembl_transcript_id_version', 'refseq_mrna'. Full list could be obtained by
+#' \code{listAttributes(mart)$name}, where \code{mart} is the output of \code{useMart} function.
+#' @param tf_sigs list, which contain the detailed information for the TF and SIGs, this can be obtained by running \code{db.preload}.
+#' @param z_col character, column name in \code{DE}, \code{DA} that contains the Z statistics. Default is 'Z-statistics'.
+#' @param display_col character,column name in \code{DE}, \code{DA} to be kept in the master table. Default is c('logFC','P.Value').
+#' @return a data.frame that contains the information for all tested drivers.
+#' The column "originalID" and "originalID_label" contain the ID same with the original dataset.
+#' @examples
+#' analysis.par <- list()
+#' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
+#' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' #analysis.par$final_ms_tab ## this is master table generated before
+#' ac_mat <- cal.Activity(target_list=analysis.par$merge.network$target_list,
+#'                        cal_mat=exprs(analysis.par$cal.eset),es.method='weightedmean')
+#' analysis.par$ac.merge.eset  <- generate.eset(exp_mat=ac_mat,
+#'                                              phenotype_info=pData(analysis.par$cal.eset))
+#' phe_info <- pData(analysis.par$cal.eset)
+#' all_subgroup <- unique(phe_info$subgroup) ##
+#' for(each_subtype in all_subgroup){
+#'  comp_name <- sprintf('%s.Vs.others',each_subtype) ## each comparison must give a name !!!
+#'  G0  <- rownames(phe_info)[which(phe_info$`subgroup`!=each_subtype)] # get sample list for G0
+#'  G1  <- rownames(phe_info)[which(phe_info$`subgroup`==each_subtype)] # get sample list for G1
+#'  DE_gene_limma <- getDE.limma.2G(eset=analysis.par$cal.eset,G1=G1,G0=G0,
+#'                                  G1_name=each_subtype,G0_name='other')
+#'  analysis.par$DE[[comp_name]] <- DE_gene_limma
+#'  DA_driver_limma <- getDE.limma.2G(eset=analysis.par$ac.merge.eset,G1=G1,G0=G0,
+#'                                    G1_name=each_subtype,G0_name='other')
+#'  analysis.par$DA[[comp_name]] <- DA_driver_limma
+#' }
+#' all_comp <- names(analysis.par$DE) ## get all comparison name for output
+#' db.preload(use_level='gene',use_spe='human',update=FALSE);
+#' test_ms_tab <- generate.masterTable(use_comp=all_comp,
+#'                                            DE=analysis.par$DE,
+#'                                            DA=analysis.par$DA,
+#'                                            network=analysis.par$merge.network$target_list,
+#'                                            tf_sigs=tf_sigs,
+#'                                            z_col='Z-statistics',
+#'                                            display_col=c('logFC','P.Value'),
+#'                                            main_id_type='external_gene_name')
 #' @export
-generate.masterTable <- function(use_comp=NULL,DE=NULL,DA=NULL,network=NULL,main_id_type=NULL,
-                                 tf_sigs=tf_sigs,z_col=NULL,display_col=NULL){
+generate.masterTable <- function(use_comp=NULL,DE=NULL,DA=NULL,
+                                 network=NULL,main_id_type=NULL,
+                                 tf_sigs=tf_sigs,
+                                 z_col='Z-statistics',display_col=c('logFC','P.Value')){
   if(is.null(use_comp)){message('No input for use_comp, please check and re-try!');return(FALSE)}
   if(is.null(main_id_type)){message('No input for main_id_type, please check and re-try!');return(FALSE)}
   if(is.null(DE)){message('No input for DE, please check and re-try!');return(FALSE)}
@@ -1575,12 +2195,95 @@ generate.masterTable <- function(use_comp=NULL,DE=NULL,DA=NULL,network=NULL,main
   return(ms_tab)
 }
 
-#' output master table to excel files.
+#' Output master table to excel files.
+#'
+#' \code{out2excel} is a function to output dataframe into an excel file, mainly for output the master table generated by \code{generate.masterTable}.
+#'
+#' @param all_ms_tab list or dataframe, if dataframe, it is the master table generated by \code{generate.masterTable}.
+#' If it is a list, each item in list could be a dataframe containing the master table.
+#' The name of the list will be the sheet name in the excel file.
+#' @param out.xlsx character, file name for the output excel.
+#' @param mark_gene list, list of marker genes, additional info to add in the master table.The name of the list is the name for the mark group.
+#' @param mark_col character, the color used to label the marker genes. If NULL, will use \code{get.class.color} to get the colors.
+#' @param mark_strategy character, choose from 'color','add_column'. 'Color' means the mark_gene will be displayed by its background color;
+#' 'add_column' means the mark_gene will be displayed in separate columns with content TRUE/FALSE indicating whether the genes belong to each mark group.
+#' @param workbook_name character, workbook name for the output excel. Default is 'ms_tab'.
+#' @param only_z_sheet logical, if TRUE will generate a separate sheet only contain Z related columns in DA/DE. Default is FALSE.
+#' @param z_column character, the column name that contain the Z-statistics. If NULL, will find columns start with "Z.".
+#' Default is NULL.
+#' @param sig_thre numeric, threshold for the Z-statistics, values passed the threshold will be marked by the color automatically generated by \code{z2col}.
+#' Default is 1.64.
+#' @return logical value indicating whether the file has been sucessfully generated or not.
+#' @examples
+#' \dontrun{
+#' analysis.par <- list()
+#' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
+#' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' ms_tab <- analysis.par$final_ms_tab ## this is master table generated before
+#' mark_gene <- list(WNT=c('WIF1','TNC','GAD1','DKK2','EMX2'),
+#'                  SHH=c('PDLIM3','EYA1','HHIP','ATOH1','SFRP1'),
+#'                  Group3=c('IMPG2','GABRA5','EGFL11','NRL','MAB21L2','NPR3','MYC'),
+#'                  Group4=c('KCNA1','EOMES','KHDRBS2','RBM24','UNC5D'))
+#' mark_col <- get.class.color(names(mark_gene))
+#' outfile <- 'test_out.xlsx'
+#' out2excel(ms_tab,out.xlsx = out_file,mark_gene,mark_col)
+#' }
 #' @export
-out2excel <- function(all_ms_tab,out.xls,mark_gene=NULL,mark_col,workbook_name='ms_tab',z_column=NULL,sig_thre=1.64){
+out2excel <- function(all_ms_tab,out.xlsx,
+                      mark_gene=NULL,
+                      mark_col=NULL,
+                      mark_strategy='color',
+                      workbook_name='ms_tab',
+                      only_z_sheet=FALSE,
+                      z_column=NULL,sig_thre=1.64){
   wb <- createWorkbook(workbook_name)
+  if(!mark_strategy %in% c('color','add_column')){
+    message('mark_strategy must be color or add_column, please check and re-try!');return(FALSE);
+  }
   if(!'list' %in% class(all_ms_tab)){
     all_ms_tab <- list('Sheet1'=as.data.frame(all_ms_tab))
+  }
+  if(only_z_sheet==TRUE){
+    nn <- names(all_ms_tab)
+    all_ms_tab <- lapply(all_ms_tab,function(x){
+      w1 <- grep('.*_[DE|DA]',colnames(x))
+      w2 <- setdiff(colnames(x)[w1],colnames(x)[w1][grep('^Z.*',colnames(x)[w1])])
+      w3 <- setdiff(colnames(x),w2)
+      list(x[,w3],x)
+    })
+    all_ms_tab <- unlist(all_ms_tab,recursive = FALSE)
+    nn1 <- lapply(nn,function(x){
+      if(x!='Sheet1'){
+        c(sprintf('Only_Z_%s',x),sprintf('Full_info_%s',x))
+      }else{
+        c('Only_Z','Full_info')
+      }
+    })
+    nn1 <- unlist(nn1)
+    names(all_ms_tab) <- nn1
+  }
+  if(is.null(mark_gene)==FALSE){
+    if(!'list' %in% class(mark_gene)){
+      mark_gene <- list('mark_gene'=mark_gene)
+    }
+    if(is.null(names(mark_gene))==TRUE){
+      message('Must give name to the mark_gene list');return(FALSE)
+    }
+    if(mark_strategy=='color' & is.null(mark_col)==TRUE){
+      mark_col <- get.class.color(names(mark_gene))
+    }
+    if(mark_strategy=='add_column'){
+      new_col_name <- paste0('is',names(mark_gene))
+      all_ms_tab <- lapply(all_ms_tab,function(x){
+        g1 <- x$geneSymbol
+        r1 <- do.call(cbind,lapply(mark_gene,function(x1){
+          ifelse(g1 %in% x1,'TRUE','FALSE')
+        }))
+        new_x <- cbind(x,r1)
+        colnames(new_x) <- c(colnames(x),new_col_name)
+        new_x
+      })
+    }
   }
   z_column_index <- 'defined'
   if(is.null(z_column)==TRUE) z_column_index <- 'auto'
@@ -1624,14 +2327,15 @@ out2excel <- function(all_ms_tab,out.xls,mark_gene=NULL,mark_col,workbook_name='
     rr[which(rr==1)] <- nn+1
     addStyle(wb, sheet = i, createStyle(fontColour='#FF0000'), rows =rr, cols = as.numeric(cc)) ## find column with TRUE/FALSE and mark with color
   }
-  saveWorkbook(wb, out.xls, overwrite = TRUE)
+  saveWorkbook(wb, out.xlsx, overwrite = TRUE)
+  return(TRUE)
   ##
 }
 
 #' Load MSigDB for NetBID2 into R workspace.
 #'
 #' \code{gs.preload} will load two variables into R workspace, the list for gene set to genes (all_gs2gene)
-#'  and a data frame (all_gs2gene_info) for detailed description for gene sets.
+#'  and a dataframe (all_gs2gene_info) for detailed description for gene sets.
 #'
 #' This is a pre-processing function for NetBID2 advanced analysis, user only need to input the species name (e.g Homo sapiens, Mus musculus).
 #' The function could automatically download information from MSigDB by the functions in \code{msigdbr} and save into RData under the db/ directory
@@ -1731,8 +2435,9 @@ gs.preload <- function(use_spe='Homo sapiens',update=FALSE,
 #' This is a simple function to generate sample category vector from a data.frame.
 #' Mainly used for input preparation in the visualization plots.
 #'
-#' @param phe_info data.frame, phenotype data frame for the samples with sample names in rownames, e.g from \code{pData(eset)}.
-#' @param i numeric or character, the column index or column name for extraction to get the sample category vector.
+#' @param phe_info data.frame, phenotype dataframe for the samples with sample names in rownames, e.g from \code{pData(eset)}.
+#' @param use_col a vector of numeric or character, the column index or column name for extraction to get the sample category vector.
+#' @param collapse character, character string to separate the results when the length use_col is more than 1. default is "|".
 #'
 #' @return
 #' Will return a vector for sample categories with names to the vector representing the sample name.
@@ -1740,18 +2445,34 @@ gs.preload <- function(use_spe='Homo sapiens',update=FALSE,
 #' @examples
 #' analysis.par <- list()
 #' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
-#' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' phe_info <- pData(analysis.par$cal.eset)
 #' use_obs_class <- get_obs_label(phe_info = phe_info,'subgroup')
 #' print(use_obs_class)
 #' \dontrun{
 #'}
 #' @export
-get_obs_label <- function(phe_info,i){
-  obs_label<-phe_info[,i];names(obs_label) <- rownames(phe_info);obs_label
+get_obs_label <- function(phe_info,use_col,collapse='|'){
+  obs_label<-phe_info[,use_col];
+  if(length(use_col)>1){
+    obs_label<-apply(obs_label,1,function(x)paste(x,collapse=collapse))
+  }
+  names(obs_label) <- rownames(phe_info);
+  obs_label
 }
 
-
+#' Get interested groups from the pData of an ExpressionSet object.
+#'
+#' \code{get_int_group} is a simple function to extract columns with unique sample feature ranges from 2 to sample size-1.
+#'
+#' @param eset, an ExpressionSet object, the input object for analysis.
+#' @return a vector of characters, the column names which could be used for sample cluster analysis
+#' @examples
+#' network.par <- list()
+#' network.par$out.dir.DATA <- system.file('demo1','network/DATA/',package = "NetBID2")
+#' NetBID.loadRData(network.par=network.par,step='exp-QC')
+#' intgroups <- get_int_group(network.par$net.eset)
+#' @export
 get_int_group <- function(eset){
   phe <- pData(eset)
   feature_len <- apply(phe,2,function(x)length(unique(x)))
@@ -1759,8 +2480,42 @@ get_int_group <- function(eset){
   return(intgroup)
 }
 
-#' get jaccard accuracy between predicted label and observed label
+#' Get Score between predicted label and observed label.
+#'
+#' \code{get_clustComp} is a function to compare the predicted label and observed label and return the score.
+#'
+#' @param pred_label a vector of characters, the predicted label.
+#' @param obs_label a vector of characters, the observed label
+#' @param strategy character, the strategy to compare with labels,
+#' choose from 'ARI (adjusted rand index)', 'NMI (normalized mutual information)', 'Jaccard'. Default is 'ARI'.
+#' @return score for the comparison
+#' @examples
+#' obs_label <- c('A','A','A','B','B','C','D')
+#' pred_label  <- c(1,1,1,1,2,2,2)
+#' get_clustComp(pred_label,obs_label)
 #' @export
+get_clustComp <- function(pred_label, obs_label,strategy='ARI') {
+  if(is.null(names(pred_label))==TRUE & is.null(names(obs_label))==FALSE){
+    message('The names of pred_label will use the order of obs_label')
+    names(pred_label) <- names(obs_label)
+  }
+  if(is.null(names(obs_label))==TRUE & is.null(names(pred_label))==FALSE){
+    message('The names of obs_label will use the order of pred_label')
+    names(obs_label) <- names(pred_label)
+  }
+  if(is.null(names(obs_label))==TRUE & is.null(names(pred_label))==TRUE){
+    message('Assume pred_label and obs_label have the same order!')
+    names(obs_label) <- as.character(1:length(obs_label))
+    names(pred_label) <- names(obs_label)
+  }
+  if(!strategy %in% c('ARI','NMI','Jaccard')){
+    message('Only support RI,ARI,NMI and Jaccard!');return(FALSE);
+  }
+  if(strategy=='Jaccard') res1 <- get_jac(pred_label, obs_label) else res1 <- clustComp(pred_label, obs_label)[[strategy]]
+  return(res1)
+}
+
+# get jaccard accuracy
 get_jac <- function(pred_label, obs_label) {
   jac1 <- c()
   for (i in unique(pred_label)) {
@@ -1777,7 +2532,115 @@ get_jac <- function(pred_label, obs_label) {
   return(jac1)
 }
 
-#' transfer Z statistics to color bar
+#' Draw the cluster comparison between predicted label and observed label.
+#'
+#' \code{draw.clustComp} is a function to draw the comparison between the predicted label and observed label.
+#'
+#' @param pred_label a vector of characters, the predicted label.
+#' @param obs_label a vector of characters, the observed label
+#' @param strategy character, the strategy to compare with labels,
+#' choose from 'ARI (adjusted rand index)', 'NMI (normalized mutual information)', 'Jaccard'. Default is 'ARI'.
+#' @param use_col logical, whether or not to use color in the plot. Default is TRUE.
+#' @param low_K integer, the lowest number to display on the figures. Number smaller than this will directly display the sample name.
+#' Default is 5
+#' @param highlight_clust a vector of characters, the cluster need to be highlighted on the plot.
+#' @param main character, the title for the plot.
+#' @param clust_cex numeric, cex for the cluster label. Default is 1
+#' @param outlier_cex numeric, cex for the sample names. Default is 0.3
+#' @return a matrix for the number in the plot
+#' @examples
+#' network.par <- list()
+#' network.par$out.dir.DATA <- system.file('demo1','network/DATA/',package = "NetBID2")
+#' NetBID.loadRData(network.par=network.par,step='exp-QC')
+#' mat <- exprs(network.par$net.eset)
+#' phe <- pData(network.par$net.eset)
+#' intgroup <- 'subgroup'
+#' pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,
+#'                              obs_label=get_obs_label(phe,intgroup),
+#'                              kmeans_strategy='consensus')
+#' draw.clustComp(pred_label,get_obs_label(phe,intgroup),outlier_cex=1,low_K=2,use_col=TRUE)
+#' draw.clustComp(pred_label,get_obs_label(phe,intgroup),outlier_cex=1,low_K=2,use_col=FALSE)
+#' @export
+draw.clustComp <- function(pred_label, obs_label,strategy='ARI',
+                           use_col=TRUE,low_K=5,
+                           highlight_clust=NULL,
+                           main=NULL,clust_cex=1,outlier_cex=0.3) {
+  if(is.null(names(pred_label))==TRUE & is.null(names(obs_label))==FALSE){
+    message('The names of pred_label will use the order of obs_label')
+    names(pred_label) <- names(obs_label)
+  }
+  if(is.null(names(obs_label))==TRUE & is.null(names(pred_label))==FALSE){
+    message('The names of obs_label will use the order of pred_label')
+    names(obs_label) <- names(pred_label)
+  }
+  if(is.null(names(obs_label))==TRUE & is.null(names(pred_label))==TRUE){
+    message('Assume pred_label and obs_label have the same order!')
+    names(obs_label) <- as.character(1:length(obs_label))
+    names(pred_label) <- names(obs_label)
+  }
+  nn <- names(pred_label)
+  k1 <- get_clustComp(pred_label,obs_label,strategy=strategy)
+  if(is.null(main)==TRUE){
+    mm <- sprintf('%s:%s',strategy,format(k1,digits=4),
+                  format(k1,digits=4))
+  }else{
+    mm <- main
+  }
+  t1 <- table(list(pred_label[nn],obs_label[nn]))
+  layout(1)
+  par(mar=c(2,12,3,4))
+  if(use_col==TRUE){
+    image(t1,col=c('white',colorRampPalette(brewer.pal(8,'Reds'))(length(unique(as.numeric(t1)))-1)),bty='n',xaxt='n',yaxt='n',
+          main=mm)
+  }else{
+    image(t1,bty='n',xaxt='n',yaxt='n',
+          main=mm,col='white')
+  }
+
+  pp <- par()$usr
+  rect(xleft=pp[1],xright=pp[2],ybottom=pp[3],ytop=pp[4])
+  xx <- seq(pp[1],pp[2],length.out = nrow(t1)+1)
+  yy <- seq(pp[3],pp[4],length.out = ncol(t1)+1)
+  xxx <- (xx[1:(length(xx)-1)]+xx[2:length(xx)])/2
+  yyy <- (yy[1:(length(yy)-1)]+yy[2:length(yy)])/2
+
+  abline(h=yy);abline(v=xx)
+  text(pp[1],yyy,colnames(t1),adj=1,xpd=TRUE,col=ifelse(colnames(t1) %in% highlight_clust,2,1),cex=clust_cex)
+  text(xxx,pp[4]+max(strheight(rownames(t1),units='inches',cex=1))/12,rownames(t1),adj=0.5,srt=0,xpd=TRUE,
+       col=ifelse(rownames(t1) %in% highlight_clust,2,1),cex=clust_cex)
+
+  for(i in 1:nrow(t1)){
+    for(j in 1:ncol(t1)){
+      v1 <- t1[i,j]
+      if(v1==0) next
+      if(v1>low_K){
+        text(xxx[i],yyy[j],v1,cex=clust_cex)
+      }else{
+        v2 <- names(obs_label)[which(pred_label==rownames(t1)[i] & obs_label==colnames(t1)[j])]
+        v2 <- paste(v2,collapse='\n')
+        text(xxx[i],yyy[j],v2,cex=outlier_cex)
+      }
+    }
+  }
+  return(t1)
+}
+
+
+#' Get the color for the input Z statistics.
+#'
+#' \code{z2col} is a function to transfer the input Z statistics to a color bar.
+#'
+#' @param x a vector of numeric values. The input Z statistics.
+#' @param n_len integer, number of unique colors. Default is 60.
+#' @param sig_thre numeric, the threshold for significance (absolute Z statistics), values do not pass the threshold will be colored in 'white'.
+#' @param col_min_thre numeric, the threshold for the lowest values used to generate the color bar. Default is 0.01.
+#' @param col_max_thre numeric, the threshold for the maximum values used to generate the color bar. Default is 3.
+#' @param blue_col a vector of characters, the blue colors used for the negative values in Z statistics. Default is brewer.pal(9,'Set1')[2].
+#' @param red_col a vector of characters, the red lors used for the negative values in Z statistics. Default is brewer.pal(9,'Set1')[1].
+#' @return a vector of color characters
+#' @examples
+#' t1 <- sort(rnorm(mean=0,sd=2,n=100))
+#' image(as.matrix(t1),col=z2col(t1))
 #' @export
 z2col <- function(x,n_len=60,sig_thre=0.01,col_min_thre=0.01,col_max_thre=3,
                   blue_col=brewer.pal(9,'Set1')[2],
@@ -1818,7 +2681,7 @@ z2col <- function(x,n_len=60,sig_thre=0.01,col_min_thre=0.01,col_max_thre=3,
 #' @param x a vector of characters.
 #' @param use_color a vector of characters, color bar used to generate the color vector for the input.Default is brewer.pal(12, 'Set3').
 #' @param pre_define a vector of characters, pre-defined color code for some of the input characters. Default is NULL.
-#' @param user_inner logical, indicating whether to use inner pre-defined color code for some characters. Default is TRUE.
+#' @param use_inner logical, indicating whether to use inner pre-defined color code for some characters. Default is TRUE.
 #'
 #' @return
 #' Will return a vector of colors with names the input vector characters.
@@ -1951,9 +2814,30 @@ boxtext <- function(x, y, labels = NA, col.text = NULL, col.bg = NA,
   }
 }
 
-#' Draw 2D dimension plot
+#' Draw 2D dimension plot for sample cluster visualization.
+#'
+#' \code{draw.2D} is a function to draw 2D dimension plot for sample cluster visualization.
+#'
+#' @param X a vector of numeric values, the first dimension values.
+#' @param Y a vector of numeric values, the second dimension values.
+#' @param class_label a vector of characters, with the names are the samples (optional) and the values are the sample cluster label.
+#' The function will treat that the order are the same for X,Y and class_label.
+#' @param xlab character, the label for x-axis.
+#' @param ylab character, the label for y-axis.
+#' @param legend_cex numeric, the cex for the legend.
+#' @param main character, the title for the plot.
+#' @param point_cex numeric, the cex for the points.
+#'
+#' @return logical value indicating whether the plot has been successfully generated
+#' @examples
+#' mat1 <- matrix(rnorm(2000,mean=0,sd=1),nrow=100,ncol=20)
+#' rownames(mat1) <- paste0('Gene',1:nrow(mat1))
+#' colnames(mat1) <- paste0('Sample',1:ncol(mat1))
+#' pc <- prcomp(t(mat1))$x
+#' pred_label <- kmeans(pc,centers=4)$cluster ## this can use other cluster results
+#' draw.2D(X=pc[,1],Y=pc[,2],class_label=pred_label)
 #' @export
-draw.2D <- function(X,Y,class_label,xlab='PC1',ylab='PC2',label_cex=0.8,main="",point_cex=1){
+draw.2D <- function(X,Y,class_label,xlab='PC1',ylab='PC2',legend_cex=0.8,main="",point_cex=1){
   if(is.null(class_label)==TRUE){
     message('No class_label, please check and re-try !');return(FALSE);
   }
@@ -1968,13 +2852,144 @@ draw.2D <- function(X,Y,class_label,xlab='PC1',ylab='PC2',label_cex=0.8,main="",
   cls_cc <- get.class.color(class_label) ## get color for each label
   plot(Y ~ X,pch = 16,cex = point_cex,col = cls_cc,main=main,xlab=xlab,ylab=ylab)
   legend(par()$usr[2],par()$usr[4],sort(unique(class_label)),fill = cls_cc[sort(unique(class_label))],
-         horiz = FALSE,xpd = TRUE,border = NA,bty = 'n',cex=label_cex)
+         horiz = FALSE,xpd = TRUE,border = NA,bty = 'n',cex=legend_cex)
   return(TRUE)
 }
 
-#' Draw 2D dimension plot with ellipse
+#' Draw 2D dimension plot for sample cluster visualization with user-defined text on each point.
+#'
+#' \code{draw.2D.text} is a function to draw 2D dimension plot for sample cluster visualization.
+#'
+#' @param X a vector of numeric values, the first dimension values.
+#' @param Y a vector of numeric values, the second dimension values.
+#' @param class_label a vector of characters, with the names are the samples (optional) and the values are the sample cluster label.
+#' The function will treat that the order are the same for X,Y and class_label.
+#' @param class_text a vector of characters, the user-defined text on each point.
+#' If NULL, will use the names of class_label. Default is NULL.
+#' @param xlab character, the label for x-axis.
+#' @param ylab character, the label for y-axis.
+#' @param legend_cex numeric, the cex for the legend.
+#' @param main character, the title for the plot.
+#' @param point_cex numeric, the cex for the points.
+#' @param text_cex numeric, the cex for the points.
+#'
+#' @return logical value indicating whether the plot has been successfully generated
+#' @examples
+#' mat1 <- matrix(rnorm(2000,mean=0,sd=1),nrow=100,ncol=20)
+#' rownames(mat1) <- paste0('Gene',1:nrow(mat1))
+#' colnames(mat1) <- paste0('Sample',1:ncol(mat1))
+#' pc <- prcomp(t(mat1))$x
+#' pred_label <- kmeans(pc,centers=4)$cluster ## this can use other cluster results
+#' draw.2D.text(X=pc[,1],Y=pc[,2],class_label=pred_label,
+#'              point_cex=5,text_cex=0.5)
 #' @export
-draw.2D.ellipse <- function(X,Y,class_label,xlab='PC1',ylab='PC2',label_cex=0.8,main="",point_cex=1){
+draw.2D.text <- function(X,Y,class_label,class_text=NULL,xlab='PC1',ylab='PC2',legend_cex=0.8,main="",
+                         point_cex=1,text_cex=NULL){
+  if(is.null(class_label)==TRUE){
+    message('No class_label, please check and re-try !');return(FALSE);
+  }
+  if(length(X)!=length(Y)){
+    message('Input two dimension vector with different length, please check and re-try !');return(FALSE);
+  }
+  if(length(X)!=length(class_label)){
+    message('Input dimension vector has different length with the class_label, please check and re-try !');return(FALSE);
+  }
+  par(mar = c(4, 4, 4, 15))
+  if(is.null(class_text)==TRUE){
+    class_text <- names(class_label)
+  }
+  cc <- 10/length(class_label)
+  if(cc<0.05) cc<-0.05
+  if(cc>1) cc<-1
+  if(is.null(text_cex)==FALSE) cc <- text_cex
+  class_label <- as.character(class_label)
+  cls_cc <- get.class.color(class_label) ## get color for each label
+  plot(Y ~ X,pch = 16,cex = point_cex,col = cls_cc,main=main,xlab=xlab,ylab=ylab)
+  text(x=X,y=Y,labels=class_text,cex=cc,xpd=TRUE,adj=0.5)
+  #print(cc);print(str(nn))
+  legend(par()$usr[2],par()$usr[4],sort(unique(class_label)),fill = cls_cc[sort(unique(class_label))],
+         horiz = FALSE,xpd = TRUE,border = NA,bty = 'n',cex=legend_cex)
+  return(TRUE)
+}
+
+#' Draw 3D dimension plot for sample cluster visualization.
+#'
+#' \code{draw.3D} is a function to draw 3D dimension plot for sample cluster visualization.
+#'
+#' @param X a vector of numeric values, the first dimension values.
+#' @param Y a vector of numeric values, the second dimension values.
+#' @param Z a vector of numeric values, the third dimension values.
+#' @param class_label a vector of characters, with the names are the samples (optional) and the values are the sample cluster label.
+#' The function will treat that the order are the same for X,Y and class_label.
+#' @param xlab character, the label for x-axis.
+#' @param ylab character, the label for y-axis.
+#' @param zlab character, the label for z-axis.
+#' @param legend_cex numeric, the cex for the legend.
+#' @param main character, the title for the plot.
+#' @param point_cex numeric, the cex for the points.
+#' @param legend_pos character, the position to put the legend. Default is 'topright'.
+#' @param legend_ncol integer, number of columns used to display the legend. Default is 1.
+#' @param ... other paramters used in \code{scatter3D}.
+#'
+#' @return logical value indicating whether the plot has been successfully generated
+#' @examples
+#' mat1 <- matrix(rnorm(2000,mean=0,sd=1),nrow=100,ncol=20)
+#' rownames(mat1) <- paste0('Gene',1:nrow(mat1))
+#' colnames(mat1) <- paste0('Sample',1:ncol(mat1))
+#' pc <- prcomp(t(mat1))$x
+#' pred_label <- kmeans(pc,centers=4)$cluster ## this can use other cluster results
+#' draw.3D(X=pc[,1],Y=pc[,2],Z=pc[,3],class_label=pred_label)
+#' @export
+draw.3D <- function(X,Y,Z,class_label,xlab='PC1',ylab='PC2',zlab='PC3',
+                    legend_cex=0.8,main="",point_cex=1,legend_pos='topright',legend_ncol=1,...){
+  if(is.null(class_label)==TRUE){
+    message('No class_label, please check and re-try !');return(FALSE);
+  }
+  if(length(X)!=length(Y)){
+    message('Input two dimension vector with different length, please check and re-try !');return(FALSE);
+  }
+  if(length(X)!=length(class_label)){
+    message('Input dimension vector has different length with the class_label, please check and re-try !');return(FALSE);
+  }
+  class_label <- as.character(class_label)
+  c1 <- factor(class_label,levels=sort(unique(class_label)))
+  cls_cc <- get.class.color(class_label) ## get color for each label
+  #print(str(class_label))
+  #print(str(sort(unique(class_label))))
+  #print(str(cls_cc))
+  #print(cls_cc[sort(unique(class_label))])
+  scatter3D(X,Y,Z,pch = 16,xlab = xlab,ylab = ylab,zlab=zlab,bty='g',
+            colvar=1:length(c1),
+            col=cls_cc,colkey = FALSE,cex=point_cex,main=main,...)
+  legend(legend_pos,sort(unique(class_label)),fill = cls_cc[sort(unique(class_label))],
+         border = NA,bty = 'n',ncol = legend_ncol,cex = legend_cex)
+  return(TRUE)
+}
+
+#' Draw 2D dimension plot with ellipse for sample cluster visualization.
+#'
+#' \code{draw.2D.ellipse} is a function to draw 2D dimension plot with ellipse to cover the samples in the sample cluster for visualization.
+#'
+#' @param X a vector of numeric values, the first dimension values.
+#' @param Y a vector of numeric values, the second dimension values.
+#' @param class_label a vector of characters, with the names are the samples (optional) and the values are the sample cluster label.
+#' The function will treat that the order are the same for X,Y and class_label.
+#' @param xlab character, the label for x-axis.
+#' @param ylab character, the label for y-axis.
+#' @param legend_cex numeric, the cex for the legend.
+#' @param main character, the title for the plot.
+#' @param point_cex numeric, the cex for the points.
+#'
+#' @return logical value indicating whether the plot has been successfully generated
+#' @examples
+#' mat1 <- matrix(rnorm(2000,mean=0,sd=1),nrow=100,ncol=20)
+#' rownames(mat1) <- paste0('Gene',1:nrow(mat1))
+#' colnames(mat1) <- paste0('Sample',1:ncol(mat1))
+#' pc <- prcomp(t(mat1))$x
+#' pred_label <- kmeans(pc,centers=4)$cluster ## this can use other cluster results
+#' draw.2D.ellipse(X=pc[,1],Y=pc[,2],class_label=pred_label)
+#' @export
+draw.2D.ellipse <- function(X,Y,class_label,xlab='PC1',ylab='PC2',legend_cex=0.8,main="",point_cex=1){
   if(is.null(class_label)==TRUE){
     message('No class_label, please check and re-try !');return(FALSE);
   }
@@ -2005,11 +3020,11 @@ draw.2D.ellipse <- function(X,Y,class_label,xlab='PC1',ylab='PC2',label_cex=0.8,
     d1 <- unlist(lapply(1:nrow(w1),function(x)sqrt(sum((w1[x,]-m1)^2))))
     if(length(d1)==1){
       draw.ellipse(m1[1],m1[2],a=(par()$usr[2]-par()$usr[1])/30,b=(par()$usr[2]-par()$usr[1])/30,col=c1,border=NA,xpd=TRUE)
-      text(m1[1],m1[2],i,xpd=TRUE,adj=0,cex=0.8)
+      text(m1[1],m1[2],i,xpd=TRUE,adj=0,cex=legend_cex)
     }
     if(length(d1)==2){
       draw.ellipse(m1[1],m1[2],a=d1[1],b=d1[1],col=c1,border=NA,xpd=TRUE)
-      text(m1[1],m1[2],i,xpd=TRUE,adj=0,cex=0.8)
+      text(m1[1],m1[2],i,xpd=TRUE,adj=0,cex=legend_cex)
     }
     if(length(d1)>=3){
       w2 <- order(d1,decreasing=TRUE)
@@ -2030,10 +3045,10 @@ draw.2D.ellipse <- function(X,Y,class_label,xlab='PC1',ylab='PC2',label_cex=0.8,
       d1 <- (par()$usr[2]-par()$usr[1])/30
       m2 <- w1[s1,]
       if(m2[1]>m1[1]){
-        boxtext(m2[1]+d1,m2[2],labels=i,adj=0,cex=label_cex,col.bg=c1)
+        boxtext(m2[1]+d1,m2[2],labels=i,adj=0,cex=legend_cex,col.bg=c1)
         segments(x0=w1[s1,1],y0=w1[s1,2],x1=m2[1]+d1,y1=m2[2],col='dark grey')
       } else{
-        boxtext(m2[1]-d1,m2[2],labels=i,adj=1,cex=label_cex,col.bg=c1)
+        boxtext(m2[1]-d1,m2[2],labels=i,adj=1,cex=legend_cex,col.bg=c1)
         segments(x0=w1[s1,1],y0=w1[s1,2],x1=m2[1]-d1,y1=m2[2],col='dark grey')
       }
     }
@@ -2041,12 +3056,59 @@ draw.2D.ellipse <- function(X,Y,class_label,xlab='PC1',ylab='PC2',label_cex=0.8,
   return(TRUE)
 }
 
-#' QC plot for eset
-#' @param eset input
-#' @param outdir output directory
-#' @param intgroup interested group
+###
+prepdata <- function (expressionset, intgroup, do.logtransform)
+{
+  conversions = c(RGList = "NChannelSet")
+  for (i in seq_along(conversions)) {
+    if (is(expressionset, names(conversions)[i])) {
+      expressionset = try(as(expressionset, conversions[i]))
+      if (is(expressionset, "try-error")) {
+        stop(sprintf("The argument 'expressionset' is of class '%s', and its automatic conversion into '%s' failed. Please try to convert it manually, or contact the creator of that object.\n",
+                     names(conversions)[i], conversions[i]))
+      }
+      else {
+        break
+      }
+    }
+  }
+  x = platformspecific(expressionset, intgroup, do.logtransform)
+  if (!all(intgroup %in% colnames(x$pData)))
+    stop("all elements of 'intgroup' should match column names of 'pData(expressionset)'.")
+  x = append(x, list(numArrays = ncol(x$M), intgroup = intgroup,
+                     do.logtransform = do.logtransform))
+  x = append(x, intgroupColors(x))
+  return(x)
+}
+
+#' QC plot for ExpressionSet class object.
+#'
+#' \code{draw.eset.QC} is a function to draw the basic QC plots for an ExpressionSet class object.
+#' The QC plots include heatmap, pca, density and meansd.
+#'
+#' @param eset ExpressionSet class, the input ExpressionSet class object to be plot.
+#' @param outdir character, output directory to save the figures.
+#' Suggest to set \code{network.par$out.dir.QC} or \code{analysis.par$out.dir.QC}
+#' @param do.logtransform logical, whether to do log transformation before drawing the QC plots. Default is FALSE.
+#' @param intgroup a vector of characters, the interested groups from the phenotype information of the eset to be used in plot.
+#' If NULL, will automatcially extract all possible groups by \code{get_int_group}.
+#' Default is NULL.
+#' @param prefix character, the prefix for the QC figure name.Default is "".
+#' @param choose_plot a vector of characters,
+#' choose one or multiple from 'heatmap', 'pca', 'density', 'meansd.'
+#' Default is 'heatmap','pca','density','meansd'.
+#' @examples
+#' \dontrun{
+#' network.par <- list()
+#' network.par$out.dir.DATA <- system.file('demo1','network/DATA/',package = "NetBID2")
+#' NetBID.loadRData(network.par=network.par,step='exp-QC')
+#' intgroups <- get_int_group(network.par$net.eset)
+#' network.par$out.dir.QC <- getwd() ## set the output directory
+#' draw.eset.QC(network.par$net.eset,outdir=network.par$out.dir.QC,intgroup=intgroups)
+#' }
 #' @export
-plot.eset.QC <- function(eset,outdir = '.',do.logtransform = FALSE,intgroup=NULL,prefix = 'afterQC_',choose_plot=c('heatmap','pca','density','meansd')) {
+draw.eset.QC <- function(eset,outdir = '.',do.logtransform = FALSE,intgroup=NULL,prefix = '',
+                         choose_plot=c('heatmap','pca','density','meansd')) {
   if (!file.exists(outdir)) {
     dir.create(outdir, recursive = TRUE)
     message(paste0("The output directory: \"", outdir, "\" is created!"))
@@ -2071,9 +3133,9 @@ plot.eset.QC <- function(eset,outdir = '.',do.logtransform = FALSE,intgroup=NULL
       class_label <- x$pData[[x$intgroup[i]]]
       class_label[which(is.na(class_label)==TRUE)] <- 'NA'
       draw.2D(as.data.frame(pca$x)$PC1,as.data.frame(pca$x)$PC2,class_label=class_label,xlab='PC1',ylab='PC2',
-              label_cex=0.8,main=sprintf('PCA/Kmeans plot for %s',intgroup[i]))
+              legend_cex=0.8,main=sprintf('PCA/Kmeans plot for %s',intgroup[i]))
       draw.2D.ellipse(as.data.frame(pca$x)$PC1,as.data.frame(pca$x)$PC2,class_label=class_label,xlab='PC1',ylab='PC2',
-                      label_cex=0.8,main=sprintf('PCA/Kmeans plot for %s',intgroup[i]))
+                      legend_cex=0.8,main=sprintf('PCA/Kmeans plot for %s',intgroup[i]))
     }
     dev.off()
     message('Finish PCA plot !')
@@ -2144,11 +3206,52 @@ plot.eset.QC <- function(eset,outdir = '.',do.logtransform = FALSE,intgroup=NULL
   return(TRUE)
 }
 
-#' pca+kmeans in 2D
-#' @param plot_type 2D or 2D.ellipse
-#' @param obs_label the value should be the class label with names equal to sample names
+#' Draw the cluster plot by PCA (visulization algorithm) and Kmeans (cluster algorithm).
+#'
+#' \code{draw.pca.kmeans} is a visualization function to draw the cluster for the input data matrix.
+#'
+#' This function mainly aims for the visulization of sample clusters.
+#' The input is the expression matrix for each row a gene/transcript/probe and each column a sample.
+#' User need to input the real observation label for samples and this function will choose the best K by compared with predicted label and the observed label.
+#' The output figure contains two sub-figures, left is labelled by the real observartion label and right is labelled by the predicted label
+#' with comparison score (choose from ARI, NMI, Jaccard) shown above.
+#'
+#' @param mat a numeric data matrix, the column (e.g sample) will be clustered by the features (e.g genes) in rows.
+#' @param all_k a vector of integers, the pre-defined K to evaluate.
+#' If NULL, will use all possible K. Default is NULL.
+#' @param obs_label a vector of characters, a vector for sample categories with names representing the sample name.
+#' @param legend_pos character, position for the legend displayed on the plot. Default is 'topleft'.
+#' @param legend_cex numeric, cex for the legend displayed on the plot. Default is 0.8.
+#' @param plot_type character, the type for the plot, choose from '2D' or '2D.ellipse' or '3D'. Default is '2D.ellipse'.
+#' @param point_cex numeric, cex for the point in the plot. Default is 1.
+#' @param kmeans_strategy character, the strategy to run the kmeans algorith, choose from 'basic' and 'consensus',
+#' here the consensus kmeans is performed by functions in \code{ConsensusClusterPlus}. Default is 'basic'.
+#' @param choose_k_strategy character, the strategy to choose the best K,
+#' choose from 'ARI (adjusted rand index)', 'NMI (normalized mutual information)', 'Jaccard'. Default is 'ARI'.
+#' @param return_type character, the strategy to return the results, choose from 'optimal' and 'all'.
+#' If choose 'all', cluster results from all k in \code{all_k} will be returned.
+#' Default is 'optimal'.
+#' @return a vector of predicted label (if \code{return_type} is 'optimal') and a list of all possible K (if \code{return_type} is 'all')
+#' @examples
+#' network.par <- list()
+#' network.par$out.dir.DATA <- system.file('demo1','network/DATA/',package = "NetBID2")
+#' NetBID.loadRData(network.par=network.par,step='exp-QC')
+#' mat <- exprs(network.par$net.eset)
+#' phe <- pData(network.par$net.eset)
+#' intgroup <- get_int_group(network.par$net.eset)
+#' for(i in 1:length(intgroup)){
+#'  print(intgroup[i])
+#'  pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,intgroup[i]))
+#'  print(table(list(pred_label=pred_label,obs_label=get_obs_label(phe,intgroup[i]))))
+#' }
+#' pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,
+#'                              obs_label=get_obs_label(phe,intgroup[i]),
+#'                              kmeans_strategy='consensus')
 #' @export
-plot.2D.pca.kmeans <- function(mat=NULL,all_k=NULL,obs_label=NULL,legend_pos = 'topleft',legend_cex = 0.8,plot_type='2D.ellipse',point_cex=1){
+draw.pca.kmeans <- function(mat=NULL,all_k=NULL,obs_label=NULL,legend_pos = 'topleft',legend_cex = 0.8,
+                               plot_type='2D.ellipse',point_cex=1,
+                               kmeans_strategy='basic',choose_k_strategy='ARI',
+                               return_type='optimal'){
   if(is.null(mat)==TRUE){
     message('Please input mat, check and re-try !');return(FALSE)
   }
@@ -2161,46 +3264,103 @@ plot.2D.pca.kmeans <- function(mat=NULL,all_k=NULL,obs_label=NULL,legend_pos = '
   if(length(setdiff(all_k,2:length(obs_label)))>0){
     message('some value in all_k exceed the maximum sample size, check and re-try !');return(FALSE);
   }
-  pc <- prcomp(t(mat))$x
+  cluster_mat <- prcomp(t(mat))$x
   all_jac <- list()
   all_k_res <- list()
-  for(k in all_k){
-    tmp_k <- list()
-    for(i in 1:10){
-      tmp_k[[i]] <- kmeans(pc,centers=as.numeric(k))
+  if(kmeans_strategy=='basic'){
+    for(k in all_k){
+      tmp_k <- list()
+      for(i in 1:10){
+        tmp_k[[i]] <- kmeans(cluster_mat,centers=as.numeric(k))$cluster
+      }
+      pred_label <- tmp_k
+      jac <- unlist(lapply(pred_label,function(x){get_clustComp(x, obs_label,strategy=choose_k_strategy)}))
+      top_i <- which.max(jac)
+      all_k_res[[as.character(k)]] <- tmp_k[[top_i]]
     }
-    pred_label <- lapply(tmp_k,function(x)x$cluster)
-    jac <- unlist(lapply(pred_label,function(x){get_jac(x, obs_label)}))
-    top_i <- which.max(jac)
-    all_k_res[[k]] <- tmp_k[[top_i]]
+  }else{
+    all_k_res <- get_consensus_cluster(mat=mat,all_k=all_k)
   }
   for(k in all_k){
-    pred_label <- all_k_res[[k]]$cluster
-    jac <- get_jac(pred_label, obs_label)
+    pred_label <- all_k_res[[as.character(k)]]
+    jac <- get_clustComp(pred_label, obs_label,strategy = choose_k_strategy)
     all_jac[[as.character(k)]] <- signif(jac,4)
   }
+  message('Optimal k is chosen byScore between predicted and observed label')
   print(all_jac)
   use_k <- all_k[which.max(all_jac)]
-  message(sprintf('Best Jaccard Accuracy occurs when k=%s, with value=%s',use_k,all_jac[as.character(use_k)]))
-  pred_label <- all_k_res[[use_k]]$cluster
-  d1 <- data.frame(id=colnames(mat),X=pc[,1],Y=pc[,2],label=pred_label,stringsAsFactors=FALSE)
+  pred_label <- all_k_res[[as.character(use_k)]]
+  message(sprintf('Best Score occurs when k=%s, with value=%s',use_k,all_jac[as.character(use_k)]))
+##
+  d1 <- data.frame(id=colnames(mat),X=cluster_mat[,1],Y=cluster_mat[,2],Z=cluster_mat[,3],label=pred_label,stringsAsFactors=FALSE)
   layout(t(matrix(1:2)))
   if(plot_type=='2D.ellipse'){
-    draw.2D.ellipse(d1$X,d1$Y,class_label=obs_label[d1$id],xlab='PC1',ylab='PC2',label_cex=0.8,point_cex=point_cex)
-    draw.2D.ellipse(d1$X,d1$Y,class_label=d1$label,xlab='PC1',ylab='PC2',label_cex=0.8,point_cex=point_cex)
+    draw.2D.ellipse(d1$X,d1$Y,class_label=obs_label[d1$id],xlab='PC1',ylab='PC2',legend_cex=legend_cex,point_cex=point_cex)
+    draw.2D.ellipse(d1$X,d1$Y,class_label=d1$label,xlab='PC1',ylab='PC2',legend_cex=legend_cex,point_cex=point_cex,
+                    main=sprintf('%s:%s',choose_k_strategy,format(all_jac[as.character(use_k)],digits=4)))
   }
   if(plot_type=='2D'){
-    draw.2D(d1$X,d1$Y,class_label=obs_label[d1$id],xlab='PC1',ylab='PC2',label_cex=0.8,point_cex=point_cex)
-    draw.2D(d1$X,d1$Y,class_label=d1$label,xlab='PC1',ylab='PC2',label_cex=0.8,point_cex=point_cex)
+    draw.2D(d1$X,d1$Y,class_label=obs_label[d1$id],xlab='PC1',ylab='PC2',legend_cex=legend_cex,point_cex=point_cex)
+    draw.2D(d1$X,d1$Y,class_label=d1$label,xlab='PC1',ylab='PC2',legend_cex=legend_cex,point_cex=point_cex,
+            main=sprintf('%s:%s',choose_k_strategy,format(all_jac[as.character(use_k)],digits=4)))
+  }
+  if(plot_type=='3D'){
+    draw.3D(d1$X,d1$Y,d1$Z,class_label=obs_label[d1$id],xlab='PC1',ylab='PC2',zlab='PC3',legend_cex=legend_cex,point_cex=point_cex,legend_pos=legend_pos)
+    draw.3D(d1$X,d1$Y,d1$Z,class_label=d1$label,xlab='PC1',ylab='PC2',zlab='PC3',legend_cex=legend_cex,point_cex=point_cex,legend_pos=legend_pos,
+            main=sprintf('%s:%s',choose_k_strategy,format(all_jac[as.character(use_k)],digits=4)))
   }
   layout(1);
-  return(pred_label)
+  if(return_type=='optimal') return(pred_label)
+  if(return_type=='all') return(all_k_res)
 }
 
-#' pca+kmeans in 3D
-#' @param obs_label the value should be the class label with names equal to sample names
+#' Draw the cluster plot by UMAP (visulization algorithm) and Kmeans (cluster algorithm).
+#'
+#' \code{draw.umap.kmeans} is a visualization function to draw the cluster for the input data matrix.
+#'
+#' This function mainly aims for the visulization of sample clusters.
+#' The input is the expression matrix for each row a gene/transcript/probe and each column a sample.
+#' User need to input the real observation label for samples and this function will choose the best K by compared with predicted label and the observed label.
+#' The output figure contains two sub-figures, left is labelled by the real observartion label and right is labelled by the predicted label
+#' with comparison score (choose from ARI, NMI, Jaccard) shown above.
+#' Not suggested when sample size is small.
+#'
+#' @param mat a numeric data matrix, the column (e.g sample) will be clustered by the features (e.g genes) in rows.
+#' @param all_k a vector of integers, the pre-defined K to evaluate.
+#' If NULL, will use all possible K. Default is NULL.
+#' @param obs_label a vector of characters, a vector for sample categories with names representing the sample name.
+#' @param legend_pos character, position for the legend displayed on the plot. Default is 'topleft'.
+#' @param legend_cex numeric, cex for the legend displayed on the plot. Default is 0.8.
+#' @param plot_type character, the type for the plot, choose from '2D' or '2D.ellipse' or '3D'. Default is '2D.ellipse'.
+#' @param point_cex numeric, cex for the point in the plot. Default is 1.
+#' @param kmeans_strategy character, the strategy to run the kmeans algorith, choose from 'basic' and 'consensus',
+#' here the consensus kmeans is performed by functions in \code{ConsensusClusterPlus}. Default is 'basic'.
+#' @param choose_k_strategy character, the strategy to choose the best K,
+#' choose from 'ARI (adjusted rand index)', 'NMI (normalized mutual information)', 'Jaccard'. Default is 'ARI'.
+#' @param return_type character, the strategy to return the results, choose from 'optimal' and 'all'.
+#' If choose 'all', cluster results from all k in \code{all_k} will be returned.
+#' Default is 'optimal'.
+#' @return a vector of predicted label (if \code{return_type} is 'optimal') and a list of all possible K (if \code{return_type} is 'all')
+#' @examples
+#' network.par <- list()
+#' network.par$out.dir.DATA <- system.file('demo1','network/DATA/',package = "NetBID2")
+#' NetBID.loadRData(network.par=network.par,step='exp-QC')
+#' mat <- exprs(network.par$net.eset)
+#' phe <- pData(network.par$net.eset)
+#' intgroup <- get_int_group(network.par$net.eset)
+#' for(i in 1:length(intgroup)){
+#'  print(intgroup[i])
+#'  pred_label <- draw.umap.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,intgroup[i]))
+#'  print(table(list(pred_label=pred_label,obs_label=get_obs_label(phe,intgroup[i]))))
+#' }
+#' pred_label <- draw.umap.kmeans(mat=mat,all_k = NULL,
+#'                              obs_label=get_obs_label(phe,intgroup[i]),
+#'                              kmeans_strategy='consensus')
 #' @export
-plot.3D.pca.kmeans <- function(mat=NULL,all_k=NULL,obs_label=NULL,legend_pos = 'topleft',legend_ncol = 1,legend_cex = 0.8){
+draw.umap.kmeans <- function(mat=NULL,all_k=NULL,obs_label=NULL,
+                             legend_pos = 'topleft',legend_cex = 0.8,
+                             kmeans_strategy='basic',choose_k_strategy='ARI',
+                             plot_type='2D.ellipse',point_cex=1,return_type='optimal'){
   if(is.null(mat)==TRUE){
     message('Please input mat, check and re-try !');return(FALSE)
   }
@@ -2213,237 +3373,122 @@ plot.3D.pca.kmeans <- function(mat=NULL,all_k=NULL,obs_label=NULL,legend_pos = '
   if(length(setdiff(all_k,2:length(obs_label)))>0){
     message('some value in all_k exceed the maximum sample size, check and re-try !');return(FALSE);
   }
-  pc <- prcomp(t(mat))$x
-  all_jac <- list()
-  all_k_res <- list()
-  for(k in all_k){
-    tmp_k <- list()
-    for(i in 1:10){
-      tmp_k[[i]] <- kmeans(pc,centers=as.numeric(k))
-    }
-    pred_label <- lapply(tmp_k,function(x)x$cluster)
-    jac <- unlist(lapply(pred_label,function(x){get_jac(x, obs_label)}))
-    top_i <- which.max(jac)
-    all_k_res[[k]] <- tmp_k[[top_i]]
-    #all_k_res[[k]] <- kmeans(pc,centers=as.numeric(k))
-  }
-  for(k in all_k){
-    pred_label <- all_k_res[[k]]$cluster
-    jac <- get_jac(pred_label, obs_label)
-    all_jac[[as.character(k)]] <- signif(jac,4)
-  }
-  print(all_jac)
-  use_k <- all_k[which.max(all_jac)]
-  message(sprintf('Best Jaccard Accuracy occurs when k=%s, with value=%s',use_k,all_jac[as.character(use_k)]))
-  pred_label <- all_k_res[[use_k]]$cluster
-  d1 <- data.frame(id=colnames(mat),X=pc[,1],Y=pc[,2],Z=pc[,3],obs=obs_label[colnames(mat)],label=pred_label,stringsAsFactors=FALSE)
-  par(mar=c(3,3,10,3))
-  layout(t(matrix(1:2)))
-  cls_cc <- get.class.color(unique(d1$obs))
-  scatter3D(
-    d1$X,
-    d1$Y,
-    d1$Z,
-    pch = 16,
-    xlab = 'PC1',
-    ylab = 'PC2',
-    zlab='PC3',bty='g',colvar=as.numeric(factor(d1$obs,levels=unique(d1$obs))),col=cls_cc,colkey = FALSE
-  )
-  legend(
-    legend_pos,
-    legend=unique(obs_label[d1$id]),
-    fill = cls_cc[unique(obs_label[d1$id])],
-    border = NA,
-    bty = 'n',
-    ncol = legend_ncol,
-    cex = legend_cex
-  )
-  ##
-  cls_cc <- get.class.color(as.character(unique(d1$label)))
-  scatter3D(
-    d1$X,
-    d1$Y,
-    d1$Z,
-    pch = 16,
-    xlab = 'PC1',
-    ylab = 'PC2',zlab='PC3',bty='g',colvar=as.numeric(factor(d1$label,levels=unique(d1$label))),col=cls_cc,colkey = FALSE
-  )
-  legend(
-    legend_pos,
-    legend=as.character(sort(unique(d1$label))),
-    fill = cls_cc[as.character(sort(unique(
-      d1$label
-    )))],
-    border = NA,
-    bty = 'n',
-    ncol = legend_ncol,
-    cex = legend_cex
-  )
-  return(pred_label)
-}
-
-#' umap+kmeans in 2D
-#' @param plot_type 2D or 2D.ellipse
-#' @param obs_label the value should be the class label with names equal to sample names
-#' @export
-plot.2D.umap.kmeans <- function(mat=NULL,all_k=NULL,obs_label=NULL,legend_pos = 'topleft',legend_cex = 0.8,plot_type='2D.ellipse',point_cex=1){
-  if(is.null(mat)==TRUE){
-    message('Please input mat, check and re-try !');return(FALSE)
-  }
-  if(is.null(obs_label)==TRUE){
-    message('Please input obs_label, check and re-try !');return(FALSE)
-  }
-  if(is.null(all_k)==TRUE){
-    all_k <- 2:min(length(obs_label)-1,2*length(unique(obs_label)))
-  }
-  if(length(setdiff(all_k,2:length(obs_label)))>0){
-    message('some value in all_k exceed the maximum sample size, check and re-try !');return(FALSE);
-  }
-  #pc <- prcomp(t(mat))$x
-  use_mat_umap <- umap(t(mat))
+  ori_cc <- umap.defaults;
+  ori_cc$n_epochs <- 2000;
+  ori_cc$n_neighbors <- min(15,round(ncol(mat)/2));
+  if(plot_type=='3D') ori_cc$n_components <- 3
+  cluster_mat <- umap(as.matrix(t(mat)),config=ori_cc)
   #
   all_jac <- list()
   all_k_res <- list()
-  for(k in all_k){
-    tmp_k <- list()
-    for(i in 1:10){
-      tmp_k[[i]] <- kmeans(use_mat_umap$layout,centers=as.numeric(k))
+  if(kmeans_strategy=='basic'){
+    for(k in all_k){
+      tmp_k <- list()
+      for(i in 1:10){
+        tmp_k[[i]] <- kmeans(cluster_mat$layout,centers=as.numeric(k))$cluster
+      }
+      pred_label <- tmp_k
+      jac <- unlist(lapply(pred_label,function(x){get_clustComp(x, obs_label,strategy = choose_k_strategy)}))
+      top_i <- which.max(jac)
+      all_k_res[[as.character(k)]] <- tmp_k[[top_i]]
     }
-    pred_label <- lapply(tmp_k,function(x)x$cluster)
-    jac <- unlist(lapply(pred_label,function(x){get_jac(x, obs_label)}))
-    top_i <- which.max(jac)
-    all_k_res[[k]] <- tmp_k[[top_i]]
-    #all_k_res[[k]] <- kmeans(use_mat_umap$layout,centers=as.numeric(k))
+  }else{
+    all_k_res <- get_consensus_cluster(mat=mat,all_k=all_k)
   }
   for(k in all_k){
-    pred_label <- all_k_res[[k]]$cluster
-    jac <- get_jac(pred_label, obs_label)
+    pred_label <- all_k_res[[as.character(k)]]
+    jac <- get_clustComp(pred_label, obs_label,strategy = choose_k_strategy)
     all_jac[[as.character(k)]] <- signif(jac,4)
   }
   print(all_jac)
   use_k <- all_k[which.max(all_jac)]
-  message(sprintf('Best Jaccard Accuracy occurs when k=%s, with value=%s',use_k,all_jac[as.character(use_k)]))
-  pred_label <- all_k_res[[use_k]]$cluster
+  message(sprintf('Best Score occurs when k=%s, with value=%s',use_k,all_jac[as.character(use_k)]))
+  pred_label <- all_k_res[[as.character(use_k)]]
 
-  d1 <- data.frame(id=colnames(mat),X=use_mat_umap$layout[,1],Y=use_mat_umap$layout[,2],label=pred_label,stringsAsFactors=FALSE)
+  d1 <- data.frame(id=colnames(mat),X=cluster_mat$layout[,1],Y=cluster_mat$layout[,2],label=pred_label,stringsAsFactors=FALSE)
+  if(plot_type=='3D')   d1 <- data.frame(id=colnames(mat),X=cluster_mat$layout[,1],Y=cluster_mat$layout[,2],Y=cluster_mat$layout[,3],label=pred_label,stringsAsFactors=FALSE)
   layout(t(matrix(1:2)))
   if(plot_type=='2D.ellipse'){
-    draw.2D.ellipse(d1$X,d1$Y,class_label=obs_label[d1$id],xlab="",ylab="",label_cex=0.8,point_cex=point_cex)
-    draw.2D.ellipse(d1$X,d1$Y,class_label=d1$label,xlab="",ylab="",label_cex=0.8,point_cex=point_cex)
+    draw.2D.ellipse(d1$X,d1$Y,class_label=obs_label[d1$id],xlab="",ylab="",legend_cex=legend_cex,point_cex=point_cex)
+    draw.2D.ellipse(d1$X,d1$Y,class_label=d1$label,xlab="",ylab="",legend_cex=legend_cex,point_cex=point_cex,
+                    main=sprintf('%s:%s',choose_k_strategy,format(all_jac[as.character(use_k)],digits=4)))
   }
   if(plot_type=='2D'){
-    draw.2D(d1$X,d1$Y,class_label=obs_label[d1$id],xlab="",ylab="",label_cex=0.8,point_cex=point_cex)
-    draw.2D(d1$X,d1$Y,class_label=d1$label,xlab="",ylab="",label_cex=0.8,point_cex=point_cex)
+    draw.2D(d1$X,d1$Y,class_label=obs_label[d1$id],xlab="",ylab="",legend_cex=legend_cex,point_cex=point_cex)
+    draw.2D(d1$X,d1$Y,class_label=d1$label,xlab="",ylab="",legend_cex=legend_cex,point_cex=point_cex,
+            main=sprintf('%s:%s',choose_k_strategy,format(all_jac[as.character(use_k)],digits=4)))
+  }
+  if(plot_type=='3D'){
+    draw.3D(d1$X,d1$Y,d1$Z,class_label=obs_label[d1$id],xlab='',ylab='',zlab='',legend_cex=legend_cex,point_cex=point_cex,legend_pos=legend_pos)
+    draw.3D(d1$X,d1$Y,d1$Z,class_label=d1$label,xlab='',ylab='',zlab='',legend_cex=legend_cex,point_cex=point_cex,legend_pos=legend_pos,
+            main=sprintf('%s:%s',choose_k_strategy,format(all_jac[as.character(use_k)],digits=4)))
   }
   layout(1);
-  return(pred_label)
-}
-
-#' umap+kmeans in 3D
-#' @param obs_label the value should be the class label with names equal to sample names
-#' @export
-plot.3D.umap.kmeans <- function(mat=NULL,all_k=NULL,obs_label=NULL,legend_pos = 'topleft',legend_cex = 0.8,point_cex=1){
-  if(is.null(mat)==TRUE){
-    message('Please input mat, check and re-try !');return(FALSE)
-  }
-  if(is.null(obs_label)==TRUE){
-    message('Please input obs_label, check and re-try !');return(FALSE)
-  }
-  if(is.null(all_k)==TRUE){
-    all_k <- 2:min(length(obs_label)-1,2*length(unique(obs_label)))
-  }
-  if(length(setdiff(all_k,2:length(obs_label)))>0){
-    message('some value in all_k exceed the maximum sample size, check and re-try !');return(FALSE);
-  }
-  #pc <- prcomp(t(mat))$x
-  ori_cc <- umap.defaults; ori_cc$n_components <- 3
-  use_mat_umap <- umap(t(mat),config=ori_cc)
-  #
-  all_jac <- list()
-  all_k_res <- list()
-  for(k in all_k){
-    tmp_k <- list()
-    for(i in 1:10){
-      tmp_k[[i]] <- kmeans(use_mat_umap$layout,centers=as.numeric(k))
-    }
-    pred_label <- lapply(tmp_k,function(x)x$cluster)
-    jac <- unlist(lapply(pred_label,function(x){get_jac(x, obs_label)}))
-    top_i <- which.max(jac)
-    all_k_res[[k]] <- tmp_k[[top_i]]
-  }
-  for(k in all_k){
-    pred_label <- all_k_res[[k]]$cluster
-    jac <- get_jac(pred_label, obs_label)
-    all_jac[[as.character(k)]] <- signif(jac,4)
-  }
-  print(all_jac)
-  use_k <- all_k[which.max(all_jac)]
-  message(sprintf('Best Jaccard Accuracy occurs when k=%s, with value=%s',use_k,all_jac[as.character(use_k)]))
-  pred_label <- all_k_res[[use_k]]$cluster
-
-  d1 <- data.frame(id=colnames(mat),X=use_mat_umap$layout[,1],
-                   Y=use_mat_umap$layout[,2],Z=use_mat_umap$layout[,3],label=pred_label,stringsAsFactors=FALSE)
-  layout(t(matrix(1:2)))
-  d1$obs <- obs_label
-  print(str(d1))
-  layout(t(matrix(1:2)))
-  cls_cc <- get.class.color(unique(d1$obs))
-  scatter3D(
-    d1$X,
-    d1$Y,
-    d1$Z,
-    pch = 16,cex=point_cex,
-    xlab = 'MICA-1',
-    ylab = 'MICA-2',
-    zlab='MICA-3',bty='g',colvar=as.numeric(factor(d1$obs,levels=unique(d1$obs))),col=cls_cc,colkey = FALSE
-  )
-  legend(
-    legend_pos,
-    legend=unique(obs_label[d1$id]),
-    fill = cls_cc[unique(obs_label[d1$id])],
-    border = NA,
-    bty = 'n',
-    ncol = legend_ncol,
-    cex = legend_cex,xpd=TRUE
-  )
-  ##
-  cls_cc <- get.class.color(as.character(unique(d1$label)))
-  scatter3D(
-    d1$X,
-    d1$Y,
-    d1$Z,
-    pch = 16,cex=point_cex,
-    xlab = 'MICA-1',
-    ylab = 'MICA-2',
-    zlab='MICA-3',bty='g',colvar=as.numeric(factor(d1$label,levels=unique(d1$label))),col=cls_cc,colkey = FALSE
-  )
-  legend(
-    legend_pos,
-    legend=as.character(sort(unique(d1$label))),
-    fill = cls_cc[as.character(sort(unique(
-      d1$label
-    )))],
-    border = NA,
-    bty = 'n',
-    ncol = legend_ncol,
-    cex = legend_cex,xpd=TRUE
-  )
-  layout(1);
-  return(pred_label)
+  if(return_type=='optimal') return(pred_label)
+  if(return_type=='all') return(all_k_res)
 }
 
 
-#' MICA in 2D
-#' @param plot_type 2D or 2D.ellipse
-#' @param visualization_type tsne or umap
-#' @param obs_label the value should be the class label with names equal to sample names
+## get consensus Kmeans results, using M3C(toooo slow),ConsensusClusterPlus
+# return cluster results, RCSI score, P-value
+# plot==TRUE, plot RSCI+BETA_P
+# get_consensus_cluster
+get_consensus_cluster <-function(mat,all_k=2:12,clusterAlg="km",plot=FALSE,...)
+{
+  maxK <- max(all_k)
+  res1 <- ConsensusClusterPlus(mat,maxK=maxK,clusterAlg=clusterAlg,plot=plot,...)
+  cls_res <- lapply(all_k,function(x){
+    x1 <- res1[[x]]$consensusClass
+    x1
+  })
+  names(cls_res) <- as.character(all_k)
+  cluster_res <- cls_res
+  return(cluster_res)
+}
+
+
+#' Draw the cluster plot by MICA (cluster algorithm).
+#'
+#' \code{draw.MICA} is a visualization function to draw the cluster results for the MICA output.
+#'
+#' This function mainly aims for the visulization of sample clusters.
+#' The input is the MICA project information.
+#' User need to input the real observation label for samples and this function will choose the best K by compared with predicted label and the observed label.
+#' The output figure contains two sub-figures, left is labelled by the real observartion label and right is labelled by the predicted label
+#' with comparison score (choose from ARI, NMI, Jaccard) shown above.
+#' Not suggested when sample size is small.
+#'
+#' @param outdir character, the output directory for running MICA.
+#' @param prjname charater, the project name set for running MICA.
+#' @param all_k a vector of integers, the pre-defined K to evaluate.
+#' If NULL, will use all possible K. Default is NULL.
+#' @param obs_label a vector of characters, a vector for sample categories with names representing the sample name.
+#' @param legend_pos character, position for the legend displayed on the plot. Default is 'topleft'.
+#' @param legend_cex numeric, cex for the legend displayed on the plot. Default is 0.8.
+#' @param plot_type character, the type for the plot, choose from '2D' or '2D.ellipse' or '3D'. Default is '2D.ellipse'.
+#' @param point_cex numeric, cex for the point in the plot. Default is 1.
+#' @param choose_k_strategy character, the strategy to choose the best K,
+#' choose from 'ARI (adjusted rand index)', 'NMI (normalized mutual information)', 'Jaccard'. Default is 'ARI'.
+#' @param visualization_type character,choose from 'tsne', 'umap' or 'mds'. Default is 'tsne'.
+#' @param return_type character, the strategy to return the results, choose from 'optimal' and 'all'.
+#' If choose 'all', cluster results from all k in \code{all_k} will be returned.
+#' Default is 'optimal'.
+#' @return a vector of predicted label (if \code{return_type} is 'optimal') and a list of all possible K (if \code{return_type} is 'all')
 #' @export
-plot.2D.MICA <- function(outdir=NULL,prjname=NULL,all_k=NULL,obs_label=NULL,legend_pos = 'topleft',legend_cex = 0.8,point_cex=1,plot_type='2D.ellipse',
-                         visualization_type='tsne') {
+draw.MICA <- function(outdir=NULL,prjname=NULL,all_k=NULL,obs_label=NULL,
+                         legend_pos = 'topleft',legend_cex = 0.8,
+                         point_cex=1,plot_type='2D.ellipse',
+                         choose_k_strategy='ARI',
+                         visualization_type='tsne',return_type='optimal') {
+  if(plot_type=='3D' & visualization_type=='tsne'){
+    message('Current tsne not support for 3D');return(FALSE)
+  }
   # choose best k
-  all_jac <- get_jac_MICA(outdir=outdir, all_k=all_k, obs_label=obs_label, prjname = prjname)
+  res1 <- get_clustComp_MICA(outdir=outdir, all_k=all_k, obs_label=obs_label, prjname = prjname,strategy = choose_k_strategy)
+  all_k_res <- res1$all_k_res
+  all_jac <- res1$all_jac
   use_k <- all_k[which.max(all_jac)]
-  message(sprintf('Best Jaccard Accuracy occurs when k=%s, with value=%s',use_k,all_jac[as.character(use_k)]))
+  message(sprintf('Best Score occurs when k=%s, with value=%s',use_k,all_jac[as.character(use_k)]))
   #
   use_file <- sprintf('%s/scMINER_%s/scMINER_%s_MDS_%s/scMINER_MICA_out/%s.ggplot.txt',
                       outdir,prjname,prjname,use_k,prjname)
@@ -2452,126 +3497,66 @@ plot.2D.MICA <- function(outdir=NULL,prjname=NULL,all_k=NULL,obs_label=NULL,lege
     use_file <- sprintf('%s/scMINER_%s/scMINER_%s_MDS_%s/scMINER_MICA_out/%s_clust.h5',
                         outdir,prjname,prjname,use_k,prjname)
     fid <- H5Fopen(use_file)
-    dist_mat <- fid$`mds`$block0_values
+    dist_mat <- fid$`mds`$block0_values[1:19,] ###
     if(visualization_type=='mds'){
-      X <- fid$mds$block0_values[1,];Y <- fid$mds$block0_values[2,]
-      d1$X <- X; d1$Y <- Y;
+      X <- fid$mds$block0_values[1,];
+      Y <- fid$mds$block0_values[2,];
+      Z <- fid$mds$block0_values[3,];
+      d1$X <- X; d1$Y <- Y;d1$Z <- Z
     }else{
-      use_mat_umap <- umap(t(dist_mat))
-      X <- use_mat_umap$layout[,1];Y <- use_mat_umap$layout[,2]
-      d1$X <- X; d1$Y <- Y;
+      ori_cc <- umap.defaults;
+      ori_cc$n_epochs <- 2000;
+      ori_cc$n_neighbors <- round(ncol(dist_mat)/use_k)
+      ori_cc$min_dist <- 0.01 # 0.1
+      if(plot_type=='3D'){
+        ori_cc$n_components <- 3
+        use_mat_umap <- umap(t(dist_mat),config=ori_cc)
+        X <- use_mat_umap$layout[,1];Y <- use_mat_umap$layout[,2]; Z <- use_mat_umap$layout[,3];
+        d1$X <- X; d1$Y <- Y;d1$Z <- Z
+      }else{
+        use_mat_umap <- umap(t(dist_mat),config=ori_cc)
+        X <- use_mat_umap$layout[,1];Y <- use_mat_umap$layout[,2]
+        d1$X <- X; d1$Y <- Y;
+      }
     }
     H5Fclose(fid)
   }
   layout(t(matrix(1:2)))
   if(plot_type=='2D.ellipse'){
-    draw.2D.ellipse(d1$X,d1$Y,class_label=obs_label[d1$id],xlab='MICA-1',ylab='MICA-2',label_cex=legend_cex,point_cex=point_cex)
-    draw.2D.ellipse(d1$X,d1$Y,class_label=d1$label,xlab='MICA-1',ylab='MICA-2',label_cex=legend_cex,point_cex=point_cex)
+    draw.2D.ellipse(d1$X,d1$Y,class_label=obs_label[d1$id],xlab='MICA-1',ylab='MICA-2',legend_cex=legend_cex,point_cex=point_cex)
+    draw.2D.ellipse(d1$X,d1$Y,class_label=d1$label,xlab='MICA-1',ylab='MICA-2',legend_cex=legend_cex,point_cex=point_cex,
+                    main=sprintf('%s:%s',choose_k_strategy,format(all_jac[as.character(use_k)],digits=4)))
   }
   if(plot_type=='2D'){
-    draw.2D(d1$X,d1$Y,class_label=obs_label[d1$id],xlab='MICA-1',ylab='MICA-2',label_cex=legend_cex,point_cex=point_cex)
-    draw.2D(d1$X,d1$Y,class_label=d1$label,xlab='MICA-1',ylab='MICA-2',label_cex=legend_cex,point_cex=point_cex)
+    draw.2D(d1$X,d1$Y,class_label=obs_label[d1$id],xlab='MICA-1',ylab='MICA-2',legend_cex=legend_cex,point_cex=point_cex)
+    draw.2D(d1$X,d1$Y,class_label=d1$label,xlab='MICA-1',ylab='MICA-2',legend_cex=legend_cex,point_cex=point_cex,
+            main=sprintf('%s:%s',choose_k_strategy,format(all_jac[as.character(use_k)],digits=4)))
   }
-  ## jaccard accuracy
+  if(plot_type=='2D.text'){
+    draw.2D.text(d1$X,d1$Y,class_label=obs_label[d1$id],class_text=d1$id,xlab='MICA-1',ylab='MICA-2',legend_cex=legend_cex,point_cex=point_cex)
+    draw.2D.text(d1$X,d1$Y,class_label=d1$label,class_text=d1$id,xlab='MICA-1',ylab='MICA-2',legend_cex=legend_cex,point_cex=point_cex,
+                 main=sprintf('%s:%s',choose_k_strategy,format(all_jac[as.character(use_k)],digits=4)))
+  }
+  if(plot_type=='3D'){
+    draw.3D(d1$X,d1$Y,d1$Z,class_label=obs_label[d1$id],xlab='MICA-1',ylab='MICA-2',zlab='MICA-3',legend_cex=legend_cex,point_cex=point_cex,legend_pos=legend_pos)
+    draw.3D(d1$X,d1$Y,d1$Z,class_label=d1$label,xlab='MICA-1',ylab='MICA-2',zlab='MICA-3',legend_cex=legend_cex,point_cex=point_cex,legend_pos=legend_pos,
+            main=sprintf('%s:%s',choose_k_strategy,format(all_jac[as.character(use_k)],digits=4)))
+  }
+  ##Score
   rownames(d1) <- d1$id
   pred_label <- d1[names(obs_label), ]$label
   names(pred_label) <- names(obs_label)
-  jac <- get_jac(pred_label, obs_label)
-  print(sprintf('Jaccard Accuracy:%s', jac))
-  return(pred_label)
+  jac <- get_clustComp(pred_label, obs_label,strategy = choose_k_strategy)
+  print(sprintf('Best Score:%s', jac))
+  if(return_type=='optimal') return(pred_label)
+  if(return_type=='all') return(all_k_res)
 }
 
-#' MICA in 3D
-#' @param visualization_type tsne or umap
-#' @param obs_label the value should be the class label with names equal to sample names
-#' @param visualization_type mds,umap
-#' @export
-plot.3D.MICA <- function(outdir=NULL,prjname=NULL,all_k=NULL,obs_label=NULL,
-                         legend_pos = 'topleft',legend_cex = 0.8,legend_ncol=1,point_cex=1,
-                         visualization_type='umap') {
-  if(visualization_type=='tsne'){
-    message('tsne is not supported in 3D');return(FALSE)
-  }
-  # choose best k
-  all_jac <- get_jac_MICA(outdir=outdir, all_k=all_k, obs_label=obs_label, prjname = prjname)
-  use_k <- all_k[which.max(all_jac)]
-  message(sprintf('Best Jaccard Accuracy occurs when k=%s, with value=%s',use_k,all_jac[as.character(use_k)]))
-  #
-  use_file <- sprintf('%s/scMINER_%s/scMINER_%s_MDS_%s/scMINER_MICA_out/%s.ggplot.txt',
-                      outdir,prjname,prjname,use_k,prjname)
-  d1 <- read.delim(use_file, stringsAsFactors = FALSE) ## get cluster results
-  if(visualization_type=='umap' | visualization_type=='mds'){
-    use_file <- sprintf('%s/scMINER_%s/scMINER_%s_MDS_%s/scMINER_MICA_out/%s_clust.h5',
-                        outdir,prjname,prjname,use_k,prjname)
-    fid <- H5Fopen(use_file)
-    dist_mat <- fid$`mds`$block0_values
-    if(visualization_type=='mds'){
-      X <- fid$mds$block0_values[1,];Y <- fid$mds$block0_values[2,]; Z <- fid$mds$block0_values[3,]
-      d1$X <- X; d1$Y <- Y; d1$Z <- Z;
-    }else{
-      ori_cc <- umap.defaults; ori_cc$n_components <- 3
-      use_mat_umap <- umap(t(dist_mat),config=ori_cc)
-      X <- use_mat_umap$layout[,1];Y <- use_mat_umap$layout[,2]; Z <- use_mat_umap$layout[,3];
-      d1$X <- X; d1$Y <- Y; d1$Z <- Z;
-    }
-    H5Fclose(fid)
-  }
-  d1$obs <- obs_label
-  print(str(d1))
-  layout(t(matrix(1:2)))
-  cls_cc <- get.class.color(unique(d1$obs))
-  scatter3D(
-    d1$X,
-    d1$Y,
-    d1$Z,
-    pch = 16,cex=point_cex,
-    xlab = 'MICA-1',
-    ylab = 'MICA-2',
-    zlab='MICA-3',bty='g',colvar=as.numeric(factor(d1$obs,levels=unique(d1$obs))),col=cls_cc,colkey = FALSE
-  )
-  legend(
-    legend_pos,
-    legend=unique(obs_label[d1$id]),
-    fill = cls_cc[unique(obs_label[d1$id])],
-    border = NA,
-    bty = 'n',
-    ncol = legend_ncol,
-    cex = legend_cex,xpd=TRUE
-  )
-  ##
-  cls_cc <- get.class.color(as.character(unique(d1$label)))
-  scatter3D(
-    d1$X,
-    d1$Y,
-    d1$Z,
-    pch = 16,cex=point_cex,
-    xlab = 'MICA-1',
-    ylab = 'MICA-2',
-    zlab='MICA-3',bty='g',colvar=as.numeric(factor(d1$label,levels=unique(d1$label))),col=cls_cc,colkey = FALSE
-  )
-  legend(
-    legend_pos,
-    legend=as.character(sort(unique(d1$label))),
-    fill = cls_cc[as.character(sort(unique(
-      d1$label
-    )))],
-    border = NA,
-    bty = 'n',
-    ncol = legend_ncol,
-    cex = legend_cex,xpd=TRUE
-  )
-  ## jaccard accuracy
-  rownames(d1) <- d1$id
-  pred_label <- d1[names(obs_label), ]$label
-  names(pred_label) <- names(obs_label)
-  jac <- get_jac(pred_label, obs_label)
-  print(sprintf('Jaccard Accuracy:%s', jac))
-  return(pred_label)
-}
 
-# get all jaccard accuracy for MICA
-get_jac_MICA <- function(outdir, all_k, obs_label, prjname = NULL) {
+# get allScore for MICA
+get_clustComp_MICA <- function(outdir, all_k, obs_label, prjname = NULL,strategy = 'ARI') {
   all_jac <- list()
+  all_k_res <- list()
   for (k in all_k) {
     use_file <-
       sprintf(
@@ -2579,16 +3564,17 @@ get_jac_MICA <- function(outdir, all_k, obs_label, prjname = NULL) {
         outdir,prjname,prjname,k,prjname
       )
     d1 <- read.delim(use_file, stringsAsFactors = FALSE)
-    ## jaccard accuracy
+    ##Score
     rownames(d1) <- d1$id
     pred_label <-
       d1[names(obs_label), ]$label
     names(pred_label) <- names(obs_label)
-    jac <- get_jac(pred_label, obs_label)
+    jac <- get_clustComp(pred_label, obs_label,strategy=strategy)
     all_jac[[as.character(k)]] <- jac
-    print(sprintf('Jaccard Accuracy for %d:%s', k, jac))
+    all_k_res[[as.character(k)]] <- pred_label
+    print(sprintf('Best Score for %d:%s', k, jac))
   }
-  return(all_jac)
+  return(list(all_k_res=all_k_res,all_jac=all_jac))
 }
 
 #' Volcano plot for top DE (differentiated expressed) genes or DA (differentiated activity) drivers
@@ -2621,7 +3607,7 @@ get_jac_MICA <- function(outdir, all_k, obs_label, prjname = NULL) {
 #' @examples
 #' analysis.par <- list()
 #' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
-#' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
 #' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
 #'                                logFC_col='logFC.G4.Vs.others_DA',
@@ -2636,7 +3622,7 @@ get_jac_MICA <- function(outdir, all_k, obs_label, prjname = NULL) {
 #' \dontrun{
 #' analysis.par <- list()
 #' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
-#' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
 #' analysis.par$out.dir.PLOT <- getwd() ## directory for saving the pdf files
 #' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
@@ -2748,7 +3734,7 @@ draw.volcanoPlot <- function(dat=NULL,label_col=NULL,logFC_col=NULL,Pv_col=NULL,
 #' @param phenotype_info data.frame,contain the sample phenotype information, can be generated by \code{pData(eset)}.
 #' The rownames should match the colnames of mat. Default is NULL.
 #' @param use_phe a list of characters, selected phenotype for display,must be the subset of colnames of phenotype_info.Default is NULL.
-#' @param main character, title for the plot. Default is "".
+#' @param main character, title for the draw. Default is "".
 #' @param scale character, indicating if the values should be centered and scaled in either the row direction or the column direction, or none.
 #' The default is "none".
 #' @param pdf_file character, file path for the pdf file to save the figure into pdf format.If NULL, will not generate pdf file. Default is NULL.
@@ -2763,7 +3749,7 @@ draw.volcanoPlot <- function(dat=NULL,label_col=NULL,logFC_col=NULL,Pv_col=NULL,
 #' @examples
 #' analysis.par <- list()
 #' analysis.par$out.dir.DATA <- system.file('demo1/driver/DATA/',package = "NetBID2")
-#' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
 #' exp_mat <- exprs(analysis.par$cal.eset) ## expression,the rownames matches originalID in ms_tab
 #' ac_mat <- exprs(analysis.par$merge.ac.eset) ## ac,the rownames matches originalID_label in ms_tab
@@ -2802,7 +3788,7 @@ draw.volcanoPlot <- function(dat=NULL,label_col=NULL,logFC_col=NULL,Pv_col=NULL,
 #' \dontrun{
 #' analysis.par <- list()
 #' analysis.par$out.dir.DATA <- system.file('demo1/driver/DATA/',package = "NetBID2")
-#' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
 #' exp_mat <- exprs(analysis.par$cal.eset) ## expression,the rownames matches originalID in ms_tab
 #' ac_mat <- exprs(analysis.par$merge.ac.eset) ## ac,the rownames matches originalID_label in ms_tab
@@ -2928,6 +3914,8 @@ draw.heatmap <- function(mat=NULL,use_genes=rownames(mat),use_gene_label=use_gen
 
 ################################ Function enrichment related functions
 #' find.gsByGene
+#' @param gene character
+#' @param use_gs a vector of characters
 #' @export
 find.gsByGene <- function(gene=NULL,use_gs=NULL){
   if(is.null(use_gs)==TRUE){
@@ -2946,9 +3934,21 @@ find.gsByGene <- function(gene=NULL,use_gs=NULL){
   return(x2)
 }
 ##
-#' merge genesets
+#' Merge GeneSets by choosing several categories.
+#'
+#' \code{merge_gs} is a simple function to merge the gene set list.
+#'
+#' @param all_gs2gene list, which could be obtained by running \code{gs.preload()}.
+#' @param use_gs a vector of characters, could check \code{all_gs2gene_info} for the cateogory description.
+#' Default is 'H', 'CP:BIOCARTA', 'CP:REACTOME', 'CP:KEGG'.
+#' @return a one-level list for geneset to genes.
+#' @examples
+#' gs.preload(use_spe='Homo sapiens',update=FALSE)
+#' use_gs2gene <- merge_gs(all_gs2gene=all_gs2gene,
+#'                        use_gs=c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG','C5'))
+#'
 #' @export
-merge_gs <- function(all_gs2gene=NULL,use_gs=c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG','C5')){
+merge_gs <- function(all_gs2gene=all_gs2gene,use_gs=c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG','C5')){
   if(is.null(use_gs)==TRUE){
     nn <- unlist(lapply(all_gs2gene,names))
     use_gs2gene <- unlist(all_gs2gene,recursive = FALSE)
@@ -2960,6 +3960,7 @@ merge_gs <- function(all_gs2gene=NULL,use_gs=c('H','CP:BIOCARTA','CP:REACTOME','
   }
   use_gs2gene
 }
+
 # simple functions
 list2mat <- function(input_list){
   all_x <- unique(unlist(input_list))
@@ -3007,7 +4008,8 @@ vec2list <- function(input_v,sep=NULL){
 #' If gs2gene is set to NULL, use_gs must be the subset of \code{names(all_gs2gene)}.
 #' Could check \code{all_gs2gene_info} for the cateogory description.
 #' If set to 'all', all gene sets in gs2gene will be used.
-#' Default is \code{c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG')} if gs2gene is set to NULL (use all_gs2gene).
+#' Default is 'H', 'CP:BIOCARTA', 'CP:REACTOME', 'CP:KEGG'
+#' if gs2gene is set to NULL (use all_gs2gene).
 #' If user input own gs2gene list, use_gs will be set to 'all' as default.
 #' @param min_gs_size numeric, minimum gene set size for analysis, default is 5.
 #' @param max_gs_size numeric, maximum gene set size for analysis, default is 500.
@@ -3029,7 +4031,7 @@ vec2list <- function(input_v,sep=NULL){
 #' @examples
 #' analysis.par <- list()
 #' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
-#' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
 #' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
 #'                                logFC_col='logFC.G4.Vs.others_DA',
@@ -3159,7 +4161,7 @@ funcEnrich.Fisher <- function(input_list=NULL,bg_list=NULL,
 #' @examples
 #' analysis.par <- list()
 #' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
-#' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
 #' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
 #'                                logFC_col='logFC.G4.Vs.others_DA',
@@ -3173,7 +4175,7 @@ funcEnrich.Fisher <- function(input_list=NULL,bg_list=NULL,
 #' gs.preload(use_spe='Homo sapiens',update=FALSE)
 #' res1 <- funcEnrich.Fisher(input_list=ms_tab[rownames(sig_driver),'geneSymbol'],
 #'                           bg_list=ms_tab[,'geneSymbol'],
-#'                           use_gs=use_gs=c('H','C5'),Pv_thre=0.1,
+#'                           use_gs=c('H','C5'),Pv_thre=0.1,
 #'                           Pv_adj = 'none')
 #' draw.funcEnrich.bar(funcEnrich_res=res1,top_number=5,
 #'                    main='Function Enrichment for Top drivers',
@@ -3185,7 +4187,7 @@ funcEnrich.Fisher <- function(input_list=NULL,bg_list=NULL,
 #' \dontrun{
 #' analysis.par <- list()
 #' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
-#' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
 #' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
 #'                                logFC_col='logFC.G4.Vs.others_DA',
@@ -3280,7 +4282,7 @@ draw.funcEnrich.bar <- function(funcEnrich_res=NULL,top_number=30,
 #' @examples
 #' analysis.par <- list()
 #' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
-#' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
 #' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
 #'                                logFC_col='logFC.G4.Vs.others_DA',
@@ -3312,7 +4314,7 @@ draw.funcEnrich.bar <- function(funcEnrich_res=NULL,top_number=30,
 #' \dontrun{
 #' analysis.par <- list()
 #' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
-#' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
 #' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
 #'                                logFC_col='logFC.G4.Vs.others_DA',
@@ -3464,8 +4466,8 @@ draw.funcEnrich.cluster <- function(funcEnrich_res=NULL,top_number=30,Pv_col='Or
 #' Each bubble represents the enrichment for each driver's target gene in the corresponding gene set.
 #' The size for each bubble shows the intersected size for the target gene and the gene set.
 #' The color for each bubble shows the significance of enrichment performed by Fisher's Exact Test.
-#' Color bar and size bar are shown in the plot.
-#' Besides, the target size and the driver gene/transcript bio-type is shown at the bottom of the plot.
+#' Color bar and size bar are shown in the draw.
+#' Besides, the target size and the driver gene/transcript bio-type is shown at the bottom of the draw.
 #'
 #' @param driver_list a vector of characters, the name for the top drivers.
 #' @param show_label a vector of characters, the name for the top drivers to display on the plot.
@@ -3483,8 +4485,13 @@ draw.funcEnrich.cluster <- function(funcEnrich_res=NULL,top_number=30,Pv_col='Or
 #' or transcript symbol and transcript biotype (at transcript level). strongly suggest to use \code{get_IDtransfer2symbol2type} to generate the transfer table.
 #' @param gs2gene a list for geneset to genes, the name for the list is the gene set name and the content in each list is the vector for genes belong to that gene set.
 #' If NULL, will use all_gs2gene loaded by using \code{gs.preload}. Default is NULL.
-#' @param use_gs a vector of characters, the name for gene set category used for anlaysis. If gs2gene is set to NULL, use_gs must be the subset of \code{names(all_gs2gene)}.
-#' Could check \code{all_gs2gene_info} for the cateogory description.Default is \code{c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG')}.
+#' @param use_gs a vector of characters, the name for gene set category used for anlaysis.
+#' If gs2gene is set to NULL, use_gs must be the subset of \code{names(all_gs2gene)}.
+#' Could check \code{all_gs2gene_info} for the cateogory description.
+#' Default is 'H', 'CP:BIOCARTA', 'CP:REACTOME', 'CP:KEGG'.
+#' @param display_gs_list a vector of characters, the list of gene set names to display on the plot.
+#' If NULL, the gene sets are shown according to the significant ranking.
+#' Default is NULL.
 #' @param bg_list a vector of characters, the background list of genes for analysis. Only accept gene symbols.
 #' Default is NULL, will use all genes in the gs2gene as the background list.
 #' @param min_gs_size numeric, minimum gene set size for analysis, default is 5.
@@ -3495,7 +4502,7 @@ draw.funcEnrich.cluster <- function(funcEnrich_res=NULL,top_number=30,Pv_col='Or
 #' @param top_driver_number number for the top significant drivers to be displayed on the plot. Default is 30.
 #' @param main character, \code{main} for the title on the plot.
 #' @param pdf_file character, file path for the pdf file to save the figure into pdf format.If NULL, will not generate pdf file. Default is NULL.
-#' @param mark_gene a vector of characters, if not NULL, the drivers in the mark_gene will be labelled red in the plot. Default is NULL.
+#' @param mark_gene a vector of characters, if not NULL, the drivers in the mark_gene will be labelled red in the draw. Default is NULL.
 #' @param driver_cex numeric, \code{cex} for the driver displayed on the plot. Default is 1.
 #' @param gs_cex numeric, \code{cex} for the gene sets displayed on the plot. Default is 1.
 #'
@@ -3505,7 +4512,7 @@ draw.funcEnrich.cluster <- function(funcEnrich_res=NULL,top_number=30,Pv_col='Or
 #' @examples
 #' analysis.par <- list()
 #' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
-#' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
 #' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
 #'                                logFC_col='logFC.G4.Vs.others_DA',
@@ -3517,6 +4524,7 @@ draw.funcEnrich.cluster <- function(funcEnrich_res=NULL,top_number=30,Pv_col='Or
 #'                                label_type = 'origin',
 #'                                label_cex = 0.5)
 #' gs.preload(use_spe='Homo sapiens',update=FALSE)
+#' db.preload(use_level='gene',use_spe='human',update=FALSE)
 #' use_genes <- unique(analysis.par$merge.network$network_dat$target.symbol)
 #' transfer_tab <- get_IDtransfer2symbol2type(from_type = 'external_gene_name',
 #'                                            use_genes=use_genes,
@@ -3538,7 +4546,7 @@ draw.funcEnrich.cluster <- function(funcEnrich_res=NULL,top_number=30,Pv_col='Or
 #' \dontrun{
 #' analysis.par <- list()
 #' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
-#' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
 #' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
 #'                                logFC_col='logFC.G4.Vs.others_DA',
@@ -3567,7 +4575,7 @@ draw.funcEnrich.cluster <- function(funcEnrich_res=NULL,top_number=30,Pv_col='Or
 #'                min_gs_size=5,max_gs_size=500,
 #'                use_gs=use_gs=c('CP:KEGG','CP:BIOCARTA','H'),
 #'                top_geneset_number=30,top_driver_number=50,
-#'                pdf_file = sprintf('%s/bubblePlot.pdf',
+#'                pdf_file = sprintf('%s/bubbledraw.pdf',
 #'                analysis.par$out.dir.PLOT),
 #'                main='Bubbleplot for top driver targets',
 #'                mark_gene=ms_tab[which(ms_tab$geneSymbol %in% mark_gene),
@@ -3576,7 +4584,10 @@ draw.funcEnrich.cluster <- function(funcEnrich_res=NULL,top_number=30,Pv_col='Or
 #' @export
 draw.bubblePlot <- function(driver_list=NULL,show_label=driver_list,Z_val=NULL,driver_type=NULL,
                             target_list=NULL,transfer2symbol2type=NULL,
-                            bg_list=NULL,min_gs_size=5,max_gs_size=500,gs2gene=NULL,use_gs=NULL,Pv_adj='none',Pv_thre=0.1,
+                            bg_list=NULL,min_gs_size=5,max_gs_size=500,
+                            gs2gene=NULL,use_gs=NULL,
+                            display_gs_list=NULL,
+                            Pv_adj='none',Pv_thre=0.1,
                             top_geneset_number=30,top_driver_number=30,
                             pdf_file=NULL,main="",mark_gene=NULL,driver_cex=1,gs_cex=1){
   ## check NULL
@@ -3613,6 +4624,13 @@ draw.bubblePlot <- function(driver_list=NULL,show_label=driver_list,Z_val=NULL,d
   ## get display matrix
   all_path <- unique(unlist(lapply(f_res,function(x){x[[1]]})))
   all_path <- all_path[which(is.na(all_path)==FALSE)] ## get all sig path
+  if(is.null(display_gs_list)==FALSE){
+    all_path <- intersect(display_gs_list,all_path)
+    if(length(all_path)<3){
+      message('The number for passed gene sets is smaller than 3, please check the display_gs_list and re-try!')
+      return(FALSE)
+    }
+  }
   f_mat <- lapply(f_res,function(x){
     as.data.frame(x)[all_path,5:6]
   })
@@ -3745,7 +4763,7 @@ draw.bubblePlot <- function(driver_list=NULL,show_label=driver_list,Z_val=NULL,d
 #' @param use_direction a vector of numerics, indicate the direction for the driver and the target gene list.
 #' 1 indicates positive regulation and -1 indicates negative regulation.
 #' If NULL, will not consider direction information. Default is NULL.
-#' @param main character, title for the plot. Default is "".
+#' @param main character, title for the draw. Default is "".
 #' @param pdf_file character, file path for the pdf file to save the figure into pdf format.If NULL, will not generate pdf file. Default is NULL.
 #' @param annotation character, annotation for the significance to be displayed on the plot.
 #' If NULL, will perform Kolmogorov-Smirnov tests to get significance. Default is NULL.
@@ -3758,7 +4776,7 @@ draw.bubblePlot <- function(driver_list=NULL,show_label=driver_list,Z_val=NULL,d
 #' @examples
 #' analysis.par <- list()
 #' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
-#' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
 #' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
 #'                                logFC_col='logFC.G4.Vs.others_DA',
@@ -3807,7 +4825,7 @@ draw.bubblePlot <- function(driver_list=NULL,show_label=driver_list,Z_val=NULL,d
 #' \dontrun{
 #' #' analysis.par <- list()
 #' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
-#' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
 #' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
 #'                                logFC_col='logFC.G4.Vs.others_DA',
@@ -3849,6 +4867,9 @@ draw.bubblePlot <- function(driver_list=NULL,show_label=driver_list,Z_val=NULL,d
 draw.GSEA <- function(rank_profile=NULL,use_genes=NULL,use_direction=NULL,main="",pdf_file=NULL,
                       annotation=NULL,annotation_cex=1.2,left_annotation=NULL,right_annotation=NULL){
   #### start plot
+  pos_col <- brewer.pal(12,'Paired')[8]
+  neg_col <- brewer.pal(12,'Paired')[4]
+
   if(is.null(pdf_file)==FALSE){
     pdf(pdf_file,width=10,height=10)
   }
@@ -3896,22 +4917,28 @@ draw.GSEA <- function(rank_profile=NULL,use_genes=NULL,use_direction=NULL,main="
   }else{
     text(w1,-mm/4,sprintf('Zero cross at %d',w1),adj=0.5)
   }
-  legend(w1,pp[3]-(pp[4]-pp[3])/4,lty=1,lwd=2,c('Enrichment profile','Hits','Ranking metric scores'),
-         col=c('green','black','grey'),xpd=TRUE,horiz=TRUE,xjust=0.5,cex=1.2)
+  if(is.null(use_direction)==FALSE){
+    legend(w1,pp[3]-(pp[4]-pp[3])/4,lty=1,lwd=2,c('Enrichment profile','Hits_positive_direction','Hits_negative_direction','Ranking metric scores'),
+           col=c('green',pos_col,neg_col,'grey'),xpd=TRUE,horiz=TRUE,xjust=0.5,cex=1.2)
+  }else{
+    legend(w1,pp[3]-(pp[4]-pp[3])/4,lty=1,lwd=2,c('Enrichment profile','Hits','Ranking metric scores'),
+           col=c('green','black','grey'),xpd=TRUE,horiz=TRUE,xjust=0.5,cex=1.2)
+  }
+
   pm <- par()$usr
   ## get image bar
   par(mar=c(0,6,0,2))
   use_col <- z2col(rank_profile,sig_thre = 0,n_len = 30,blue_col='blue',red_col='red')
   image(x=as.matrix(1:r_len),col=use_col,bty='n',xaxt='n',yaxt='n',xlim=c(pm[1],pm[2])/r_len)
   abline(v=use_pos/r_len,col='grey')
-  ## mark gene position; brewer.pal(9,'Reds')[6]; brewer.pal(9,'Blues')[6]
+  ## mark gene position;
   par(mar=c(0,6,0,2))
   plot(1,col='white',xlab="",ylab="",bty='n',xlim=c(1,r_len),xaxt='n',yaxt='n')
   if(is.null(use_direction)==FALSE){
     use_pos_P <- which(names(rank_profile) %in% use_genes[grep('POS',use_genes)])
     use_pos_N <- which(names(rank_profile) %in% use_genes[grep('NEG',use_genes)])
-    abline(v=use_pos_P,col=brewer.pal(9,'Reds')[6])
-    abline(v=use_pos_N,col=brewer.pal(9,'Blues')[6])
+    abline(v=use_pos_P,col=pos_col)
+    abline(v=use_pos_N,col=neg_col)
   }else{
     abline(v=use_pos)
   }
@@ -3920,8 +4947,14 @@ draw.GSEA <- function(rank_profile=NULL,use_genes=NULL,use_direction=NULL,main="
   # get ES score
   es_res <- get_ES(rank_profile,use_genes)
   y2 <- seq(min(es_res$RES),max(es_res$RES),length.out=7); y2 <- round(y2,1)
-  plot(es_res$RES,col='green',xaxt='n',yaxt='n',xlab="",ylab="",bty='n',
-       xlim=c(1,r_len),type='l',lwd=3,ylim=c(min(es_res$RES),max(y2)),main=main,xpd=TRUE)
+  if(is.null(use_direction)==FALSE){
+    plot(es_res$RES,col='green',xaxt='n',yaxt='n',xlab="",ylab="",bty='n',
+         xlim=c(1,r_len),type='l',lwd=3,ylim=c(min(es_res$RES),max(y2)),main=main,xpd=TRUE)
+  }else{
+    plot(es_res$RES,col='green',xaxt='n',yaxt='n',xlab="",ylab="",bty='n',
+         xlim=c(1,r_len),type='l',lwd=3,ylim=c(min(es_res$RES),max(y2)),main=main,xpd=TRUE)
+  }
+
   pp <- par()$usr
   #abline(h=0)
   #axis(side=2,at=y2,label=y2,las=2)
@@ -4052,7 +5085,7 @@ get_z2p <- function(x){
 #' @examples
 #' analysis.par <- list()
 #' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
-#' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
 #' comp <- 'G4.Vs.others'
 #' DE <- analysis.par$DE[[comp]]
@@ -4084,7 +5117,7 @@ get_z2p <- function(x){
 #' \dontrun{
 #' analysis.par <- list()
 #' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
-#' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
 #' comp <- 'G4.Vs.others'
 #' DE <- analysis.par$DE[[comp]]
@@ -4138,6 +5171,8 @@ draw.GSEA.NetBID <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_tren
                              top_driver_number=30,target_nrow=2,target_col='RdBu',target_col_type='PN',
                              left_annotation="",right_annotation="",main="",
                              profile_sig_thre=0,Z_sig_thre=1.64,pdf_file=NULL){
+  pos_col <- brewer.pal(12,'Paired')[8]
+  neg_col <- brewer.pal(12,'Paired')[4]
   if(!profile_col %in% colnames(DE)){
     message(sprintf('%s not in colnames of DE, please check and re-try!',profile_col))
     return(FALSE)
@@ -4248,7 +5283,7 @@ draw.GSEA.NetBID <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_tren
         }else{
           segments(x0=w1,x1=w1,y0=yy1[i],y1=yy1[i+1],lwd=1.5,
                    col=z2col(t1$spearman,sig_thre=0,col_max_thre=1,col_min_thre=0.01,
-                             red_col = brewer.pal(9,'Reds')[7:9],blue_col=brewer.pal(9,'Blues')[7:9]))
+                             red_col = pos_col,blue_col=neg_col))
         }
       }
     }
@@ -4267,7 +5302,7 @@ draw.GSEA.NetBID <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_tren
           if(target_col_type=='DE'){
             segments(x0=w1,x1=w1,y0=yy1[2*i],y1=yy1[2*i+1],col=cc[w0],lwd=1.5)
           }else{
-            segments(x0=w1,x1=w1,y0=yy1[2*i],y1=yy1[2*i+1],col=brewer.pal(9,'Reds')[6],lwd=1.5)
+            segments(x0=w1,x1=w1,y0=yy1[2*i],y1=yy1[2*i+1],col=pos_col,lwd=1.5)
           }
         }
       }
@@ -4280,7 +5315,7 @@ draw.GSEA.NetBID <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_tren
           if(target_col_type=='DE'){
             segments(x0=w1,x1=w1,y0=yy1[2*i-1],y1=yy1[2*i],col=cc[w0],lwd=1.5)
           }else{
-            segments(x0=w1,x1=w1,y0=yy1[2*i-1],y1=yy1[2*i],col=brewer.pal(9,'Blues')[6],lwd=1.5)
+            segments(x0=w1,x1=w1,y0=yy1[2*i-1],y1=yy1[2*i],col=neg_col,lwd=1.5)
           }
         }
       }
@@ -4338,9 +5373,9 @@ draw.GSEA.NetBID <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_tren
     tt <- pp[2]-(pp[1]+pp[2])*0.55
     for(i in 1:length(driver_list)){
       rect(xleft=(pp[1]+pp[2])*0.55,xright=(pp[1]+pp[2])*0.55+target_size[i,1]/mm*tt,
-           ybottom=yy22[i],ytop=yy22[i]+dyy*0.35,col=brewer.pal(9,'Reds')[5],border=NA)
+           ybottom=yy22[i],ytop=yy22[i]+dyy*0.35,col=pos_col,border=NA)
       rect(xleft=(pp[1]+pp[2])*0.55,xright=(pp[1]+pp[2])*0.55+target_size[i,2]/mm*tt,
-           ytop=yy22[i],ybottom=yy22[i]-dyy*0.35,col=brewer.pal(9,'Blues')[5],border=NA)
+           ytop=yy22[i],ybottom=yy22[i]-dyy*0.35,col=neg_col,border=NA)
     }
     segments(x0=(pp[1]+pp[2])*0.55,x1=pp[2],y0=pp[4],y1=pp[4],xpd=TRUE)
     sst <- round(seq(0,mm,length.out=3))
@@ -4420,7 +5455,7 @@ draw.GSEA.NetBID <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_tren
 #'
 #' analysis.par <- list()
 #' analysis.par$out.dir.DATA <- system.file('demo','gene set/DATA/',package = "NetBID2")
-#' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
 #'
 #' ms_tab <- analysis.par$final_ms_tab
 #' comp <- 'G4.Vs.others'
@@ -4710,7 +5745,7 @@ draw.GSEA.NetBID.GS <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_t
 #' \dontrun{
 #' analysis.par <- list()
 #' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
-#' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
 #' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
 #'                                logFC_col='logFC.G4.Vs.others_DA',
@@ -4788,6 +5823,8 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profil
                                    top_driver_number=10,top_order='merge',target_nrow=2,target_col='RdBu',target_col_type='PN',
                                    left_annotation="",right_annotation="",main="",
                                    profile_sig_thre=0,Z_sig_thre=1.64,pdf_file=NULL){
+  pos_col <- brewer.pal(12,'Paired')[8]
+  neg_col <- brewer.pal(12,'Paired')[4]
   if(!profile_col %in% colnames(DE)){
     message(sprintf('%s not in colnames of DE, please check and re-try!',profile_col))
     return(FALSE)
@@ -4811,7 +5848,8 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profil
   #
   if(top_order=='merge'){
     if(length(partner_driver_list)>top_driver_number){
-      partner_driver_list <- partner_driver_list[order(abs(DA_Z_merge[partner_driver_list]),decreasing = TRUE)][1:top_driver_number]
+      #partner_driver_list <- partner_driver_list[order(abs(DA_Z_merge[partner_driver_list]),decreasing = TRUE)][1:top_driver_number]
+      partner_driver_list <- partner_driver_list[order(DA_Z_merge[partner_driver_list],decreasing = TRUE)][1:top_driver_number] ## only consider positive part
     }
     if(profile_trend=='pos2neg')
       partner_driver_list <- partner_driver_list[order(DA_Z_merge[partner_driver_list],decreasing = FALSE)]
@@ -4819,7 +5857,8 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profil
       partner_driver_list <- partner_driver_list[order(DA_Z_merge[partner_driver_list],decreasing = TRUE)]
   }else{
     if(length(partner_driver_list)>top_driver_number){
-      partner_driver_list <- partner_driver_list[order(abs(diff_Z[partner_driver_list]),decreasing = TRUE)][1:top_driver_number]
+      #partner_driver_list <- partner_driver_list[order(abs(diff_Z[partner_driver_list]),decreasing = TRUE)][1:top_driver_number]
+      partner_driver_list <- partner_driver_list[order(diff_Z[partner_driver_list],decreasing = TRUE)][1:top_driver_number] ## only consider positive increase
     }
     if(profile_trend=='pos2neg')
       partner_driver_list <- partner_driver_list[order(diff_Z[partner_driver_list],decreasing = FALSE)]
@@ -4937,7 +5976,7 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profil
                  col=cc[w0])
       }else{
         segments(x0=w1,x1=w1,y0=yy1[length(yy1)-1],y1=yy1[length(yy1)],lwd=1.5,
-                 col=c(brewer.pal(9,'Blues')[5],'white',brewer.pal(9,'Reds')[5])[sign(t1$spearman)+2])
+                 col=c(neg_col,'white',pos_col)[sign(t1$spearman)+2])
       }
     }
     # for each partner driver
@@ -4953,7 +5992,7 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profil
                    col=cc[w0])
         }else{
           segments(x0=w1,x1=w1,y0=yy1[2*i],y1=yy11[2*i+1],lwd=1.5,
-                   col=c(brewer.pal(9,'Blues')[5],'white',brewer.pal(9,'Reds')[5])[sign(t1$spearman)+2])
+                   col=c(neg_col,'white',pos_col)[sign(t1$spearman)+2])
         }
       }
     }
@@ -4971,7 +6010,7 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profil
         if(target_col_type=='DE'){
           segments(x0=w1,x1=w1,y0=yy1[2*i-1],y1=yy11[2*i],lwd=1.5,col=cc[w0])
         }else{
-          segments(x0=w1,x1=w1,y0=yy1[2*i-1],y1=yy11[2*i],lwd=1.5,col=c(brewer.pal(9,'Blues')[5],'white',brewer.pal(9,'Reds')[5])[sign(t1$spearman)+2])
+          segments(x0=w1,x1=w1,y0=yy1[2*i-1],y1=yy11[2*i],lwd=1.5,col=c(neg_col,'white',pos_col)[sign(t1$spearman)+2])
         }
       }
       points(w1_over,rep((yy11[2*i]+yy1[2*i])/2,length.out=length(w1_over)),pch='*',col='black')
@@ -4992,7 +6031,7 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profil
         if(target_col_type=='DE'){
           segments(x0=w1,x1=w1,y0=yy1[length(yy1)-1],y1=yy1[length(yy1)],col=cc[w0],lwd=1.5)
         }else{
-          segments(x0=w1,x1=w1,y0=yy1[length(yy1)-1],y1=yy1[length(yy1)],col=brewer.pal(9,'Reds')[9],lwd=1.5)
+          segments(x0=w1,x1=w1,y0=yy1[length(yy1)-1],y1=yy1[length(yy1)],col=pos_col,lwd=1.5)
         }
       }
     }
@@ -5005,7 +6044,7 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profil
         if(target_col_type=='DE'){
           segments(x0=w1,x1=w1,y0=yy1[length(yy1)-2],y1=yy1[length(yy1)-1],col=cc[w0],lwd=1.5)
         }else{
-          segments(x0=w1,x1=w1,y0=yy1[length(yy1)-2],y1=yy1[length(yy1)-1],col=brewer.pal(9,'Blues')[9],lwd=1.5)
+          segments(x0=w1,x1=w1,y0=yy1[length(yy1)-2],y1=yy1[length(yy1)-1],col=neg_col,lwd=1.5)
         }
       }
     }
@@ -5023,7 +6062,7 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profil
           if(target_col_type=='DE'){
             segments(x0=w1,x1=w1,y0=yy1[4*i],y1=yy11[4*i+1],col=cc[w0],lwd=1.5)
           }else{
-            segments(x0=w1,x1=w1,y0=yy1[4*i],y1=yy11[4*i+1],col=brewer.pal(9,'Reds')[5],lwd=1.5)
+            segments(x0=w1,x1=w1,y0=yy1[4*i],y1=yy11[4*i+1],col=pos_col,lwd=1.5)
           }
         }
       }
@@ -5036,7 +6075,7 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profil
           if(target_col_type=='DE'){
             segments(x0=w1,x1=w1,y0=yy1[4*i-1],y1=yy11[4*i],col=cc[w0],lwd=1.5)
           }else{
-            segments(x0=w1,x1=w1,y0=yy1[4*i-1],y1=yy11[4*i],col=brewer.pal(9,'Blues')[5],lwd=1.5)
+            segments(x0=w1,x1=w1,y0=yy1[4*i-1],y1=yy11[4*i],col=neg_col,lwd=1.5)
           }
         }
       }
@@ -5058,7 +6097,7 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profil
           if(target_col_type=='DE'){
             segments(x0=w1,x1=w1,y0=yy1[4*i-2],y1=yy11[4*i-1],col=cc[w0],lwd=1.5)
           }else{
-            segments(x0=w1,x1=w1,y0=yy1[4*i-2],y1=yy11[4*i-1],col=brewer.pal(9,'Reds')[5],lwd=1.5)
+            segments(x0=w1,x1=w1,y0=yy1[4*i-2],y1=yy11[4*i-1],col=pos_col,lwd=1.5)
           }
         }
       }
@@ -5072,7 +6111,7 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profil
           if(target_col_type=='DE'){
             segments(x0=w1,x1=w1,y0=yy1[4*i-3],y1=yy11[4*i-2],col=cc[w0],lwd=1.5)
           }else{
-            segments(x0=w1,x1=w1,y0=yy1[4*i-3],y1=yy11[4*i-2],col=brewer.pal(9,'Blues')[5],lwd=1.5)
+            segments(x0=w1,x1=w1,y0=yy1[4*i-3],y1=yy11[4*i-2],col=neg_col,lwd=1.5)
           }
         }
       }
@@ -5193,9 +6232,9 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profil
     mm <- max(merge_target_size)
     i <- length(yy1)-1
     rect(xleft=xleft,xright=xleft+target_size[1,1]/mm*tt,
-         ybottom=yy1[i],ytop=yy1[i]+dyy22/2*0.35,col=brewer.pal(9,'Reds')[5],border=NA)
+         ybottom=yy1[i],ytop=yy1[i]+dyy22/2*0.35,col=pos_col,border=NA)
     rect(xleft=xleft,xright=xleft+target_size[1,2]/mm*tt,
-         ytop=yy1[i],ybottom=yy1[i]-dyy22/2*0.35,col=brewer.pal(9,'Blues')[5],border=NA)
+         ytop=yy1[i],ybottom=yy1[i]-dyy22/2*0.35,col=neg_col,border=NA)
   }else{
     target_size <- rowSums(target_size)
     merge_target_size <- rowSums(merge_target_size)
@@ -5209,14 +6248,14 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profil
     mm <- max(merge_target_size)
     for(i in 1:length(partner_driver_list)){
       rect(xleft=xleft,xright=xleft+target_size[i+1,1]/mm*tt,
-           ybottom=yy33[2*i],ytop=yy33[2*i]+dyy33*0.35,col=brewer.pal(9,'Reds')[5],border=NA)
+           ybottom=yy33[2*i],ytop=yy33[2*i]+dyy33*0.35,col=pos_col,border=NA)
       rect(xleft=xleft,xright=xleft+target_size[i+1,2]/mm*tt,
-           ytop=yy33[2*i],ybottom=yy33[2*i]-dyy33*0.35,col=brewer.pal(9,'Blues')[5],border=NA)
+           ytop=yy33[2*i],ybottom=yy33[2*i]-dyy33*0.35,col=neg_col,border=NA)
       # merge
       rect(xleft=xleft,xright=xleft+merge_target_size[i,1]/mm*tt,
-           ybottom=yy33[2*i-1],ytop=yy33[2*i-1]+dyy33*0.35,col=brewer.pal(9,'Reds')[5],border=NA)
+           ybottom=yy33[2*i-1],ytop=yy33[2*i-1]+dyy33*0.35,col=pos_col,border=NA)
       rect(xleft=xleft,xright=xleft+merge_target_size[i,2]/mm*tt,
-           ytop=yy33[2*i-1],ybottom=yy33[2*i-1]-dyy33*0.35,col=brewer.pal(9,'Blues')[5],border=NA)
+           ytop=yy33[2*i-1],ybottom=yy33[2*i-1]-dyy33*0.35,col=neg_col,border=NA)
     }
     segments(x0=xleft,x1=pp[2],y0=pp[4],y1=pp[4],xpd=TRUE)
     sst <- round(seq(0,mm,length.out=3))
@@ -5270,7 +6309,27 @@ draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profil
   return(TRUE)
 }
 
-#' merge target list
+#' Merge target list for two drivers.
+#'
+#' \code{merge_target_list} is a function to merge the target list for two drivers.
+#' Higher MI statistics for the shared target genes by the two drivers will be kept in the final target list.
+#'
+#' @param driver1 character, the name for the first driver to merge.
+#' @param driver2 character, the name for the second driver to merge.
+#' @param target_list a list for the target gene information for the drivers. The names for the list must contain the driver1 and driver2.
+#' Each object in the list must be a data.frame and should contain one column ("target") to save the target genes.
+#' Strongly suggest to follow the NetBID2 pipeline, and the \code{target_list} could be automatically generated by \code{get_net2target_list} by
+#' running \code{get.SJAracne.network}.
+#' @return a list for the target gene information.
+#' @examples
+#' analysis.par <- list()
+#' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
+#' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' ms_tab <- analysis.par$final_ms_tab
+#' driver1 <- ms_tab[1,'originalID_label']
+#' driver2 <- ms_tab[2,'originalID_label']
+#' m1 <- merge_target_list(driver1=driver1,driver2=driver2,
+#'                           target_list=analysis.par$merge.network$target_list)
 #' @export
 merge_target_list <- function(driver1=NULL,driver2=NULL,target_list=NULL){
   t1 <- target_list[driver1][[1]]
@@ -5306,7 +6365,7 @@ merge_target_list <- function(driver1=NULL,driver2=NULL,target_list=NULL){
 #' @param exp_val a vector of numeric values, the expression level for the interested gene across all samples.
 #' @param use_obs_class a vector of characters, the cateogory class for all samples.
 #' The order of samples in \code{use_obs_class} must be the same with \code{ac_val} or \code{exp_val}.
-#' This vector could be generated by the function \code{get_obs_label} to extract this vector from the data frame of \code{pData(eset)}
+#' This vector could be generated by the function \code{get_obs_label} to extract this vector from the dataframe of \code{pData(eset)}
 #' by selecting the column name.
 #' @param class_order a vector of characters, the order of category class displayed on the figure.
 #' If NULL, will use the alphabetical order of the category class name. Default is NULL.
@@ -5327,7 +6386,7 @@ merge_target_list <- function(driver1=NULL,driver2=NULL,target_list=NULL){
 #' @examples
 #' analysis.par <- list()
 #' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
-#' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
 #' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
 #'                                logFC_col='logFC.G4.Vs.others_DA',
@@ -5356,7 +6415,7 @@ merge_target_list <- function(driver1=NULL,driver2=NULL,target_list=NULL){
 #' \dontrun{
 #' analysis.par <- list()
 #' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
-#' NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
 #' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
 #'                                logFC_col='logFC.G4.Vs.others_DA',
@@ -5459,6 +6518,8 @@ get_label_manual <- function(x){
 #' The value ranges from -1 to 1, with positive value indicating postivie regulation and negative value indicating negative correlation.
 #' The names for the vector is the gene labels displayed on the plot.
 #' @param label_cex numeric, \code{cex} for the target genes displayed on the plot. Default is 0.7.
+#' @param source_cex numeric, \code{cex} for the source genes displayed on the plot. Default is 1.
+#' @param arrow_direction character, choose from 'in' or 'out'. Default is 'out'.
 #' @param pdf_file character, file path for the pdf file to save the figure into pdf format.If NULL, will not generate pdf file. Default is NULL.
 #'
 #' @return Will return logical value indicating whether the plot has been successfully generated
@@ -5468,7 +6529,12 @@ get_label_manual <- function(x){
 #' source_z <- 1.96
 #' edge_score <- (sample(1:200,size=100,replace=TRUE)-100)/100
 #' names(edge_score) <- paste0('G',1:100)
-#' draw.targetNet(source_label=source_label,source_z=source_z,edge_score=edge_score)
+#' draw.targetNet(source_label=source_label,source_z=source_z,
+#'                edge_score=edge_score)
+#' draw.targetNet(source_label=source_label,source_z=source_z,
+#'                edge_score=edge_score,
+#'                arrow_direction='in',
+#'                source_cex=2)
 #' \dontrun{
 #' source_label <- 'test1'
 #' source_z <- 1.96
@@ -5482,7 +6548,11 @@ get_label_manual <- function(x){
 #'                analysis.par$out.dir.PLOT))
 #'}
 #' @export
-draw.targetNet <- function(source_label="",source_z=NULL,edge_score=NULL,label_cex=0.7,pdf_file=NULL){
+draw.targetNet <- function(source_label="",source_z=NULL,edge_score=NULL,
+                           label_cex=0.7,source_cex=1,
+                           pdf_file=NULL,arrow_direction='out'){
+  pos_col <- brewer.pal(12,'Paired')[8]
+  neg_col <- brewer.pal(12,'Paired')[4]
   edge_score<- sort(edge_score)
   tmp1 <- sapply(unique(names(edge_score)),function(x){
     x1 <- edge_score[which(names(edge_score)==x)]
@@ -5492,7 +6562,7 @@ draw.targetNet <- function(source_label="",source_z=NULL,edge_score=NULL,label_c
   edge_score <- tmp1
   edge_score<- sort(edge_score)
   g1 <- names(edge_score)
-  ec <- z2col(edge_score*100,sig_thre=0,n_len=length(edge_score));names(ec) <- names(edge_score)
+  ec <- z2col(edge_score*100,sig_thre=0,n_len=length(edge_score),red_col=pos_col,blue_col=neg_col);names(ec) <- names(edge_score)
   ec <- get_transparent(ec,alpha=0.8)
   ew <- 2*label_cex*(abs(edge_score)-min(abs(edge_score)))/(max(abs(edge_score))-min(abs(edge_score)))+label_cex/2; names(ew) <- names(edge_score)
   t2xy <- function(tt,radius=1) {
@@ -5507,17 +6577,27 @@ draw.targetNet <- function(source_label="",source_z=NULL,edge_score=NULL,label_c
   tt <- seq(-0.5,0.5,length.out=length(g1)+1)[-1];
   p1<-t2xy(tt,radius=0.8);
   for(i in 1:length(p1$x)) text(p1$x[i],p1$y[i],g1[i],cex=label_cex,srt=180*atan(p1$y[i]/p1$x[i])/pi,adj=ifelse(p1$x[i]>0,0,1),xpd=TRUE)
-  p2<-t2xy(tt,radius=0.8-label_cex/15);
-  p3<-t2xy(tt,radius=0.8-label_cex/20);
-  arrows(x0=0,y0=0,x1=p2$x,y1=p2$y,col=ec,lwd=1,angle=10,length=0.1*label_cex);
+  geneWidth <- strwidth(source_label,'user',cex=source_cex)
+  if(arrow_direction=='out'){
+    p2<-t2xy(tt,radius=0.8-label_cex/36);
+    p3<-t2xy(tt,radius=0.8-label_cex/48);
+    arrows(x0=0,y0=0,x1=p2$x,y1=p2$y,col=ec,lwd=1,angle=10,length=0.1*label_cex);
+  }else{
+    p2<-t2xy(tt,radius=0.8-label_cex/36);
+    p3<-t2xy(tt,radius=0.8-label_cex/36);
+    p4<-t2xy(tt,radius=geneWidth/2);
+    arrows(x0=p2$x,y0=p2$y,x1=p4$x,y1=p4$y,col=ec,lwd=1,angle=5,length=0.1*label_cex);
+  }
   points(p3$x,p3$y,pch=16,col='dark grey',cex=label_cex)
-  geneWidth <- strwidth(source_label,'inches',cex=0.8)
-  if(is.null(source_z)==TRUE)
-    points(0,0,col='light grey',cex=geneWidth*18,pch=16)
-  else
-    points(0,0,col=z2col(source_z),cex=geneWidth*18,pch=16)
+  if(is.null(source_z)==TRUE){
+    #points(0,0,col='light grey',cex=geneWidth*36,pch=16)
+    draw.ellipse(0,0,a=geneWidth/2,b=geneWidth/2,col='light grey',border=NA)
+  }else{
+    #points(0,0,col=z2col(source_z),cex=geneWidth*36,pch=16)
+    draw.ellipse(0,0,a=geneWidth/2,b=geneWidth/2,col=z2col(source_z),border=NA)
+  }
   #points(0,0,col='light grey',cex=14,pch=16)
-  text(0,0,source_label,adj=0.5,xpd=TRUE)
+  text(0,0,source_label,adj=0.5,xpd=TRUE,cex=source_cex)
   if(is.null(pdf_file)==FALSE) dev.off()
   return(TRUE)
 }
@@ -5540,7 +6620,10 @@ draw.targetNet <- function(source_label="",source_z=NULL,edge_score=NULL,label_c
 #' The names for the vector is the gene labels displayed on the plot.
 #' @param edge_score2 a vector of numeric values, indicating the correlation between the second driver and the target genes.
 #' Similar with \code{edge_score1}
+#' @param arrow1_direction character, the arrow direction for source1, choose from 'in' or 'out'. Default is 'out'.
+#' @param arrow2_direction character, the arrow direction for source2, choose from 'in' or 'out'. Default is 'out'.
 #' @param label_cex numeric, \code{cex} for the target genes displayed on the plot. Default is 0.7.
+#' @param source_cex numeric, \code{cex} for the source genes displayed on the plot. Default is 1.
 #' @param pdf_file character, file path for the pdf file to save the figure into pdf format.If NULL, will not generate pdf file. Default is NULL.
 #' @param total_possible_target numeric or a vector of characters. If input numeric, will be the total number of possible targets.
 #' If input a vector of characters, will be the background list of all possible target genes.
@@ -5565,6 +6648,7 @@ draw.targetNet <- function(source_label="",source_z=NULL,edge_score=NULL,label_c
 #'                edge_score1=edge_score1,edge_score2=edge_score2,
 #'                total_possible_target=paste0('G',1:1000),
 #'                show_test=TRUE,label_cex=0.6)
+#'
 #' \dontrun{
 #' source1_label <- 'test1'
 #' source1_z <- 1.96
@@ -5588,8 +6672,11 @@ draw.targetNet <- function(source_label="",source_z=NULL,edge_score=NULL,label_c
 draw.targetNet.TWO <- function(source1_label="",source2_label="",
                                source1_z=NULL,source2_z=NULL,
                                edge_score1=NULL,edge_score2=NULL,
-                               label_cex=0.7,pdf_file=NULL,
+                               arrow1_direction='out',arrow2_direction='out',
+                               label_cex=0.7,source_cex=1,pdf_file=NULL,
                                total_possible_target=NULL,show_test=FALSE){
+  pos_col <- brewer.pal(12,'Paired')[8]
+  neg_col <- brewer.pal(12,'Paired')[4]
   tmp1 <- sapply(unique(names(edge_score1)),function(x){
     x1 <- edge_score1[which(names(edge_score1)==x)];x1[which.max(abs(x1))]
   })
@@ -5603,8 +6690,8 @@ draw.targetNet.TWO <- function(source1_label="",source2_label="",
   g12 <- intersect(names(edge_score1),names(edge_score2))
   g1  <- setdiff(names(edge_score1),names(edge_score2))
   g2  <- setdiff(names(edge_score2),names(edge_score1))
-  ec1 <- z2col(edge_score1*100,sig_thre=0,n_len=length(edge_score1));names(ec1) <- names(edge_score1)
-  ec2 <- z2col(edge_score2*100,sig_thre=0,n_len=length(edge_score2));names(ec2) <- names(edge_score2)
+  ec1 <- z2col(edge_score1*100,sig_thre=0,n_len=length(edge_score1),red_col=pos_col,blue_col=neg_col);names(ec1) <- names(edge_score1)
+  ec2 <- z2col(edge_score2*100,sig_thre=0,n_len=length(edge_score2),red_col=pos_col,blue_col=neg_col);names(ec2) <- names(edge_score2)
   ew1 <- 2*label_cex*(abs(edge_score1)-min(abs(edge_score1)))/(max(abs(edge_score1))-min(abs(edge_score1)))+label_cex/2; names(ew1) <- names(edge_score1)
   ew2 <- 2*label_cex*(abs(edge_score2)-min(abs(edge_score2)))/(max(abs(edge_score2))-min(abs(edge_score2)))+label_cex/2; names(ew2) <- names(edge_score2)
   t2xy <- function(tt,radius=1) {
@@ -5612,54 +6699,81 @@ draw.targetNet.TWO <- function(source1_label="",source2_label="",
     list(x = radius * cos(t2p), y = radius * sin(t2p))
   }
   geneWidth <- max(strwidth(g1,'inches',cex=label_cex))
+
   if(is.null(pdf_file)==FALSE) pdf(pdf_file,width=10+4*geneWidth,height=8+2*geneWidth)
   plot(1,xlim=c(-1,1),ylim=c(-1,1),bty='n',col='white',xlab="",ylab="",xaxt='n',yaxt='n')
   par(mai=c(1,1,1,1))
+
+  geneWidth1 <- strwidth(source1_label,'user',cex=source_cex)
+  geneWidth2 <- strwidth(source2_label,'user',cex=source_cex)
+
   if(length(g1)>0){
     tt <- seq(-0.225,0.225,length.out=length(g1));init.angle <- -180;p1<-t2xy(tt,radius=0.8);
     for(i in 1:length(p1$x)) text(p1$x[i],p1$y[i],g1[i],cex=label_cex,srt=180*atan(p1$y[i]/p1$x[i])/pi,adj=ifelse(p1$x[i]>0,0,1),xpd=TRUE)
-    #p1<-t2xy(tt,radius=0.78);
-    #p2<-t2xy(tt,radius=0.76);
-    p1<-t2xy(tt,radius=0.8-label_cex/15);
-    p2<-t2xy(tt,radius=0.8-label_cex/20);
-    arrows(x0=-0.2,y0=0,x1=p1$x,y1=p1$y,col=ec1[g1],lwd=ew1[g1],angle=10,length=0.1*label_cex);
-    points(p1$x,p1$y,pch=16,col='dark grey',cex=label_cex)
+    p1<-t2xy(tt,radius=0.8-label_cex/36);
+    if(arrow1_direction=='out'){
+      p2<-t2xy(tt,radius=0.8-label_cex/36);
+      p3<-t2xy(tt,radius=0.8-label_cex/48);
+      arrows(x0=-0.2,y0=0,x1=p1$x,y1=p1$y,col=ec1[g1],lwd=ew1[g1],angle=10,length=0.1*label_cex);
+    }else{
+      p2<-t2xy(tt,radius=0.8-label_cex/36);
+      p3<-t2xy(tt,radius=0.8-label_cex/36);
+      p4<-t2xy(tt,radius=geneWidth1/2);
+      arrows(x0=p2$x,y0=p2$y,x1=p4$x-0.2,y1=p4$y,col=ec1[g1],lwd=ew1[g1],angle=5,length=0.1*label_cex);
+    }
+    points(p3$x,p3$y,pch=16,col='dark grey',cex=label_cex)
   }
   if(length(g2)>0){
     tt <- seq(-0.225,0.225,length.out=length(g2));init.angle <- 0;
     p1<-t2xy(tt,radius=0.8);
     for(i in 1:length(p1$x)) text(p1$x[i],p1$y[i],g2[i],cex=label_cex,srt=180*atan(p1$y[i]/p1$x[i])/pi,adj=ifelse(p1$x[i]>0,0,1),xpd=TRUE)
-    #p1<-t2xy(tt,radius=0.78);
-    #p2<-t2xy(tt,radius=0.76);
-    p1<-t2xy(tt,radius=0.8-label_cex/15);
-    p2<-t2xy(tt,radius=0.8-label_cex/20);
-    arrows(x0=0.2,y0=0,x1=p1$x,y1=p1$y,col=ec2[g2],lwd=ew2[g2],angle=10,length=0.1*label_cex)
-    points(p1$x,p1$y,pch=16,col='dark grey',cex=label_cex)
+    p1<-t2xy(tt,radius=0.8-label_cex/36);
+    if(arrow2_direction=='out'){
+      p2<-t2xy(tt,radius=0.8-label_cex/36);
+      p3<-t2xy(tt,radius=0.8-label_cex/48);
+      arrows(x0=0.2,y0=0,x1=p1$x,y1=p1$y,col=ec2[g2],lwd=ew2[g2],angle=10,length=0.1*label_cex);
+    }else{
+      p2<-t2xy(tt,radius=0.8-label_cex/36);
+      p3<-t2xy(tt,radius=0.8-label_cex/36);
+      p4<-t2xy(tt,radius=geneWidth2/2);
+      arrows(x0=p2$x,y0=p2$y,x1=p4$x+0.2,y1=p4$y,col=ec2[g2],lwd=ew2[g2],angle=5,length=0.1*label_cex);
+    }
+    points(p3$x,p3$y,pch=16,col='dark grey',cex=label_cex)
   }
   if(length(g12)>0){
     tt <- seq(min(0.1*length(g12),0.7),-min(0.1*length(g12),0.7),length.out=length(g12));
+    if(arrow1_direction=='out'){
+      arrows(x0=-0.2,y0=0,x1=0,y1=tt,col=ec1[g12],lwd=ew1[g12],angle=10,length=0.1*label_cex)
+    }else{
+      p4<-t2xy(tt,radius=geneWidth1/2);
+      arrows(x0=0,y0=tt,x1=-0.2,y1=0,col=ec1[g12],lwd=ew1[g12],angle=5,length=0.1*label_cex);
+      #arrows(x0=-0.2,y0=0,x1=0,y1=tt,col=ec1[g12],lwd=ew1[g12],angle=10,length=0.1*label_cex)
+    }
+    if(arrow2_direction=='out'){
+      arrows(x0=0.2,y0=0,x1=0,y1=tt,col=ec2[g12],lwd=ew2[g12],angle=10,length=0.1*label_cex)
+    }else{
+      p4<-t2xy(tt,radius=geneWidth2/2);
+      arrows(x0=0,y0=tt,x1=0.2,y1=0,col=ec1[g12],lwd=ew1[g12],angle=5,length=0.1*label_cex);
+      #arrows(x0=0.2,y0=0,x1=0,y1=tt,col=ec2[g12],lwd=ew2[g12],angle=10,length=0.1*label_cex)
+    }
     #segments(x0=-0.2,y0=0,x1=0,y1=tt,col=ec1[g12],lwd=ew1[g12])
     #segments(x0=0.2,y0=0,x1=0,y1=tt,col=ec2[g12],lwd=ew2[g12])
-    arrows(x0=-0.2,y0=0,x1=0,y1=tt,col=ec1[g12],lwd=ew1[g12],angle=10,length=0.1*label_cex)
-    arrows(x0=0.2,y0=0,x1=0,y1=tt,col=ec2[g12],lwd=ew2[g12],angle=10,length=0.1*label_cex)
     boxtext(0,tt,labels=g12,col.bg=get_transparent('light grey',0.3),cex=label_cex)
-    #text(0,tt,g12,adj=0.5,cex=label_cex)
   }
-  geneWidth1 <- strwidth(source1_label,'inches',cex=0.8)
-  geneWidth2 <- strwidth(source2_label,'inches',cex=0.8)
 
   if(is.null(source2_z)==TRUE)
-    points(0.2,0,col='light grey',cex=geneWidth1*18,pch=16)
+    draw.ellipse(0.2,0,a=geneWidth1/2,b=geneWidth1/2,col='light grey',border=NA)
   else
-    points(0.2,0,col=z2col(source2_z),cex=geneWidth1*18,pch=16)
+    draw.ellipse(0.2,0,a=geneWidth1/2,b=geneWidth1/2,col=z2col(source2_z),border=NA)
 
-  text(0.2,0,source2_label,adj=0.5,cex=0.8)
+  text(0.2,0,source2_label,adj=0.5,cex=source_cex)
+
   if(is.null(source1_z)==TRUE)
-    points(-0.2,0,col='light grey',cex=geneWidth1*18,pch=16)
+    draw.ellipse(-0.2,0,a=geneWidth1/2,b=geneWidth1/2,col='light grey',border=NA)
   else
-    points(-0.2,0,col=z2col(source1_z),cex=geneWidth1*18,pch=16)
+    draw.ellipse(-0.2,0,a=geneWidth1/2,b=geneWidth1/2,col=z2col(source1_z),border=NA)
 
-  text(-0.2,0,source1_label,adj=0.5,cex=0.8)
+  text(-0.2,0,source1_label,adj=0.5,cex=source_cex)
   # fisher test for target
   if(is.null(total_possible_target)==FALSE & show_test==TRUE){
     res <- test.targetNet.overlap(source1_label,source2_label,names(edge_score1),names(edge_score2),total_possible_target)
@@ -5761,12 +6875,12 @@ get.spByGene <- function(igraph_obj=NULL,driver_list=NULL,target_list=NULL,mode=
   ## get layout matrix,x,y
   net <- all_sp
   if(plot_pattern!='no'){
-    plot.spByGene(net,driver_list=ori_driver_list,target_list=ori_target_list,transfer_tab=transfer_tab,...)
+    draw.spByGene(net,driver_list=ori_driver_list,target_list=ori_target_list,transfer_tab=transfer_tab,...)
   }
   return(list(all_sp=all_r1,use_sp=net))
 }
 ### plot igraph
-plot.spByGene <- function(net,driver_list=NULL,target_list=NULL,transfer_tab=NULL,vertex.size=25,vertex.label.cex=1,
+draw.spByGene <- function(net,driver_list=NULL,target_list=NULL,transfer_tab=NULL,vertex.size=25,vertex.label.cex=1,
                           vertex.frame.color="white",vertex.label.color="black",edge.color='black',
                           layout='auto',...){
   n1 <- names(V(net))
@@ -5801,12 +6915,28 @@ plot.spByGene <- function(net,driver_list=NULL,target_list=NULL,transfer_tab=NUL
   return(TRUE)
 }
 
-#' get target list by input network data
+#' Get target list by input network information from data.frame.
+#'
+#' \code{get_net2target_list} is included in the \code{get.SJAracne.network},
+#' the reason to make it invokable just for user to read in network files prepared by themselves.
+#'
+#' @param net_dat data.frame, must contain columns named with "source" and "target",
+#' "MI" and "spearman" are strongly suggested but not required.
+#' If these two columns missed, some options may be error in some of the functions in the following steps
+#' (such as es.method='weightedmean' in \code{cal.Activity}).
+#' @return a list for the target gene information for the drivers. Each object in the list is a data.frame to save the target genes.
+#' @examples
+#' tf.network.file <- sprintf('%s/demo1/network/SJAR/project_2019-02-14/%s/%s',
+#'                    system.file(package = "NetBID2"),
+#'                    'output_tf_sjaracne_project_2019-02-14_out_.final',
+#'                    'consensus_network_ncol_.txt')
+#' net_dat      <- read.delim(file=tf.network.file,stringsAsFactors = FALSE)
+#' target_list  <- get_net2target_list(net_dat)
 #' @export
 get_net2target_list <- function(net_dat=NULL) {
   all_source <- unique(net_dat$source)
   all_target <- lapply(all_source, function(x) {
-    n1 <- net_dat[which(net_dat$source == x), c('target', 'MI', 'spearman')]
+    n1 <- net_dat[which(net_dat$source == x), intersect(c('target', 'MI', 'spearman'),colnames(net_dat))]
     rownames(n1) <- n1$target
     return(n1)
   })
@@ -5828,7 +6958,10 @@ get_net2target_list <- function(net_dat=NULL) {
 #' to indicate positive regulation (1) or negative regulation (-1).
 #'
 #' @param network_file character, file path for the network file. Must use the file (consensus_network_ncol_.txt) in the result directory.
-#' The directory may like: SJAR/<project_name>/output_tf_sjaracne_<project_name>_out_.final/consensus_network_ncol_.txt
+#' The directory may like:
+#' <SJAR_main_dir>/<project_name>/output_[tf|sig]_sjaracne_<project_name>_out_.final/
+#' <SJAR_main_dir>/SJARACNE_<project_name>/SJARACNE_out.final
+#' consensus_network_ncol_.txt
 #'
 #' @return This function will return a list containing three items, \code{network_dat}, \code{target_list} and \code{igraph_obj}.
 #'
@@ -5862,7 +6995,7 @@ get.SJAracne.network <- function(network_file=NULL){
 
 #' Update the network information in the structured network list dataset
 #'
-#' \code{update.SJAracne.network} is a function to update the network information by input threshold for statistics or input gene list for use.
+#' \code{update_SJAracne.network} is a function to update the network information by input threshold for statistics or input gene list for use.
 #'
 #' This function aims to update the network list dataset generated by \code{get.SJAracne.network}
 #' and return the list dataset passed the filtration with the same data structure.
@@ -5914,7 +7047,7 @@ get.SJAracne.network <- function(network_file=NULL){
 #' analysis.par$sig.network <- get.SJAracne.network(network_file=analysis.par$sig.network.file)
 #' all_possible_drivers <- c(names(analysis.par$tf.network$target_list)[1:1000],
 #'                            'addition_driver_1','addition_driver_2')
-#' tf.network.update <- update.SJAracne.network(network_list=analysis.par$tf.network,
+#' tf.network.update <- update_SJAracne.network(network_list=analysis.par$tf.network,
 #'                                              all_possible_drivers=all_possible_drivers,
 #'                                              force_all_drivers=TRUE,
 #'                                              force_all_targets=FALSE,
@@ -5923,8 +7056,8 @@ get.SJAracne.network <- function(network_file=NULL){
 #'       names(V(tf.network.update$igraph_obj)))) ## check
 #' \dontrun{
 #' }
-#' @export
-update.SJAracne.network <- function(network_list=NULL,
+#' @export update_SJAracne.network
+update_SJAracne.network <- function(network_list=NULL,
                                     all_possible_drivers=NULL,
                                     all_possible_targets=NULL,
                                     force_all_drivers=TRUE,
@@ -5991,12 +7124,35 @@ update.SJAracne.network <- function(network_list=NULL,
 }
 
 
-
-
-
-#' QC plot for the network
+#' Generate QC plot for the network object
+#'
+#' \code{draw.network.QC} is a function to draw the QC plot for the network object,
+#' mainly the density plot for the degree and the check for scale-free feature.
+#'
+#' @param igraph_obj igraph object, this could be generated by \code{get.SJAracne.network}
+#' @param outdir character, the output directory to save the QC figures.
+#' @param prefix character, the prefix for the QC figure name.Default is "".
+#'
+#' @return logical value indicating whether the plot has been successfully generated
+#'
+#' @examples
+#' \dontrun{
+#' if(exists('analysis.par')==TRUE) rm(analysis.par)
+#' network.dir <- sprintf('%s/demo1/network/',system.file(package = "NetBID2")) # use demo
+#' network.project.name <- 'project_2019-02-14' # demo project name
+#' project_main_dir <- 'test/'
+#' project_name <- 'test_driver'
+#' analysis.par  <- NetBID.analysis.dir.create(project_main_dir=project_main_dir,
+#'                                             prject_name=project_name,
+#'                                             network_dir=network.dir,
+#'                                             network_project_name=network.project.name)
+#' analysis.par$tf.network  <- get.SJAracne.network(network_file=analysis.par$tf.network.file)
+#' analysis.par$out.dir.PLOT <- getwd() ## directory for saving the pdf files
+#' draw.network.QC(analysis.par$tf.network$igraph_obj,
+#'                 outdir=analysis.par$out.dir.QC,prefix='TF_net_')
+#' }
 #' @export
-plot.network.QC <- function(igraph_obj,outdir=NULL,prefix=""){
+draw.network.QC <- function(igraph_obj,outdir=NULL,prefix=""){
   if (!file.exists(outdir)) {
     dir.create(outdir, recursive = TRUE)
     message(paste0("The output directory: \"", outdir, "\" is created!"))
@@ -6011,11 +7167,12 @@ plot.network.QC <- function(igraph_obj,outdir=NULL,prefix=""){
   hist(degree(igraph_obj),xlab='Degree',main='Histogram of degree')
   check_scalefree(igraph_obj);
   dev.off()
+  return(TRUE)
 }
 
-#' functions to check the scale free feature of the network
-#' @export
-check_scalefree <- function(gr1) {
+## functions to check the scale free feature of the network
+check_scalefree <- function(igraph_obj) {
+  gr1 <- igraph_obj
   fp1 <- degree_distribution(gr1)
   dd <- as.data.frame(cbind(k = 1:max(degree(gr1)), pk = fp1[-1]))
   r2 <-
@@ -6031,6 +7188,12 @@ get_server_path <- function(x){
 }
 
 #' Inner use: prepare for MICA
+#' @param mat matrix
+#' @param outdir character
+#' @param prjname character
+#' @param all_k a vector of integers
+#' @param retransformation character
+#' @param perplexity numeric
 #' @export
 SJ.MICA.prepare <- function(mat,outdir = '.',prjname = NULL,all_k=NULL,retransformation="False",perplexity=30) {
   if(is.null(prjname)){
@@ -6067,6 +7230,12 @@ SJ.MICA.prepare <- function(mat,outdir = '.',prjname = NULL,all_k=NULL,retransfo
 }
 
 #' Inner use: prepare for MICA with file
+#' @param input_exp character
+#' @param outdir character
+#' @param prjname character
+#' @param all_k a vector of integers
+#' @param retransformation character
+#' @param perplexity numeric
 #' @export
 SJ.MICA.prepare.withfile <- function(input_exp,outdir = '.',prjname = NULL,all_k=NULL,retransformation="False",perplexity=30) {
   if(is.null(prjname)){
@@ -6092,9 +7261,126 @@ SJ.MICA.prepare.withfile <- function(input_exp,outdir = '.',prjname = NULL,all_k
   return(paste0('sh ',c(run_file1,run_file)))
 }
 
+
+#' Prepare for running SJaracne
+#'
+#' \code{SJAracne.prepare} is a function to prepare files for running SJAracne.
+#'
+#' Detailed description to run SJAracne could be found in Github.
+#' Check \url{https://github.com/jyyulab/SJARACNe/} for detail.
+#'
+#' @param eset an ExpressionSet class object, which contains the expression matrix.
+#' @param use.samples a vector of characters, the sample list used for running SJAracne.
+#' @param TF_list a vector of characters, the TF list used for analysis.
+#' @param SIG_list a vector of characters, the SIG list used for analysis.
+#' @param SJAR.main_dir character, the file path to save the results for SJAracne
+#' @param SJAR.project_name character, the name of the project used to label the output directory.
+#' @param IQR.thre numeric, threshold for IQR filter for all non-driver genes.
+#' @param IQR.loose_thre numeric, threshold for IQR filter for all driver(TF/SIG) genes.
+#' @param add_options additional options used to run sjaracne.
+#' @examples
+#' \dontrun{
+#' network.par <- list()
+#' network.par$out.dir.DATA <- system.file('demo1','network/DATA/',package = "NetBID2")
+#' NetBID.loadRData(network.par=network.par,step='exp-QC')
+#' db.preload(use_level='gene',use_spe='human',update=FALSE)
+#' use_gene_type <- 'external_gene_name' ## this should user-defined !!!
+#' use_genes <- rownames(fData(network.par$net.eset))
+#' use_list  <- get.TF_SIG.list(use_genes,use_gene_type=use_gene_type)
+#' #select sample for analysis
+#' phe <- pData(network.par$net.eset)
+#' use.samples <- rownames(phe) ## use all samples, or choose to use some samples
+#' prj.name <- network.par$project.name # can use other names, if need to run different use samples
+#' network.par$out.dir.SJAR <- 'test' ## set the directory
+#' SJAracne.prepare(eset=network.par$net.eset,
+#'                  use.samples=use.samples,
+#'                  TF_list=use_list$tf,
+#'                  SIG_list=use_list$sig,
+#'                  IQR.thre = 0.5,IQR.loose_thre = 0.1,
+#'                  SJAR.project_name=prj.name,
+#'                  SJAR.main_dir=network.par$out.dir.SJAR)
+#' }
+#' @export
+SJAracne.prepare <-
+  function(eset,use.samples = rownames(pData(eset)),
+           TF_list=NULL,SIG_list=NULL,
+           SJAR.main_dir='',
+           SJAR.project_name = "",
+           IQR.thre=0.5,IQR.loose_thre=0.1,add_options='') {
+    if(is.null(TF_list)==TRUE){
+      message('Empty TF_list, please check and re-try !');return(FALSE)
+    }
+    if(is.null(SIG_list)==TRUE){
+      message('Empty SIG_list, please check and re-try !');return(FALSE)
+    }
+    if(is.null(SJAR.project_name)==TRUE){
+      message('Empty SJAR.project_name, please check and re-try !');return(FALSE)
+    }
+    SJAR.outdir <- file.path(SJAR.main_dir, SJAR.project_name)
+    if (!file.exists(SJAR.outdir)) {
+      dir.create(SJAR.outdir, recursive = TRUE)
+    }
+    SJAR.expression_matrix <-
+      file.path(SJAR.main_dir, SJAR.project_name, 'input.exp')
+    SJAR.hub_genes.tf <-
+      file.path(SJAR.main_dir, SJAR.project_name, 'tf.txt')
+    SJAR.hub_genes.sig <-
+      file.path(SJAR.main_dir, SJAR.project_name, 'sig.txt')
+    SJAR.bash_file.tf <-
+      file.path(SJAR.main_dir, SJAR.project_name, 'run_tf.sh')
+    SJAR.bash_file.sig <-
+      file.path(SJAR.main_dir, SJAR.project_name, 'run_sig.sh')
+    ## process exp matrix
+    d <- exprs(eset)[, use.samples]
+    # filter genes with count=0
+    d <- d[!apply(d == 0, 1, all), ]
+    # filter genes with IQR
+    choose1 <- IQR.filter(d, rownames(d),thre = IQR.thre,loose_thre=IQR.loose_thre,loose_gene=unique(c(TF_list,SIG_list)))
+    d <- d[choose1, ]
+    use.genes <- rownames(d)
+    use.genes <- use.genes[which(is.na(use.genes)==FALSE)]
+    # write exp data to exp format
+    expdata <- data.frame(cbind(isoformId = fData(eset)[use.genes, ], geneSymbol = fData(eset)[use.genes, ], d))
+    #
+    write.table(
+      expdata,
+      file = SJAR.expression_matrix,
+      sep = "\t",
+      row.names = FALSE,
+      quote = FALSE
+    )
+    ##
+    cat(intersect(use.genes, TF_list),file = SJAR.hub_genes.tf,sep = '\n')
+    cat(intersect(use.genes, SIG_list),file = SJAR.hub_genes.sig,sep = '\n')
+    # write scripts to bash file for tf
+    network_project_name <- SJAR.project_name
+    tf_out_path <- SJAR.main_dir
+    tf_pj <- sprintf('%s_TF',network_project_name)
+    sig_out_path <- SJAR.main_dir
+    sig_pj <- sprintf('%s_SIG',network_project_name)
+    cmd_tf <- sprintf('sjaracne %s %s %s %s %s',tf_pj,SJAR.expression_matrix,SJAR.hub_genes.tf,tf_out_path,add_options)
+    cmd_sig <- sprintf('sjaracne %s %s %s %s %s',sig_pj,SJAR.expression_matrix,SJAR.hub_genes.sig,sig_out_path,add_options)
+    cat(cmd_tf,file = SJAR.bash_file.tf,sep = '\n')
+    cat(cmd_sig,file = SJAR.bash_file.sig,sep = '\n')
+    message(sprintf('The running command is:  %s  for TF, and the bash file is generated in %s',cmd_tf,SJAR.bash_file.tf))
+    message(sprintf('The running command is:  %s  for SIG, and the bash file is generated in %s',cmd_sig,SJAR.bash_file.sig))
+    return(TRUE)
+}
+
+
 #' Inner use: prepare for SJaracne run on SJ server
 #' prepare SJAracne dataset for net-dataset
 #' project_name expression_matrix hub_genes outdir
+#' @param eset eSet object
+#' @param use.samples a vector of characters
+#' @param TF_list a vector of characters
+#' @param SIG_list a vector of characters
+#' @param SJAR.project_name character
+#' @param SJAR.main_dir character
+#' @param SJAR.bash.main_dir character
+#' @param mem integer
+#' @param IQR.thre numeric
+#' @param IQR.loose_thre numeric
 #' @export
 SJ.SJAracne.prepare <-
   function(eset,use.samples = rownames(pData(eset)),TF_list=NULL,SIG_list=NULL,
@@ -6285,6 +7571,7 @@ SJ.SJAracne.prepare <-
   }
 
 #' Inner use: auto generate bash files for Step1, Step2, Step3, Step4 for all bash files under one directory
+#' @param out.dir.SJAR character
 #' @export
 SJ.SJAracne.step <- function(out.dir.SJAR) {
   tf_bash <- list.files(out.dir.SJAR, pattern = 'tf.sh', recursive = TRUE)
@@ -6341,6 +7628,26 @@ SJ.SJAracne.step <- function(out.dir.SJAR) {
 # [1] 0 0 0 1 1 1
 # Levels: 0 1
 #d<-d[1,]
+
+#' combRowEvid.2grps is a inner function for getDE.BID.2G.
+#' @param d input expression matrix
+#' @param comp an indicator vector
+#' @param family family Objects for Models, default is 'gaussian'
+#' @param method choose from 'MLE' or 'Bayesian'
+#' @param pooling choose from 'full','no','partial'
+#' @param n.iter number of interaction, default is 1000
+#' @param prior.V.scale default is 0.02
+#' @param prior.R.nu default is 1
+#' @param prior.G.nu default is 2
+#' @param nitt default is 13000
+#' @param burnin default is 3000
+#' @param thin default is 10
+#' @param restand default is TRUE
+#' @param logTransformed default is TRUE
+#' @param log.base default is 2
+#' @param average.method choose from c('geometric','arithmetic')
+#' @param pseudoCount default is 0
+#' @export
 combRowEvid.2grps<-function(d,comp,family=gaussian,method=c('MLE','Bayesian'),pooling=c('full','no','partial'),n.iter=1000,
                             prior.V.scale=0.02,prior.R.nu=1,prior.G.nu=2,nitt = 13000,burnin =3000,thin=10,
                             restand=TRUE,logTransformed=TRUE,log.base=2,average.method=c('geometric','arithmetic'),pseudoCount=0
@@ -6692,9 +7999,6 @@ combRowEvid.2grps<-function(d,comp,family=gaussian,method=c('MLE','Bayesian'),po
 
   #Bayesian approach
   else if(method=='Bayesian'){
-    require(arm)
-    require(MCMCglmm)
-
     if(family$family=='gaussian'){
       if('full'%in%pooling){
         #comlete pooling
@@ -7017,7 +8321,6 @@ combRowEvid.2grps<-function(d,comp,family=gaussian,method=c('MLE','Bayesian'),po
 combRowEvid.multgrps<-function(d,comp,family=gaussian,method=c('MLE','Bayesian'),pooling=c('full','no','partial'), n.iter=1000,
                                prior.V.scale=0.02, prior.R.nu=1, prior.G.nu=2, nitt = 13000, burnin = 3000,thin=10,restand=TRUE,logTransformed=TRUE,log.base=2,pseudoCount=0){
 
-  require(reshape)
   if(missing(pooling))
     pooling<-c('full','no','partial')
   else
@@ -7042,7 +8345,7 @@ combRowEvid.multgrps<-function(d,comp,family=gaussian,method=c('MLE','Bayesian')
   if(grepl('MLE|MaxLikelihood',method,ignore.case = T)) method<-'MLE'
   method<-match.arg(method)
 
-  d<-reshape::melt(t(d[,-1]))
+  d<-melt(t(d[,-1]))
 
   dat<-data.frame(response=d$value,treatment=rep(comp,nlevels(d$X2)),probe=d$X2)
 

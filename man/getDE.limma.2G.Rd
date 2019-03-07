@@ -2,11 +2,47 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{getDE.limma.2G}
 \alias{getDE.limma.2G}
-\title{Limma functions to get differential expression/activity between case and control}
+\title{Get differential expression (DE)/differential activity (DA) between case and control sample groups by limma related functions.}
 \usage{
 getDE.limma.2G(eset = NULL, G1 = NULL, G0 = NULL, G1_name = NULL,
   G0_name = NULL, verbose = TRUE, random_effect = NULL)
 }
+\arguments{
+\item{eset}{ExpressionSet class object, the input gene expression or driver activity.}
+
+\item{G1}{a vector of characters, the sample list used as the case.}
+
+\item{G0}{a vecotr of characters, the sample list used as the control.}
+
+\item{G1_name}{character, the group name for the samples in G1, default is "G1".}
+
+\item{G0_name}{character, the group name for the samples in G0, default is "G0".}
+
+\item{verbose}{logical, whether or not to print verbose information during calculation.Default is TRUE.}
+
+\item{random_effect}{a vector of characters, vector or factor specifying a blocking variable.
+Default is NULL indicating no random effect will be considered.}
+}
+\value{
+A dataframe for all genes with the columns as the output of \code{topTable} in limma.
+}
 \description{
-Limma functions to get differential expression/activity between case and control
+\code{getDE.limma.2G} is a function aims to get DE/DA genes/drivers with detailed statistical information between case (G1) and control (G0) groups.
+}
+\examples{
+analysis.par <- list()
+analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
+NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
+phe_info <- pData(analysis.par$cal.eset)
+each_subtype <- 'G4'
+G0  <- rownames(phe_info)[which(phe_info$`subgroup`!=each_subtype)] # get sample list for G0
+G1  <- rownames(phe_info)[which(phe_info$`subgroup`==each_subtype)] # get sample list for G1
+DE_gene_limma <- getDE.limma.2G(eset=analysis.par$cal.eset,
+                                G1=G1,G0=G0,
+                                G1_name=each_subtype,
+                                G0_name='other')
+DA_driver_limma <- getDE.limma.2G(eset=analysis.par$merge.ac.eset,
+                                G1=G1,G0=G0,
+                                G1_name=each_subtype,
+                                G0_name='other')
 }

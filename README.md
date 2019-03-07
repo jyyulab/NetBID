@@ -18,18 +18,15 @@ devtools::install(pkg='.') ## please input the path to the directory
 
 or get the source package file from server ('/research/projects/yu3grp/Network_JY/yu3grp/NetBID2/NetBID2_0.1.0.tar.gz') and install locally by:
 
-install.packages('NetBID2_0.1.0.tar.gz') ## path to the directory
+install.packages('NetBID2_0.1.0.tar.gz',repos=NULL) ## path to the directory
 
 or directly install:
 
-install.packages('/research/projects/yu3grp/Network_JY/yu3grp/NetBID2/NetBID2_0.1.0.tar.gz')
+install.packages('/research/projects/yu3grp/Network_JY/yu3grp/NetBID2/NetBID2_0.1.0.tar.gz',repos=NULL)
 
-# Notes
 
-* the documents for some functions are not available yet (just write a blank page)
-* add demos in network/ and driver/, which allow users to test the second and third part of the demos separately
+# the documents for some functions are not available yet (just write a blank page)
 
-# Demo scripts
 ## demo scripts for network generation, in demo/ directory 
 pipeline_network_demo1.R
 * Step1: load in gene expression datasets for network construction (exp-load)
@@ -57,8 +54,5 @@ analysis_and_plot_demo1.R
 * II.2: target network structure for each driver, or two drivers (overlap testing)
 * II.3: category plot for the expression/activity for each driver
 ### Part III: advanced plots
-* III.1: input driver and target, get shortest path and draw subnetwork
-* III.2: gene set-based activity analysis, including vocalno, heatmap, category and GSEA plot
-* III.3: SINBA plot for synergistic effect
-### Part IV: Supplementary usage for different conditions (unfinished, prepare to update for new requirement)
-* IV.1: if want to get mean expression/activity value for each phenotype cluster
+* III.1: gene set-based activity analysis, including vocalno, heatmap, category and GSEA plot
+* III.2: SINBA plot for synergistic effect

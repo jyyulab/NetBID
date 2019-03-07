@@ -8,7 +8,10 @@ get.SJAracne.network(network_file = NULL)
 }
 \arguments{
 \item{network_file}{character, file path for the network file. Must use the file (consensus_network_ncol_.txt) in the result directory.
-The directory may like: SJAR/<project_name>/output_tf_sjaracne_<project_name>_out_.final/consensus_network_ncol_.txt}
+The directory may like:
+<SJAR_main_dir>/<project_name>/output_[tf|sig]_sjaracne_<project_name>_out_.final/
+<SJAR_main_dir>/SJARACNE_<project_name>/SJARACNE_out.final
+consensus_network_ncol_.txt}
 }
 \value{
 This function will return a list containing three items, \code{network_dat}, \code{target_list} and \code{igraph_obj}.

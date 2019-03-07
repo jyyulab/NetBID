@@ -7,6 +7,19 @@
 SJ.MICA.prepare(mat, outdir = ".", prjname = NULL, all_k = NULL,
   retransformation = "False", perplexity = 30)
 }
+\arguments{
+\item{mat}{matrix}
+
+\item{outdir}{character}
+
+\item{prjname}{character}
+
+\item{all_k}{a vector of integers}
+
+\item{retransformation}{character}
+
+\item{perplexity}{numeric}
+}
 \description{
 Inner use: prepare for MICA
 }

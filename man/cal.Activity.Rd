@@ -2,13 +2,36 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{cal.Activity}
 \alias{cal.Activity}
-\title{calculate activity for network targets}
+\title{Calculate activity value for all possible drivers}
 \usage{
-cal.Activity(all_target = NULL, cal_mat = NULL, es.method = "mean")
+cal.Activity(target_list = NULL, cal_mat = NULL, es.method = "mean")
 }
 \arguments{
-\item{es.method:}{mean, weighted mean, maxmean, absmean}
+\item{target_list}{a list for the target gene information for the drivers.
+Each object in the list must be a data.frame and should contain one column ("target") to save the target genes.
+Strongly suggest to follow the NetBID2 pipeline, and the \code{target_list} could be automatically generated
+by \code{get_net2target_list} by running
+\code{get.SJAracne.network}.}
+
+\item{cal_mat}{numeric matrix,the expression matrix for all genes/transcripts for calculation.}
+
+\item{es.method}{character, strategy to calculate the activity for the driver,
+choose from mean, weighted mean, maxmean, absmean;
+in which the weighted in the weighted mean is the MI (mutual information) value * sign of correlation (use the spearman correlation sign).
+Default is 'mean'.}
+}
+\value{
+the activity matrix with each row a driver and each column a sample (same sample order with cal_mat)
 }
 \description{
-calculate activity for network targets
+\code{cal.Activity} is a function to calculate activity for all possible drivers by
+input the target list for drivers and the expression matrix for target genes.
+}
+\examples{
+analysis.par <- list()
+analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
+NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
+ac_mat <- cal.Activity(target_list=analysis.par$tf.network$target_list,
+                       cal_mat=exprs(analysis.par$cal.eset),
+                       es.method='weightedmean')
 }

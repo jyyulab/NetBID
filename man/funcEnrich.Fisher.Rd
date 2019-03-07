@@ -19,7 +19,8 @@ Default is NULL, will use all genes in the gs2gene as the background list.}
 If gs2gene is set to NULL, use_gs must be the subset of \code{names(all_gs2gene)}.
 Could check \code{all_gs2gene_info} for the cateogory description.
 If set to 'all', all gene sets in gs2gene will be used.
-Default is \code{c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG')} if gs2gene is set to NULL (use all_gs2gene).
+Default is 'H', 'CP:BIOCARTA', 'CP:REACTOME', 'CP:KEGG'
+if gs2gene is set to NULL (use all_gs2gene).
 If user input own gs2gene list, use_gs will be set to 'all' as default.}
 
 \item{gs2gene}{a list for geneset to genes, the name for the list is the gene set name and the content in each list is the vector for genes belong to that gene set.
@@ -56,7 +57,7 @@ Background gene list is accepeted.
 \examples{
 analysis.par <- list()
 analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
-NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
 ms_tab <- analysis.par$final_ms_tab
 sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
                                logFC_col='logFC.G4.Vs.others_DA',

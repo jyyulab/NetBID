@@ -20,7 +20,7 @@ This could either be the annotated gene list for the gene set or the target gene
 1 indicates positive regulation and -1 indicates negative regulation.
 If NULL, will not consider direction information. Default is NULL.}
 
-\item{main}{character, title for the plot. Default is "".}
+\item{main}{character, title for the draw. Default is "".}
 
 \item{pdf_file}{character, file path for the pdf file to save the figure into pdf format.If NULL, will not generate pdf file. Default is NULL.}
 
@@ -48,7 +48,7 @@ genes with negative direction (-1 in the use_direction list) will be put in the 
 \examples{
 analysis.par <- list()
 analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
-NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
 ms_tab <- analysis.par$final_ms_tab
 sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
                                logFC_col='logFC.G4.Vs.others_DA',
@@ -97,7 +97,7 @@ draw.GSEA(rank_profile=DE_profile,
 \dontrun{
 #' analysis.par <- list()
 analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
-NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
 ms_tab <- analysis.par$final_ms_tab
 sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
                                logFC_col='logFC.G4.Vs.others_DA',

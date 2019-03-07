@@ -2,11 +2,26 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{merge_gs}
 \alias{merge_gs}
-\title{merge genesets}
+\title{Merge GeneSets by choosing several categories.}
 \usage{
-merge_gs(all_gs2gene = NULL, use_gs = c("H", "CP:BIOCARTA",
+merge_gs(all_gs2gene = all_gs2gene, use_gs = c("H", "CP:BIOCARTA",
   "CP:REACTOME", "CP:KEGG", "C5"))
 }
+\arguments{
+\item{all_gs2gene}{list, which could be obtained by running \code{gs.preload()}.}
+
+\item{use_gs}{a vector of characters, could check \code{all_gs2gene_info} for the cateogory description.
+Default is 'H', 'CP:BIOCARTA', 'CP:REACTOME', 'CP:KEGG'.}
+}
+\value{
+a one-level list for geneset to genes.
+}
 \description{
-merge genesets
+\code{merge_gs} is a simple function to merge the gene set list.
+}
+\examples{
+gs.preload(use_spe='Homo sapiens',update=FALSE)
+use_gs2gene <- merge_gs(all_gs2gene=all_gs2gene,
+                       use_gs=c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG','C5'))
+
 }

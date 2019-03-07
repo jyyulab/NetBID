@@ -6,6 +6,11 @@
 \usage{
 find.gsByGene(gene = NULL, use_gs = NULL)
 }
+\arguments{
+\item{gene}{character}
+
+\item{use_gs}{a vector of characters}
+}
 \description{
 find.gsByGene
 }

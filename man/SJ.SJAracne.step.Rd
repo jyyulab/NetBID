@@ -6,6 +6,9 @@
 \usage{
 SJ.SJAracne.step(out.dir.SJAR)
 }
+\arguments{
+\item{out.dir.SJAR}{character}
+}
 \description{
 Inner use: auto generate bash files for Step1, Step2, Step3, Step4 for all bash files under one directory
 }

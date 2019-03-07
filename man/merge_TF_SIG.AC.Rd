@@ -2,15 +2,38 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{merge_TF_SIG.AC}
 \alias{merge_TF_SIG.AC}
-\title{merge activity matrix for TF and SIG}
+\title{Merge activity value ExpressionSet for TF (transcription factors) and Sig (signaling factors)}
 \usage{
 merge_TF_SIG.AC(TF_AC = NULL, SIG_AC = NULL)
 }
 \arguments{
-\item{TF_AC}{TF activity eset}
+\item{TF_AC}{ExpressionSet object containing the activity value for all TFs.}
 
-\item{SIG_AC}{SIG activity eset}
+\item{SIG_AC}{ExpressionSet object containing the activity value for all SIGs.}
+}
+\value{
+an ExpressionSet object
 }
 \description{
-merge activity matrix for TF and SIG
+\code{merge_TF_SIG.AC} is a function to merge the activity value ExpressionSet for TF (transcription factors) and Sig (signaling factors).
+}
+\details{
+This function aims to merge the driver activity ExpressionSet, by automatically add "_TF"/"_SIG" suffix for drivers.
+}
+\examples{
+analysis.par <- list()
+analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
+NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
+ac_mat_TF <- cal.Activity(target_list=analysis.par$tf.network$target_list,
+                       cal_mat=exprs(analysis.par$cal.eset),
+                       es.method='weightedmean')
+ac_mat_SIG <- cal.Activity(target_list=analysis.par$tf.network$target_list,
+                       cal_mat=exprs(analysis.par$cal.eset),
+                       es.method='weightedmean')
+analysis.par$ac.tf.eset  <- generate.eset(exp_mat=ac_mat_TF,
+                                          phenotype_info=pData(analysis.par$cal.eset))
+analysis.par$ac.sig.eset <- generate.eset(exp_mat=ac_mat_SIG,
+                                          phenotype_info=pData(analysis.par$cal.eset))
+analysis.par$merge.ac.eset <- merge_TF_SIG.AC(TF_AC=analysis.par$ac.tf.eset,
+                                          SIG_AC=analysis.par$ac.sig.eset)
 }

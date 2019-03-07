@@ -2,20 +2,31 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{combinePvalVector}
 \alias{combinePvalVector}
-\title{combine Pvalues by Fisher or Stouffer's method}
+\title{Combine Pvalues by Fisher or Stouffer's method}
 \usage{
 combinePvalVector(pvals, method = c("Stouffer", "Fisher"),
   signed = TRUE, twosided = TRUE)
 }
 \arguments{
-\item{twosided}{For Fisher's method: if twosided, pvalues are transformed into single}
+\item{pvals, }{a vector of numeric values, the P-value values need to combine.
+The sign of the P-value will be added to indicate the direction of testing if signed is set to TRUE.}
 
-\item{dat, }{a dataframe containing pvalue.cols}
+\item{method}{character, choose from Stouffer or Fisher, default is "Stouffer".}
 
-\item{sign.cols}{column labels indicating sign of stat, if NULL, use absolute values to calculate overall stat for Stouffer's method}
+\item{signed}{logical, whether the sign of the pvals will be considered in calculation.
+Default is TRUE.}
 
-\item{combine}{one pvalues vector, the signed version}
+\item{twosided}{logical, whether the pvalues are from two-sided test or not.
+If not, pvalues must between 0 and 0.5.
+Default is TRUE.}
+}
+\value{
+a vector contains the 'Z-statistics' and 'P.Value'
 }
 \description{
-combine Pvalues by Fisher or Stouffer's method
+\code{combinePvalVector} is a function to combine P-values by Stouffer of Fisher method.
+}
+\examples{
+combinePvalVector(c(0.1,1e-3,1e-5))
+combinePvalVector(c(0.1,1e-3,-1e-5))
 }

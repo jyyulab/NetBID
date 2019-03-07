@@ -8,9 +8,9 @@ draw.bubblePlot(driver_list = NULL, show_label = driver_list,
   Z_val = NULL, driver_type = NULL, target_list = NULL,
   transfer2symbol2type = NULL, bg_list = NULL, min_gs_size = 5,
   max_gs_size = 500, gs2gene = NULL, use_gs = NULL,
-  Pv_adj = "none", Pv_thre = 0.1, top_geneset_number = 30,
-  top_driver_number = 30, pdf_file = NULL, main = "",
-  mark_gene = NULL, driver_cex = 1, gs_cex = 1)
+  display_gs_list = NULL, Pv_adj = "none", Pv_thre = 0.1,
+  top_geneset_number = 30, top_driver_number = 30, pdf_file = NULL,
+  main = "", mark_gene = NULL, driver_cex = 1, gs_cex = 1)
 }
 \arguments{
 \item{driver_list}{a vector of characters, the name for the top drivers.}
@@ -43,8 +43,14 @@ Default is NULL, will use all genes in the gs2gene as the background list.}
 \item{gs2gene}{a list for geneset to genes, the name for the list is the gene set name and the content in each list is the vector for genes belong to that gene set.
 If NULL, will use all_gs2gene loaded by using \code{gs.preload}. Default is NULL.}
 
-\item{use_gs}{a vector of characters, the name for gene set category used for anlaysis. If gs2gene is set to NULL, use_gs must be the subset of \code{names(all_gs2gene)}.
-Could check \code{all_gs2gene_info} for the cateogory description.Default is \code{c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG')}.}
+\item{use_gs}{a vector of characters, the name for gene set category used for anlaysis.
+If gs2gene is set to NULL, use_gs must be the subset of \code{names(all_gs2gene)}.
+Could check \code{all_gs2gene_info} for the cateogory description.
+Default is 'H', 'CP:BIOCARTA', 'CP:REACTOME', 'CP:KEGG'.}
+
+\item{display_gs_list}{a vector of characters, the list of gene set names to display on the plot.
+If NULL, the gene sets are shown according to the significant ranking.
+Default is NULL.}
 
 \item{Pv_adj}{character, p-value adjustment method, could check \code{p.adjust.methods} for the available options. Default is 'none'.}
 
@@ -58,7 +64,7 @@ Could check \code{all_gs2gene_info} for the cateogory description.Default is \co
 
 \item{main}{character, \code{main} for the title on the plot.}
 
-\item{mark_gene}{a vector of characters, if not NULL, the drivers in the mark_gene will be labelled red in the plot. Default is NULL.}
+\item{mark_gene}{a vector of characters, if not NULL, the drivers in the mark_gene will be labelled red in the draw. Default is NULL.}
 
 \item{driver_cex}{numeric, \code{cex} for the driver displayed on the plot. Default is 1.}
 
@@ -75,13 +81,13 @@ This is a function to draw the bubble plot for the top significant drivers. Each
 Each bubble represents the enrichment for each driver's target gene in the corresponding gene set.
 The size for each bubble shows the intersected size for the target gene and the gene set.
 The color for each bubble shows the significance of enrichment performed by Fisher's Exact Test.
-Color bar and size bar are shown in the plot.
-Besides, the target size and the driver gene/transcript bio-type is shown at the bottom of the plot.
+Color bar and size bar are shown in the draw.
+Besides, the target size and the driver gene/transcript bio-type is shown at the bottom of the draw.
 }
 \examples{
 analysis.par <- list()
 analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
-NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
 ms_tab <- analysis.par$final_ms_tab
 sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
                                logFC_col='logFC.G4.Vs.others_DA',
@@ -93,6 +99,7 @@ sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
                                label_type = 'origin',
                                label_cex = 0.5)
 gs.preload(use_spe='Homo sapiens',update=FALSE)
+db.preload(use_level='gene',use_spe='human',update=FALSE)
 use_genes <- unique(analysis.par$merge.network$network_dat$target.symbol)
 transfer_tab <- get_IDtransfer2symbol2type(from_type = 'external_gene_name',
                                            use_genes=use_genes,
@@ -114,7 +121,7 @@ draw.bubblePlot(driver_list=rownames(sig_driver),
 \dontrun{
 analysis.par <- list()
 analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
-NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
 ms_tab <- analysis.par$final_ms_tab
 sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
                                logFC_col='logFC.G4.Vs.others_DA',
@@ -143,7 +150,7 @@ draw.bubblePlot(driver_list=rownames(sig_driver),
                min_gs_size=5,max_gs_size=500,
                use_gs=use_gs=c('CP:KEGG','CP:BIOCARTA','H'),
                top_geneset_number=30,top_driver_number=50,
-               pdf_file = sprintf('\%s/bubblePlot.pdf',
+               pdf_file = sprintf('\%s/bubbledraw.pdf',
                analysis.par$out.dir.PLOT),
                main='Bubbleplot for top driver targets',
                mark_gene=ms_tab[which(ms_tab$geneSymbol \%in\% mark_gene),

@@ -22,7 +22,7 @@ Reture TRUE if success and FALSE if not. Will load two variables into R workspac
 }
 \description{
 \code{gs.preload} will load two variables into R workspace, the list for gene set to genes (all_gs2gene)
- and a data frame (all_gs2gene_info) for detailed description for gene sets.
+ and a dataframe (all_gs2gene_info) for detailed description for gene sets.
 }
 \details{
 This is a pre-processing function for NetBID2 advanced analysis, user only need to input the species name (e.g Homo sapiens, Mus musculus).

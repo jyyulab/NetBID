@@ -5,7 +5,8 @@
 \title{Target network structure plot for the driver.}
 \usage{
 draw.targetNet(source_label = "", source_z = NULL, edge_score = NULL,
-  label_cex = 0.7, pdf_file = NULL)
+  label_cex = 0.7, source_cex = 1, pdf_file = NULL,
+  arrow_direction = "out")
 }
 \arguments{
 \item{source_label}{the label for the driver displayed on the plot.}
@@ -19,7 +20,11 @@ The names for the vector is the gene labels displayed on the plot.}
 
 \item{label_cex}{numeric, \code{cex} for the target genes displayed on the plot. Default is 0.7.}
 
+\item{source_cex}{numeric, \code{cex} for the source genes displayed on the plot. Default is 1.}
+
 \item{pdf_file}{character, file path for the pdf file to save the figure into pdf format.If NULL, will not generate pdf file. Default is NULL.}
+
+\item{arrow_direction}{character, choose from 'in' or 'out'. Default is 'out'.}
 }
 \value{
 Will return logical value indicating whether the plot has been successfully generated
@@ -36,7 +41,12 @@ source_label <- 'test1'
 source_z <- 1.96
 edge_score <- (sample(1:200,size=100,replace=TRUE)-100)/100
 names(edge_score) <- paste0('G',1:100)
-draw.targetNet(source_label=source_label,source_z=source_z,edge_score=edge_score)
+draw.targetNet(source_label=source_label,source_z=source_z,
+               edge_score=edge_score)
+draw.targetNet(source_label=source_label,source_z=source_z,
+               edge_score=edge_score,
+               arrow_direction='in',
+               source_cex=2)
 \dontrun{
 source_label <- 'test1'
 source_z <- 1.96

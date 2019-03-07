@@ -12,14 +12,20 @@ get_IDtransfer_betweenSpecies(from_spe = "human", to_spe = "mouse",
 
 \item{to_spe}{character, input the species name (e.g 'human', 'mouse', 'rat') that need to transfered to, default is 'mouse'}
 
-\item{from_type}{character, attribute name from the biomaRt package, such as 'ensembl_gene_id','ensembl_gene_id_version'
-'ensembl_transcript_id','ensembl_transcript_id_version','refseq_mrna'. Full list could be obtained by
+\item{from_type}{character, attribute name from the biomaRt package,
+such as 'ensembl_gene_id',
+'ensembl_gene_id_version'
+'ensembl_transcript_id',
+'ensembl_transcript_id_version',
+'refseq_mrna'.
+Full list could be obtained by
 \code{listAttributes(mart)$name}, where \code{mart} is the output of \code{useMart} function.
 The type must be the gene type for the input \code{use_genes}.}
 
 \item{to_type}{character, character, attribute name from the biomaRt package, the gene type will be convereted to.}
 
-\item{use_genes}{a vector of characters, gene list used for ID conversion. Must be the genes with \code{from_type} in \code{from_spe}.}
+\item{use_genes}{a vector of characters, gene list used for ID conversion. Must be the genes with \code{from_type} in \code{from_spe}.
+If NULL, will output all possible genes in transfer table. Default is NULL.}
 }
 \value{
 \code{get_IDtransfer_betweenSpecies} will return a data.frame for the transfer table.
@@ -43,5 +49,9 @@ transfer_tab <- get_IDtransfer_betweenSpecies(from_spe='human',
                                use_genes=use_genes)
                                ## get transfer table !!!
 \dontrun{
+transfer_tab <- get_IDtransfer_betweenSpecies(from_spe='human',
+                               to_spe='mouse',
+                               from_type='refseq_mrna',
+                               to_type='refseq_mrna')
 }
 }

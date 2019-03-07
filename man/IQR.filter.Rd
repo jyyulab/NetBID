@@ -2,11 +2,37 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{IQR.filter}
 \alias{IQR.filter}
-\title{IQR filter}
+\title{IQR (interquartile range) filter for the genes in the expression matrix}
 \usage{
 IQR.filter(exp_mat, use_genes = rownames(exp_mat), thre = 0.5,
   loose_gene = NULL, loose_thre = 0.1)
 }
+\arguments{
+\item{exp_mat}{matrix, the gene expression matrix, with each row a gene/transcript/probe and each column a sample.}
+
+\item{use_genes}{a vector of characters, the gene list to report. Default is the rownames of \code{exp_mat}.}
+
+\item{thre}{numeric, the quantile threshold of IQR. Default is 0.5.}
+
+\item{loose_gene}{a vector of characters, the gene list that only need to pass the \code{loose_thre}.
+This parameter is designed for inputing possible drivers used in SJAracne. Default is NULL.}
+
+\item{loose_thre}{numeric,the quantile threshold of IQR for the genes in \code{loose_gene}. Default is 0.1.}
+}
+\value{
+a vector with logical values indicate which genes should be kept.
+}
 \description{
-IQR filter
+\code{IQR.filter} is a function to extract genes by their IQR value.
+}
+\details{
+This function aims to extract out most variable genes (defined by the IQR value).
+This step will be used to perform sample cluster and to prepare the input for SJAracne.
+}
+\examples{
+mat1 <- matrix(rnorm(15000),nrow=1500,ncol=10)
+colnames(mat1) <- paste0('Sample',1:ncol(mat1))
+rownames(mat1) <- paste0('Gene',1:nrow(mat1))
+choose1 <- IQR.filter(mat1,thre=0.5,
+                     loose_gene=paste0('Gene',1:100))
 }

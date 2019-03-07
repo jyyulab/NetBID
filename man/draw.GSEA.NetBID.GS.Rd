@@ -76,7 +76,7 @@ db.preload(use_level='transcript',use_spe='human',update=FALSE)
 
 analysis.par <- list()
 analysis.par$out.dir.DATA <- system.file('demo','gene set/DATA/',package = "NetBID2")
-NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
 
 ms_tab <- analysis.par$final_ms_tab
 comp <- 'G4.Vs.others'

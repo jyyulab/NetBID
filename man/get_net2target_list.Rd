@@ -2,10 +2,28 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{get_net2target_list}
 \alias{get_net2target_list}
-\title{get target list by input network data}
+\title{Get target list by input network information from data.frame.}
 \usage{
 get_net2target_list(net_dat = NULL)
 }
+\arguments{
+\item{net_dat}{data.frame, must contain columns named with "source" and "target",
+"MI" and "spearman" are strongly suggested but not required.
+If these two columns missed, some options may be error in some of the functions in the following steps
+(such as es.method='weightedmean' in \code{cal.Activity}).}
+}
+\value{
+a list for the target gene information for the drivers. Each object in the list is a data.frame to save the target genes.
+}
 \description{
-get target list by input network data
+\code{get_net2target_list} is included in the \code{get.SJAracne.network},
+the reason to make it invokable just for user to read in network files prepared by themselves.
+}
+\examples{
+tf.network.file <- sprintf('\%s/demo1/network/SJAR/project_2019-02-14/\%s/\%s',
+                   system.file(package = "NetBID2"),
+                   'output_tf_sjaracne_project_2019-02-14_out_.final',
+                   'consensus_network_ncol_.txt')
+net_dat      <- read.delim(file=tf.network.file,stringsAsFactors = FALSE)
+target_list  <- get_net2target_list(net_dat)
 }

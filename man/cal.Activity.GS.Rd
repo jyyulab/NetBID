@@ -2,14 +2,36 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{cal.Activity.GS}
 \alias{cal.Activity.GS}
-\title{calculate activity for gene sets}
+\title{Calculate activity value for gene sets.}
 \usage{
 cal.Activity.GS(use_gs2gene = all_gs2gene[c("H", "CP:BIOCARTA",
   "CP:REACTOME", "CP:KEGG")], cal_mat = NULL, es.method = "mean")
 }
 \arguments{
-\item{es.method:}{mean, absmean, maxmean}
+\item{use_gs2gene}{a list for geneset to genes, the name for the list is the gene set name and the content in each list is the vector for genes belong to that gene set.
+Default is all_gs2gene[c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG')] with all_gs2gene loaded by using \code{gs.preload}.}
+
+\item{cal_mat}{numeric matrix,the expression matrix for all genes/transcripts for calculation.}
+
+\item{es.method}{character, strategy to calculate the activity for the driver,
+choose from mean, absmean, maxmean;
+Default is 'mean'.}
+}
+\value{
+the activity matrix with each row a gene set and each column a sample (same sample order with cal_mat)
 }
 \description{
-calculate activity for gene sets
+\code{cal.Activity.GS} is a function to calculate activity for all gene sets.
+}
+\examples{
+analysis.par <- list()
+analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
+NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
+gs.preload(use_spe='Homo sapiens',update=FALSE)
+use_gs2gene <- merge_gs(all_gs2gene=all_gs2gene,
+                        use_gs=c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG','C5'))
+exp_mat_gene <- exprs(analysis.par$cal.eset)
+## each row is a gene symbol, if not, must convert ID first
+ac_gs <- cal.Activity.GS(use_gs2gene = use_gs2gene,
+                        cal_mat = exp_mat_gene)
 }

@@ -4,12 +4,14 @@
 \alias{get_obs_label}
 \title{Generate a vector for sample category.}
 \usage{
-get_obs_label(phe_info, i)
+get_obs_label(phe_info, use_col, collapse = "|")
 }
 \arguments{
-\item{phe_info}{data.frame, phenotype data frame for the samples with sample names in rownames, e.g from \code{pData(eset)}.}
+\item{phe_info}{data.frame, phenotype dataframe for the samples with sample names in rownames, e.g from \code{pData(eset)}.}
 
-\item{i}{numeric or character, the column index or column name for extraction to get the sample category vector.}
+\item{use_col}{a vector of numeric or character, the column index or column name for extraction to get the sample category vector.}
+
+\item{collapse}{character, character string to separate the results when the length use_col is more than 1. default is "|".}
 }
 \value{
 Will return a vector for sample categories with names to the vector representing the sample name.
@@ -24,7 +26,7 @@ Mainly used for input preparation in the visualization plots.
 \examples{
 analysis.par <- list()
 analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
-NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
 phe_info <- pData(analysis.par$cal.eset)
 use_obs_class <- get_obs_label(phe_info = phe_info,'subgroup')
 print(use_obs_class)

@@ -55,7 +55,7 @@ This plot function input the master table and draw the volcano plot by setting s
 \examples{
 analysis.par <- list()
 analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
-NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
 ms_tab <- analysis.par$final_ms_tab
 sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
                                logFC_col='logFC.G4.Vs.others_DA',
@@ -70,7 +70,7 @@ sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
 \dontrun{
 analysis.par <- list()
 analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
-NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
 ms_tab <- analysis.par$final_ms_tab
 analysis.par$out.dir.PLOT <- getwd() ## directory for saving the pdf files
 sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',

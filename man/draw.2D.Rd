@@ -2,11 +2,40 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{draw.2D}
 \alias{draw.2D}
-\title{Draw 2D dimension plot}
+\title{Draw 2D dimension plot for sample cluster visualization.}
 \usage{
 draw.2D(X, Y, class_label, xlab = "PC1", ylab = "PC2",
-  label_cex = 0.8, main = "", point_cex = 1)
+  legend_cex = 0.8, main = "", point_cex = 1)
+}
+\arguments{
+\item{X}{a vector of numeric values, the first dimension values.}
+
+\item{Y}{a vector of numeric values, the second dimension values.}
+
+\item{class_label}{a vector of characters, with the names are the samples (optional) and the values are the sample cluster label.
+The function will treat that the order are the same for X,Y and class_label.}
+
+\item{xlab}{character, the label for x-axis.}
+
+\item{ylab}{character, the label for y-axis.}
+
+\item{legend_cex}{numeric, the cex for the legend.}
+
+\item{main}{character, the title for the plot.}
+
+\item{point_cex}{numeric, the cex for the points.}
+}
+\value{
+logical value indicating whether the plot has been successfully generated
 }
 \description{
-Draw 2D dimension plot
+\code{draw.2D} is a function to draw 2D dimension plot for sample cluster visualization.
+}
+\examples{
+mat1 <- matrix(rnorm(2000,mean=0,sd=1),nrow=100,ncol=20)
+rownames(mat1) <- paste0('Gene',1:nrow(mat1))
+colnames(mat1) <- paste0('Sample',1:ncol(mat1))
+pc <- prcomp(t(mat1))$x
+pred_label <- kmeans(pc,centers=4)$cluster ## this can use other cluster results
+draw.2D(X=pc[,1],Y=pc[,2],class_label=pred_label)
 }

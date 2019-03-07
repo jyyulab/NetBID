@@ -23,7 +23,8 @@ db.preload(use_level = "transcript", use_spe = "human",
 \item{input_attr_type}{character, input the type for the list of TF_list, SIG_list. If no input for TF_list, SIG_list, just leave it to NULL, default NULL.
 See biomaRt \url{https://bioconductor.org/packages/release/bioc/vignettes/biomaRt/inst/doc/biomaRt.html} for more details.}
 
-\item{main.dir}{character, main file path for NetBID2, if NULL, will set to \code{system.file(package = "NetBID2")}. Default is NULL.}
+\item{main.dir}{character, main file path for NetBID2,
+if NULL, will set to \code{system.file(package = "NetBID2")}. Default is NULL.}
 
 \item{db.dir}{character, file path for saving the RData, default is \code{db} directory under \code{main.dir} when setting for \code{main.dir}.}
 }

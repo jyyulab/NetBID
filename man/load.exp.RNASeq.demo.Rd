@@ -2,12 +2,41 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{load.exp.RNASeq.demo}
 \alias{load.exp.RNASeq.demo}
-\title{Load gene expression set from RNASeq (demo version).}
+\title{Load gene expression set from RNASeq results (demo version).}
 \usage{
 load.exp.RNASeq.demo(files, type = "salmon", tx2gene = NULL,
   use_phenotype_info = NULL, use_sample_col = NULL,
   use_design_col = NULL, return_type = "eset", merge_level = "gene")
 }
+\arguments{
+\item{files}{a vector of characters,filenames for the transcript-level abundances, will be passed to \code{tximport}.
+Check for detail.}
+
+\item{type}{character, he type of software used to generate the abundances, will be passed to \code{tximport}.
+Check for detail.}
+
+\item{tx2gene}{data.frame or NULL, this parameter will be passed to \code{tximport}, check for detail.}
+
+\item{use_phenotype_info}{data.frame, phenotype information dataframe, must contain the columns \code{use_sample_col} and \code{use_design_col}.}
+
+\item{use_sample_col}{character, the column name to indicate which column in \code{use_phenotype_info} should be used as the sample name.}
+
+\item{use_design_col}{character, the column name to indicate which column in \code{use_phenotype_info} should be used as the design feature of the samples.}
+
+\item{return_type}{character, the class of the return object, choose from 'eset','dds'. 'eset' is the ExpressionSet class object,
+'dds' is the DESeqDataSet class object.
+Default is 'eset'}
+
+\item{merge_level}{character, choose from 'gene' and 'transcript',
+if choose 'gene' and original salmon results is mapped to the transcriptome,
+expression matrix will be merged to gene level.
+(this only works when using e.g gencode.v29.transcripts.fa from GENCODE as reference).}
+}
 \description{
-Load gene expression set from RNASeq (demo version).
+\code{load.exp.RNASeq.demo} is a function to read in RNASeq results and convert to eSet/DESeqDataSet class object.
+}
+\details{
+This function assist to read in RNASeq results from different resources.
+Due to the complicated condition (e.g reference sequence) in running RNASeq,
+this function is just a demo version that may not suit for all conditions.
 }

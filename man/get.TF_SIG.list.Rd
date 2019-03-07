@@ -5,26 +5,26 @@
 \title{Get transcription factor (TF) and signaling factor (SIG) list for the input gene/transcript type}
 \usage{
 get.TF_SIG.list(use_genes = NULL, use_gene_type = "ensembl_gene_id",
-  dataset = db_info[1])
+  dataset = NULL)
 }
 \arguments{
 \item{use_genes}{a vector of characters, all possible genes used in network generation.
 If NULL, will not filter the TF/SIG list by this gene list. Default is NULL.}
 
-\item{use_gene_type}{character, attribute name from the biomaRt package, such as 'ensembl_gene_id','ensembl_gene_id_version'
-'ensembl_transcript_id','ensembl_transcript_id_version','refseq_mrna'. Full list could be obtained by
+\item{use_gene_type}{character, attribute name from the biomaRt package,
+such as 'ensembl_gene_id', 'ensembl_gene_id_version', 'ensembl_transcript_id', 'ensembl_transcript_id_version', 'refseq_mrna'.
+Full list could be obtained by
 \code{listAttributes(mart)$name}, where \code{mart} is the output of \code{useMart} function.
+(e.g mart <- useMart('ensembl',db_info[1]))
 The type must be the gene type for the input \code{use_genes}. Default is 'ensembl_gene_id'.}
 
-\item{dataset}{character, name for the dataset used for ID conversion, such as 'hsapiens_gene_ensembl'.
+\item{dataset}{character, name for the dataset used for ID conversion,
+such as 'hsapiens_gene_ensembl'.
 If NULL, will use \code{db_info[1]} if run \code{db.preload} brefore. Default is NULL.}
 }
 \value{
 This function will return a list containing two parts,
 for $tf saving the TF list for the input gene type and $sig saving the SIG list.
-
-\dontrun{
-}
 }
 \description{
 \code{get.TF_SIG.list} is a gene ID conversion function to get the TF/SIG list
@@ -39,5 +39,8 @@ res_list  <- get.TF_SIG.list(use_gene_type = 'ensembl_transcript_id',
                                use_genes=use_genes,
                                dataset='hsapiens_gene_ensembl')
 print(res_list)
+
+\dontrun{
+}
 
 }

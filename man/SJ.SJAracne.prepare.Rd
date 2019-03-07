@@ -11,6 +11,27 @@ SJ.SJAracne.prepare(eset, use.samples = rownames(pData(eset)),
   SJAR.main_dir = NULL, SJAR.bash.main_dir = NULL, mem = 40960,
   IQR.thre = 0.5, IQR.loose_thre = 0.1)
 }
+\arguments{
+\item{eset}{eSet object}
+
+\item{use.samples}{a vector of characters}
+
+\item{TF_list}{a vector of characters}
+
+\item{SIG_list}{a vector of characters}
+
+\item{SJAR.project_name}{character}
+
+\item{SJAR.main_dir}{character}
+
+\item{SJAR.bash.main_dir}{character}
+
+\item{mem}{integer}
+
+\item{IQR.thre}{numeric}
+
+\item{IQR.loose_thre}{numeric}
+}
 \description{
 Inner use: prepare for SJaracne run on SJ server
 prepare SJAracne dataset for net-dataset

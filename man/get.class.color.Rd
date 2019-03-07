@@ -14,7 +14,7 @@ get.class.color(x, use_color = NULL, pre_define = NULL,
 
 \item{pre_define}{a vector of characters, pre-defined color code for some of the input characters. Default is NULL.}
 
-\item{user_inner}{logical, indicating whether to use inner pre-defined color code for some characters. Default is TRUE.}
+\item{use_inner}{logical, indicating whether to use inner pre-defined color code for some characters. Default is TRUE.}
 }
 \value{
 Will return a vector of colors with names the input vector characters.

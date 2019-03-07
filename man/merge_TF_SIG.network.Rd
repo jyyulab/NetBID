@@ -2,15 +2,35 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{merge_TF_SIG.network}
 \alias{merge_TF_SIG.network}
-\title{merge target network for TF and SIG}
+\title{Merge target network for TF (transcription factors) and Sig (signaling factors).}
 \usage{
 merge_TF_SIG.network(TF_network = NULL, SIG_network = NULL)
 }
 \arguments{
-\item{TF_network}{TF network}
+\item{TF_network}{TF network obtained by \code{get.SJAracne.network}.}
 
-\item{SIG_network}{SIG network}
+\item{SIG_network}{SIG network obtained by \code{get.SJAracne.network}.}
+}
+\value{
+This function will return the same structure object as TF_network/SIG_network,
+which is a list containing three items, \code{network_dat},
+\code{target_list} and \code{igraph_obj}.
 }
 \description{
-merge target network for TF and SIG
+\code{merge_TF_SIG.network} is a function to merge the target network from TF and Sig.
+}
+\examples{
+if(exists('analysis.par')==TRUE) rm(analysis.par)
+network.dir <- sprintf('\%s/demo1/network/',system.file(package = "NetBID2")) # use demo
+network.project.name <- 'project_2019-02-14' # demo project name
+project_main_dir <- 'test/'
+project_name <- 'test_driver'
+analysis.par  <- NetBID.analysis.dir.create(project_main_dir=project_main_dir,
+                                            prject_name=project_name,
+                                            network_dir=network.dir,
+                                            network_project_name=network.project.name)
+analysis.par$tf.network  <- get.SJAracne.network(network_file=analysis.par$tf.network.file)
+analysis.par$sig.network <- get.SJAracne.network(network_file=analysis.par$sig.network.file)
+analysis.par$merge.network <- merge_TF_SIG.network(TF_network=analysis.par$tf.network,
+                                                   SIG_network=analysis.par$sig.network)
 }

@@ -94,7 +94,7 @@ User could choose to display the target genes in one row or two rows, by selecti
 \examples{
 analysis.par <- list()
 analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
-NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
 ms_tab <- analysis.par$final_ms_tab
 comp <- 'G4.Vs.others'
 DE <- analysis.par$DE[[comp]]
@@ -126,7 +126,7 @@ draw.GSEA.NetBID(DE=DE,profile_col='t',
 \dontrun{
 analysis.par <- list()
 analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
-NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
 ms_tab <- analysis.par$final_ms_tab
 comp <- 'G4.Vs.others'
 DE <- analysis.par$DE[[comp]]

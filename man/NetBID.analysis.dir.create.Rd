@@ -5,7 +5,8 @@
 \title{Create directory for the driver analysis part. Suggested but not required.}
 \usage{
 NetBID.analysis.dir.create(project_main_dir = NULL, prject_name = NULL,
-  network_dir = NULL, network_project_name = NULL)
+  network_dir = NULL, network_project_name = NULL,
+  tf.network.file = NULL, sig.network.file = NULL)
 }
 \arguments{
 \item{project_main_dir}{character, main directory for the project in the driver analysis part.}
@@ -14,7 +15,13 @@ NetBID.analysis.dir.create(project_main_dir = NULL, prject_name = NULL,
 
 \item{network_dir}{character, main directory for the project in the network generation part.}
 
-\item{network_project_name}{character, the name of the network for use (SJAR.project_name in SJ.SJAracne.prepare)}
+\item{network_project_name}{character, the project name of the network for use (SJAR.project_name in SJ.SJAracne.prepare or SJAracne.prepare);
+This parameter is optional. If previously has not follow the NetBID2 suggested pipeline, could leave this to NULL
+but set the real path to tf.network.file and sig.network.file if want to follow the driver analysis part of NetBID2 suggested pipeline.}
+
+\item{tf.network.file}{character, file path of the TF network (XXX/consensus_network_ncol_.txt). Optional, if do not set network_project_name.}
+
+\item{sig.network.file}{character, file path of the SIG network (XXX/consensus_network_ncol_.txt). Optional, if do not set network_project_name.}
 }
 \value{
 a list called analysis.par, including main.dir,project.name, out.dir, out.dir.QC, out.dir.DATA, out.dir.PLOT

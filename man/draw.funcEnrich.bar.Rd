@@ -52,7 +52,7 @@ Two modes, one just display the P-value, and the other could show the top inters
 \examples{
 analysis.par <- list()
 analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
-NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
 ms_tab <- analysis.par$final_ms_tab
 sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
                                logFC_col='logFC.G4.Vs.others_DA',
@@ -66,7 +66,7 @@ sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
 gs.preload(use_spe='Homo sapiens',update=FALSE)
 res1 <- funcEnrich.Fisher(input_list=ms_tab[rownames(sig_driver),'geneSymbol'],
                           bg_list=ms_tab[,'geneSymbol'],
-                          use_gs=use_gs=c('H','C5'),Pv_thre=0.1,
+                          use_gs=c('H','C5'),Pv_thre=0.1,
                           Pv_adj = 'none')
 draw.funcEnrich.bar(funcEnrich_res=res1,top_number=5,
                    main='Function Enrichment for Top drivers',
@@ -78,7 +78,7 @@ draw.funcEnrich.bar(funcEnrich_res=res1,top_number=5,
 \dontrun{
 analysis.par <- list()
 analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
-NetBID2.loadRData(analysis.par=analysis.par,step='ms-tab')
+NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
 ms_tab <- analysis.par$final_ms_tab
 sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
                                logFC_col='logFC.G4.Vs.others_DA',
