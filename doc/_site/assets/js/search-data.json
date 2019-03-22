@@ -1,0 +1,38 @@
+{
+  "0": {
+    "id": "0",
+    "title": "advanced analysis",
+    "content": "Advanced analysis Part I: for top drivers I.1: volcano plot for DE/DA, p-value Vs. fold-change I.2: Heatmap for top drivers I.3: Function enrichment plot for top drivers I.4: Bubble plot for top drivers I.5: GSEA plot for top driver Part II: for each driver II.1: GSEA plot for each driver II.2: target network structure for each driver, or two drivers (overlap testing) II.3: category plot for the expression/activity for each driver Part III: advanced plots III.1: input driver and target, get shortest path and draw subnetwork III.2: gene set-based activity analysis, including vocalno, heatmap, category and GSEA plot III.3: SINBA plot for synergistic effect Part IV: Supplementary usage for different conditions IV.1: if want to get mean expression/activity value for each phenotype cluster",
+    "url": "http://localhost:4000/docs/advanced_analysis",
+    "relUrl": "/docs/advanced_analysis"
+  },
+  "1": {
+    "id": "1",
+    "title": "driver estimation",
+    "content": "Driver estimation Step1: load in gene expression datasets for analysis (exp-load,exp-cluster,exp-QC) Step2: activity calculation (act-prep,act-get) Step3: get DE/DA (act-DA) Step4: generate master table (ms-tab)",
+    "url": "http://localhost:4000/docs/driver_estimation",
+    "relUrl": "/docs/driver_estimation"
+  },
+  "2": {
+    "id": "2",
+    "title": "Home",
+    "content": "NetBID2: Network-based Bayesian Inference of Drivers. Version 2 This is the documentation for the usage of NetBID2. Get started now View it on GitHub Getting started The version mentioned below are the tested version. Other versions may also work well but haven’t tested it yet. Dependencies R, version 3.4.0 Pre-request R packages Quick start: install R packages (NetBID2) install the R packages from github (not published yet) devtools::install_github(&quot;jyyulab/NetBID-dev&quot;,ref=&#39;NetBID2-R) Overview I. Network generation II. Driver estimation III: Advanced analysis About the project For the detailed description of NetBID algorithm, please refer our lab page View Yu Lab@St. Jude. License Distributed by an MIT license.",
+    "url": "http://localhost:4000/",
+    "relUrl": "/"
+  },
+  "3": {
+    "id": "3",
+    "title": "network generation",
+    "content": "Network Generation Step1: load in gene expression datasets for network construction (exp-load) Step2: normalization for the exp dataset (exp-QC) Step3: check sample cluster info, optional (exp-cluster) Step4: prepare SJARACNE (sjaracne-prep)",
+    "url": "http://localhost:4000/docs/network_generation",
+    "relUrl": "/docs/network_generation"
+  },
+  "4": {
+    "id": "4",
+    "title": "pre request",
+    "content": "Pre-requested R packages Biobase, version 2.40.0, ## basic functions for bioconductor GEOquery, version 2.48.0, ## functions to load in data from GEO website limma, version 3.36.5, ## for data normalization and batchremoval functions DESeq2, version 1.20.0, ## for RNASeq data processing tximport, version 1.8.0, ## for RNASeq data importing arrayQualityMetrics, version 3.36.0, ## for basic QC analysis for array dataset RColorBrewer, version 1.1-2, ## for color palettes colorspace, version 1.3-2, ## for color palettes plot3D, version 1.1.1, ## for 3D plot vsn, version 3.48.1, ## for hexbin in QC plot gplots, version 3.0.1, ## for basic plot functions igraph, version 1.2.2, ## for network related functions plotrix, version 3.704, ## for draw.ellipse biomaRt, version 2.36.1, ## for gene id conversion openxlsx, version 4.1.0, ## for output into excel files impute, version 4.1-1, ## for expression data imputation msigdbr, version 6.2.1, ## for MsigDB gene sets ComplexHeatmap, version 1.18.1, ## for heatmap umap, version 0.2.0.0, ## for cluster visualization rhdf5, version 2.24.0, ## for read in h5 datasets",
+    "url": "http://localhost:4000/docs/pre_request",
+    "relUrl": "/docs/pre_request"
+  }
+  
+}

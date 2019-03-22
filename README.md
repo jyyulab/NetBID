@@ -24,7 +24,7 @@ or directly install:
 
 install.packages('/research/projects/yu3grp/Network_JY/yu3grp/NetBID2/NetBID2_0.1.0.tar.gz',repos=NULL)
 
-## manual in doc/
+## manual: NetBID2_manual.pdf
 
 ## demo scripts for network generation, in demo_scripts/ directory 
 pipeline_network_demo1.R
