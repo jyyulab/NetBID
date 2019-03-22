@@ -17,7 +17,7 @@ Depends:
     tximport (>= 1.6.0),
     RColorBrewer (>= 1.1-2),
     plot3D (>= 1.1.1),
-    vsn (>= 3.46.0),
+    hexbin (>= 1.27.2),
     igraph (>= 1.1.2),
     plotrix (>= 3.7-3),
     biomaRt (>= 2.34.2),
@@ -30,8 +30,9 @@ Depends:
     reshape (>= 0.8.7),
     arm (>= 1.10-1),
     MCMCglmm (>= 2.26),
-    ConsensusClusterPlus (>= 1.42.0),
-    aricode (>= 0.1.1)
+    ConsensusClusterPlus (>= 1.38.0),
+    aricode (>= 0.1.1),
+    GSVA (>= 1.22.4)
 Imports:
     colorspace,
     rhdf5

@@ -4,12 +4,14 @@
 \alias{find.gsByGene}
 \title{find.gsByGene}
 \usage{
-find.gsByGene(gene = NULL, use_gs = NULL)
+find.gsByGene(gene = NULL, use_gs = NULL, return_type = "name")
 }
 \arguments{
 \item{gene}{character}
 
 \item{use_gs}{a vector of characters}
+
+\item{return_type}{character, all, length, name}
 }
 \description{
 find.gsByGene

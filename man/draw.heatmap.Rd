@@ -8,11 +8,9 @@ draw.heatmap(mat = NULL, use_genes = rownames(mat),
   use_gene_label = use_genes, use_samples = colnames(mat),
   use_sample_label = use_samples, phenotype_info = NULL,
   use_phe = NULL, main = "", scale = "none", pdf_file = NULL,
-  cluster_rows = TRUE, cluster_columns = TRUE,
-  clustering_distance_rows = "pearson",
-  clustering_distance_columns = "pearson", row_names_gp = gpar(fontsize
-  = 12), column_names_gp = gpar(fontsize = 12), show_row_names = TRUE,
-  show_column_names = TRUE, ...)
+  cluster_rows = TRUE, cluster_columns = TRUE, show_row_names = TRUE,
+  show_column_names = TRUE, clustering_distance_rows = "pearson",
+  clustering_distance_columns = "pearson", ...)
 }
 \arguments{
 \item{mat}{numeric matrix, each row as one gene or driver, each column as one sample}
@@ -39,11 +37,9 @@ The default is "none".}
 
 \item{cluster_rows, cluster_columns}{parameters used in \code{Heatmap}, please check for details. Default is TRUE.}
 
-\item{clustering_distance_rows, clustering_distance_columns}{parameters used in \code{Heatmap}, please check for details. Default is 'pearson'.}
-
-\item{row_names_gp, column_names_gp}{parameters used in \code{Heatmap}, please check for details. Default is gpar(fontsize = 12).}
-
 \item{show_row_names, show_column_names}{parameters used in \code{Heatmap}, please check for details. Default is TRUE.}
+
+\item{clustering_distance_rows, clustering_distance_columns}{parameters used in \code{Heatmap}, please check for details. Default is 'pearson'.}
 
 \item{..., }{more parameters used in \code{Heatmap}}
 }

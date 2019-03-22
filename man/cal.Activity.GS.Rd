@@ -5,7 +5,8 @@
 \title{Calculate activity value for gene sets.}
 \usage{
 cal.Activity.GS(use_gs2gene = all_gs2gene[c("H", "CP:BIOCARTA",
-  "CP:REACTOME", "CP:KEGG")], cal_mat = NULL, es.method = "mean")
+  "CP:REACTOME", "CP:KEGG")], cal_mat = NULL, es.method = "mean",
+  std = TRUE)
 }
 \arguments{
 \item{use_gs2gene}{a list for geneset to genes, the name for the list is the gene set name and the content in each list is the vector for genes belong to that gene set.
@@ -14,8 +15,10 @@ Default is all_gs2gene[c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG')] with all_gs
 \item{cal_mat}{numeric matrix,the expression matrix for all genes/transcripts for calculation.}
 
 \item{es.method}{character, strategy to calculate the activity for the driver,
-choose from mean, absmean, maxmean;
+choose from mean, absmean, maxmean, gsva, ssgsea, zscore, plage, the last four options will use \code{gsva} function.
 Default is 'mean'.}
+
+\item{std}{logical, whether to perform std to the original expression matrix. Default is TRUE.}
 }
 \value{
 the activity matrix with each row a gene set and each column a sample (same sample order with cal_mat)

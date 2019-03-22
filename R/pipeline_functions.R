@@ -3,7 +3,6 @@
 #' @importFrom GEOquery getGEO
 #' @importFrom RColorBrewer brewer.pal
 #' @importFrom plot3D scatter3D
-#' @importFrom vsn meanSdPlot
 #' @importFrom plotrix draw.ellipse
 #' @importFrom impute impute.knn
 #' @importFrom umap umap
@@ -14,6 +13,8 @@
 #' @importFrom reshape melt
 #' @importFrom graphics plot
 #' @importFrom aricode clustComp
+#' @importFrom GSVA gsva
+#' @importFrom hexbin hexbin
 
 ##   ‘MCMCglmm’ ‘arm’ ‘reshape’
 ############################# NetBID2 Functions
@@ -24,12 +25,11 @@ library(GEOquery) ## for samples from GEO
 library(limma) ## for data normalization for micro-array
 library(DESeq2) ## for data normalization for RNASeq
 library(tximport) ## for data import from Salmon/sailfish/kallisto/rsem/stringtie output
-library(arrayQualityMetrics) ## for QC
 
 library(RColorBrewer) ## for color scale
 library(colorspace) ## for color scale
 library(plot3D) ## for 3D plot
-library(vsn) ## for QC plot, require hexbin
+library(hexbin) ## for QC plot, require hexbin
 #library(gplots) ## for some plot like venn
 library(igraph) ## for network related functions
 library(plotrix) ## for draw.ellipse
@@ -42,6 +42,7 @@ library(msigdbr) ## for msigDB gene sets
 library(ComplexHeatmap) ## for complex heatmap
 library(umap) ## for umap visualization
 library(rhdf5) ## for read in MICA results
+library(GSVA)
 #source('pipeline_functions_bid.R')
 
 ####
@@ -92,15 +93,17 @@ db.preload <- function(use_level='transcript',use_spe='human',update = FALSE,
   message(sprintf('Will use directory %s as the db.dir',db.dir))
   use_spe <- toupper(use_spe)
   output.db.dir <- sprintf('%s/%s',db.dir,use_spe)
-  if(!file.exists(output.db.dir)){
-    dir.create(output.db.dir)
-  }
   RData.file <- sprintf('%s/%s_%s.RData', output.db.dir,use_spe,use_level)
-  if (update == TRUE | !file.exists(RData.file)) {
+  if (!file.exists(RData.file)) {
     ## get info from use_spe
     ensembl <- useMart("ensembl")
     all_ds  <- listDatasets(ensembl)
     w1 <- grep(sprintf("^%s GENES",use_spe),toupper(all_ds$description))
+    if(length(w1)==0){
+      tmp_use_spe <- unlist(strsplit(use_spe,' ')); tmp_use_spe <- tmp_use_spe[length(tmp_use_spe)]
+      w1 <- grep(sprintf(".*%s_GENE_ENSEMBL",toupper(tmp_use_spe)),toupper(all_ds$dataset))
+      if(length(w1)==1){use_spe <- toupper(strsplit(all_ds[w1,2],' ')[[1]][1]); output.db.dir <- sprintf('%s/%s',db.dir,use_spe)}
+    }
     if(length(w1)==1){
       w2 <- all_ds[w1,1]
       mart <- useMart(biomart="ensembl", dataset=w2) ## get id for input spe
@@ -116,6 +119,12 @@ db.preload <- function(use_level='transcript',use_spe='human',update = FALSE,
                       please check and re-try',use_spe,w2))
       return(FALSE)
     }
+  }
+  RData.file <- sprintf('%s/%s_%s.RData', output.db.dir,use_spe,use_level)
+  if (update == TRUE | !file.exists(RData.file)) {
+     if(!file.exists(output.db.dir)){
+       dir.create(output.db.dir)
+     }
     ## get attributes for mart
     filters <- listFilters(mart)
     attributes <- listAttributes(mart)
@@ -330,14 +339,14 @@ get_IDtransfer <- function(from_type=NULL,to_type=NULL,add_type=NULL,use_genes=N
     message(sprintf('%s not in the attributes for %s, please check and re-try !',to_type,dataset));return(FALSE)
   }
   if(is.null(use_genes)==TRUE | length(use_genes)>100){
-    tmp1 <- getBM(attributes=c(from_type,to_type,add_type),values=1,mart=mart,filters='strand')
-    tmp2 <- getBM(attributes=c(from_type,to_type,add_type),values=-1,mart=mart,filters='strand')
-    tmp1 <- rbind(tmp1,tmp2)
+      tmp1 <- getBM(attributes=c(from_type,to_type,add_type),values=1,mart=mart,filters='strand')
+      tmp2 <- getBM(attributes=c(from_type,to_type,add_type),values=-1,mart=mart,filters='strand')
+      tmp1 <- rbind(tmp1,tmp2)
     if(is.null(use_genes)==FALSE){
       tmp1 <- tmp1[which(tmp1[,1] %in% use_genes),]
     }
   }else{
-    tmp1 <- getBM(attributes=c(from_type,to_type,add_type),values=use_genes,mart=mart,filters=from_type)
+      tmp1 <- getBM(attributes=c(from_type,to_type,add_type),values=use_genes,mart=mart,filters=from_type)
   }
   w1 <- apply(tmp1,1,function(x)length(which(is.na(x)==TRUE | x=="")))
   transfer_tab <- tmp1[which(w1==0),]
@@ -686,27 +695,25 @@ NetBID.analysis.dir.create <- function(project_main_dir=NULL,prject_name=NULL,
   if (!dir.exists(analysis.par$out.dir.PLOT)) {
     dir.create(analysis.par$out.dir.PLOT, recursive = TRUE) ## directory for Result Plots
   }
-  analysis.par$tf.network.file <- NULL
-  analysis.par$sig.network.file <- NULL
+  analysis.par$tf.network.file <- ''
+  analysis.par$sig.network.file <- ''
   if(is.null(tf.network.file)==FALSE){
     analysis.par$tf.network.file  <- tf.network.file
   }else{
     tf_net1 <- sprintf('%s/SJAR/%s/output_tf_sjaracne_%s_out_.final/consensus_network_ncol_.txt',
                       network_dir,network_project_name,network_project_name) ## old version of sjaracne
-    if(file.exists(tf_net1)) analysis.par$tf.network.file <- tf_net1
     tf_net2 <- sprintf('%s/SJAR/SJARACNE_%s_TF/SJARACNE_out.final/consensus_network_ncol_.txt',
                       network_dir,network_project_name) ## new version of sjaracne
-    if(file.exists(tf_net2)) analysis.par$tf.network.file <- tf_net2
+    if(file.exists(tf_net2)) analysis.par$tf.network.file <- tf_net2 else analysis.par$tf.network.file <- tf_net1
   }
   if(is.null(tf.network.file)==FALSE){
     analysis.par$sig.network.file <- sig.network.file
   }else{
     sig_net1 <- sprintf('%s/SJAR/%s/output_sig_sjaracne_%s_out_.final/consensus_network_ncol_.txt',
                        network_dir,network_project_name,network_project_name) ## old version of sjaracne
-    if(file.exists(sig_net1)) analysis.par$sig.network.file <- sig_net1
     sig_net2 <- sprintf('%s/SJAR/SJARACNE_%s_SIG/SJARACNE_out.final/consensus_network_ncol_.txt',
                        network_dir,network_project_name) ## new version of sjaracne
-    if(file.exists(sig_net2)) analysis.par$sig.network.file <- sig_net2
+    if(file.exists(sig_net2)) analysis.par$sig.network.file <- sig_net2  else analysis.par$sig.network.file <- sig_net1
   }
   if(file.exists(analysis.par$tf.network.file)){
     message(sprintf('TF network file found in %s',analysis.par$tf.network.file))
@@ -960,8 +967,8 @@ load.exp.RNASeq.demoSalmon <- function(salmon_dir = "",tx2gene=NULL,
 #' @param use_phenotype_info data.frame, phenotype information dataframe, must contain the columns \code{use_sample_col} and \code{use_design_col}.
 #' @param use_sample_col character, the column name to indicate which column in \code{use_phenotype_info} should be used as the sample name.
 #' @param use_design_col character, the column name to indicate which column in \code{use_phenotype_info} should be used as the design feature of the samples.
-#' @param return_type character, the class of the return object, choose from 'eset','dds'. 'eset' is the ExpressionSet class object,
-#' 'dds' is the DESeqDataSet class object.
+#' @param return_type character, the class of the return object, choose from 'eset','dds','tpm-dds'. 'eset' is the ExpressionSet class object,
+#' 'dds' is the DESeqDataSet class object.'tpm-dds' is the original tpm without DESeq2.
 #' Default is 'eset'
 #' @param merge_level character, choose from 'gene' and 'transcript',
 #' if choose 'gene' and original salmon results is mapped to the transcriptome,
@@ -999,6 +1006,9 @@ load.exp.RNASeq.demo <- function(files,type='salmon',
   tmp_phe <- cbind(group=use_phenotype_info[,use_design_col],use_phenotype_info,stringsAsFactors=FALSE)
   # import into deseq2
   dds <- DESeqDataSetFromTximport(txi, colData = tmp_phe, design =  ~ group) ## key step two, DESeqDataSetFromTximport
+  if(return_type=='tpm-dds'){
+    return(dds)
+  }
   dds <- DESeq(dds)
   if(return_type=='dds'){
     return(dds)
@@ -1481,7 +1491,7 @@ std <- function(x) {
 #' choose from mean, weighted mean, maxmean, absmean;
 #' in which the weighted in the weighted mean is the MI (mutual information) value * sign of correlation (use the spearman correlation sign).
 #' Default is 'mean'.
-#'
+#' @param std logical, whether to perform std to the original expression matrix. Default is TRUE.
 #' @return the activity matrix with each row a driver and each column a sample (same sample order with cal_mat)
 #' @examples
 #' analysis.par <- list()
@@ -1491,7 +1501,7 @@ std <- function(x) {
 #'                        cal_mat=exprs(analysis.par$cal.eset),
 #'                        es.method='weightedmean')
 #' @export
-cal.Activity <- function(target_list=NULL, cal_mat=NULL, es.method = 'mean') {
+cal.Activity <- function(target_list=NULL, cal_mat=NULL, es.method = 'mean',std=TRUE) {
   ## mean, absmean, maxmean, weightedmean
   use_genes <- row.names(cal_mat)
   all_target <- target_list
@@ -1499,7 +1509,7 @@ cal.Activity <- function(target_list=NULL, cal_mat=NULL, es.method = 'mean') {
   ac.mat <-
     matrix(NA, ncol = ncol(cal_mat), nrow = length(all_target)) ## generate activity matrix, each col for sample, each row for source target
   #z-normalize each sample
-  cal_mat <- apply(cal_mat, 2, std)
+  if(std==TRUE) cal_mat <- apply(cal_mat, 2, std)
   for (i in 1:length(all_target)) {
     x <- names(all_target)[i]
     x1 <- all_target[[x]]
@@ -1522,6 +1532,8 @@ cal.Activity <- function(target_list=NULL, cal_mat=NULL, es.method = 'mean') {
   }
   rownames(ac.mat) <- names(all_target)
   colnames(ac.mat) <- colnames(cal_mat)
+  w1 <- which(is.na(ac.mat[,1])==FALSE)
+  ac.mat <- ac.mat[w1,]
   return(ac.mat)
 }
 
@@ -1532,8 +1544,9 @@ cal.Activity <- function(target_list=NULL, cal_mat=NULL, es.method = 'mean') {
 #' Default is all_gs2gene[c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG')] with all_gs2gene loaded by using \code{gs.preload}.
 #' @param cal_mat numeric matrix,the expression matrix for all genes/transcripts for calculation.
 #' @param es.method character, strategy to calculate the activity for the driver,
-#' choose from mean, absmean, maxmean;
+#' choose from mean, absmean, maxmean, gsva, ssgsea, zscore, plage, the last four options will use \code{gsva} function.
 #' Default is 'mean'.
+#' @param std logical, whether to perform std to the original expression matrix. Default is TRUE.
 #' @return the activity matrix with each row a gene set and each column a sample (same sample order with cal_mat)
 #' @examples
 #' analysis.par <- list()
@@ -1547,17 +1560,22 @@ cal.Activity <- function(target_list=NULL, cal_mat=NULL, es.method = 'mean') {
 #' ac_gs <- cal.Activity.GS(use_gs2gene = use_gs2gene,
 #'                         cal_mat = exp_mat_gene)
 #' @export
-cal.Activity.GS <- function(use_gs2gene=all_gs2gene[c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG')], cal_mat=NULL, es.method = 'mean') {
+cal.Activity.GS <- function(use_gs2gene=all_gs2gene[c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG')], cal_mat=NULL, es.method = 'mean',std=TRUE) {
   while(class(use_gs2gene[[1]])=='list'){
     nn <- unlist(lapply(use_gs2gene,names))
     use_gs2gene <- unlist(use_gs2gene,recursive = FALSE)
     names(use_gs2gene)<-nn
   }
   use_genes <- row.names(cal_mat)
+  if(es.method %in% c('gsva','ssgsea','zscore','plage')){
+    ac.mat <- gsva(generate.eset(cal_mat),use_gs2gene,method=es.method)
+    ac.mat <- exprs(ac.mat)
+    return(ac.mat)
+  }
   ac.mat <-
     matrix(NA, ncol = ncol(cal_mat), nrow = length(use_gs2gene)) ## generate activity matrix, each col for sample, each row for source target
   #z-normalize each sample
-  cal_mat <- apply(cal_mat, 2, std)
+  if(std==TRUE) cal_mat <- apply(cal_mat, 2, std)
   for (i in 1:length(use_gs2gene)) {
     x <- names(use_gs2gene)[i]
     x1 <- use_gs2gene[[x]]
@@ -1714,7 +1732,8 @@ getDE.limma.2G <- function(eset=NULL, G1=NULL, G0=NULL,G1_name=NULL,G0_name=NULL
   if(is.null(random_effect)==TRUE){
     fit <- lmFit(new_mat,design)
   }else{
-    corfit <- duplicateCorrelation(eset,design,block=random_effect)
+    random_effect <- random_effect[colnames(exprs(new_eset))]
+    corfit <- duplicateCorrelation(new_eset,design,block=random_effect)
     fit <- lmFit(new_mat,design,block=random_effect,correlation=corfit$consensus)
   }
   contrasts <- makeContrasts(G1-G0,levels=design)
@@ -1723,7 +1742,6 @@ getDE.limma.2G <- function(eset=NULL, G1=NULL, G0=NULL,G1_name=NULL,G0_name=NULL
   #summary(decideTests(fit2, method="global"))
   ##
   tT <- topTable(fit2, adjust.method = "fdr", number = Inf,coef=1)
-  tT <- tT[order(tT$P.Value, decreasing = FALSE), ]
   tT <- cbind(ID=rownames(tT),tT,stringsAsFactors=FALSE)
   tT <- tT[rownames(new_mat),]
   exp_G1 <- rowMeans(new_mat[,G1])
@@ -1740,6 +1758,7 @@ getDE.limma.2G <- function(eset=NULL, G1=NULL, G0=NULL,G1_name=NULL,G0_name=NULL
   }
   if(is.null(G0_name)==FALSE) colnames(tT) <- gsub('Ave.G0',paste0('Ave.',G0_name),colnames(tT))
   if(is.null(G1_name)==FALSE) colnames(tT) <- gsub('Ave.G1',paste0('Ave.',G1_name),colnames(tT))
+  tT <- tT[order(tT$P.Value, decreasing = FALSE), ]
   return(tT)
 }
 
@@ -2153,6 +2172,7 @@ generate.masterTable <- function(use_comp=NULL,DE=NULL,DA=NULL,
     use_info <- use_info[which(use_info[,main_id_type] %in% rn),]
   }
   use_info <- unique(use_info)
+  if(nrow(use_info)==0){message('ID issue error, please check main_id_type setting!');return(FALSE);}
   # merge info
   tmp1 <- aggregate(use_info,list(use_info[,main_id_type]),function(x){
     x1 <- x[which(x!="")]
@@ -2292,7 +2312,7 @@ out2excel <- function(all_ms_tab,out.xlsx,
   for(sheetname in names(all_ms_tab)){ ## list, each item create one sheet
     i <- i +1
     d <- as.data.frame(all_ms_tab[[sheetname]])
-    if(z_column_index=='auto') use_z_column <- colnames(d)[grep('Z\\.',colnames(d),ignore.case = TRUE)] else use_z_column <- z_column
+    if(z_column_index=='auto') use_z_column <- colnames(d)[grep('^Z\\.',colnames(d),ignore.case = TRUE)] else use_z_column <- z_column
     addWorksheet(wb,sheetName=sheetname)
     writeData(wb,sheet = i,d)
     addStyle(wb, sheet = i, headerStyle, rows = 1, cols = 1:ncol(d), gridExpand = TRUE) ## add header style
@@ -3056,31 +3076,6 @@ draw.2D.ellipse <- function(X,Y,class_label,xlab='PC1',ylab='PC2',legend_cex=0.8
   return(TRUE)
 }
 
-###
-prepdata <- function (expressionset, intgroup, do.logtransform)
-{
-  conversions = c(RGList = "NChannelSet")
-  for (i in seq_along(conversions)) {
-    if (is(expressionset, names(conversions)[i])) {
-      expressionset = try(as(expressionset, conversions[i]))
-      if (is(expressionset, "try-error")) {
-        stop(sprintf("The argument 'expressionset' is of class '%s', and its automatic conversion into '%s' failed. Please try to convert it manually, or contact the creator of that object.\n",
-                     names(conversions)[i], conversions[i]))
-      }
-      else {
-        break
-      }
-    }
-  }
-  x = platformspecific(expressionset, intgroup, do.logtransform)
-  if (!all(intgroup %in% colnames(x$pData)))
-    stop("all elements of 'intgroup' should match column names of 'pData(expressionset)'.")
-  x = append(x, list(numArrays = ncol(x$M), intgroup = intgroup,
-                     do.logtransform = do.logtransform))
-  x = append(x, intgroupColors(x))
-  return(x)
-}
-
 #' QC plot for ExpressionSet class object.
 #'
 #' \code{draw.eset.QC} is a function to draw the basic QC plots for an ExpressionSet class object.
@@ -3121,20 +3116,29 @@ draw.eset.QC <- function(eset,outdir = '.',do.logtransform = FALSE,intgroup=NULL
     message('No intgroup, please check and re-try!');return(FALSE)
   }
   message('Preparing the data...')
-  x  <- prepdata(eset, do.logtransform = do.logtransform, intgroup = intgroup)
-
+  #x  <- prepdata(eset, do.logtransform = do.logtransform, intgroup = intgroup)
+  use_mat  <- exprs(eset)
+  if(do.logtransform==TRUE){
+    if(min(as.numeric(use_mat))<=0){
+      message('Warning, the original expression matrix has values not larger than 0, the log-transformation may introduce NA, please manually modifiy and re-try !')
+    }
+    use_mat <- log2(use_mat)
+  }
   ## pca
   if('pca' %in% choose_plot){
-    pca <- prcomp(t(na.omit(x$M)))
-    x$key$rect$col <- get.class.color(x$key$text[[1]])
+    pca <- prcomp(t(na.omit(use_mat)))
     fp <- file.path(outdir, sprintf("%s%s.pdf", prefix, 'pca'))
     pdf(fp, width = 14, height = 9)
     for (i in 1:length(intgroup)) {
-      class_label <- x$pData[[x$intgroup[i]]]
+      class_label <- pData(eset)[,intgroup[i]]
       class_label[which(is.na(class_label)==TRUE)] <- 'NA'
-      draw.2D(as.data.frame(pca$x)$PC1,as.data.frame(pca$x)$PC2,class_label=class_label,xlab='PC1',ylab='PC2',
+      draw.2D(as.data.frame(pca$x)$PC1,as.data.frame(pca$x)$PC2,class_label=class_label,
+              xlab=sprintf('PC1(%s%s variance)',format(summary(pca)$importance[2,'PC1']*100,digits=3),'%'),
+              ylab=sprintf('PC2(%s%s variance)',format(summary(pca)$importance[2,'PC2']*100,digits=3),'%'),
               legend_cex=0.8,main=sprintf('PCA/Kmeans plot for %s',intgroup[i]))
-      draw.2D.ellipse(as.data.frame(pca$x)$PC1,as.data.frame(pca$x)$PC2,class_label=class_label,xlab='PC1',ylab='PC2',
+      draw.2D.ellipse(as.data.frame(pca$x)$PC1,as.data.frame(pca$x)$PC2,class_label=class_label,
+                      xlab=sprintf('PC1(%s%s variance)',format(summary(pca)$importance[2,'PC1']*100,digits=3),'%'),
+                      ylab=sprintf('PC2(%s%s variance)',format(summary(pca)$importance[2,'PC2']*100,digits=3),'%'),
                       legend_cex=0.8,main=sprintf('PCA/Kmeans plot for %s',intgroup[i]))
     }
     dev.off()
@@ -3146,12 +3150,12 @@ draw.eset.QC <- function(eset,outdir = '.',do.logtransform = FALSE,intgroup=NULL
     fp <- file.path(outdir, sprintf("%s%s.pdf", prefix, 'heatmap'))
     pdf(fp, width = 12, height = 9)
     par(mar = c(6, 6, 6, 6))
-    m <- dist2(x$M)
+    m <- dist2(use_mat)
     dend <- as.dendrogram(hclust(as.dist(m), method = "single"))
     ord <- order.dendrogram(dend)
     m <- m[ord, ord]
     for(i in 1:length(intgroup)){
-      class_label <- x$pData[rownames(m),x$intgroup[i]]
+      class_label <- pData(eset)[,intgroup[i]]
       class_label[which(is.na(class_label)==TRUE)] <- 'NA'
       cls_cc <- get.class.color(class_label)
       heatmap(
@@ -3184,15 +3188,15 @@ draw.eset.QC <- function(eset,outdir = '.',do.logtransform = FALSE,intgroup=NULL
     pdf(fp, width = 12, height = 9)
     for(i in 1:length(intgroup)){
       all_dens <- list()
-      for (j in 1:ncol(x$M)) {
-        all_dens[[j]] <- density(x$M[,j],na.rm=TRUE)
+      for (j in 1:ncol(use_mat)) {
+        all_dens[[j]] <- density(use_mat[,j],na.rm=TRUE)
       }
       plot(1,col = 'white',xlim=c(min(unlist(lapply(all_dens,function(x)min(x$x)))),max(unlist(lapply(all_dens,function(x)max(x$x))))),
            type = 'l',xlab = "",ylab='Density',main = sprintf('Density plot for %s',intgroup[i]),
            ylim=c(min(unlist(lapply(all_dens,function(x)min(x$y)))),max(unlist(lapply(all_dens,function(x)max(x$y))))))
-      class_label <- x$pData[,x$intgroup[i]]
+      class_label <- pData(eset)[,intgroup[i]]
       cls_cc <- get.class.color(class_label)
-      for (j in 1:ncol(x$M)) {
+      for (j in 1:ncol(use_mat)) {
         lines(all_dens[[j]], col = cls_cc[j])
       }
       legend('topright',legend=unique(class_label),
@@ -3264,7 +3268,8 @@ draw.pca.kmeans <- function(mat=NULL,all_k=NULL,obs_label=NULL,legend_pos = 'top
   if(length(setdiff(all_k,2:length(obs_label)))>0){
     message('some value in all_k exceed the maximum sample size, check and re-try !');return(FALSE);
   }
-  cluster_mat <- prcomp(t(mat))$x
+  pca <- prcomp(t(mat))
+  cluster_mat <- pca$x
   all_jac <- list()
   all_k_res <- list()
   if(kmeans_strategy=='basic'){
@@ -3295,18 +3300,38 @@ draw.pca.kmeans <- function(mat=NULL,all_k=NULL,obs_label=NULL,legend_pos = 'top
   d1 <- data.frame(id=colnames(mat),X=cluster_mat[,1],Y=cluster_mat[,2],Z=cluster_mat[,3],label=pred_label,stringsAsFactors=FALSE)
   layout(t(matrix(1:2)))
   if(plot_type=='2D.ellipse'){
-    draw.2D.ellipse(d1$X,d1$Y,class_label=obs_label[d1$id],xlab='PC1',ylab='PC2',legend_cex=legend_cex,point_cex=point_cex)
-    draw.2D.ellipse(d1$X,d1$Y,class_label=d1$label,xlab='PC1',ylab='PC2',legend_cex=legend_cex,point_cex=point_cex,
+    draw.2D.ellipse(d1$X,d1$Y,class_label=obs_label[d1$id],
+                    xlab=sprintf('PC1(%s%s variance)',format(summary(pca)$importance[2,'PC1']*100,digits=3),'%'),
+                    ylab=sprintf('PC2(%s%s variance)',format(summary(pca)$importance[2,'PC2']*100,digits=3),'%'),
+                    legend_cex=legend_cex,point_cex=point_cex)
+    draw.2D.ellipse(d1$X,d1$Y,class_label=d1$label,
+                    xlab=sprintf('PC1(%s%s variance)',format(summary(pca)$importance[2,'PC1']*100,digits=3),'%'),
+                    ylab=sprintf('PC2(%s%s variance)',format(summary(pca)$importance[2,'PC2']*100,digits=3),'%'),
+                    legend_cex=legend_cex,point_cex=point_cex,
                     main=sprintf('%s:%s',choose_k_strategy,format(all_jac[as.character(use_k)],digits=4)))
   }
   if(plot_type=='2D'){
-    draw.2D(d1$X,d1$Y,class_label=obs_label[d1$id],xlab='PC1',ylab='PC2',legend_cex=legend_cex,point_cex=point_cex)
-    draw.2D(d1$X,d1$Y,class_label=d1$label,xlab='PC1',ylab='PC2',legend_cex=legend_cex,point_cex=point_cex,
+    draw.2D(d1$X,d1$Y,class_label=obs_label[d1$id],
+            xlab=sprintf('PC1(%s%s variance)',format(summary(pca)$importance[2,'PC1']*100,digits=3),'%'),
+            ylab=sprintf('PC2(%s%s variance)',format(summary(pca)$importance[2,'PC2']*100,digits=3),'%'),
+            legend_cex=legend_cex,point_cex=point_cex)
+    draw.2D(d1$X,d1$Y,class_label=d1$label,
+            xlab=sprintf('PC1(%s%s variance)',format(summary(pca)$importance[2,'PC1']*100,digits=3),'%'),
+            ylab=sprintf('PC2(%s%s variance)',format(summary(pca)$importance[2,'PC2']*100,digits=3),'%'),
+            legend_cex=legend_cex,point_cex=point_cex,
             main=sprintf('%s:%s',choose_k_strategy,format(all_jac[as.character(use_k)],digits=4)))
   }
   if(plot_type=='3D'){
-    draw.3D(d1$X,d1$Y,d1$Z,class_label=obs_label[d1$id],xlab='PC1',ylab='PC2',zlab='PC3',legend_cex=legend_cex,point_cex=point_cex,legend_pos=legend_pos)
-    draw.3D(d1$X,d1$Y,d1$Z,class_label=d1$label,xlab='PC1',ylab='PC2',zlab='PC3',legend_cex=legend_cex,point_cex=point_cex,legend_pos=legend_pos,
+    draw.3D(d1$X,d1$Y,d1$Z,class_label=obs_label[d1$id],
+            xlab=sprintf('PC1(%s%s variance)',format(summary(pca)$importance[2,'PC1']*100,digits=3),'%'),
+            ylab=sprintf('PC2(%s%s variance)',format(summary(pca)$importance[2,'PC2']*100,digits=3),'%'),
+            zlab=sprintf('PC3(%s%s variance)',format(summary(pca)$importance[2,'PC3']*100,digits=3),'%'),
+            legend_cex=legend_cex,point_cex=point_cex,legend_pos=legend_pos)
+    draw.3D(d1$X,d1$Y,d1$Z,class_label=d1$label,
+            xlab=sprintf('PC1(%s%s variance)',format(summary(pca)$importance[2,'PC1']*100,digits=3),'%'),
+            ylab=sprintf('PC2(%s%s variance)',format(summary(pca)$importance[2,'PC2']*100,digits=3),'%'),
+            zlab=sprintf('PC3(%s%s variance)',format(summary(pca)$importance[2,'PC3']*100,digits=3),'%'),
+            legend_cex=legend_cex,point_cex=point_cex,legend_pos=legend_pos,
             main=sprintf('%s:%s',choose_k_strategy,format(all_jac[as.character(use_k)],digits=4)))
   }
   layout(1);
@@ -3589,6 +3614,7 @@ get_clustComp_MICA <- function(outdir, all_k, obs_label, prjname = NULL,strategy
 #' @param Pv_col character, the name of the column in \code{dat}, which contains the P-value
 #' @param logFC_thre numeric, cutoff value for the logFC. Genes or drivers with absolute logFC value higher than the cutoff are remained.Default is 1.5.
 #' @param Pv_thre numeric, cutoff value for the p-values. Genes or drivers with lower p-values are remained.Default is 0.01.
+#' @param show_plot logical, whether or not to draw the figure. Default is TRUE.
 #' @param xlab character, title for the X axis
 #' @param ylab character, title for the Y axis
 #' @param show_label logical, whether or not to display the genes or drivers passed the cutoff on the plot. Default is FALSE
@@ -3645,15 +3671,20 @@ get_clustComp_MICA <- function(outdir, all_k, obs_label, prjname = NULL,strategy
 #'}
 #' @export
 draw.volcanoPlot <- function(dat=NULL,label_col=NULL,logFC_col=NULL,Pv_col=NULL,logFC_thre=1.5, Pv_thre=0.01,
+                             show_plot=TRUE,
                              xlab='log2 Fold Change',ylab='P-value',show_label=FALSE,label_cex=0.5,legend_cex=0.7,
                              label_type='distribute',main="",pdf_file=NULL){
   dat <- unique(dat[,c(label_col,logFC_col,Pv_col)])
-  dat <- dat[order(dat[,3],decreasing=TRUE),]
+  dat <- dat[order(dat[,3],decreasing=FALSE),]
   dat <- dat[which(is.na(dat[,2])==FALSE),]
   x <- as.numeric(dat[,logFC_col])
   y <- as.numeric(dat[,Pv_col]);
   y <- -log10(y)
   s1 <- which(abs(x)>=logFC_thre & y>= -log10(Pv_thre))
+  if(show_plot==FALSE){
+    sig_info <- dat[s1,]
+    return(sig_info)
+  }
   geneWidth <- 0
   geneHeight <- 0
   if(length(s1)>0){
@@ -3678,7 +3709,8 @@ draw.volcanoPlot <- function(dat=NULL,label_col=NULL,logFC_col=NULL,Pv_col=NULL,
     plot(y~x,pch=16,col=get_transparent('grey',0.7),xlab=xlab,ylab="",
          xlim=c(-mm*1.5,mm*1.5),ylim=c(0,max(y)*1.5),yaxt='n',main=main,cex.lab=1.2,cex.main=1.6)
   }
-  axis(side=2,at=seq(0,round(max(y)*1.5)),labels=c(1,format(10^-seq(1,round(max(y)*1.5)),scientific = TRUE)),las=2)
+  yyy <- c(1,round(seq(1,max(y)*1.5,length.out=min(length(y),5)))) ## max:5
+  axis(side=2,at=c(0,yyy),labels=c(1,format(10^-yyy,scientific = TRUE)),las=2)
   mtext(side=2,line = 4,ylab,cex=1.2)
   z_val <- sapply(dat[,Pv_col]*sign(x),combinePvalVector)[1,]
   if(logFC_thre>0){abline(v=logFC_thre,lty=2,lwd=0.5);abline(v=-logFC_thre,lty=2,lwd=0.5)}
@@ -3741,7 +3773,6 @@ draw.volcanoPlot <- function(dat=NULL,label_col=NULL,logFC_col=NULL,Pv_col=NULL,
 #' @param cluster_rows,cluster_columns parameters used in \code{Heatmap}, please check for details. Default is TRUE.
 #' @param clustering_distance_rows,clustering_distance_columns parameters used in \code{Heatmap}, please check for details. Default is 'pearson'.
 #' @param show_row_names,show_column_names parameters used in \code{Heatmap}, please check for details. Default is TRUE.
-#' @param row_names_gp,column_names_gp parameters used in \code{Heatmap}, please check for details. Default is gpar(fontsize = 12).
 #' @param ..., more parameters used in \code{Heatmap}
 #'
 #' @return logical value indicating whether the plot has been successfully generated
@@ -3834,14 +3865,16 @@ draw.volcanoPlot <- function(dat=NULL,label_col=NULL,logFC_col=NULL,Pv_col=NULL,
 draw.heatmap <- function(mat=NULL,use_genes=rownames(mat),use_gene_label=use_genes,use_samples=colnames(mat),use_sample_label=use_samples,
                          phenotype_info=NULL,use_phe=NULL,main="",scale='none',pdf_file=NULL,
                          cluster_rows=TRUE,cluster_columns=TRUE,
+                         show_row_names=TRUE,show_column_names=TRUE,
                          clustering_distance_rows='pearson',clustering_distance_columns='pearson',
-                         row_names_gp = gpar(fontsize = 12),column_names_gp = gpar(fontsize = 12),
-                         show_row_names=TRUE,show_column_names=TRUE,...){
+                         ...){
   names(use_gene_label) <- use_genes
   names(use_sample_label) <- use_samples
   if(is.null(rownames(phenotype_info))==FALSE){
     phenotype_info <- phenotype_info[colnames(mat),]
   }
+  if(exists('row_names_gp')==FALSE) row_names_gp <- gpar(fontsize = 12)
+  if(exists('column_names_gp')==FALSE) column_names_gp <- gpar(fontsize = 12)
   use_genes <- intersect(use_genes,rownames(mat))
   use_samples <- intersect(use_samples,colnames(mat))
   use_mat <- mat[use_genes,use_samples]
@@ -3858,7 +3891,6 @@ draw.heatmap <- function(mat=NULL,use_genes=rownames(mat),use_gene_label=use_gen
       ht1 <- Heatmap(use_mat, column_title = main,name='Raw value',
                      cluster_rows=cluster_rows,cluster_columns=cluster_columns,
                      clustering_distance_rows=clustering_distance_rows,clustering_distance_columns=clustering_distance_columns,
-                     row_names_gp=row_names_gp,column_names_gp=column_names_gp,
                      show_row_names=show_row_names,show_column_names=show_column_names,
                      row_names_max_width=row_names_max_width,column_names_max_height=column_names_max_height,...)
     }
@@ -3866,7 +3898,6 @@ draw.heatmap <- function(mat=NULL,use_genes=rownames(mat),use_gene_label=use_gen
       ht1 <- Heatmap(use_mat, column_title = main, name='Z value',
                      cluster_rows=cluster_rows,cluster_columns=cluster_columns,
                      clustering_distance_rows=clustering_distance_rows,clustering_distance_columns=clustering_distance_columns,
-                     row_names_gp=row_names_gp,column_names_gp=column_names_gp,
                      show_row_names=show_row_names,show_column_names=show_column_names,
                      row_names_max_width=row_names_max_width,column_names_max_height=column_names_max_height,...)
     }
@@ -3889,14 +3920,12 @@ draw.heatmap <- function(mat=NULL,use_genes=rownames(mat),use_gene_label=use_gen
                      cluster_rows=cluster_rows,cluster_columns=cluster_columns,
                      show_row_names=show_row_names,show_column_names=show_column_names,
                      clustering_distance_rows=clustering_distance_rows,clustering_distance_columns=clustering_distance_columns,
-                     row_names_gp=row_names_gp,column_names_gp=column_names_gp,
                      row_names_max_width=row_names_max_width,column_names_max_height=column_names_max_height,...)
     }
     if(scale!='none'){
       ht1 <- Heatmap(use_mat, column_title = main, top_annotation = ha_column,name='Z value',
                      cluster_rows=cluster_rows,cluster_columns=cluster_columns,
                      clustering_distance_rows=clustering_distance_rows,clustering_distance_columns=clustering_distance_columns,
-                     row_names_gp=row_names_gp,column_names_gp=column_names_gp,
                      show_row_names=show_row_names,show_column_names=show_column_names,
                      row_names_max_width=row_names_max_width,column_names_max_height=column_names_max_height,...)
     }
@@ -3916,22 +3945,27 @@ draw.heatmap <- function(mat=NULL,use_genes=rownames(mat),use_gene_label=use_gen
 #' find.gsByGene
 #' @param gene character
 #' @param use_gs a vector of characters
+#' @param return_type character, all, length, name
 #' @export
-find.gsByGene <- function(gene=NULL,use_gs=NULL){
+find.gsByGene <- function(gene=NULL,use_gs=NULL,return_type='name'){
   if(is.null(use_gs)==TRUE){
-    all <- unlist(all_gs2gene,recursive = FALSE)
+    all_gg <- unlist(all_gs2gene,recursive = FALSE)
   } else {
     if('all' %in% use_gs){
-      all <- unlist(all_gs2gene,recursive = FALSE)
+      all_gg <- unlist(all_gs2gene,recursive = FALSE)
     }else{
-      all <-  unlist(all_gs2gene[use_gs],recursive = FALSE)
+      all_gg <-  unlist(all_gs2gene[use_gs],recursive = FALSE)
     }
   }
-  x1 <- unlist(lapply(all,function(x){
+  x1 <- unlist(lapply(all_gg,function(x){
     length(intersect(x,gene))
   }))
   x2 <- names(x1[which(x1==length(gene))])
-  return(x2)
+  x3 <- sort(unlist(lapply(all_gg[x2],function(x)length(x))))
+  #print(sort(x3))
+  if(return_type=='name') return(x2)
+  if(return_type=='length') return(x3)
+  if(return_type=='all') return(all_gg[names(x3)])
 }
 ##
 #' Merge GeneSets by choosing several categories.
@@ -3949,14 +3983,22 @@ find.gsByGene <- function(gene=NULL,use_gs=NULL){
 #'
 #' @export
 merge_gs <- function(all_gs2gene=all_gs2gene,use_gs=c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG','C5')){
-  if(is.null(use_gs)==TRUE){
-    nn <- unlist(lapply(all_gs2gene,names))
-    use_gs2gene <- unlist(all_gs2gene,recursive = FALSE)
-    names(use_gs2gene)<-nn
-  }else{
-    nn <- unlist(lapply(all_gs2gene[use_gs],names))
-    use_gs2gene <- unlist(all_gs2gene[use_gs],recursive = FALSE)
-    names(use_gs2gene)<-nn
+  if(is.null(use_gs)==TRUE | 'all' %in% use_gs){
+    use_gs <- unique(all_gs2gene_info$Category)
+  }
+  use_gs <- unique(use_gs)
+  nn <- unlist(lapply(all_gs2gene[use_gs],names))
+  use_gs2gene <- unlist(all_gs2gene[use_gs],recursive = FALSE)
+  names(use_gs2gene)<-nn
+  if(length(unique(nn))<length(nn)){
+    message('duplicate names observed, will merge by name!')
+    nn1 <- unique(nn)
+    mod_use_gs2gene <- list()
+    for(i in nn1){
+      mod_use_gs2gene[[i]] <- unique(unlist(use_gs2gene[which(nn==i)]))
+    }
+    names(mod_use_gs2gene) <- nn1
+    use_gs2gene <- mod_use_gs2gene
   }
   use_gs2gene
 }
@@ -4077,12 +4119,12 @@ funcEnrich.Fisher <- function(input_list=NULL,bg_list=NULL,
       use_gs <- 'all'
     }
     if(length(use_gs)>1){
-        gs2gene <- merge_gs(gs2gene,use_gs = use_gs)
+        if(class(gs2gene[[1]])=='list') gs2gene <- merge_gs(gs2gene,use_gs = use_gs)
     }else{
       if(use_gs == 'all'){
-        gs2gene <- merge_gs(gs2gene,use_gs = NULL)
+        if(class(gs2gene[[1]])=='list') gs2gene <- merge_gs(gs2gene,use_gs = names(gs2gene))
       }else{
-        gs2gene <- gs2gene[[use_gs]]
+        if(class(gs2gene[[1]])=='list') gs2gene <- gs2gene[[use_gs]]
       }
     }
   }
@@ -4406,6 +4448,12 @@ draw.funcEnrich.cluster <- function(funcEnrich_res=NULL,top_number=30,Pv_col='Or
   geneWidth <- round(geneWidth*mr)
   pvWidth <- round(pvWidth*mr)
   gsWidth <- round(gsWidth*mr)
+  if(geneWidth+pvWidth+gsWidth>200){
+    mr <- 180/(geneWidth+pvWidth+gsWidth)
+    geneWidth <- round(geneWidth*mr)
+    pvWidth <- round(pvWidth*mr)
+    gsWidth <- round(gsWidth*mr)
+  }
   layout(t(matrix(c(rep(1,geneWidth),rep(2,pvWidth),rep(3,gsWidth)),byrow=TRUE)))
   #print(t(matrix(c(rep(1,geneWidth),rep(2,pvWidth),rep(3,gsWidth)))))
   image(t(mat1),col=c('white',cc3[1]),xaxt='n',yaxt='n',bty='n')
@@ -4536,7 +4584,7 @@ draw.funcEnrich.cluster <- function(funcEnrich_res=NULL,top_number=30,Pv_col='Or
 #'                driver_type=ms_tab[rownames(sig_driver),'gene_biotype'],
 #'                target_list=analysis.par$merge.network$target_list,
 #'                transfer2symbol2type=transfer_tab,
-#'                bg_list=ms_tab[,'geneSymbol'],min_gs_size=5,
+#'                min_gs_size=5,
 #'                max_gs_size=500,use_gs=c('H'),
 #'                top_geneset_number=5,top_driver_number=5,
 #'                main='Bubbleplot for top driver targets',
@@ -4571,7 +4619,6 @@ draw.funcEnrich.cluster <- function(funcEnrich_res=NULL,top_number=30,Pv_col='Or
 #'                driver_type=ms_tab[rownames(sig_driver),'gene_biotype'],
 #'                target_list=analysis.par$merge.network$target_list,
 #'                transfer2symbol2type=transfer_tab,
-#'                bg_list=ms_tab[,'geneSymbol'],
 #'                min_gs_size=5,max_gs_size=500,
 #'                use_gs=use_gs=c('CP:KEGG','CP:BIOCARTA','H'),
 #'                top_geneset_number=30,top_driver_number=50,
@@ -5010,16 +5057,27 @@ get_ES <- function(rank_profile=NULL,use_genes=NULL,weighted.score.type=1){
   return(list(ES = ES, arg.ES = arg.ES, RES = RES, indicator = tag.indicator))
 }
 ##
-get_z2p <- function(x){
-  if(is.na(x)==TRUE) return('NA')
+get_z2p <- function(x,use_star=FALSE){
+  if(is.na(x[1])==TRUE) return('NA')
   x <- abs(x)
-  if(x<5) return(format(1-pnorm(x),digits=2,scientific = TRUE))
-  low_p <- .Machine$double.xmin
-  low_z <- sapply(10^(-(1:(1+-log10(low_p)))),combinePvalVector)
-  use_p <- low_z[2,which(low_z[1,]>=x)[1]]
-  use_p <- format(use_p, digits=3,scientific = TRUE)
-  if(use_p=='NA') use_p <- '<1e-308'
-  use_p <- as.character(use_p)
+  if(max(x)<5){
+    use_pv <- 1-pnorm(x)
+    use_p <- format(use_pv,digits=2,scientific = TRUE)
+  }else{
+    low_p <- .Machine$double.xmin
+    low_z <- sapply(10^(-(1:(1+-log10(low_p)))),combinePvalVector)
+    use_pv <- sapply(x,function(x1){
+      low_z[2,which(low_z[1,]>=x1)[1]]}
+    )
+    use_p <- format(use_pv, digits=3,scientific = TRUE)
+    use_p[which(use_p=='NA')] <- '<1e-308'
+    use_p <- as.character(use_p)
+  }
+  x_star <- rep('',length.out=length(use_pv))
+  x_star[which(use_pv<0.05)] <-'*'
+  x_star[which(use_pv<0.01)] <-'**'
+  x_star[which(use_pv<0.001)] <-'***'
+  if(use_star==TRUE) use_p<-paste0(use_p,x_star)
   return(use_p)
 }
 
@@ -6447,6 +6505,10 @@ merge_target_list <- function(driver1=NULL,driver2=NULL,target_list=NULL){
 draw.categoryValue <- function(ac_val=NULL,exp_val=NULL,use_obs_class=NULL,category_color=NULL,
                                stripchart_color=get_transparent('black',0.7),strip_cex=1,class_order=NULL,class_srt=90,class_cex=1,pdf_file=NULL,
                                main_ac="",main_exp="",main_cex=1){
+  if(is.null(names(use_obs_class))==FALSE){
+    if(is.null(ac_val)==FALSE) use_obs_class <- use_obs_class[names(ac_val)]
+    if(is.null(exp_val)==FALSE) use_obs_class <- use_obs_class[names(exp_val)]
+  }
   if(is.null(class_order)){
     class_order <- sort(unique(use_obs_class))
   }
@@ -6591,10 +6653,10 @@ draw.targetNet <- function(source_label="",source_z=NULL,edge_score=NULL,
   points(p3$x,p3$y,pch=16,col='dark grey',cex=label_cex)
   if(is.null(source_z)==TRUE){
     #points(0,0,col='light grey',cex=geneWidth*36,pch=16)
-    draw.ellipse(0,0,a=geneWidth/2,b=geneWidth/2,col='light grey',border=NA)
+    draw.ellipse(0,0,a=1.05*geneWidth/2,b=1.05*geneWidth/2,col='light grey',border=NA)
   }else{
     #points(0,0,col=z2col(source_z),cex=geneWidth*36,pch=16)
-    draw.ellipse(0,0,a=geneWidth/2,b=geneWidth/2,col=z2col(source_z),border=NA)
+    draw.ellipse(0,0,a=1.05*geneWidth/2,b=1.05*geneWidth/2,col=z2col(source_z),border=NA)
   }
   #points(0,0,col='light grey',cex=14,pch=16)
   text(0,0,source_label,adj=0.5,xpd=TRUE,cex=source_cex)
@@ -7163,8 +7225,8 @@ draw.network.QC <- function(igraph_obj,outdir=NULL,prefix=""){
   }
   res_file <- sprintf('%s/%snetwork_info.pdf',outdir,prefix)
   pdf(res_file);
-  plot(density(degree(igraph_obj)),xlab='Degree',main='Density plot for degree');
-  hist(degree(igraph_obj),xlab='Degree',main='Histogram of degree')
+  plot(density(igraph::degree(igraph_obj)),xlab='Degree',main='Density plot for degree');
+  hist(igraph::degree(igraph_obj),xlab='Degree',main='Histogram of degree')
   check_scalefree(igraph_obj);
   dev.off()
   return(TRUE)
@@ -7174,7 +7236,7 @@ draw.network.QC <- function(igraph_obj,outdir=NULL,prefix=""){
 check_scalefree <- function(igraph_obj) {
   gr1 <- igraph_obj
   fp1 <- degree_distribution(gr1)
-  dd <- as.data.frame(cbind(k = 1:max(degree(gr1)), pk = fp1[-1]))
+  dd <- as.data.frame(cbind(k = 1:max(igraph::degree(gr1)), pk = fp1[-1]))
   r2 <-
     lm(log(dd$pk + 1 / length(V(gr1))) ~ log(dd$k))
   r3 <- summary(r2)$adj.r.squared

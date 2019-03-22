@@ -23,8 +23,8 @@ Check for detail.}
 
 \item{use_design_col}{character, the column name to indicate which column in \code{use_phenotype_info} should be used as the design feature of the samples.}
 
-\item{return_type}{character, the class of the return object, choose from 'eset','dds'. 'eset' is the ExpressionSet class object,
-'dds' is the DESeqDataSet class object.
+\item{return_type}{character, the class of the return object, choose from 'eset','dds','tpm-dds'. 'eset' is the ExpressionSet class object,
+'dds' is the DESeqDataSet class object.'tpm-dds' is the original tpm without DESeq2.
 Default is 'eset'}
 
 \item{merge_level}{character, choose from 'gene' and 'transcript',
