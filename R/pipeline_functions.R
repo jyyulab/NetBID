@@ -10,11 +10,14 @@
 #' @importFrom plyr ddply
 #' @importFrom DESeq2 DESeqDataSetFromTximport DESeq
 #' @importFrom ComplexHeatmap Heatmap
-#' @importFrom reshape melt
 #' @importFrom graphics plot
 #' @importFrom aricode clustComp
 #' @importFrom GSVA gsva
 #' @importFrom hexbin hexbin
+#' @importFrom MCMCglmm MCMCglmm
+#' @importFrom arm bayesglm
+#' @importFrom reshape melt
+#' @importFrom vsn meanSdPlot
 
 ##   ‘MCMCglmm’ ‘arm’ ‘reshape’
 ############################# NetBID2 Functions
@@ -468,6 +471,7 @@ get_IDtransfer_betweenSpecies <- function(from_spe='human',to_spe='mouse',
 
 
 #' Gene ID conversion related functions.
+#'
 #' \code{get_IDtransfer2symbol2type} will generate the transfer table for the original ID to the gene symbol and gene biotype (at gene level)
 #' or transcript symbol and transcript biotype (at transcript level).
 #'
@@ -2102,6 +2106,7 @@ generate.masterTable.TF_SIG <- function(use_comp=NULL,DE=NULL,DA_TF=NULL,DA_SIG=
 #' @param main_id_type character, the main gene id type. The attribute name from the biomaRt package,
 #' such as 'ensembl_gene_id', 'ensembl_gene_id_version', 'ensembl_transcript_id', 'ensembl_transcript_id_version', 'refseq_mrna'. Full list could be obtained by
 #' \code{listAttributes(mart)$name}, where \code{mart} is the output of \code{useMart} function.
+#' @param transfer_tab data.frame, the transfer table for ID conversion, could be obtained by \code{get_IDtransfer}.
 #' @param tf_sigs list, which contain the detailed information for the TF and SIGs, this can be obtained by running \code{db.preload}.
 #' @param z_col character, column name in \code{DE}, \code{DA} that contains the Z statistics. Default is 'Z-statistics'.
 #' @param display_col character,column name in \code{DE}, \code{DA} to be kept in the master table. Default is c('logFC','P.Value').
@@ -2141,7 +2146,7 @@ generate.masterTable.TF_SIG <- function(use_comp=NULL,DE=NULL,DA_TF=NULL,DA_SIG=
 #'                                            main_id_type='external_gene_name')
 #' @export
 generate.masterTable <- function(use_comp=NULL,DE=NULL,DA=NULL,
-                                 network=NULL,main_id_type=NULL,
+                                 network=NULL,main_id_type=NULL,transfer_tab=NULL,
                                  tf_sigs=tf_sigs,
                                  z_col='Z-statistics',display_col=c('logFC','P.Value')){
   if(is.null(use_comp)){message('No input for use_comp, please check and re-try!');return(FALSE)}
@@ -2167,7 +2172,11 @@ generate.masterTable <- function(use_comp=NULL,DE=NULL,DA=NULL,
   if(main_id_type %in% current_id){
     use_info <- use_info[which(use_info[,main_id_type] %in% rn),]
   }else{
-    transfer_tab <- get_IDtransfer(from_type=main_id_type,to_type=current_id[1],use_genes=rn)
+    if(is.null(transfer_tab)==TRUE){
+      transfer_tab <- get_IDtransfer(from_type=main_id_type,to_type=current_id[1],use_genes=rn)
+    }else{
+      transfer_tab <- transfer_tab[which(transfer_tab[,main_id_type] %in% rn),]
+    }
     use_info <- merge(use_info,transfer_tab,by.x=current_id[1],by.y=current_id[1])
     use_info <- use_info[which(use_info[,main_id_type] %in% rn),]
   }
@@ -2312,7 +2321,7 @@ out2excel <- function(all_ms_tab,out.xlsx,
   for(sheetname in names(all_ms_tab)){ ## list, each item create one sheet
     i <- i +1
     d <- as.data.frame(all_ms_tab[[sheetname]])
-    if(z_column_index=='auto') use_z_column <- colnames(d)[grep('^Z\\.',colnames(d),ignore.case = TRUE)] else use_z_column <- z_column
+    if(z_column_index=='auto') use_z_column <- colnames(d)[grep('^Z\\.',colnames(d),ignore.case = TRUE)] else use_z_column <- intersect(colnames(d),z_column)
     addWorksheet(wb,sheetName=sheetname)
     writeData(wb,sheet = i,d)
     addStyle(wb, sheet = i, headerStyle, rows = 1, cols = 1:ncol(d), gridExpand = TRUE) ## add header style
@@ -5058,8 +5067,10 @@ get_ES <- function(rank_profile=NULL,use_genes=NULL,weighted.score.type=1){
 }
 ##
 get_z2p <- function(x,use_star=FALSE){
-  if(is.na(x[1])==TRUE) return('NA')
+  x[which(is.na(x)==TRUE)] <- 0
+  #if(is.na(x[1])==TRUE) return('NA')
   x <- abs(x)
+  x[which(is.na(x)==TRUE)] <- 0 ##
   if(max(x)<5){
     use_pv <- 1-pnorm(x)
     use_p <- format(use_pv,digits=2,scientific = TRUE)
@@ -5724,648 +5735,7 @@ draw.GSEA.NetBID.GS <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_t
   return(TRUE)
 }
 
-#' GSEA (gene set enrichment analysis) plot for the Synergy Inference by data-driven Network-based Bayesian Analysis (SINBA) analysis results.
-#'
-#' \code{draw.GSEA.NetBID.SINBA} will generate a GSEA plot for Synergy Inference by data-driven Network-based Bayesian Analysis (SINBA)
-#' analysis results. SINBA calculates the synergistic effect between a seed driver and a partner driver.
-#' The plot includes the GSEA plot for the seed driver and the partner driver independently and
-#' the GSEA plot for the combination for the seed driver to each partner driver.
-#' The statistics on the plot include the differentiated expression (DE), differentiated activity (DA) for each driver,
-#' and the different Z (deltaZ) showing the difference between the combination of the seed and the partner driver to the sum of the original Z statistics.
-#'
-#' This is a plot function to draw GSEA for synergistic effect prediction between the seed driver and a list of partner drivers.
-#' User need to input the differentiated expression information, and choose to display the target genes in one row or two rows,
-#' by selecting black color or red to blue color bar.
-#'
-#' @param DE data.frame,the differentiated expression results.
-#' This data.frame could be generated by using \code{getDE.limma.2G} or \code{getDE.BID.2G}.
-#' If user want to generate this data.frame by other strategies, the rownames must be the gene names or need one column to be the gene name
-#' (set in \code{name_col}) and must contain the columns indicating the differentiated expression profile.
-#' @param name_col character, the name of the column in \code{DE}, which contains the gene name. If NULL, will use the rownames of \code{DE}.
-#' Default is NULL.
-#' @param profile_col character, the name of the column in \code{DE}, which will be used as the differentiated expression profile.
-#' If DE is created by \code{getDE.limma.2G} or \code{getDE.BID.2G}, this parameter could be 'logFC' or 't'.
-#' @param profile_trend character, the choice of how to display the profile, from high/positive to low/negative ('pos2neg')
-#' or low/negative to high/positive ('neg2pos').Default is 'pos2neg'.
-#' @param seed_driver character, name for the seed driver.
-#' @param partner_driver_list a vector of characters, name for the partner driver list.
-#' @param seed_driver_label character, label for the seed driver displayed on the plot. Default is seed_driver.
-#' @param partner_driver_label a vector of characters, label for the partner driver list displayed on the plot. Default is partner_driver_list
-#' @param driver_DA_Z a vector of numeric values, the Z statistics of differentiated activity (DA) for the driver list.
-#' Better to give name to the vector, otherwise will automatically use driver list (seed + partner) as the name.
-#' @param driver_DE_Z a vector of numeric values, the Z statistics of differentiated expression (DE) for the driver list.
-#' Better to give name to the vector, otherwise will automatically use driver list (seed + partner) as the name.
-#' @param target_list a list for the target gene information for the drivers. The names for the list must contain the driver in driver list (seed + partner)
-#' Each object in the list must be a data.frame and should contain one column ("target") to save the target genes.
-#' Strongly suggest to follow the NetBID2 pipeline, and the \code{target_list} could be automatically generated by \code{get_net2target_list} by
-#' running \code{get.SJAracne.network}.
-#' @param DA_Z_merge a vector of numeric values, the Z statistics of differentiated activity (DA) for the combination of the seed driver to partner drivers saperately.
-#' Better to give name to the vector, otherwise will automatically use partner driver list as the name.
-#' @param target_list_merge a list for the target gene information for thecombination of the seed driver to partner drivers saperately.
-#' The names for the list must contain the driver in partner_driver_list
-#' Each object in the list must be a data.frame and should contain one column ("target") to save the target genes.
-#' Strongly suggest to follow the NetBID2 pipeline, and the \code{target_list_merge} could be automatically generated by \code{merge_target_list}.
-#' @param top_driver_number numeric, number for the top significant partner drivers to be displayed on the plot. Default is 10.
-#' @param top_order character, choice of order pattern used to display the partner drivers. Two options,'merge' or 'diff'.
-#' 'merge' means the partner drivers will be sorted by the combined Z statistics.
-#' 'diff' means the partner drivers will be sorted by the delta Z statistics.
-#' Default is 'merge'.
-#' @param target_nrow numeric, number of rows for each driver display on the plot. Two options, 1 or 2.
-#' If set to 1, the target genes' position on the profile will be displayed in one row.
-#' If set to 2, the target genes' position on the profile will be displayed in two rows,
-#' with positive regulated genes displayed on the first row and negative regulated genes displayed on the second row.
-#' Default is 2.
-#' @param target_col character, choice of color pattern used to display the targets. Two options,'black' or 'RdBu'.
-#' If set to 'black', the lines will be colored in black.
-#' If set to 'RdBu', the lines will be colored into Red to Blue color bar.
-#' If \code{target_col_type} is set as 'PN', the positive regulated genes will be colored in red and negative regulated genes in blue.
-#' If \code{target_col_type} is set as 'DE', the color for the target genes is set according to its value in the differentiated expression profile,
-#' with significant high set for red and low for blue. The significant threshold is set by \code{profile_sig_thre}.
-#' Default is 'RdBu'.
-#' @param target_col_type character, choice of the pattern used to display the color for target genes, only work when \code{target_col} is set as 'RdBu'.
-#' Two options,'PN' or 'DE'.
-#' If set as 'PN', the positive regulated genes will be colored in red and negative regulated genes in blue.
-#' If set as 'DE', the color for the target genes is set according to its value in the differentiated expression profile,
-#' Default is 'PN'.
-#' @param left_annotation character, annotation displayed on the left of the figure representing left condition of the rank_profile. Default is "".
-#' @param right_annotation character, annotation displayed on the right of the figure representing right condition of the rank_profile. Default is "".
-#' @param main character, title for the plot. Default is "".
-#' @param profile_sig_thre numeric, threshold for the absolute values in profile to be treated as significance.
-#' Target genes without signifcant values in the profile will be colored in grey. Only work when \code{target_col_type} is set as "DE" and \code{target_col} is set as "RdBu".
-#' Default is 0.
-#' @param Z_sig_thre numeric, threshold for the Z statistics in \code{driver_DA_Z} and \code{driver_DE_Z} to be treated as signifcance.
-#' Only signifcant values will have background color. Default is 1.64.
-#' @param pdf_file character, file path for the pdf file to save the figure into pdf format.If NULL, will not generate pdf file. Default is NULL.
-#'
-#' @return logical value indicating whether the plot has been successfully generated
 
-#' @examples
-#' \dontrun{
-#' analysis.par <- list()
-#' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
-#' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
-#' ms_tab <- analysis.par$final_ms_tab
-#' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
-#'                                logFC_col='logFC.G4.Vs.others_DA',
-#'                                Pv_col='P.Value.G4.Vs.others_DA',
-#'                                logFC_thre=0.4,
-#'                                Pv_thre=1e-7,
-#'                                main='Volcano Plot for G4.Vs.others_DA',
-#'                                show_label=FALSE,
-#'                                label_type = 'origin',
-#'                                label_cex = 0.5)
-#' driver_list <- rownames(sig_driver)
-#' ## choose seed driver and partner driver list
-#' seed_driver <- driver_list[1]
-#' part_driver <- ms_tab$originalID_label
-#' ## get merge target
-#' merge_target <- lapply(part_driver,function(x){
-#'   m1 <- merge_target_list(driver1=seed_driver,driver2=x,
-#'                           target_list=analysis.par$merge.network$target_list)
-#' })
-#' names(merge_target) <- part_driver
-#' ## get activity matrix for the merge target network
-#' ac_combine_mat <- cal.Activity(all_target=merge_target,
-#'                                cal_mat=exprs(analysis.par$cal.eset),
-#'                                es.method='weightedmean')
-#' ## get DA for the combined drivers
-#' comp_name <- 'G4.Vs.others'
-#' G0  <- rownames(phe_info)[which(phe_info$`subgroup`!='G4')]
-#' # get sample list for G0
-#' G1  <- rownames(phe_info)[which(phe_info$`subgroup`=='G4')]
-#' # get sample list for G1
-#' DA_driver_combine <- getDE.limma.2G(eset=generate.eset(ac_combine_mat),
-#'                                     G1=G1,G0=G0,
-#'                                     G1_name='G4',G0_name='others')
-#' ## or use: DA_driver_combine <- getDE.BID.2G(eset=generate.eset(ac_combine_mat),
-#'                                     G1=G1,G0=G0,
-#'                                     G1_name='G4',G0_name='others')
-#' ## prepare for SINBA input
-#' ori_part_Z <- analysis.par$DA[[comp_name]][part_driver,'Z-statistics']
-#' ori_seed_Z <- analysis.par$DA[[comp_name]][seed_driver,'Z-statistics']
-#' DE <- analysis.par$DE[[comp_name]]
-#' driver_DA_Z <- analysis.par$DA[[comp_name]][,'Z-statistics']
-#' names(driver_DA_Z) <- rownames(analysis.par$DA[[comp_name]])
-#' driver_DE_Z <- analysis.par$DE[[comp_name]][,'Z-statistics']
-#' names(driver_DE_Z) <- rownames(analysis.par$DE[[comp_name]])
-#' DA_Z_merge <- DA_driver_combine[,'Z-statistics']
-#' names(DA_Z_merge) <- rownames(DA_driver_combine)
-#' target_list_merge <- merge_target
-#' seed_driver_label <- ms_tab[seed_driver,'gene_label']
-#' partner_driver_list <- part_driver
-#' profile_col <- 't'
-#' partner_driver_label <- ms_tab[partner_driver_list,'gene_label']
-#' target_list <- analysis.par$merge.network$target_list
-##
-#' draw.GSEA.NetBID.SINBA(DE=DE,profile_col = profile_col,
-#'                        seed_driver=seed_driver,
-#'                        partner_driver_list=partner_driver_list,
-#'                        seed_driver_label=seed_driver_label,
-#'                        partner_driver_label=partner_driver_label,
-#'                        driver_DA_Z=driver_DA_Z,driver_DE_Z=driver_DE_Z,
-#'                        target_list=target_list,
-#'                        DA_Z_merge=DA_Z_merge,
-#'                        target_list_merge=target_list_merge,
-#'                        top_driver_number=20,profile_trend='pos2neg',
-#'                        top_order='merge',Z_sig_thre = 1.64,
-#'                        target_nrow=1,target_col='RdBu',target_col_type='PN',
-#'                        pdf_file=sprintf('%s/NetBID_GSEA_SINBA_demo1.pdf',
-#'                        analysis.par$out.dir.PLOT))
-#'}
-#' @export
-draw.GSEA.NetBID.SINBA <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_trend='pos2neg',
-                                   seed_driver=NULL,partner_driver_list=NULL,
-                                   seed_driver_label=seed_driver,partner_driver_label=partner_driver_list,
-                                   driver_DA_Z=NULL,driver_DE_Z=NULL,target_list=NULL,
-                                   DA_Z_merge=NULL,target_list_merge=NULL,
-                                   top_driver_number=10,top_order='merge',target_nrow=2,target_col='RdBu',target_col_type='PN',
-                                   left_annotation="",right_annotation="",main="",
-                                   profile_sig_thre=0,Z_sig_thre=1.64,pdf_file=NULL){
-  pos_col <- brewer.pal(12,'Paired')[8]
-  neg_col <- brewer.pal(12,'Paired')[4]
-  if(!profile_col %in% colnames(DE)){
-    message(sprintf('%s not in colnames of DE, please check and re-try!',profile_col))
-    return(FALSE)
-  }
-  driver_list <- c(seed_driver,partner_driver_list)
-  driver_list_gene <- gsub('(.*)_.*','\\1',driver_list)
-  show_label <- c(seed_driver_label,partner_driver_label)
-  # get names
-  if(is.null(names(driver_DA_Z))) names(driver_DA_Z) <- driver_list
-  if(is.null(names(driver_DE_Z))) names(driver_DE_Z) <- driver_list
-  if(is.null(names(show_label))) names(show_label) <- driver_list
-  if(is.null(names(DA_Z_merge))) names(DA_Z_merge) <- driver_list
-  #
-  ori_part_Z <- driver_DA_Z[partner_driver_list]
-  ori_seed_Z <- driver_DA_Z[seed_driver]
-  diff_Z <- 2*DA_Z_merge[partner_driver_list]-(ori_part_Z+ori_seed_Z)
-  names(diff_Z) <- partner_driver_list
-  driver_DA_Z <- driver_DA_Z[driver_list]
-  driver_DE_Z <- driver_DE_Z[driver_list_gene]; names(driver_DE_Z) <- driver_list
-  DA_Z_merge  <- DA_Z_merge[partner_driver_list]
-  #
-  if(top_order=='merge'){
-    if(length(partner_driver_list)>top_driver_number){
-      #partner_driver_list <- partner_driver_list[order(abs(DA_Z_merge[partner_driver_list]),decreasing = TRUE)][1:top_driver_number]
-      partner_driver_list <- partner_driver_list[order(DA_Z_merge[partner_driver_list],decreasing = TRUE)][1:top_driver_number] ## only consider positive part
-    }
-    if(profile_trend=='pos2neg')
-      partner_driver_list <- partner_driver_list[order(DA_Z_merge[partner_driver_list],decreasing = FALSE)]
-    else
-      partner_driver_list <- partner_driver_list[order(DA_Z_merge[partner_driver_list],decreasing = TRUE)]
-  }else{
-    if(length(partner_driver_list)>top_driver_number){
-      #partner_driver_list <- partner_driver_list[order(abs(diff_Z[partner_driver_list]),decreasing = TRUE)][1:top_driver_number]
-      partner_driver_list <- partner_driver_list[order(diff_Z[partner_driver_list],decreasing = TRUE)][1:top_driver_number] ## only consider positive increase
-    }
-    if(profile_trend=='pos2neg')
-      partner_driver_list <- partner_driver_list[order(diff_Z[partner_driver_list],decreasing = FALSE)]
-    else
-      partner_driver_list <- partner_driver_list[order(diff_Z[partner_driver_list],decreasing = TRUE)]
-  }
-  #
-  driver_list <- c(seed_driver,partner_driver_list)
-  show_label <- show_label[driver_list]
-  driver_DA_Z <- driver_DA_Z[driver_list]
-  driver_DE_Z <- driver_DE_Z[driver_list]
-  diff_Z <- diff_Z[partner_driver_list]
-  DA_Z_merge <- DA_Z_merge[partner_driver_list]
-  if(is.null(name_col)==TRUE){
-    DE <- cbind(DE[,setdiff(colnames(DE),'name')],name=rownames(DE),stringsAsFactors=FALSE)
-    name_col <- 'name'
-  }
-  w1 <- which(is.na(DE[,profile_col])==FALSE)
-  DE <- DE[w1,]
-  if(profile_trend=='pos2neg') DE <- DE[order(DE[,profile_col],decreasing = TRUE),] else DE <- DE[order(DE[,profile_col],decreasing = FALSE),]
-  DE_profile <- DE[,profile_col]
-  DE_profile_name <- DE[,name_col]
-  ##############################################
-  ## calculate layout
-
-  target_list <- lapply(target_list,function(x)x[which(x$target %in% DE_profile_name),])
-  target_list_merge <- lapply(target_list_merge,function(x)x[which(x$target %in% DE_profile_name),])
-
-  n_gene <- length(DE_profile)
-  if(target_nrow==2){
-    n_driver <- length(partner_driver_list)*4+2
-    ratio1 <- ceiling(n_driver/15) ## profile height to rows
-    ratio2 <- 4 ## width of profile to DA/DE
-    rr <- 1
-  } else {
-    n_driver <- length(partner_driver_list)*2+1
-    ratio1 <- ceiling(1.5*n_driver/15) ## profile height to rows
-    ratio2 <- 4 ## width of profile to DA/DE
-    rr <- 1
-  }
-  #
-  if(is.null(pdf_file)==FALSE){
-    pdf(pdf_file,width=(rr*2+ratio2)*2,height=(ratio1+rr)*2)
-  }
-  # get layout
-  layout(matrix(c(rep(0,length.out=rr),rep(1,length.out=ratio2),rep(0,length.out=rr*1),
-                  rep(c(rep(4,length.out=rr),rep(2,length.out=ratio2),rep(3,length.out=rr*1)),
-                      length.out=ratio1*(ratio2+rr*2))),
-                ncol=c(ratio2+rr*2),byrow=TRUE))
-  ## plot 1
-  par(mar=c(1.5,1.5,1.5,0))
-  mm <- quantile(DE_profile,probs=c(0.0001,0.9999));
-  mm <- max(abs(mm)); mm <- c(-mm,mm)
-  y1 <- seq(mm[1],mm[2],length.out=5); y1 <- round(y1,1)
-  unit <- n_gene/10; unit <- round(unit/100)*100
-  x1 <- seq(0,n_gene,by=unit);x1 <- unique(x1); x1 <- c(x1,max(x1)+unit)
-  par(usr=c(0,length(DE_profile),mm[1],mm[2]))
-  plot(DE_profile,col='white',pch=16,xaxt='n',yaxt='n',xlab="",ylab="",bty='n',type='n',ylim=c(mm[1],mm[2]),main=main,cex.main=1.8)
-  pp <- par()$usr; rr <- (pp[2]-pp[1])/n_gene
-  polygon(x=c(pp[1],c(1:n_gene)*rr+pp[1],pp[2]),y=c(0,DE_profile,0),col='grey',border='grey',xpd=TRUE,lwd=0.3)
-  if(profile_trend=='pos2neg'){
-    if(is.null(left_annotation)==FALSE) text(pp[1]+(pp[2]-pp[1])/100,mm[2]*0.8,adj=0,left_annotation,col=brewer.pal(9,'Reds')[6],xpd=TRUE,cex=1.2)
-    if(is.null(right_annotation)==FALSE) text(pp[2]-(pp[2]-pp[1])/100,mm[1]*0.8,adj=1,right_annotation,col=brewer.pal(9,'Blues')[6],xpd=TRUE,cex=1.2)
-  }else{
-    if(is.null(left_annotation)==FALSE) text(pp[1]+(pp[2]-pp[1])/100,mm[1]*0.8,adj=0,left_annotation,col=brewer.pal(9,'Reds')[6],xpd=TRUE,cex=1.2)
-    if(is.null(right_annotation)==FALSE) text(pp[2]-(pp[2]-pp[1])/100,mm[2]*0.8,adj=1,right_annotation,col=brewer.pal(9,'Blues')[6],xpd=TRUE,cex=1.2)
-  }
-  axis(side=2,at=y1,labels=y1)
-  mtext(side=2,line = 2.5,profile_col,cex=1)
-  segments(pp[1],mm[1],pp[2],mm[1],xpd=TRUE)
-  segments(x1*rr,mm[1]-(mm[2]-mm[1])/50,x1*rr,mm[1],xpd=TRUE)
-  text(x1*rr,mm[1]-(mm[2]-mm[1])/25,get_label_manual(x1),adj=0.5,xpd=TRUE)
-  ## plot2
-  par(mar=c(2,1.5,2,0))
-  plot(1,col='white',xlab="",ylab="",xlim=c(0,n_gene),xaxt='n',yaxt='n')
-
-  pp <- par()$usr;rr <- (pp[2]-pp[1])/n_gene
-  yy1 <- seq(from=pp[3],to=pp[4],length.out=n_driver+1) # separate each detail
-  yy3 <- seq(from=pp[3],to=pp[4],length.out=length(partner_driver_list)*2+1+1) # separate each driver(pos/neg)
-  yy2 <- yy1[seq(from=1,to=length(yy1),by=target_nrow*2)] # separate each driver combine
-  yy4 <- yy2+(yy1[2]-yy1[1])*target_nrow
-
-  rect(xleft = pp[1],xright=pp[2],ybottom = yy1[length(yy1)-target_nrow],ytop=yy1[length(yy1)],border=NA,col=get_transparent(brewer.pal(11,'Set3')[2],0.3)) ## for seed rows
-  rect(xleft = pp[1],xright=pp[2],ybottom = yy2,ytop=yy4,border=NA,col=get_transparent(brewer.pal(11,'Set3')[2],0.2)) ## for combine rows
-
-  segments(x0=pp[1],x1=pp[2],y0=yy1,y1=yy1,lwd=0.2,col='light grey')
-  segments(x0=pp[1],x1=pp[2],y0=yy3,y1=yy3,lwd=1,col='dark grey')
-  segments(x0=pp[1],x1=pp[2],y0=yy2,y1=yy2,lwd=2,col='white')
-  segments(x0=pp[1],x1=pp[2],y0=yy2,y1=yy2,lwd=1,col='black')
-  segments(x0=pp[1],x1=pp[2],y0=yy1[length(yy1)-target_nrow],y1=yy1[length(yy1)-target_nrow],lwd=1.5,col='black')
-
-  # shorten yy1
-  dyy <- yy1[2]-yy1[1]
-  yy11 <- yy1-dyy*0.3
-  # add columns
-  use_target_list <- target_list[driver_list]
-  use_merge_target_list <- target_list_merge[partner_driver_list]
-
-  if(target_col_type=='DE'){
-    cc <- z2col(DE_profile,sig_thre=profile_sig_thre,n_len=100,red_col = brewer.pal(9,'Reds')[5:9],blue_col=brewer.pal(9,'Blues')[5:9],
-                col_max_thre=max(abs(DE_profile)))
-    #names(cc) <- names(DE_profile)
-    cc[which(cc=='white')] <- 'light grey'
-  }
-  if(target_nrow==1){
-    # for seed driver
-    t1 <- use_target_list[[seed_driver]]
-    w0 <- which(DE_profile_name %in% t1$target)
-    w1 <- w0*rr+pp[1]
-    if(target_col=='black'){
-      segments(x0=w1,x1=w1,y0=yy1[length(yy1)-1],y1=yy1[length(yy1)],col='black',lwd=1)
-    }else{
-      if(target_col_type=='DE'){
-        segments(x0=w1,x1=w1,y0=yy1[length(yy1)-1],y1=yy1[length(yy1)],lwd=1.5,
-                 col=cc[w0])
-      }else{
-        segments(x0=w1,x1=w1,y0=yy1[length(yy1)-1],y1=yy1[length(yy1)],lwd=1.5,
-                 col=c(neg_col,'white',pos_col)[sign(t1$spearman)+2])
-      }
-    }
-    # for each partner driver
-    for(i in 1:length(partner_driver_list)){
-      t1 <- use_target_list[[partner_driver_list[[i]]]]
-      w0 <- which(DE_profile_name %in% t1$target)
-      w1 <- w0*rr+pp[1]
-      if(target_col=='black'){
-        segments(x0=w1,x1=w1,y0=yy1[2*i],y1=yy11[2*i+1],col='black',lwd=1)
-      }else{
-        if(target_col_type=='DE'){
-          segments(x0=w1,x1=w1,y0=yy1[2*i],y1=yy11[2*i+1],lwd=1.5,
-                   col=cc[w0])
-        }else{
-          segments(x0=w1,x1=w1,y0=yy1[2*i],y1=yy11[2*i+1],lwd=1.5,
-                   col=c(neg_col,'white',pos_col)[sign(t1$spearman)+2])
-        }
-      }
-    }
-    # for combine
-    for(i in 1:length(partner_driver_list)){
-      t1 <- target_list_merge[[partner_driver_list[[i]]]]
-      w0 <- which(DE_profile_name %in% t1$target)
-      w1 <- w0*rr+pp[1]
-      t_over <- intersect(target_list[[partner_driver_list[[i]]]]$target,target_list[[seed_driver]]$target)
-      w0_over <- which(DE_profile_name %in% t_over)
-      w1_over <- w0_over*rr+pp[1]
-      if(target_col=='black'){
-        segments(x0=w1,x1=w1,y0=yy1[2*i-1],y1=yy11[2*i],col='black',lwd=1)
-      }else{
-        if(target_col_type=='DE'){
-          segments(x0=w1,x1=w1,y0=yy1[2*i-1],y1=yy11[2*i],lwd=1.5,col=cc[w0])
-        }else{
-          segments(x0=w1,x1=w1,y0=yy1[2*i-1],y1=yy11[2*i],lwd=1.5,col=c(neg_col,'white',pos_col)[sign(t1$spearman)+2])
-        }
-      }
-      points(w1_over,rep((yy11[2*i]+yy1[2*i])/2,length.out=length(w1_over)),pch='*',col='black')
-    }
-  }
-  ###################
-  if(target_nrow==2){
-    # for seed driver
-    t1 <- use_target_list[[seed_driver]]
-    t11 <- t1[which(t1$spearman>=0),]$target
-    t12 <- t1[which(t1$spearman<0),]$target
-    w0 <- which(DE_profile_name %in% t11)
-    w1 <- w0*rr+pp[1]
-    if(length(w1)>0){
-      if(target_col=='black'){
-        segments(x0=w1,x1=w1,y0=yy1[length(yy1)-1],y1=yy1[length(yy1)],col='black',lwd=1)
-      }else{
-        if(target_col_type=='DE'){
-          segments(x0=w1,x1=w1,y0=yy1[length(yy1)-1],y1=yy1[length(yy1)],col=cc[w0],lwd=1.5)
-        }else{
-          segments(x0=w1,x1=w1,y0=yy1[length(yy1)-1],y1=yy1[length(yy1)],col=pos_col,lwd=1.5)
-        }
-      }
-    }
-    w0 <- which(DE_profile_name %in% t12)
-    w1 <- w0*rr+pp[1]
-    if(length(w1)>0){
-      if(target_col=='black'){
-        segments(x0=w1,x1=w1,y0=yy1[length(yy1)-2],y1=yy1[length(yy1)-1],col='black',lwd=1)
-      }else{
-        if(target_col_type=='DE'){
-          segments(x0=w1,x1=w1,y0=yy1[length(yy1)-2],y1=yy1[length(yy1)-1],col=cc[w0],lwd=1.5)
-        }else{
-          segments(x0=w1,x1=w1,y0=yy1[length(yy1)-2],y1=yy1[length(yy1)-1],col=neg_col,lwd=1.5)
-        }
-      }
-    }
-    # for each partner driver
-    for(i in 1:length(partner_driver_list)){
-      t1 <- use_target_list[[partner_driver_list[[i]]]]
-      t11 <- t1[which(t1$spearman>=0),]$target
-      t12 <- t1[which(t1$spearman<0),]$target
-      w0 <- which(DE_profile_name %in% t11)
-      w1 <- w0*rr+pp[1]
-      if(length(w1)>0){
-        if(target_col=='black'){
-          segments(x0=w1,x1=w1,y0=yy1[4*i],y1=yy11[4*i+1],col='black',lwd=1)
-        }else{
-          if(target_col_type=='DE'){
-            segments(x0=w1,x1=w1,y0=yy1[4*i],y1=yy11[4*i+1],col=cc[w0],lwd=1.5)
-          }else{
-            segments(x0=w1,x1=w1,y0=yy1[4*i],y1=yy11[4*i+1],col=pos_col,lwd=1.5)
-          }
-        }
-      }
-      w0 <- which(DE_profile_name %in% t12)
-      w1 <- w0*rr+pp[1]
-      if(length(w1)>0){
-        if(target_col=='black'){
-          segments(x0=w1,x1=w1,y0=yy1[4*i-1],y1=yy11[4*i],col='black',lwd=1)
-        }else{
-          if(target_col_type=='DE'){
-            segments(x0=w1,x1=w1,y0=yy1[4*i-1],y1=yy11[4*i],col=cc[w0],lwd=1.5)
-          }else{
-            segments(x0=w1,x1=w1,y0=yy1[4*i-1],y1=yy11[4*i],col=neg_col,lwd=1.5)
-          }
-        }
-      }
-    }
-    # for each partner driver + seed combination
-    for(i in 1:length(partner_driver_list)){
-      t1 <- target_list_merge[[partner_driver_list[[i]]]]
-      t11 <- t1[which(t1$spearman>=0),]$target
-      t12 <- t1[which(t1$spearman<0),]$target
-      w0 <- which(DE_profile_name %in% t11)
-      w1 <- w0*rr+pp[1]
-      t_over <- intersect(target_list[[partner_driver_list[[i]]]]$target,target_list[[seed_driver]]$target)
-      w0_over <- which(DE_profile_name %in% t_over) ## setdiff(t_over,names(DE_profile)) !!!
-      w1_over <- w0_over*rr+pp[1]
-      if(length(w1)>0){
-        if(target_col=='black'){
-          segments(x0=w1,x1=w1,y0=yy1[4*i-2],y1=yy11[4*i-1],col='black',lwd=1)
-        }else{
-          if(target_col_type=='DE'){
-            segments(x0=w1,x1=w1,y0=yy1[4*i-2],y1=yy11[4*i-1],col=cc[w0],lwd=1.5)
-          }else{
-            segments(x0=w1,x1=w1,y0=yy1[4*i-2],y1=yy11[4*i-1],col=pos_col,lwd=1.5)
-          }
-        }
-      }
-      points(intersect(w1_over,w1),rep((yy11[4*i-1]+yy1[4*i-1])/2,length.out=length(intersect(w1_over,w1))),pch='*',col='black')
-      w0 <- which(DE_profile_name %in% t12)
-      w1 <- w0*rr+pp[1]
-      if(length(w1)>0){
-        if(target_col=='black'){
-          segments(x0=w1,x1=w1,y0=yy1[4*i-3],y1=yy11[4*i-2],col='black',lwd=1)
-        }else{
-          if(target_col_type=='DE'){
-            segments(x0=w1,x1=w1,y0=yy1[4*i-3],y1=yy11[4*i-2],col=cc[w0],lwd=1.5)
-          }else{
-            segments(x0=w1,x1=w1,y0=yy1[4*i-3],y1=yy11[4*i-2],col=neg_col,lwd=1.5)
-          }
-        }
-      }
-      points(intersect(w1_over,w1),rep((yy11[4*i-2]+yy1[4*i-2])/2,length.out=length(intersect(w1_over,w1))),pch='*',col='black')
-    }
-    ####
-  }
-  ###################
-  ## plot 3
-  par(mar=c(2,0.5,2,2))
-  plot(1,col='white',xlab="",ylab="",xlim=c(0,3),xaxt='n',yaxt='n',bty='n')
-  pp <- par()$usr
-  rect(xleft=pp[1],xright=pp[2],ybottom=pp[3],ytop=pp[4])
-
-  pp <- par()$usr;rr <- (pp[2]-pp[1])/n_gene
-  yy1 <- seq(from=pp[3],to=pp[4],length.out=n_driver+1) # separate each detail
-  yy3 <- seq(from=pp[3],to=pp[4],length.out=length(partner_driver_list)*2+1+1) # separate each driver(pos/neg)
-  yy2 <- yy1[seq(from=1,to=length(yy1),by=target_nrow*2)] # separate each driver combine
-  yy4 <- yy2+(yy1[2]-yy1[1])*target_nrow
-  xx1 <- seq(pp[1],pp[2],length.out=4)
-
-  segments(x0=pp[1],x1=pp[2],y0=yy2,y1=yy2,lwd=2,col='white',xpd=TRUE)
-  segments(x0=pp[1],x1=pp[2],y0=yy2,y1=yy2,lwd=1.2,col='dark grey',xpd=TRUE)
-  abline(v=xx1)
-
-  ## add text
-  mm_min <- min(min(abs(driver_DA_Z[partner_driver_list]),na.rm=TRUE)*0.9,min(abs(driver_DE_Z[partner_driver_list]),na.rm=TRUE)*0.9,
-                min(abs(diff_Z[partner_driver_list]),na.rm=TRUE)*0.9,min(abs(DA_Z_merge[partner_driver_list]),na.rm=TRUE)*0.9)
-  mm_min <- max(mm_min,Z_sig_thre)
-  mm_max <- max(max(abs(driver_DA_Z[partner_driver_list]),na.rm=TRUE)*1.1,max(abs(driver_DE_Z[partner_driver_list]),na.rm=TRUE)*1.1,
-                max(abs(diff_Z[partner_driver_list]),na.rm=TRUE)*1.1,max(abs(DA_Z_merge[partner_driver_list]),na.rm=TRUE)*1.1)
-  c1 <- z2col(driver_DA_Z[driver_list],sig_thre=Z_sig_thre,n_len=100,red_col = brewer.pal(9,'Reds')[7],blue_col=brewer.pal(9,'Blues')[7],
-              col_min_thre=mm_min,col_max_thre=mm_max)
-  c2 <- z2col(driver_DE_Z[driver_list],sig_thre=Z_sig_thre,n_len=100,red_col = brewer.pal(9,'Reds')[7],blue_col=brewer.pal(9,'Blues')[7],
-              col_min_thre=mm_min,col_max_thre=mm_max)
-  c3 <- z2col(diff_Z[partner_driver_list],sig_thre=Z_sig_thre,n_len=100,red_col = brewer.pal(9,'Reds')[7],blue_col=brewer.pal(9,'Blues')[7],
-              col_min_thre=mm_min,col_max_thre=mm_max)
-  c4 <- z2col(DA_Z_merge[partner_driver_list],sig_thre=Z_sig_thre,n_len=100,red_col = brewer.pal(9,'Reds')[7],blue_col=brewer.pal(9,'Blues')[7],
-              col_min_thre=mm_min,col_max_thre=mm_max)
-
-  # for seed driver
-  yy1<-yy3
-  z1 <- driver_DA_Z[seed_driver]
-  z2 <- driver_DE_Z[seed_driver]
-  p1 <- get_z2p(z1)
-  p2 <- get_z2p(z2)
-  rect(xleft=xx1[1],xright=xx1[2],ybottom=yy1[length(yy1)-1],ytop=yy1[length(yy1)],col=c1[1],border='dark grey',xpd=TRUE)
-  rect(xright=xx1[3],xleft=xx1[2],ybottom=yy1[length(yy1)-1],ytop=yy1[length(yy1)],col=c2[1],border='dark grey',xpd=TRUE)
-  text(x=sum(xx1[1:2])/2,y=(yy1[length(yy1)-1]+yy1[length(yy1)])/2,p1,adj=0.5)
-  text(x=sum(xx1[3:4])/2,y=(yy1[length(yy1)-1]+yy1[length(yy1)])/2,p2,adj=0.5)
-  text(x=sum(xx1[2:3])/2,y=(yy1[length(yy1)-1]+yy1[length(yy1)])/2,'-',adj=0.5)
-
-  # for partner driver
-  for(i in 1:length(partner_driver_list)){
-    z1 <- driver_DA_Z[partner_driver_list[i]]
-    z2 <- driver_DE_Z[partner_driver_list[i]]
-    z3 <- diff_Z[partner_driver_list[i]]
-    z4 <- DA_Z_merge[partner_driver_list[i]]
-    p1 <- get_z2p(z1)
-    p2 <- get_z2p(z2)
-    p3 <- format(z3,digits=3)
-    p4 <- get_z2p(z4)
-    rect(xleft=xx1[1],xright=xx1[2],ybottom=yy1[2*i],ytop=yy1[2*i+1],col=c1[i+1],border='dark grey',xpd=TRUE) ## DA_Z
-    rect(xleft=xx1[1],xright=xx1[2],ybottom=yy1[2*i-1],ytop=yy1[2*i],col=c4[i],border='dark grey',xpd=TRUE) ## merge_Z
-    rect(xleft=xx1[3],xright=xx1[4],ybottom=yy2[i],ytop=yy2[i+1],col=c2[i+1],border='dark grey',xpd=TRUE) ## DE
-    rect(xleft=xx1[2],xright=xx1[3],ybottom=yy2[i],ytop=yy2[i+1],col=c3[i],border='dark grey',xpd=TRUE) ## delta Z
-    text(x=sum(xx1[1:2])/2,y=(yy1[2*i]+yy1[2*i+1])/2,p1,adj=0.5) ## DA_Z
-    text(x=sum(xx1[1:2])/2,y=(yy1[2*i-1]+yy1[2*i])/2,p4,adj=0.5) ## merge_Z
-    text(x=sum(xx1[3:4])/2,y=(yy2[i]+yy2[i+1])/2,p2,adj=0.5) ## DE
-    text(x=sum(xx1[2:3])/2,y=(yy2[i]+yy2[i+1])/2,p3,adj=0.5) ## delta z
-  }
-
-  textheight <- strheight('DA',units='user',cex=1.5)
-  text(sum(xx1[1:2])/2,pp[4]+textheight,'DA',xpd=TRUE,cex=1.5)
-  textheight <- strheight('DE',units='user',cex=1.5)
-  text(sum(xx1[3:4])/2,pp[4]+textheight,'DE',xpd=TRUE,cex=1.5)
-  textheight <- strheight('deltaZ',units='user',cex=1.5)
-  text(sum(xx1[2:3])/2,pp[4]+textheight,'deltaZ',xpd=TRUE,cex=1.5)
-
-  ## plot 4
-  par(mar=c(2,6,2,0.2))
-  plot(1,col='white',xlab="",ylab="",xlim=c(0,2),xaxt='n',yaxt='n',bty='n')
-
-  pp <- par()$usr;rr <- (pp[2]-pp[1])/n_gene
-  yy1 <- seq(from=pp[3],to=pp[4],length.out=n_driver+1) # separate each detail
-  yy3 <- seq(from=pp[3],to=pp[4],length.out=length(partner_driver_list)*2+1+1) # separate each driver(pos/neg)
-  yy2 <- yy1[seq(from=1,to=length(yy1),by=target_nrow*2)] # separate each driver combine
-  yy4 <- yy2+(yy1[2]-yy1[1])*target_nrow
-  xx1 <- seq(pp[1],pp[2],length.out=4)
-
-  yy22 <- (yy2[1:(length(yy2)-1)]+yy2[2:length(yy2)])/2
-  dyy22 <- yy22[2]-yy22[1]
-
-  yy33 <- (yy3[1:(length(yy3)-1)]+yy3[2:length(yy3)])/2
-  dyy33 <- yy33[2]-yy33[1]
-
-  xleft <- pp[1]+(pp[2]-pp[1])*0.55
-  tt <- pp[2]-xleft
-
-  text(show_label[1],x=pp[1]+(pp[1]+pp[2])*0.53,y=(yy3[length(yy3)-1]+yy3[length(yy3)])/2,xpd=TRUE,adj=1,cex=1.2) ## label for seed
-  text(show_label[2:length(show_label)],x=pp[1]+(pp[1]+pp[2])*0.52,y=yy22,xpd=TRUE,adj=1) ## label for partner
-
-  # add target size
-  use_target_list <- target_list[driver_list]
-  use_merge_target_list <- target_list_merge[partner_driver_list]
-  target_size <- do.call(rbind,lapply(use_target_list,function(x){
-    x1 <- length(which(x$spearman>=0))
-    x2 <- length(which(x$spearman<0))
-    c(x1,x2)
-  }))
-  merge_target_size <- do.call(rbind,lapply(use_merge_target_list,function(x){
-    x1 <- length(which(x$spearman>=0))
-    x2 <- length(which(x$spearman<0))
-    c(x1,x2)
-  }))
-  # for seed driver
-  if(target_nrow==2){
-    mm <- max(merge_target_size)
-    i <- length(yy1)-1
-    rect(xleft=xleft,xright=xleft+target_size[1,1]/mm*tt,
-         ybottom=yy1[i],ytop=yy1[i]+dyy22/2*0.35,col=pos_col,border=NA)
-    rect(xleft=xleft,xright=xleft+target_size[1,2]/mm*tt,
-         ytop=yy1[i],ybottom=yy1[i]-dyy22/2*0.35,col=neg_col,border=NA)
-  }else{
-    target_size <- rowSums(target_size)
-    merge_target_size <- rowSums(merge_target_size)
-    mm <- max(merge_target_size)
-    i <- length(yy1)
-    rect(xleft=xleft,xright=xleft+target_size[1]/mm*tt,
-         ybottom=(yy1[i]+yy1[i-1])/2-dyy22*0.2/2,ytop=(yy1[i]+yy1[i-1])/2+dyy22*0.2/2,col='dark grey',border=NA)
-  }
-  # for partner
-  if(target_nrow==2){
-    mm <- max(merge_target_size)
-    for(i in 1:length(partner_driver_list)){
-      rect(xleft=xleft,xright=xleft+target_size[i+1,1]/mm*tt,
-           ybottom=yy33[2*i],ytop=yy33[2*i]+dyy33*0.35,col=pos_col,border=NA)
-      rect(xleft=xleft,xright=xleft+target_size[i+1,2]/mm*tt,
-           ytop=yy33[2*i],ybottom=yy33[2*i]-dyy33*0.35,col=neg_col,border=NA)
-      # merge
-      rect(xleft=xleft,xright=xleft+merge_target_size[i,1]/mm*tt,
-           ybottom=yy33[2*i-1],ytop=yy33[2*i-1]+dyy33*0.35,col=pos_col,border=NA)
-      rect(xleft=xleft,xright=xleft+merge_target_size[i,2]/mm*tt,
-           ytop=yy33[2*i-1],ybottom=yy33[2*i-1]-dyy33*0.35,col=neg_col,border=NA)
-    }
-    segments(x0=xleft,x1=pp[2],y0=pp[4],y1=pp[4],xpd=TRUE)
-    sst <- round(seq(0,mm,length.out=3))
-    ss <- sst*tt/mm+xleft
-    segments(x0=ss,x1=ss,y0=pp[4],y1=pp[4]+(pp[4]-pp[3])/150,xpd=TRUE)
-    text(x=ss,y=pp[4]+(pp[4]-pp[3])/100,srt=90,sst,xpd=TRUE,adj=0,cex=0.8)
-    text('Target Size',x=(pp[1]+pp[2])*0.45,y=pp[4]+(pp[4]-pp[3])/50,adj=1,xpd=TRUE,cex=0.8)
-  }
-  #
-  if(target_nrow==1){
-    #target_size <- rowSums(target_size)
-    #merge_target_size <- rowSums(merge_target_size)
-    mm <- max(merge_target_size)
-    for(i in 1:length(partner_driver_list)){
-      rect(xleft=xleft,xright=xleft+target_size[i+1]/mm*tt,ybottom=yy33[i*2]-dyy33*0.2,ytop=yy33[i*2]+dyy33*0.2,col='dark grey',border=NA) #each
-      rect(xleft=xleft,xright=xleft+merge_target_size[i]/mm*tt,ybottom=yy33[i*2-1]-dyy33*0.2,ytop=yy33[i*2-1]+dyy33*0.2,col='dark grey',border=NA) #merge
-    }
-    segments(x0=xleft,x1=pp[2],y0=pp[4],y1=pp[4],xpd=TRUE)
-    sst <- round(seq(0,mm,length.out=3))
-    ss <- sst*tt/mm+xleft
-    segments(x0=ss,x1=ss,y0=pp[4],y1=pp[4]+(pp[4]-pp[3])/150,xpd=TRUE)
-    text(x=ss,y=pp[4]+(pp[4]-pp[3])/100,srt=90,sst,xpd=TRUE,adj=0,cex=0.8)
-    text('Target Size',x=(pp[1]+pp[2])*0.45,y=pp[4]+(pp[4]-pp[3])/50,adj=1,xpd=TRUE,cex=0.8)
-  }
-  ## add lines
-  segments(x0=xleft,x1=pp[2],y0=yy2,y1=yy2,lwd=1.2,col='grey',xpd=TRUE)
-  abline(v=xleft,col='grey')
-  #abline(v=pp[2],col='grey')
-  ## test for significant overlap
-  total_possible_target <- unique(unlist(lapply(target_list,function(x)x$target)))
-  for(i in 1:length(partner_driver_list)){
-    res1 <- test.targetNet.overlap(seed_driver,partner_driver_list[i],
-                                   target1=intersect(use_target_list[[seed_driver]]$target,DE_profile_name),
-                                   target2=intersect(use_target_list[[partner_driver_list[i]]]$target,DE_profile_name),
-                                   total_possible_target = total_possible_target)
-    pv <- format(res1[1],digits=2,scientific=TRUE)
-    ov <- round(res1[3])
-    if(res1[1]<0.05){
-      text(sprintf('Overlap:%d, P value:%s',ov,pv),x=xleft-(pp[2]-pp[1])/10,y=yy33[i*2-1],adj=1,xpd=TRUE,cex=0.8,col='dark red')
-    }else{
-      if(ov==0){
-        text('No overlap',x=xleft-(pp[2]-pp[1])/10,y=yy33[i*2-1],adj=1,xpd=TRUE,cex=0.7)
-      }else{
-        text(sprintf('Overlap:%d, P value:%s',ov,pv),x=xleft-(pp[2]-pp[1])/10,y=yy33[i*2-1],adj=1,xpd=TRUE,cex=0.7)
-      }
-    }
-  }
-  ##
-  if(is.null(pdf_file)==FALSE) dev.off()
-  layout(1);
-  return(TRUE)
-}
 
 #' Merge target list for two drivers.
 #'

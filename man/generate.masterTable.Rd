@@ -5,8 +5,9 @@
 \title{Generate final master table for drivers.}
 \usage{
 generate.masterTable(use_comp = NULL, DE = NULL, DA = NULL,
-  network = NULL, main_id_type = NULL, tf_sigs = tf_sigs,
-  z_col = "Z-statistics", display_col = c("logFC", "P.Value"))
+  network = NULL, main_id_type = NULL, transfer_tab = NULL,
+  tf_sigs = tf_sigs, z_col = "Z-statistics", display_col = c("logFC",
+  "P.Value"))
 }
 \arguments{
 \item{use_comp}{a vector of characters, the comparison name used to display in the master table.}
@@ -23,6 +24,8 @@ running \code{get.SJAracne.network}.}
 \item{main_id_type}{character, the main gene id type. The attribute name from the biomaRt package,
 such as 'ensembl_gene_id', 'ensembl_gene_id_version', 'ensembl_transcript_id', 'ensembl_transcript_id_version', 'refseq_mrna'. Full list could be obtained by
 \code{listAttributes(mart)$name}, where \code{mart} is the output of \code{useMart} function.}
+
+\item{transfer_tab}{data.frame, the transfer table for ID conversion, could be obtained by \code{get_IDtransfer}.}
 
 \item{tf_sigs}{list, which contain the detailed information for the TF and SIGs, this can be obtained by running \code{db.preload}.}
 

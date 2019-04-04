@@ -2,9 +2,7 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{get_IDtransfer2symbol2type}
 \alias{get_IDtransfer2symbol2type}
-\title{Gene ID conversion related functions.
-\code{get_IDtransfer2symbol2type} will generate the transfer table for the original ID to the gene symbol and gene biotype (at gene level)
-or transcript symbol and transcript biotype (at transcript level).}
+\title{Gene ID conversion related functions.}
 \usage{
 get_IDtransfer2symbol2type(from_type = NULL, use_genes = NULL,
   dataset = NULL, use_level = "gene")
@@ -28,7 +26,6 @@ If NULL, will use \code{db_info[1]} if run \code{db.preload} brefore. Default is
 \code{get_IDtransfer2symbol2type} will return a data.frame for the transfer table with gene/transcript biotype.
 }
 \description{
-Gene ID conversion related functions.
 \code{get_IDtransfer2symbol2type} will generate the transfer table for the original ID to the gene symbol and gene biotype (at gene level)
 or transcript symbol and transcript biotype (at transcript level).
 }
