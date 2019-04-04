@@ -54,4 +54,3 @@ analysis_and_plot_demo1.R
 * II.3: category plot for the expression/activity for each driver
 ### Part III: advanced plots
 * III.1: gene set-based activity analysis, including vocalno, heatmap, category and GSEA plot
-* III.2: SINBA plot for synergistic effect
