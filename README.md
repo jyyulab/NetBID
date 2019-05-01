@@ -1,16 +1,17 @@
 # NetBID2
-Network-based Bayesian Inference of Drivers
+Network-based Bayesian Inference of Drivers, Version II
 
-# public version (not available to install remotely yet)
+# Install
 
-# remote install (not available yet)
+## remote install (not available yet)
 
-library(githubinstall)
+library(devtools)
 
-githubinstall("jyyulab/NetBID-dev",ref='NetBID2-R') ## not public yet
+install_github("jyyulab/NetBID-dev",ref='master') 
 
+or download the release version from https://github.com/jyyulab/NetBID-dev/releases/download/NetBID2-R/NetBID2_0.1.0.tar.gz
 
-# local install
+## local install
 
 download the directory to your workspace and then run:
 
@@ -24,9 +25,16 @@ or directly install:
 
 install.packages('/research/projects/yu3grp/Network_JY/yu3grp/NetBID2/NetBID2_0.1.0.tar.gz',repos=NULL)
 
-## manual: NetBID2_manual.pdf
+# Manual & Tutorial
 
-## demo scripts for network generation, in demo_scripts/ directory 
+manual: NetBID2_0.1.0.pdf
+
+tutorial: https://jyyulab.github.io/NetBID-dev/
+
+# Demo
+in demo_scripts/ directory
+
+## demo scripts for network generation 
 pipeline_network_demo1.R
 * Step1: load in gene expression datasets for network construction (exp-load)
 * Step2: normalization for the exp dataset (exp-QC)
@@ -54,3 +62,5 @@ analysis_and_plot_demo1.R
 * II.3: category plot for the expression/activity for each driver
 ### Part III: advanced plots
 * III.1: gene set-based activity analysis, including vocalno, heatmap, category and GSEA plot
+
+
