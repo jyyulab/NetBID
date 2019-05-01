@@ -6,7 +6,7 @@
 \usage{
 draw.eset.QC(eset, outdir = ".", do.logtransform = FALSE,
   intgroup = NULL, prefix = "", choose_plot = c("heatmap", "pca",
-  "density", "meansd"))
+  "density", "meansd"), generate_html = TRUE)
 }
 \arguments{
 \item{eset}{ExpressionSet class, the input ExpressionSet class object to be plot.}
@@ -25,6 +25,10 @@ Default is NULL.}
 \item{choose_plot}{a vector of characters,
 choose one or multiple from 'heatmap', 'pca', 'density', 'meansd.'
 Default is 'heatmap','pca','density','meansd'.}
+
+\item{generate_html}{logical, whether to generate html file for the report.
+If TRUE, will generate a html file by rmarkdown, otherwise will generate separate pdf files.
+Default is TRUE.}
 }
 \description{
 \code{draw.eset.QC} is a function to draw the basic QC plots for an ExpressionSet class object.

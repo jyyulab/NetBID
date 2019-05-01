@@ -5,7 +5,7 @@
 \title{Gene ID conversion related functions.}
 \usage{
 get_IDtransfer2symbol2type(from_type = NULL, use_genes = NULL,
-  dataset = NULL, use_level = "gene")
+  dataset = NULL, use_level = "gene", ignore_version = FALSE)
 }
 \arguments{
 \item{from_type}{character, attribute name from the biomaRt package,
@@ -21,6 +21,8 @@ If NULL, will output all possible genes in transfer table. Default is NULL.}
 If NULL, will use \code{db_info[1]} if run \code{db.preload} brefore. Default is NULL.}
 
 \item{use_level}{character, either 'transcript' or 'gene', default is 'gene'}
+
+\item{ignore_version}{logical, whether to ignore version when from_type is 'ensembl_gene_id_version' or 'ensembl_transcript_id_version'. Default is FALSE.}
 }
 \value{
 \code{get_IDtransfer2symbol2type} will return a data.frame for the transfer table with gene/transcript biotype.

@@ -7,7 +7,7 @@
 generate.masterTable(use_comp = NULL, DE = NULL, DA = NULL,
   network = NULL, main_id_type = NULL, transfer_tab = NULL,
   tf_sigs = tf_sigs, z_col = "Z-statistics", display_col = c("logFC",
-  "P.Value"))
+  "P.Value"), column_order_stratey = "type")
 }
 \arguments{
 \item{use_comp}{a vector of characters, the comparison name used to display in the master table.}
@@ -32,6 +32,8 @@ such as 'ensembl_gene_id', 'ensembl_gene_id_version', 'ensembl_transcript_id', '
 \item{z_col}{character, column name in \code{DE}, \code{DA} that contains the Z statistics. Default is 'Z-statistics'.}
 
 \item{display_col}{character,column name in \code{DE}, \code{DA} to be kept in the master table. Default is c('logFC','P.Value').}
+
+\item{column_order_stratey}{character, choose from 'type' and 'comp'. Default is 'type'.}
 }
 \value{
 a data.frame that contains the information for all tested drivers.

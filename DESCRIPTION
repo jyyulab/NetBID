@@ -1,7 +1,7 @@
 Package: NetBID2
 Type: Package
 Title: Network-based Bayesian Inference of Drivers, version 2
-Version: 0.1.0
+Version: 0.1.1
 Authors@R: person('Xinran', 'Dong', email = 'xinran.dong@stjude.org', role = c('aut', 'cre'))
 Maintainer@R: person('Xinran', 'Dong', email = 'xinran.dong@stjude.org')
 Description: A integrative systems biolgy algorithm to infer driers of phenotype based on data-driven context-specific network and Bayesian inference.
@@ -32,11 +32,14 @@ Depends:
     MCMCglmm (>= 2.26),
     ConsensusClusterPlus (>= 1.38.0),
     aricode (>= 0.1.1),
-    GSVA (>= 1.22.4)
+    GSVA (>= 1.22.4),
+    ordinal (>= 2019.4-25),
+    vsn (>= 3.48.1),
+    rmarkdown (>= 1.11),
+    kableExtra (>= 1.1.0)
 Imports:
     colorspace,
-    rhdf5,
-    vsn
+    rhdf5
 Suggests:
     lme4
 RoxygenNote: 6.1.1

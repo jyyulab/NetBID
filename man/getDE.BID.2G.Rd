@@ -4,11 +4,19 @@
 \alias{getDE.BID.2G}
 \title{Get differential expression (DE)/differential activity (DA) between case and control sample groups by Bayesian Inference.}
 \usage{
-getDE.BID.2G(eset, G1 = NULL, G0 = NULL, G1_name = NULL,
-  G0_name = NULL, verbose = TRUE)
+getDE.BID.2G(eset, ouput_id_column = NULL, G1 = NULL, G0 = NULL,
+  G1_name = NULL, G0_name = NULL, method = "Bayesian",
+  family = gaussian, pooling = "full", logTransformed = TRUE,
+  verbose = TRUE)
 }
 \arguments{
 \item{eset}{ExpressionSet class object, the input gene expression or driver activity.}
+
+\item{ouput_id_column}{character, the column in the fData(eset) used for output the results.
+This option is used in the condition that the original expression matrix is at transcript-level,
+but the statistics can be gene-level if the relation is provided in the feature of the eset.
+If NULL, will use the rownames of the fData(eset).
+Default is NULL.}
 
 \item{G1}{a vector of characters, the sample list used as the case.}
 
@@ -17,6 +25,34 @@ getDE.BID.2G(eset, G1 = NULL, G0 = NULL, G1_name = NULL,
 \item{G1_name}{character, the group name for the samples in G1, default is "G1".}
 
 \item{G0_name}{character, the group name for the samples in G0, default is "G0".}
+
+\item{method}{character, choose from 'MLE' or 'Bayesian'.
+'MLE' stands for maximum likelihood estimation, that the function will use generalized linear model(glm/glmer) to fit the data
+for the expression value and sample phenotype, and use MLE to estimate the regression coefficients.
+'Bayesian' means that the function will use Bayesian generalized linear model (bayesglm)
+or multivariate generalized linear mixed model (MCMCglmm) to fit the data.
+Default is 'Bayesian'.}
+
+\item{family}{a description of the error distribution and link function to be used in the model.
+This can be a character string naming a family function, a family function or the result of a call to a family function.
+(See family for details of family functions).
+Currently only support gaussian,poisson,binomial(two group sample class)/category(multi-group sample class)/ordinal(multi-group sample class with class_ordered=TRUE)
+If set at gaussian or poission, the response variable will be the expression level and the regressors will be the sample phenotype.
+If set at binomial,the response variable will be the sample phenotype and the regressors will be the expression level.
+For the input of binomial, category and ordinal, the family will be automatically reset by the input sample class level and the setting of class_ordered.
+Default is gaussian.}
+
+\item{pooling}{character, choose from 'full','no','partial'. The strategy for the calculation of DE/DA.
+Supposing geneA has multiple probes A1,A2, in Samples (Case-rep1, Case-rep2, Case-rep3, Control-rep1, Control-rep2, Control-rep3).
+The \code{mat} contains the expression for probes A1,A2 in all samples.
+The purpose is to testify the DE of geneA between Case and Control.
+'full' means to pull the probe together and treat them as indepedent observations.
+'no' means to treat the probe information as an independent variable in the regression model.
+'partial' means to treat the probe information as a random effect in the regression model.
+Default is 'full'.}
+
+\item{logTransformed}{logical, whether the original expression value has been log transformed.
+Default is TRUE.}
 
 \item{verbose}{logical, whether or not to print verbose information during calculation.
 Default is TRUE.}
@@ -28,6 +64,27 @@ A dataframe for all genes with the columns as the output of \code{topTable} in l
 \code{getDE.BID.2G} is a function aims to get DE/DA genes/drivers with detailed statistical information between case (G1) and control (G0) groups.
 }
 \examples{
+mat <- matrix(c(0.50099,-1.2108,-1.0524,
+                0.34881,-0.13441,0.87112,
+                1.84579,-2.0356,-2.6025,
+                1.62954,1.88281,1.29604),nrow=2,byrow=TRUE)
+rownames(mat) <- c('A1','A2')
+colnames(mat) <-  c('Case-rep1','Case-rep2','Case-rep3',
+                'Control-rep1','Control-rep2','Control-rep3')
+tmp_eset <- generate.eset(mat,feature_info=data.frame(row.names=rownames(mat),
+            probe=rownames(mat),gene=rep('GeneX',2),
+            stringsAsFactors = FALSE))
+res1 <- getDE.BID.2G(tmp_eset,ouput_id_column='probe',
+        G1=c('Case-rep1','Case-rep2','Case-rep3'),
+        G0=c('Control-rep1','Control-rep2','Control-rep3'))
+res2 <- getDE.BID.2G(tmp_eset,ouput_id_column='gene',
+        G1=c('Case-rep1','Case-rep2','Case-rep3'),
+        G0=c('Control-rep1','Control-rep2','Control-rep3'))
+res3 <- getDE.BID.2G(tmp_eset,ouput_id_column='gene',
+        G1=c('Case-rep1','Case-rep2','Case-rep3'),
+        G0=c('Control-rep1','Control-rep2','Control-rep3'),
+        pooling='partial')
+\dontrun{
 analysis.par <- list()
 analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
 NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
@@ -43,4 +100,5 @@ DA_driver_BID <- getDE.BID.2G(eset=analysis.par$merge.ac.eset,
                                 G1=G1,G0=G0,
                                 G1_name=each_subtype,
                                 G0_name='other')
+}
 }

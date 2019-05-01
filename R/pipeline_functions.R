@@ -1,5 +1,5 @@
 
-#' @import Biobase limma tximport igraph biomaRt openxlsx msigdbr ConsensusClusterPlus
+#' @import Biobase limma tximport igraph biomaRt openxlsx msigdbr ConsensusClusterPlus rmarkdown kableExtra
 #' @importFrom GEOquery getGEO
 #' @importFrom RColorBrewer brewer.pal
 #' @importFrom plot3D scatter3D
@@ -18,11 +18,14 @@
 #' @importFrom arm bayesglm
 #' @importFrom reshape melt
 #' @importFrom vsn meanSdPlot
+#' @importFrom ordinal clm clmm
 
-##   ‘MCMCglmm’ ‘arm’ ‘reshape’
-############################# NetBID2 Functions
-######## pre-request packages
-# R >= 3.4.0
+#' @importFrom grDevices col2rgb colorRampPalette dev.off pdf rgb
+#' @importFrom graphics abline arrows axis barplot boxplot hist image layout legend lines mtext par points polygon rect segments strheight stripchart strwidth text
+#' @importFrom stats IQR aggregate as.dendrogram as.dist cutree density dist fisher.test gaussian glm hclust kmeans ks.test lm median model.matrix na.omit order.dendrogram p.adjust pchisq pnorm prcomp pt qnorm quantile sd
+#' @importFrom utils read.delim write.table
+
+################################
 library(Biobase) ## basic functions for bioconductor
 library(GEOquery) ## for samples from GEO
 library(limma) ## for data normalization for micro-array
@@ -33,7 +36,6 @@ library(RColorBrewer) ## for color scale
 library(colorspace) ## for color scale
 library(plot3D) ## for 3D plot
 library(hexbin) ## for QC plot, require hexbin
-#library(gplots) ## for some plot like venn
 library(igraph) ## for network related functions
 library(plotrix) ## for draw.ellipse
 
@@ -46,9 +48,14 @@ library(ComplexHeatmap) ## for complex heatmap
 library(umap) ## for umap visualization
 library(rhdf5) ## for read in MICA results
 library(GSVA)
-#source('pipeline_functions_bid.R')
 
-####
+library(vsn)
+library(MCMCglmm)
+library(arm)
+library(reshape)
+library(ordinal)
+library(rmarkdown)
+
 #' Load database files used for NetBID2 into R workspace.
 #'
 #' \code{db.preload} returns the TF (transcription factors) and Sig (signaling factors) list (tf_sigs)
@@ -97,7 +104,7 @@ db.preload <- function(use_level='transcript',use_spe='human',update = FALSE,
   use_spe <- toupper(use_spe)
   output.db.dir <- sprintf('%s/%s',db.dir,use_spe)
   RData.file <- sprintf('%s/%s_%s.RData', output.db.dir,use_spe,use_level)
-  if (!file.exists(RData.file)) {
+  if (!file.exists(RData.file) | update==TRUE) {
     ## get info from use_spe
     ensembl <- useMart("ensembl")
     all_ds  <- listDatasets(ensembl)
@@ -305,6 +312,8 @@ get.TF_SIG.list <- function(use_genes=NULL,
 #' If NULL, will extract all possible genes.
 #' @param dataset character, name for the dataset used for ID conversion, such as 'hsapiens_gene_ensembl'.
 #' If NULL, will use \code{db_info[1]} if run \code{db.preload} brefore. Default is NULL.
+#' @param ignore_version logical, whether to ignore version when from_type is 'ensembl_gene_id_version' or 'ensembl_transcript_id_version'.
+#' Default is FALSE.
 #'
 #' @return
 #' \code{get_IDtransfer} will return a data.frame for the transfer table.
@@ -325,7 +334,7 @@ get.TF_SIG.list <- function(use_genes=NULL,
 #' \dontrun{
 #' }
 #' @export
-get_IDtransfer <- function(from_type=NULL,to_type=NULL,add_type=NULL,use_genes=NULL,dataset=NULL){
+get_IDtransfer <- function(from_type=NULL,to_type=NULL,add_type=NULL,use_genes=NULL,dataset=NULL,ignore_version=FALSE){
   if(is.null(dataset)==TRUE){
     if(exists('db_info')==FALSE){
       message('db_info not found, please run db.preload() first!');return(FALSE);
@@ -340,6 +349,15 @@ get_IDtransfer <- function(from_type=NULL,to_type=NULL,add_type=NULL,use_genes=N
   }
   if(!to_type %in% attributes$name){
     message(sprintf('%s not in the attributes for %s, please check and re-try !',to_type,dataset));return(FALSE)
+  }
+  if(from_type %in% c('ensembl_gene_id_version','ensembl_transcript_id_version')){
+    if(ignore_version==FALSE){
+      message(sprintf('Attention: %s in %s will be updated with new version number, please check the output.
+                    If lots of missing, try to set ignore_version=TRUE and try again !',from_type,dataset));
+    }else{
+      from_type <- gsub('(.*)_version','\\1',from_type)
+      use_genes <- gsub('(.*)\\..*','\\1',use_genes)
+    }
   }
   if(is.null(use_genes)==TRUE | length(use_genes)>100){
       tmp1 <- getBM(attributes=c(from_type,to_type,add_type),values=1,mart=mart,filters='strand')
@@ -485,6 +503,7 @@ get_IDtransfer_betweenSpecies <- function(from_spe='human',to_spe='mouse',
 #' @param dataset character, name for the dataset used for ID conversion, such as 'hsapiens_gene_ensembl'.
 #' If NULL, will use \code{db_info[1]} if run \code{db.preload} brefore. Default is NULL.
 #' @param use_level character, either 'transcript' or 'gene', default is 'gene'
+#' @param ignore_version logical, whether to ignore version when from_type is 'ensembl_gene_id_version' or 'ensembl_transcript_id_version'. Default is FALSE.
 #'
 #' @return
 #' \code{get_IDtransfer2symbol2type} will return a data.frame for the transfer table with gene/transcript biotype.
@@ -505,7 +524,7 @@ get_IDtransfer_betweenSpecies <- function(from_spe='human',to_spe='mouse',
 #' \dontrun{
 #' }
 #' @export
-get_IDtransfer2symbol2type <- function(from_type=NULL,use_genes=NULL,dataset=NULL,use_level='gene'){
+get_IDtransfer2symbol2type <- function(from_type=NULL,use_genes=NULL,dataset=NULL,use_level='gene',ignore_version=FALSE){
   if(is.null(dataset)==TRUE){
     dataset <- db_info[1]
   }
@@ -515,8 +534,8 @@ get_IDtransfer2symbol2type <- function(from_type=NULL,use_genes=NULL,dataset=NUL
   if(!from_type %in% attributes$name){
     message(sprintf('%s not in the attributes for %s, please check and re-try !',from_type,dataset));return(FALSE)
   }
-  if(use_level=='gene') tmp1 <- get_IDtransfer(from_type=from_type,to_type='external_gene_name',add_type='gene_biotype',use_genes=use_genes,dataset=dataset)
-  if(use_level=='transcript')   tmp1 <- get_IDtransfer(from_type=from_type,to_type='external_gene_name',add_type='transcript_biotype',use_genes=use_genes,dataset=dataset)
+  if(use_level=='gene') tmp1 <- get_IDtransfer(from_type=from_type,to_type='external_gene_name',add_type='gene_biotype',use_genes=use_genes,dataset=dataset,ignore_version=ignore_version)
+  if(use_level=='transcript')   tmp1 <- get_IDtransfer(from_type=from_type,to_type='external_gene_name',add_type='transcript_biotype',use_genes=use_genes,dataset=dataset,ignore_version=ignore_version)
   transfer_tab <- tmp1
   return(transfer_tab)
 }
@@ -540,6 +559,7 @@ get_IDtransfer2symbol2type <- function(from_type=NULL,use_genes=NULL,dataset=NUL
 #' @param to_type character, character, attribute name from the biomaRt package,
 #'  the gene type will be convereted to.
 #'  If NULL, will use the second column in the transfer table.
+#' @param ignore_version logical, whether to ignore version when from_type is 'ensembl_gene_id_version' or 'ensembl_transcript_id_version'. Default is FALSE.
 #'
 #' @return
 #' \code{get_name_transfertab} will return the list for the converted IDs.
@@ -559,9 +579,13 @@ get_IDtransfer2symbol2type <- function(from_type=NULL,use_genes=NULL,dataset=NUL
 #' \dontrun{
 #' }
 #' @export
-get_name_transfertab <- function(use_genes=NULL,transfer_tab=NULL,from_type=NULL,to_type=NULL){
+get_name_transfertab <- function(use_genes=NULL,transfer_tab=NULL,from_type=NULL,to_type=NULL,ignore_version=FALSE){
   if(is.null(from_type)==TRUE){from_type=colnames(transfer_tab)[1];}
   if(is.null(to_type)==TRUE){to_type=colnames(transfer_tab)[2];}
+  if(ignore_version==TRUE){
+    from_type <- gsub('(.*)_version','\\1',from_type)
+    use_genes <- gsub('(.*)\\..*','\\1',use_genes)
+  }
   transfer_tab <- unique(transfer_tab[,c(from_type,to_type)])
   x <- use_genes;
   t1 <- unique(transfer_tab[which(transfer_tab[,from_type] %in% x),])
@@ -1605,10 +1629,39 @@ cal.Activity.GS <- function(use_gs2gene=all_gs2gene[c('H','CP:BIOCARTA','CP:REAC
 #' \code{getDE.BID.2G} is a function aims to get DE/DA genes/drivers with detailed statistical information between case (G1) and control (G0) groups.
 #'
 #' @param eset ExpressionSet class object, the input gene expression or driver activity.
+#' @param ouput_id_column character, the column in the fData(eset) used for output the results.
+#' This option is used in the condition that the original expression matrix is at transcript-level,
+#' but the statistics can be gene-level if the relation is provided in the feature of the eset.
+#' If NULL, will use the rownames of the fData(eset).
+#' Default is NULL.
 #' @param G1 a vector of characters, the sample list used as the case.
 #' @param G0 a vecotr of characters, the sample list used as the control.
 #' @param G1_name character, the group name for the samples in G1, default is "G1".
 #' @param G0_name character, the group name for the samples in G0, default is "G0".
+#' @param logTransformed logical, whether the original expression value has been log transformed.
+#' Default is TRUE.
+#' @param method character, choose from 'MLE' or 'Bayesian'.
+#' 'MLE' stands for maximum likelihood estimation, that the function will use generalized linear model(glm/glmer) to fit the data
+#' for the expression value and sample phenotype, and use MLE to estimate the regression coefficients.
+#' 'Bayesian' means that the function will use Bayesian generalized linear model (bayesglm)
+#' or multivariate generalized linear mixed model (MCMCglmm) to fit the data.
+#' Default is 'Bayesian'.
+#' @param family a description of the error distribution and link function to be used in the model.
+#' This can be a character string naming a family function, a family function or the result of a call to a family function.
+#' (See family for details of family functions).
+#' Currently only support gaussian,poisson,binomial(two group sample class)/category(multi-group sample class)/ordinal(multi-group sample class with class_ordered=TRUE)
+#' If set at gaussian or poission, the response variable will be the expression level and the regressors will be the sample phenotype.
+#' If set at binomial,the response variable will be the sample phenotype and the regressors will be the expression level.
+#' For the input of binomial, category and ordinal, the family will be automatically reset by the input sample class level and the setting of class_ordered.
+#' Default is gaussian.
+#' @param pooling character, choose from 'full','no','partial'. The strategy for the calculation of DE/DA.
+#' Supposing geneA has multiple probes A1,A2, in Samples (Case-rep1, Case-rep2, Case-rep3, Control-rep1, Control-rep2, Control-rep3).
+#' The \code{mat} contains the expression for probes A1,A2 in all samples.
+#' The purpose is to testify the DE of geneA between Case and Control.
+#' 'full' means to pull the probe together and treat them as indepedent observations.
+#' 'no' means to treat the probe information as an independent variable in the regression model.
+#' 'partial' means to treat the probe information as a random effect in the regression model.
+#' Default is 'full'.
 #' @param verbose logical, whether or not to print verbose information during calculation.
 #' Default is TRUE.
 #'
@@ -1616,6 +1669,27 @@ cal.Activity.GS <- function(use_gs2gene=all_gs2gene[c('H','CP:BIOCARTA','CP:REAC
 #' A dataframe for all genes with the columns as the output of \code{topTable} in limma.
 #'
 #' @examples
+#' mat <- matrix(c(0.50099,-1.2108,-1.0524,
+#'                 0.34881,-0.13441,0.87112,
+#'                 1.84579,-2.0356,-2.6025,
+#'                 1.62954,1.88281,1.29604),nrow=2,byrow=TRUE)
+#' rownames(mat) <- c('A1','A2')
+#' colnames(mat) <-  c('Case-rep1','Case-rep2','Case-rep3',
+#'                 'Control-rep1','Control-rep2','Control-rep3')
+#' tmp_eset <- generate.eset(mat,feature_info=data.frame(row.names=rownames(mat),
+#'             probe=rownames(mat),gene=rep('GeneX',2),
+#'             stringsAsFactors = FALSE))
+#' res1 <- getDE.BID.2G(tmp_eset,ouput_id_column='probe',
+#'         G1=c('Case-rep1','Case-rep2','Case-rep3'),
+#'         G0=c('Control-rep1','Control-rep2','Control-rep3'))
+#' res2 <- getDE.BID.2G(tmp_eset,ouput_id_column='gene',
+#'         G1=c('Case-rep1','Case-rep2','Case-rep3'),
+#'         G0=c('Control-rep1','Control-rep2','Control-rep3'))
+#' res3 <- getDE.BID.2G(tmp_eset,ouput_id_column='gene',
+#'         G1=c('Case-rep1','Case-rep2','Case-rep3'),
+#'         G0=c('Control-rep1','Control-rep2','Control-rep3'),
+#'         pooling='partial')
+#' \dontrun{
 #' analysis.par <- list()
 #' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
 #' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
@@ -1631,8 +1705,9 @@ cal.Activity.GS <- function(use_gs2gene=all_gs2gene[c('H','CP:BIOCARTA','CP:REAC
 #'                                 G1=G1,G0=G0,
 #'                                 G1_name=each_subtype,
 #'                                 G0_name='other')
+#' }
 #' @export
-getDE.BID.2G <-function(eset,G1=NULL, G0=NULL,G1_name=NULL,G0_name=NULL,verbose=TRUE){
+getDE.BID.2G <-function(eset,ouput_id_column=NULL,G1=NULL, G0=NULL,G1_name=NULL,G0_name=NULL,method='Bayesian',family=gaussian,pooling='full',logTransformed=TRUE,verbose=TRUE){
   if(verbose==TRUE){
     print(sprintf('G1:%s', paste(G1, collapse = ';')))
     print(sprintf('G0:%s', paste(G0, collapse = ';')))
@@ -1641,22 +1716,31 @@ getDE.BID.2G <-function(eset,G1=NULL, G0=NULL,G1_name=NULL,G0_name=NULL,verbose=
   G1 <- intersect(G1,colnames(exp_mat))
   G0 <- intersect(G0,colnames(exp_mat))
   exp_mat <- exp_mat[,c(G1,G0)]
-  d<-data.frame(id=rownames(exp_mat),exp_mat,stringsAsFactors=FALSE)
-  comp <- factor(c(rep(1,length.out=length(G1)),rep(0,length.out=length(G0))))
-  de<- ddply(d,'id','combRowEvid.2grps',comp=comp,family=gaussian,method='Bayesian',n.iter=5000,nitt=25000,burnin=5000,thin=1,pooling=c('full'),logTransformed=TRUE,restand=FALSE,average.method=c('geometric'))
-  names(de)<-gsub('.full',"",names(de))
-  de$P.Value<-de$pval
+  if(is.null(ouput_id_column)==TRUE) use_id <- rownames(fData(eset)) else use_id <- fData(eset)[,ouput_id_column]
+  comp <- c(rep(1,length.out=length(G1)),rep(0,length.out=length(G0)))
+  all_id <- unique(use_id)
+  de <- lapply(all_id,function(x){
+    w1 <- which(use_id==x)
+    x1 <- exp_mat[w1,]
+    if(length(w1)==1) x1 <- t(as.matrix(x1)) else x1 <- as.matrix(x1)
+    bid(mat=x1,use_obs_class=comp,class_order=c(0,1),family=family,method=method,
+                   nitt=13000,burnin=3000,thin=1,pooling=pooling,class_ordered=FALSE,
+                   logTransformed=logTransformed,std=FALSE,average.method=c('geometric'),verbose=FALSE)
+  })
+  de <- as.data.frame(do.call(rbind,de))
+  #de<- ddply(d,'id','bid',mat=d[,-1],use_obs_class=comp,class_order=c(0,1),family=gaussian,method='Bayesian',
+  #           nitt=13000,burnin=3000,thin=1,pooling=c('full'),class_ordered=FALSE,
+  #           logTransformed=FALSE,std=FALSE,average.method=c('geometric'),verbose=TRUE)
+#  print(str(de))
   de$adj.P.Val<-p.adjust(de$P.Value,'fdr')
   de$logFC<-sign(de$FC)*log2(abs(de$FC))
-  de$AveExpr <- de$AveExp
-  de$`Z-statistics`<- de$z
-  de$ID <- de$id
+  de$ID <- all_id
   de<-de[,c('ID','logFC','AveExpr','t','P.Value','adj.P.Val','Z-statistics')]
   rownames(de) <- de$ID
   de <- de[order(de$P.Value),]
   tT <- de
-  new_mat <- exp_mat
-  tT <- tT[rownames(new_mat),]
+  new_mat <- aggregate(exp_mat,list(use_id),mean)[,-1]
+  tT <- tT[all_id,]
   exp_G1 <- rowMeans(new_mat[,G1])
   exp_G0 <- rowMeans(new_mat[,G0])
   tT <- cbind(tT,'Ave.G0'=exp_G0,'Ave.G1'=exp_G1)
@@ -1666,7 +1750,106 @@ getDE.BID.2G <-function(eset,G1=NULL, G0=NULL,G1_name=NULL,G0_name=NULL,verbose=
   return(tT)
 }
 
-# class_label can be obtained by get_class
+#' Combine the differential expression (DE)/differential activity (DA) results.
+#'
+#' \code{combineDE} is a function aims to combine DE/DA genes/drivers.
+#'
+#' @param DE_list list of DE results.
+#' @param DE_name a vector of DE names, if NULL, will use the names of the DE_list.
+#' If not NULL, must match the order of DE_list.
+#' Default is NULL.
+#' @param transfer_tab data.frame, the transfer table for ID conversion, could be obtained by get_IDtransfer.
+#' This transfer table is used for ID mapping for the results of DE_list.
+#' The column names must match the DE_name.
+#' If NULL, will treat the ID column for each DE results in DE_list as the same type of ID.
+#' Default is NULL.
+#' @param method character, choose from Stouffer or Fisher, default is "Stouffer".
+#' @param twosided logical, whether the pvalues are from two-sided test or not.
+#' If not, pvalues must between 0 and 0.5. Default is TRUE.
+#' @param signed logical, whether the sign of the pvals will be considered in calculation. Default is TRUE.
+#' @return a list of DE/DA results, with one more component named "combine" that include the combined results.
+#' The original DE/DA results are filtered by the used ID in combination.
+#'
+#' @examples
+#' analysis.par <- list()
+#' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
+#' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' phe_info <- pData(analysis.par$cal.eset)
+#' each_subtype <- 'G4'
+#' G0  <- rownames(phe_info)[which(phe_info$`subgroup`!=each_subtype)] # get sample list for G0
+#' G1  <- rownames(phe_info)[which(phe_info$`subgroup`==each_subtype)] # get sample list for G1
+#' DE_gene_limma <- getDE.limma.2G(eset=analysis.par$cal.eset,
+#'                                G1=G1,G0=G0,
+#'                                G1_name=each_subtype,
+#'                                G0_name='other')
+#' DA_driver_limma <- getDE.limma.2G(eset=analysis.par$merge.ac.eset,
+#'                                  G1=G1,G0=G0,
+#'                                  G1_name=each_subtype,
+#'                                  G0_name='other')
+#' DE_list <- list(DE=DE_gene_limma,DA=DA_driver_limma)
+#' g1 <- gsub('(.*)_.*','\\1',DE_list$DA$ID)
+#' transfer_tab <- data.frame(DE=g1,DA=DE_list$DA$ID,stringsAsFactors = FALSE)
+#' res1 <- combineDE(DE_list,transfer_tab=transfer_tab)
+#'
+#' \dontrun{
+#' each_subtype <- 'G4'
+#' G0  <- rownames(phe_info)[which(phe_info$`subgroup`!=each_subtype)] # get sample list for G0
+#' G1  <- rownames(phe_info)[which(phe_info$`subgroup`==each_subtype)] # get sample list for G1
+#' DE_gene_limma_G4 <- getDE.limma.2G(eset=analysis.par$cal.eset,
+#'                                    G1=G1,G0=G0,
+#'                                    G1_name=each_subtype,
+#'                                    G0_name='other')
+#' each_subtype <- 'SHH'
+#' G0  <- rownames(phe_info)[which(phe_info$`subgroup`!=each_subtype)] # get sample list for G0
+#' G1  <- rownames(phe_info)[which(phe_info$`subgroup`==each_subtype)] # get sample list for G1
+#' DE_gene_limma_SHH <- getDE.limma.2G(eset=analysis.par$cal.eset,
+#'                                     G1=G1,G0=G0,
+#'                                     G1_name=each_subtype,
+#'                                     G0_name='other')
+#' DE_list <- list(G4=DE_gene_limma_G4,SHH=DE_gene_limma_SHH)
+#' res2 <- combineDE(DE_list,transfer_tab=NULL)
+#' }
+#' @export
+combineDE<-function(DE_list,DE_name=NULL,transfer_tab=NULL,method='Stouffer',twosided=TRUE,signed=FALSE){
+  nDE<-length(DE_list)
+  if(nDE<2) stop('At least two DE outputs are required for combineDE analysis!\n')
+  if(is.null(DE_name)==TRUE){
+    DE_name <- names(DE_list)
+  }
+  if(is.null(transfer_tab)==TRUE){
+    transfer_tab <- lapply(DE_list,function(x)x$ID)
+    names(transfer_tab) <- DE_name
+    w1 <- names(which(table(unlist(transfer_tab))==nDE))
+    if(length(w1)==0){message('No intersected IDs found between DE list, please check and re-try!');return(FALSE);}
+    transfer_tab <- do.call(cbind,lapply(transfer_tab,function(x)w1))
+    transfer_tab <- as.data.frame(transfer_tab,stringsAsFactors=FALSE)
+  }
+  w1 <- lapply(DE_name,function(x){
+    which(transfer_tab[[x]] %in% DE_list[[x]]$ID)
+  })
+  w2 <- as.numeric(names(which(table(unlist(w1))==nDE)))
+  transfer_tab <- transfer_tab[w2,]
+  combine_info <- lapply(DE_name,function(x1){
+    DE_list[[x1]][transfer_tab[[x1]],]
+  })
+  names(combine_info) <- DE_name
+  dd <- do.call(cbind,lapply(combine_info,function(x1){
+    x1$P.Value*sign(x1$logFC)
+  }))
+  res1 <- t(apply(dd,1,function(x){
+    combinePvalVector(x,method=method,signed=signed,twosided=twosided)
+  }))
+  res1 <- as.data.frame(res1)
+  res1$adj.P.Val <- p.adjust(res1$P.Value,'fdr')
+  res1$logFC <- rowMeans(do.call(cbind,lapply(combine_info,function(x)x$logFC)))
+  res1$AveExpr <- rowMeans(do.call(cbind,lapply(combine_info,function(x)x$AveExpr)))
+  res1 <- cbind(transfer_tab,res1)
+  combine_info$combine <- res1
+  return(combine_info)
+}
+
+
+# inner function: class_label can be obtained by get_class
 get_class2design <- function(class_label){
   design <- model.matrix(~0+class_label);colnames(design) <- unique(class_label);
   rownames(design) <- names(class_label)
@@ -1855,6 +2038,7 @@ combinePvalVector <-
     }
     return(c(`Z-statistics` = stat, `P.Value` = pval))
   }
+
 
 #' Merge activity value ExpressionSet for TF (transcription factors) and Sig (signaling factors)
 #'
@@ -2110,6 +2294,7 @@ generate.masterTable.TF_SIG <- function(use_comp=NULL,DE=NULL,DA_TF=NULL,DA_SIG=
 #' @param tf_sigs list, which contain the detailed information for the TF and SIGs, this can be obtained by running \code{db.preload}.
 #' @param z_col character, column name in \code{DE}, \code{DA} that contains the Z statistics. Default is 'Z-statistics'.
 #' @param display_col character,column name in \code{DE}, \code{DA} to be kept in the master table. Default is c('logFC','P.Value').
+#' @param column_order_stratey character, choose from 'type' and 'comp'. Default is 'type'.
 #' @return a data.frame that contains the information for all tested drivers.
 #' The column "originalID" and "originalID_label" contain the ID same with the original dataset.
 #' @examples
@@ -2148,7 +2333,7 @@ generate.masterTable.TF_SIG <- function(use_comp=NULL,DE=NULL,DA_TF=NULL,DA_SIG=
 generate.masterTable <- function(use_comp=NULL,DE=NULL,DA=NULL,
                                  network=NULL,main_id_type=NULL,transfer_tab=NULL,
                                  tf_sigs=tf_sigs,
-                                 z_col='Z-statistics',display_col=c('logFC','P.Value')){
+                                 z_col='Z-statistics',display_col=c('logFC','P.Value'),column_order_stratey='type'){
   if(is.null(use_comp)){message('No input for use_comp, please check and re-try!');return(FALSE)}
   if(is.null(main_id_type)){message('No input for main_id_type, please check and re-try!');return(FALSE)}
   if(is.null(DE)){message('No input for DE, please check and re-try!');return(FALSE)}
@@ -2219,6 +2404,18 @@ generate.masterTable <- function(use_comp=NULL,DE=NULL,DA=NULL,
   })
   combine_info_DA <- do.call(cbind,lapply(combine_info,function(x)x[rn_label,grep('_DA$',colnames(x))]))
   combine_info_DE <- do.call(cbind,lapply(combine_info,function(x)x[rn_label,grep('_DE$',colnames(x))]))
+  # re-organize the columns for combine info
+  if(column_order_stratey=='type'){
+    col_ord <- c('Z','AveExpr',display_col)
+    tmp1 <- lapply(col_ord,function(x){
+      combine_info_DA[,grep(sprintf('^%s\\.',x),colnames(combine_info_DA))]
+    })
+    combine_info_DA <- do.call(cbind,combine_info_DA)
+    tmp1 <- lapply(col_ord,function(x){
+      combine_info_DE[,grep(sprintf('^%s\\.',x),colnames(combine_info_DA))]
+    })
+    combine_info_DE <- do.call(cbind,combine_info_DE)
+  }
   # put them together
   ms_tab <- cbind(label_info,combine_info_DA,combine_info_DE,add_info)
   return(ms_tab)
@@ -2455,7 +2652,7 @@ gs.preload <- function(use_spe='Homo sapiens',update=FALSE,
   return(TRUE)
 }
 
-########################### visualization functions
+######################################################### visualization functions
 ## simple functions to get info
 #' Generate a vector for sample category.
 #'
@@ -3101,6 +3298,9 @@ draw.2D.ellipse <- function(X,Y,class_label,xlab='PC1',ylab='PC2',legend_cex=0.8
 #' @param choose_plot a vector of characters,
 #' choose one or multiple from 'heatmap', 'pca', 'density', 'meansd.'
 #' Default is 'heatmap','pca','density','meansd'.
+#' @param generate_html logical, whether to generate html file for the report.
+#' If TRUE, will generate a html file by rmarkdown, otherwise will generate separate pdf files.
+#' Default is TRUE.
 #' @examples
 #' \dontrun{
 #' network.par <- list()
@@ -3112,7 +3312,7 @@ draw.2D.ellipse <- function(X,Y,class_label,xlab='PC1',ylab='PC2',legend_cex=0.8
 #' }
 #' @export
 draw.eset.QC <- function(eset,outdir = '.',do.logtransform = FALSE,intgroup=NULL,prefix = '',
-                         choose_plot=c('heatmap','pca','density','meansd')) {
+                         choose_plot=c('heatmap','pca','density','meansd'),generate_html=TRUE) {
   if (!file.exists(outdir)) {
     dir.create(outdir, recursive = TRUE)
     message(paste0("The output directory: \"", outdir, "\" is created!"))
@@ -3132,6 +3332,12 @@ draw.eset.QC <- function(eset,outdir = '.',do.logtransform = FALSE,intgroup=NULL
       message('Warning, the original expression matrix has values not larger than 0, the log-transformation may introduce NA, please manually modifiy and re-try !')
     }
     use_mat <- log2(use_mat)
+  }
+  if(generate_html==TRUE){
+    output_rmd_file <- sprintf('%s/%sQC.Rmd',outdir,prefix)
+    file.copy(from=system.file('Rmd/eset_QC.Rmd',package = "NetBID2"),to=output_rmd_file)
+    render(output_rmd_file, html_document(toc = TRUE))
+    return(TRUE)
   }
   ## pca
   if('pca' %in% choose_plot){
@@ -3163,20 +3369,7 @@ draw.eset.QC <- function(eset,outdir = '.',do.logtransform = FALSE,intgroup=NULL
     dend <- as.dendrogram(hclust(as.dist(m), method = "single"))
     ord <- order.dendrogram(dend)
     m <- m[ord, ord]
-    for(i in 1:length(intgroup)){
-      class_label <- pData(eset)[,intgroup[i]]
-      class_label[which(is.na(class_label)==TRUE)] <- 'NA'
-      cls_cc <- get.class.color(class_label)
-      heatmap(
-        m,Colv = NA,Rowv = NA,labRow = NA,labCol = NA,margin = c(10, 10),scale = 'none',
-        col = colorRampPalette(c('blue', 'yellow'))(100),
-        RowSideColors = cls_cc,
-        ColSideColors = cls_cc
-      )
-      legend(0,0,legend=unique(class_label),
-             fill = cls_cc[unique(class_label)],
-             xpd = TRUE,border = NA,bty = 'n',horiz = TRUE)
-    }
+    draw.heatmap(mat=m,phenotype_info = pData(eset),use_phe=intgroup)
     dev.off()
     message('Finish Heatmap plot !')
   }
@@ -3761,6 +3954,100 @@ draw.volcanoPlot <- function(dat=NULL,label_col=NULL,logFC_col=NULL,Pv_col=NULL,
   #return(TRUE)
 }
 ###
+
+#' Plot for combined DE (differentiated expressed)/DA (differentiated activity) Vs. original DE/DA
+#'
+#' \code{draw.combineDE} draw the image for the combined DE/DA Vs. original DE/DA.
+#'
+#' This plot function need to input the output from \code{combineDE}.
+#'
+#' @param DE_list list, a list of DE/DA results, with one more component named "combine" that include the combined results.
+#' Strongly suggest to use the output from \code{combineDE}.
+#' @param main_id character, the main id for display in the figure, must be one of the name in DE_list.
+#' If NULL, will use the first name. Default is NULL.
+#' @param top_number number for the top significant genes/drivers in the combine results to be displayed on the plot.
+#' Default is 30.
+#' @param row_cex numeric, \code{cex} for the row labels displayed on the plot. Default is 1
+#' @param column_cex numeric, \code{cex} for the col labels displayed on the plot. Default is 1
+#' @param text_cex numeric, \code{cex} for the text displayed on the plot. Default is 1
+#' @param pdf_file character, file path for the pdf file to save the figure into pdf format.If NULL, will not generate pdf file. Default is NULL.
+#'
+#' @return logical value indicating whether the plot has been successfully generated
+#'
+#' @examples
+#' analysis.par <- list()
+#' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
+#' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' phe_info <- pData(analysis.par$cal.eset)
+#' each_subtype <- 'G4'
+#' G0  <- rownames(phe_info)[which(phe_info$`subgroup`!=each_subtype)] # get sample list for G0
+#' G1  <- rownames(phe_info)[which(phe_info$`subgroup`==each_subtype)] # get sample list for G1
+#' DE_gene_limma_G4 <- getDE.limma.2G(eset=analysis.par$cal.eset,
+#'                                    G1=G1,G0=G0,
+#'                                    G1_name=each_subtype,
+#'                                    G0_name='other')
+#' each_subtype <- 'SHH'
+#' G0  <- rownames(phe_info)[which(phe_info$`subgroup`!=each_subtype)] # get sample list for G0
+#' G1  <- rownames(phe_info)[which(phe_info$`subgroup`==each_subtype)] # get sample list for G1
+#' DE_gene_limma_SHH <- getDE.limma.2G(eset=analysis.par$cal.eset,
+#'                                     G1=G1,G0=G0,
+#'                                     G1_name=each_subtype,
+#'                                     G0_name='other')
+#' DE_list <- list(G4=DE_gene_limma_G4,SHH=DE_gene_limma_SHH)
+#' res2 <- combineDE(DE_list,transfer_tab=NULL)
+#' draw.combineDE(res2)
+#' @export
+draw.combineDE <- function(DE_list=NULL,main_id=NULL,top_number=30,row_cex=1,column_cex=1,text_cex=1,pdf_file=NULL){
+    DE_name <- setdiff(names(DE_list),'combine')
+    if(top_number > nrow(DE_list$combine)) top_number <- nrow(DE_list$combine)
+    w1 <- DE_list$combine[order(DE_list$combine$P.Value)[1:top_number],]
+    dd <- do.call(cbind,lapply(DE_name,function(x){
+      x1 <- DE_list[[x]]
+      x2 <- x1[w1[,x],]
+      x2$'Z-statistics'
+    }))
+    colnames(dd) <- DE_name
+    if(is.null(main_id)==TRUE) main_id <- DE_name[1]
+    dat <- data.frame(main_id=w1[,main_id],dd,combine=w1$`Z-statistics`,stringsAsFactors=FALSE)
+    mat <- as.matrix(dat[,-1])
+    rownames(mat) <- dat$main_id
+    mat1 <- matrix(sapply(mat,function(x)get_z2p(x,use_star=TRUE,digit_num = 2)),nrow=nrow(mat))
+    if(is.null(pdf_file)==FALSE) pdf(pdf_file,width=4+ncol(mat),height=3+nrow(mat)/4)
+    par(mar=c(3,8,5,3))
+    draw.heatmap.local(mat,inner_line=TRUE,out_line=TRUE,col_srt=0,display_text_mat=mat1,row_cex=row_cex,column_cex=column_cex,text_cex=text_cex)
+    if(is.null(pdf_file)==FALSE) dev.off()
+    return(TRUE)
+}
+
+### local functions to draw heatmap
+draw.heatmap.local <- function(mat,inner_line=FALSE,out_line=TRUE,n=20,col_srt=60,display_text_mat=NULL,row_cex=1,column_cex=1,text_cex=1){
+  mat1 <- mat[nrow(mat):1,]
+  if(is.null(display_text_mat)==FALSE) display_text_mat <- display_text_mat[nrow(display_text_mat):1,]
+  cc1 <- colorRampPalette(c(brewer.pal(9,'Blues')[8],'white',brewer.pal(9,'Reds')[7]))(n*2)
+  bb1 <- seq(0,max(abs(mat1)),length.out=n)
+  if(out_line==TRUE) image(t(mat1),col=cc1,breaks=sort(c(-bb1,0,bb1)),xaxt='n',yaxt='n')
+  if(out_line==FALSE) image(t(mat1),col=cc1,breaks=sort(c(-bb1,0,bb1)),xaxt='n',yaxt='n',bty='n')
+  pp <- par()$usr
+  xx <- seq(pp[1],pp[2],length.out=1+ncol(mat1))
+  yy <- seq(pp[3],pp[4],length.out=1+nrow(mat1))
+  xxx <- xx[1:(length(xx)-1)]/2+xx[2:length(xx)]/2
+  yyy <- yy[1:(length(yy)-1)]/2+yy[2:length(yy)]/2
+  if(inner_line==TRUE){
+    abline(v=xx)
+    abline(h=yy)
+  }
+  text(pp[1]-max(strwidth(rownames(mat1))/10),yyy,rownames(mat1),adj=1,xpd=TRUE,cex=row_cex)
+  text(xxx,pp[4]+max(strheight(colnames(mat1))/2)+max(strheight(colnames(mat1))/10),colnames(mat1),adj=0.5-col_srt/90,xpd=TRUE,srt=col_srt,cex=column_cex)
+  if(is.null(display_text_mat)==FALSE){
+    for(i in 1:nrow(display_text_mat)){
+      for(j in 1:ncol(display_text_mat)){
+        text(xxx[j],yyy[i],display_text_mat[i,j],cex=text_cex)
+      }
+    }
+  }
+  return(TRUE)
+}
+
 #' Heatmap plot for displaying expression level or activity level for genes and drivers
 #'
 #' \code{draw.heatmap} draw the heatmap for expression level or activity level for genes and drivers across selected samples.
@@ -4933,8 +5220,8 @@ draw.GSEA <- function(rank_profile=NULL,use_genes=NULL,use_direction=NULL,main="
     new_rank_profile <- c(rank_profile,-rank_profile)
     names(new_rank_profile) <- c(paste0('POS_',names(rank_profile)),paste0('NEG_',names(rank_profile)))
     rank_profile <- new_rank_profile
-    use_genes[which(use_target_direction==1)] <- paste0('POS_',use_genes[which(use_target_direction==1)])
-    use_genes[which(use_target_direction==-1)] <- paste0('NEG_',use_genes[which(use_target_direction==-1)])
+    use_genes[which(use_direction==1)] <- paste0('POS_',use_genes[which(use_direction==1)])
+    use_genes[which(use_direction==-1)] <- paste0('NEG_',use_genes[which(use_direction==-1)])
   }
   rank_profile <- sort(rank_profile,decreasing = TRUE)
   r_len <- length(rank_profile)
@@ -5066,14 +5353,14 @@ get_ES <- function(rank_profile=NULL,use_genes=NULL,weighted.score.type=1){
   return(list(ES = ES, arg.ES = arg.ES, RES = RES, indicator = tag.indicator))
 }
 ##
-get_z2p <- function(x,use_star=FALSE){
+get_z2p <- function(x,use_star=FALSE,digit_num=2){
   x[which(is.na(x)==TRUE)] <- 0
   #if(is.na(x[1])==TRUE) return('NA')
   x <- abs(x)
   x[which(is.na(x)==TRUE)] <- 0 ##
   if(max(x)<5){
     use_pv <- 1-pnorm(x)
-    use_p <- format(use_pv,digits=2,scientific = TRUE)
+    use_p <- format(use_pv,digits=digit_num,scientific = TRUE)
   }else{
     low_p <- .Machine$double.xmin
     low_z <- sapply(10^(-(1:(1+-log10(low_p)))),combinePvalVector)
@@ -6266,86 +6553,6 @@ test.targetNet.overlap <- function(source1_label=NULL,source2_label=NULL,
   res <- c('P.Value'=ft,'Odds_Ratio'=or,'Intersected_Number'=mm[1,1])
   return(res)
 }
-##
-####
-# plot_pattern: no, random_one, all
-get.spByGene <- function(igraph_obj=NULL,driver_list=NULL,target_list=NULL,mode='all',transfer_tab=NULL,plot_pattern='random_one',...){
-  ori_driver_list <- driver_list
-  ori_target_list <- target_list
-  if(is.null(driver_list) & length(target_list)==1){
-    driver_list <- unlist(lapply(neighborhood(igraph_obj,nodes=target_list,mode='in'),names))
-  }
-  if(is.null(target_list) & length(driver_list)==1){
-    target_list <- unlist(lapply(neighborhood(igraph_obj,nodes=driver_list,mode='out'),names))
-  }
-  driver_list <- unique(intersect(driver_list,names(V(igraph_obj))))
-  target_list <- unique(intersect(target_list,names(V(igraph_obj))))
-  if(length(driver_list)==0 & length(target_list)==0){
-    message('No gene included, please check and re-try!');return(FALSE)
-  }
-  #r1 <- all_shortest_paths(igraph_obj,from=use_list,to=use_list,mode=mode)$res
-  #r2 <- unique(unlist(lapply(r1,names)))
-  print(driver_list)
-  print(target_list)
-
-  if(length(driver_list)==0) driver_list <- target_list
-  if(length(target_list)==0) target_list <- driver_list
-
-  all_r1 <- list()
-  for(d in driver_list){
-    for(t in target_list){
-      if(d!=t) all_r1[[sprintf('%s %s',d,t)]] <- all_shortest_paths(igraph_obj,from=d,to=t,mode=mode)$res
-    }
-  }
-  #print(all_r1)
-
-  if(plot_pattern!='all') r2 <- unique(unlist(lapply(all_r1,function(x)names(x[[1]]))))
-  if(plot_pattern=='all') r2 <- unique(unlist(lapply(all_r1,function(x)names(unlist(x)))))
-
-  all_sp <- induced_subgraph(igraph_obj,r2)
-
-  ## get layout matrix,x,y
-  net <- all_sp
-  if(plot_pattern!='no'){
-    draw.spByGene(net,driver_list=ori_driver_list,target_list=ori_target_list,transfer_tab=transfer_tab,...)
-  }
-  return(list(all_sp=all_r1,use_sp=net))
-}
-### plot igraph
-draw.spByGene <- function(net,driver_list=NULL,target_list=NULL,transfer_tab=NULL,vertex.size=25,vertex.label.cex=1,
-                          vertex.frame.color="white",vertex.label.color="black",edge.color='black',
-                          layout='auto',...){
-  n1 <- names(V(net))
-  cc <- brewer.pal(11,'Set3')
-  c1 <- ifelse(n1 %in% driver_list,cc[3],ifelse(n1 %in% target_list,cc[1],cc[9]))
-  names(c1) <- n1
-  d1 <- degree(net,mode='out')
-  n2 <- n1[order(d1,decreasing = TRUE)]
-  y <- ifelse(d1[n2]>0,2,1)
-  x <- c(seq(0,1,length.out=length(y[which(y==2)])),seq(0,1,length.out=length(y[which(y==1)])))
-  l <- cbind(x,y)
-  use_label <- names(V(net))
-  if(is.null(transfer_tab)==FALSE){
-    transfer_tab <- as.matrix(transfer_tab)
-    tt1 <- rbind(cbind(paste0(transfer_tab[,1],'_TF'),paste0(transfer_tab[,2],'_TF')),
-                 cbind(paste0(transfer_tab[,1],'_SIG'),paste0(transfer_tab[,2],'_SIG')),
-                 transfer_tab[,1:2])
-    tt1 <- unique(tt1)
-    rownames(tt1) <- tt1[,1]
-    w1 <- which(use_label %in% rownames(tt1))
-    use_label[w1] <- tt1[use_label[w1],2]
-  }
-  if(class(layout) != 'function'){
-    plot.igraph(net,vertex.label=use_label,vertex.color=c1,layout=l,vertex.size=vertex.size,vertex.frame.color=vertex.frame.color,
-                vertex.label.color=vertex.label.color,vertex.label.cex=vertex.label.cex,
-                edge.color=edge.color,...)
-  }else{
-    plot.igraph(net,vertex.label=use_label,vertex.color=c1,layout=layout,vertex.size=vertex.size,vertex.frame.color=vertex.frame.color,
-                vertex.label.color=vertex.label.color,vertex.label.cex=vertex.label.cex,
-                edge.color=edge.color,...)
-  }
-  return(TRUE)
-}
 
 #' Get target list by input network information from data.frame.
 #'
@@ -6564,7 +6771,11 @@ update_SJAracne.network <- function(network_list=NULL,
 #' @param igraph_obj igraph object, this could be generated by \code{get.SJAracne.network}
 #' @param outdir character, the output directory to save the QC figures.
 #' @param prefix character, the prefix for the QC figure name.Default is "".
-#'
+#' @param directed logical, whether to treat the network as directed network. Default is TRUE.
+#' @param weighted logical, whether to treat the network as weighted network. Default is FALSE.
+#' @param generate_html logical, whether to generate html file for the report.
+#' If TRUE, will generate a html file by rmarkdown, otherwise will generate separate pdf files.
+#' Default is TRUE.
 #' @return logical value indicating whether the plot has been successfully generated
 #'
 #' @examples
@@ -6584,7 +6795,7 @@ update_SJAracne.network <- function(network_list=NULL,
 #'                 outdir=analysis.par$out.dir.QC,prefix='TF_net_')
 #' }
 #' @export
-draw.network.QC <- function(igraph_obj,outdir=NULL,prefix=""){
+draw.network.QC <- function(igraph_obj,outdir=NULL,prefix="",directed=TRUE,weighted=FALSE,generate_html=TRUE){
   if (!file.exists(outdir)) {
     dir.create(outdir, recursive = TRUE)
     message(paste0("The output directory: \"", outdir, "\" is created!"))
@@ -6593,9 +6804,18 @@ draw.network.QC <- function(igraph_obj,outdir=NULL,prefix=""){
   if(class(igraph_obj)!='igraph'){
     message('Should input igraph object ! ');return(FALSE);
   }
+  if(generate_html==TRUE){
+    net <- igraph_obj
+    directed <- directed
+    weighted <- weighted
+    output_rmd_file <- sprintf('%s/%snetQC.Rmd',outdir,prefix)
+    file.copy(from=system.file('Rmd/net_QC.Rmd',package = "NetBID2"),to=output_rmd_file)
+    render(output_rmd_file, html_document(toc = TRUE))
+    return(TRUE)
+  }
   res_file <- sprintf('%s/%snetwork_info.pdf',outdir,prefix)
   pdf(res_file);
-  plot(density(igraph::degree(igraph_obj)),xlab='Degree',main='Density plot for degree');
+  plot(density(igraph::degree(igraph_obj)),xlab='Degree',main=sprintf('Density plot for degree distribution \n (network node:%d, network edge:%d)',length(V(igraph_obj)),length(E(igraph_obj))));
   hist(igraph::degree(igraph_obj),xlab='Degree',main='Histogram of degree')
   check_scalefree(igraph_obj);
   dev.off()
@@ -6612,85 +6832,6 @@ check_scalefree <- function(igraph_obj) {
   r3 <- summary(r2)$adj.r.squared
   plot(pk ~ k,data = dd,log = 'xy',main = sprintf('R2:%f', r3))
   return(r3)
-}
-
-########################## server-run functions (need local run version)
-get_server_path <- function(x){
-  gsub(RP.main_dir, RP.bash.main_dir, x)
-}
-
-#' Inner use: prepare for MICA
-#' @param mat matrix
-#' @param outdir character
-#' @param prjname character
-#' @param all_k a vector of integers
-#' @param retransformation character
-#' @param perplexity numeric
-#' @export
-SJ.MICA.prepare <- function(mat,outdir = '.',prjname = NULL,all_k=NULL,retransformation="False",perplexity=30) {
-  if(is.null(prjname)){
-    message('prjname should be input, please check and re-try !');return(FALSE)
-  }
-  if (!file.exists(outdir)) {
-    dir.create(outdir)
-  }
-  if(is.null(all_k)){
-    all_k <- 2:12
-  }
-  input_exp <- file.path(outdir, 'input.exp')
-  mat1 <- t(mat)
-  mat1 <- cbind(rownames(mat1), mat1)
-  colnames(mat1)[1] <- 'id'
-  write.table(mat1,file = input_exp,row.names = FALSE,col.names = TRUE,sep = '\t',quote = FALSE)
-  message(sprintf('Output exp file into %s',input_exp))
-  run_file <- file.path(outdir, 'run_MICA_S1.sh')
-  cmd <- sprintf('%s\nsh %s/run_MIE.sh %s %s/ %s',RP.load,RP.MICA.main,prjname,outdir,input_exp)
-  cmd <- get_server_path(cmd)
-  cat(cmd, file = run_file, sep = '\n')
-  run_file <- get_server_path(run_file)
-  print(sprintf('Check %s', run_file))
-  run_file <- file.path(outdir, 'run_MICA_S2.sh')
-  cmd <-
-    sprintf('%s\nsh %s/run_MICA.sh %s %s/ %s %s %s \"%s\"',RP.load,RP.MICA.main,prjname,
-            outdir,input_exp,retransformation,perplexity,paste(all_k,collapse = ' ')
-    )
-  cmd <- get_server_path(cmd)
-  cat(cmd, file = run_file, sep = '\n')
-  run_file <- get_server_path(run_file)
-  print(sprintf('Check %s', run_file))
-  return(TRUE)
-}
-
-#' Inner use: prepare for MICA with file
-#' @param input_exp character
-#' @param outdir character
-#' @param prjname character
-#' @param all_k a vector of integers
-#' @param retransformation character
-#' @param perplexity numeric
-#' @export
-SJ.MICA.prepare.withfile <- function(input_exp,outdir = '.',prjname = NULL,all_k=NULL,retransformation="False",perplexity=30) {
-  if(is.null(prjname)){
-    message('prjname should be input, please check and re-try !');return(FALSE)
-  }
-  if (!file.exists(outdir)) {
-    dir.create(outdir)
-  }
-  run_file <- file.path(outdir, 'run_MICA_S1.sh')
-  cmd <- sprintf('%s\nsh %s/run_MIE.sh %s %s/ %s',RP.load,RP.MICA.main,prjname,outdir,input_exp)
-  cmd <- get_server_path(cmd)
-  cat(cmd, file = run_file, sep = '\n')
-  run_file <- get_server_path(run_file)
-  print(sprintf('Check %s', run_file))
-  run_file1 <- run_file
-  run_file <- file.path(outdir, 'run_MICA_S2.sh')
-  cmd <- sprintf('%s\nsh %s/run_MICA.sh %s %s/ %s %s %s \"%s\"',RP.load,RP.MICA.main,prjname,outdir,
-                 input_exp,retransformation,perplexity,paste(all_k,collapse = ' '))
-  cmd <- get_server_path(cmd)
-  cat(cmd, file = run_file, sep = '\n')
-  run_file <- get_server_path(run_file)
-  print(sprintf('Check %s', run_file))
-  return(paste0('sh ',c(run_file1,run_file)))
 }
 
 
@@ -6799,1551 +6940,329 @@ SJAracne.prepare <-
     return(TRUE)
 }
 
-
-#' Inner use: prepare for SJaracne run on SJ server
-#' prepare SJAracne dataset for net-dataset
-#' project_name expression_matrix hub_genes outdir
-#' @param eset eSet object
-#' @param use.samples a vector of characters
-#' @param TF_list a vector of characters
-#' @param SIG_list a vector of characters
-#' @param SJAR.project_name character
-#' @param SJAR.main_dir character
-#' @param SJAR.bash.main_dir character
-#' @param mem integer
-#' @param IQR.thre numeric
-#' @param IQR.loose_thre numeric
-#' @export
-SJ.SJAracne.prepare <-
-  function(eset,use.samples = rownames(pData(eset)),TF_list=NULL,SIG_list=NULL,
-           SJAR.project_name = "",
-           SJAR.main_dir = NULL,
-           SJAR.bash.main_dir = NULL,
-           mem = 40960,IQR.thre=0.5,IQR.loose_thre=0.1) {
-    if(is.null(TF_list)==TRUE){
-      message('Empty TF_list, please check and re-try !');return(FALSE)
-    }
-    if(is.null(SIG_list)==TRUE){
-      message('Empty SIG_list, please check and re-try !');return(FALSE)
-    }
-    if(is.null(SJAR.project_name)==TRUE){
-      message('Empty SJAR.project_name, please check and re-try !');return(FALSE)
-    }
-    SJAR.outdir <- file.path(SJAR.main_dir, SJAR.project_name)
-    if (!file.exists(SJAR.outdir)) {
-      dir.create(SJAR.outdir, recursive = TRUE)
-    }
-    SJAR.outdir.tf  <-
-      file.path(SJAR.main_dir, SJAR.project_name, 'output_tf_')
-    SJAR.outdir.sig <-
-      file.path(SJAR.main_dir, SJAR.project_name, 'output_sig_')
-    SJAR.expression_matrix <-
-      file.path(SJAR.main_dir, SJAR.project_name, 'input.exp')
-    SJAR.hub_genes.tf <-
-      file.path(SJAR.main_dir, SJAR.project_name, 'tf.txt')
-    SJAR.hub_genes.sig <-
-      file.path(SJAR.main_dir, SJAR.project_name, 'sig.txt')
-    SJAR.bash_file.tf <-
-      file.path(SJAR.main_dir, SJAR.project_name, 'run_tf.sh')
-    SJAR.bash_file.sig <-
-      file.path(SJAR.main_dir, SJAR.project_name, 'run_sig.sh')
-    ## process exp matrix
-    d <- exprs(eset)[, use.samples]
-    # filter genes with count=0
-    d <- d[!apply(d == 0, 1, all), ]
-    # filter genes with IQR
-    choose1 <- IQR.filter(d, rownames(d),thre = IQR.thre,loose_thre=IQR.loose_thre,loose_gene=unique(c(TF_list,SIG_list)))
-    d <- d[choose1, ]
-    use.genes <- rownames(d)
-    use.genes <- use.genes[which(is.na(use.genes)==FALSE)]
-    # write exp data to exp format
-    expdata <- data.frame(cbind(isoformId = fData(eset)[use.genes, ], geneSymbol = fData(eset)[use.genes, ], d))
-    #
-    write.table(
-      expdata,
-      file = SJAR.expression_matrix,
-      sep = "\t",
-      row.names = FALSE,
-      quote = FALSE
-    )
-    ##
-    cat(intersect(use.genes, TF_list),file = SJAR.hub_genes.tf,sep = '\n')
-    cat(intersect(use.genes, SIG_list),file = SJAR.hub_genes.sig,sep = '\n')
-    # write scripts to bash file for tf
-    cmd_tf1 <-
-      sprintf(
-        '%s %s/generate_pipeline.py %s %s %s %s --run False --host CLUSTER',
-        RP.python3.path,
-        RP.SJAR.main,
-        SJAR.project_name,
-        SJAR.expression_matrix,
-        SJAR.hub_genes.tf,
-        SJAR.outdir.tf
-      )
-    SJAR.outdir.tf.script <-
-      sprintf('%ssjaracne_%s_scripts_/',
-              SJAR.outdir.tf,
-              SJAR.project_name)
-    cmd_tf2 <-
-      sprintf(
-        'cat %s/02_bootstrap_%s.sh | while read line; do bsub -R "rusage[mem=%d]" -P %s -oo %s%s.log -eo %s%s.err $line;done',
-        SJAR.outdir.tf.script,
-        SJAR.project_name,
-        mem,
-        SJAR.project_name,
-        SJAR.outdir.tf,
-        SJAR.project_name,
-        SJAR.outdir.tf,
-        SJAR.project_name
-      )
-    cmd_tf3 <-
-      sprintf(
-        'cat %s/03_getconsensusnetwork_%s.sh | while read line; do bsub -R "rusage[mem=%d]" -P %s -oo %s%s.log -eo %s%s.err $line;done',
-        SJAR.outdir.tf.script,
-        SJAR.project_name,
-        mem,
-        SJAR.project_name,
-        SJAR.outdir.tf,
-        SJAR.project_name,
-        SJAR.outdir.tf,
-        SJAR.project_name
-      )
-    cmd_tf4 <-
-      sprintf(
-        'cat %s/04_getenhancedconsensusnetwork_%s.sh | while read line; do bsub -R "rusage[mem=%d]" -P %s -oo %s%s.log -eo %s%s.err $line;done',
-        SJAR.outdir.tf.script,
-        SJAR.project_name,
-        mem,
-        SJAR.project_name,
-        SJAR.outdir.tf,
-        SJAR.project_name,
-        SJAR.outdir.tf,
-        SJAR.project_name
-      )
-    all_cmd <-
-      paste(RP.SJAR.pre_cmd,
-            cmd_tf1,
-            cmd_tf2,
-            cmd_tf3,
-            cmd_tf4,
-            sep = '\n')
-    all_cmd <- get_server_path(all_cmd)
-    cat(all_cmd, file = SJAR.bash_file.tf, sep = '\n')
-    # write scripts to bash file for sig
-    cmd_sig1 <-
-      sprintf(
-        '%s %s/generate_pipeline.py %s %s %s %s --run False --host CLUSTER',
-        RP.python3.path,
-        RP.SJAR.main,
-        SJAR.project_name,
-        SJAR.expression_matrix,
-        SJAR.hub_genes.sig,
-        SJAR.outdir.sig
-      )
-    SJAR.outdir.sig.script <-
-      sprintf('%ssjaracne_%s_scripts_/',
-              SJAR.outdir.sig,
-              SJAR.project_name)
-    cmd_sig2 <-
-      sprintf(
-        'cat %s/02_bootstrap_%s.sh | while read line; do bsub -R "rusage[mem=%d]" -P %s -oo %s%s.log -eo %s%s.err $line;done',
-        SJAR.outdir.sig.script,
-        SJAR.project_name,
-        mem,
-        SJAR.project_name,
-        SJAR.outdir.sig,
-        SJAR.project_name,
-        SJAR.outdir.sig,
-        SJAR.project_name
-      )
-    cmd_sig3 <-
-      sprintf(
-        'cat %s/03_getconsensusnetwork_%s.sh | while read line; do bsub -R "rusage[mem=%d]" -P %s -oo %s%s.log -eo %s%s.err $line;done',
-        SJAR.outdir.sig.script,
-        SJAR.project_name,
-        mem,
-        SJAR.project_name,
-        SJAR.outdir.sig,
-        SJAR.project_name,
-        SJAR.outdir.sig,
-        SJAR.project_name
-      )
-    cmd_sig4 <-
-      sprintf(
-        'cat %s/04_getenhancedconsensusnetwork_%s.sh | while read line; do bsub -R "rusage[mem=%d]" -P %s -oo %s%s.log -eo %s%s.err $line;done',
-        SJAR.outdir.sig.script,
-        SJAR.project_name,
-        mem,
-        SJAR.project_name,
-        SJAR.outdir.sig,
-        SJAR.project_name,
-        SJAR.outdir.sig,
-        SJAR.project_name
-      )
-    all_cmd <-
-      paste(RP.SJAR.pre_cmd,
-            cmd_sig1,
-            cmd_sig2,
-            cmd_sig3,
-            cmd_sig4,
-            sep = '\n')
-    all_cmd <- get_server_path(all_cmd)
-    cat(all_cmd, file = SJAR.bash_file.sig, sep = '\n')
-    ##
-    message(sprintf('Check %s',SJAR.bash_file.tf))
-    message(sprintf('Check %s',SJAR.bash_file.sig))
-    return(
-      list(
-        outdir.tf = SJAR.outdir.tf,
-        outdir.sig = SJAR.outdir.sig,
-        bash.tf = get_server_path(SJAR.bash_file.tf),
-        bash.sig = get_server_path(SJAR.bash_file.sig)
-      )
-    )
-  }
-
-#' Inner use: auto generate bash files for Step1, Step2, Step3, Step4 for all bash files under one directory
-#' @param out.dir.SJAR character
-#' @export
-SJ.SJAracne.step <- function(out.dir.SJAR) {
-  tf_bash <- list.files(out.dir.SJAR, pattern = 'tf.sh', recursive = TRUE)
-  sig_bash <-
-    list.files(out.dir.SJAR, pattern = 'sig.sh', recursive = TRUE)
-  s1 <-
-    lapply(c(tf_bash, sig_bash), function(x) {
-      system(paste0('head -n 4 ', out.dir.SJAR, x, '| tail -n 1'), intern = TRUE)
-    })
-  s2 <-
-    lapply(c(tf_bash, sig_bash), function(x) {
-      system(paste0('head -n 5 ', out.dir.SJAR, x, '| tail -n 1'), intern = TRUE)
-    })
-  s3 <-
-    lapply(c(tf_bash, sig_bash), function(x) {
-      system(paste0('head -n 6 ', out.dir.SJAR, x, '| tail -n 1'), intern = TRUE)
-    })
-  s4 <-
-    lapply(c(tf_bash, sig_bash), function(x) {
-      system(paste0('head -n 7 ', out.dir.SJAR, x, '| tail -n 1'), intern = TRUE)
-    })
-  cat(
-    c(RP.SJAR.pre_cmd, unlist(s1)),
-    file = sprintf('%s/step1.bash', out.dir.SJAR),
-    sep = '\n'
-  )
-  cat(
-    c(RP.SJAR.pre_cmd, unlist(s2)),
-    file = sprintf('%s/step2.bash', out.dir.SJAR),
-    sep = '\n'
-  )
-  cat(
-    c(RP.SJAR.pre_cmd, unlist(s3)),
-    file = sprintf('%s/step3.bash', out.dir.SJAR),
-    sep = '\n'
-  )
-  cat(
-    c(RP.SJAR.pre_cmd, unlist(s4)),
-    file = sprintf('%s/step4.bash', out.dir.SJAR),
-    sep = '\n'
-  )
-  message(get_server_path(sprintf('Check: %s', sprintf('%s/step1-4.bash', out.dir.SJAR))))
-  return(TRUE)
-}
 ####
-
-
-#combRowEvid.2grps
-#d: dataframe as below: (first column is the annotation)
-#			geneSymbol  DMSO_1 DMSO_2 DMSO_3    DEX_1    DEX_2    DEX_3
-#P0112072    PRKAR2B 0.50099 1.2108 1.0524 -0.34881 -0.13441 -0.87112
-#P0112073    PRKAR2B 1.84579 2.0356 2.6025  1.62954  1.88281  1.29604
-#comp as below:
-# [1] 0 0 0 1 1 1
-# Levels: 0 1
-#d<-d[1,]
-
-#' combRowEvid.2grps is a inner function for getDE.BID.2G.
-#' @param d input expression matrix
-#' @param comp an indicator vector
-#' @param family family Objects for Models, default is 'gaussian'
-#' @param method choose from 'MLE' or 'Bayesian'
-#' @param pooling choose from 'full','no','partial'
-#' @param n.iter number of interaction, default is 1000
-#' @param prior.V.scale default is 0.02
-#' @param prior.R.nu default is 1
-#' @param prior.G.nu default is 2
-#' @param nitt default is 13000
-#' @param burnin default is 3000
-#' @param thin default is 10
-#' @param restand default is TRUE
-#' @param logTransformed default is TRUE
-#' @param log.base default is 2
-#' @param average.method choose from c('geometric','arithmetic')
-#' @param pseudoCount default is 0
+#' Calculate differential expression (DE)/differential activity (DA) by Bayesian Inference.
+#'
+#' \code{bid} is a function to get differential expression (DE)/differential activity (DA) by Bayesian Inference.
+#'
+#' It is the inner function for \code{getDE.BID.2G} and also could be directly called.
+#' More options related with statistics in Bayesian Inference is provided in this function.
+#' If user input the ID conversion table \code{use_feature_info}, the original input expression matrix could be at probe/transcript level,
+#' and the output for DE/DA could be at gene level. Three pooling strategies could be selected for calculation.
+#' The P-value is approximately estimated by the posterior distribution of the coefficient and test whether it is significantly different from 0.
+#'
+#' @param mat matrix, input expression/activity matrix for IDs (gene/transcript/probe) belong to one gene/gene set, each column is one sample.
+#' The matrix is strongly suggest to contain rownames for IDs and colnames for samples.
+#' Supposing geneA has multiple probes A1,A2, in Samples (Case-rep1, Case-rep2, Case-rep3, Control-rep1, Control-rep2, Control-rep3).
+#' The \code{mat} will be a 2*6 numeric matrix.
+#' If the gene only contains one probe, the matrix should be a one-row matrix.
+#' @param use_obs_class a vector of characters, the cateogory class for all samples.
+#' The order of samples in use_obs_class must be the same with mat if no names of the vector is provided.
+#' This vector could be generated by the function get_obs_label to extract this vector from the dataframe of pData(eset) by selecting the column name.
+#' @param class_order a vector of characters, the order for the sample classes.
+#' Attention: The first class in this order vector will be treated as control.
+#' If class_ordered==TRUE, The order must be consistent with the phenotypic trend, such as "low", "medium", "high". Else, only the first order is important.
+#' If NULL, will use the alphabetical order in \code{use_obs_class}. Default is NULL.
+#' @param class_ordered logical, whether the sample class in class_order is ordered or not. Default is TRUE.
+#' @param method character, choose from 'MLE' or 'Bayesian'.
+#' 'MLE' stands for maximum likelihood estimation, that the function will use generalized linear model(glm/glmer) to fit the data
+#' for the expression value and sample phenotype, and use MLE to estimate the regression coefficients.
+#' 'Bayesian' means that the function will use Bayesian generalized linear model (bayesglm)
+#' or multivariate generalized linear mixed model (MCMCglmm) to fit the data.
+#' Default is 'Bayesian'.
+#' @param family a description of the error distribution and link function to be used in the model.
+#' This can be a character string naming a family function, a family function or the result of a call to a family function.
+#' (See family for details of family functions).
+#' Currently only support gaussian,poisson,binomial(two group sample class)/category(multi-group sample class)/ordinal(multi-group sample class with class_ordered=TRUE)
+#' If set at gaussian or poission, the response variable will be the expression level and the regressors will be the sample phenotype.
+#' If set at binomial,the response variable will be the sample phenotype and the regressors will be the expression level.
+#' For the input of binomial, category and ordinal, the family will be automatically reset by the input sample class level and the setting of class_ordered.
+#' Default is gaussian.
+#' @param pooling character, choose from 'full','no','partial'. The strategy for the calculation of DE/DA.
+#' Supposing geneA has multiple probes A1,A2, in Samples (Case-rep1, Case-rep2, Case-rep3, Control-rep1, Control-rep2, Control-rep3).
+#' The \code{mat} contains the expression for probes A1,A2 in all samples.
+#' The purpose is to testify the DE of geneA between Case and Control.
+#' 'full' means to pull the probe together and treat them as indepedent observations.
+#' 'no' means to treat the probe information as an independent variable in the regression model.
+#' 'partial' means to treat the probe information as a random effect in the regression model.
+#' Default is 'full'.
+#' @param prior.V.scale numeric, parameters used in the prior list for \code{MCMCglmm}.
+#' Useful when setting method as 'Bayesian' and pooling as 'partial'.
+#' Default is 0.02
+#' @param prior.R.nu numeric, parameters in the prior list for used in \code{MCMCglmm}.
+#' Useful when setting method as 'Bayesian' and pooling as 'partial'.
+#' Default is 1
+#' @param prior.G.nu numeric, parameters in the prior list for used in \code{MCMCglmm}.
+#' Useful when setting method as 'Bayesian' and pooling as 'partial'.
+#' Default is 2
+#' @param nitt numeric, number of MCMC iterations, parameters used in \code{MCMCglmm}.
+#' Useful when setting method as 'Bayesian' and pooling as 'partial'.
+#' Default is 13000
+#' @param burnin numeric, parameters used in \code{MCMCglmm}.
+#' Useful when setting method as 'Bayesian' and pooling as 'partial'.
+#' Default is 3000
+#' @param thin numeric, thinning interval, parameters used in \code{MCMCglmm}.
+#' Useful when setting method as 'Bayesian' and pooling as 'partial'.
+#' Default is 10
+#' @param std logical, whether to perform std to the original expression matrix. Default is TRUE
+#' @param logTransformed logical, whether the original data has been log transformation. Default is TRUE.
+#' @param log.base numeric, the base for log transformation, only used when do.logtransform is TRUE. Default is 2.
+#' @param average.method character, the strategy to calculate FC (fold change), choose from 'geometric','arithmetic'. Default is 'geometric'.
+#' @param pseudoCount integer, pseudo count to add for all value to avoid -Inf in log transformation when calculating FC (fold change).
+#' @param return_model logical, indicate what kind of data to return, if TRUE, the regression model will be returned, otherwise the basic statistics will be returned. Default is FALSE.
+#' @param use_seed integer, random seed, default is 999.
+#' @param verbose logical, whether to print addtional information.Default is FALSE.
+#'
+#' @return one row data.frame containing the output statistics or the regression model if set return_model as TRUE.
+#'
+#' @examples
+#' mat <- matrix(c(0.50099,1.2108,1.0524,-0.34881,-0.13441,-0.87112,
+#'                 1.84579,2.0356,2.6025,1.62954,1.88281,1.29604),
+#'                 nrow=2,byrow=TRUE)
+#' rownames(mat) <- c('A1','A2')
+#' colnames(mat) <- c('Case-rep1','Case-rep2','Case-rep3',
+#'                   'Control-rep1','Control-rep2','Control-rep3')
+#' res1 <- bid(mat=mat,
+#'            use_obs_class = c(rep('Case',3),rep('Control',3)),
+#'            class_order = c('Control','Case'))
+#' \dontrun{
+#' }
 #' @export
-combRowEvid.2grps<-function(d,comp,family=gaussian,method=c('MLE','Bayesian'),pooling=c('full','no','partial'),n.iter=1000,
-                            prior.V.scale=0.02,prior.R.nu=1,prior.G.nu=2,nitt = 13000,burnin =3000,thin=10,
-                            restand=TRUE,logTransformed=TRUE,log.base=2,average.method=c('geometric','arithmetic'),pseudoCount=0
-){
-
-  if(!all(comp %in% c(1,0))){
-    stop('comp only takes 1 or 0 !!! \n')
-  }
-
+bid <- function(mat=NULL,use_obs_class=NULL,class_order=NULL,class_ordered=TRUE,
+                        method=c('MLE','Bayesian'),family=gaussian,pooling=c('full','no','partial'),
+                        prior.V.scale=0.02,prior.R.nu=1,prior.G.nu=2,nitt = 13000,burnin =3000,thin=10,
+                        std=TRUE,logTransformed=TRUE,log.base=2,
+                        average.method='geometric',pseudoCount=0,return_model=FALSE,use_seed=999,verbose=FALSE){
+  #check input
+  if(is.null(mat)==TRUE){message('Input mat is NULL, please check and re-try!');return(FALSE);}
+  if(is.null(use_obs_class)==TRUE){message('Input use_obs_class is NULL, please check and re-try!');return(FALSE);}
+  if(is.null(class_order)==TRUE){message('Input class_order is NULL, please check and re-try!');return(FALSE);}
   if(missing(pooling))
-    pooling<-c('full','no','partial')
+    pooling<-c('full')
   else
     pooling<-tolower(pooling)
-
   pooling<-match.arg(pooling,several.ok=T)
-
-
+  if (is.character(family)){
+    if(family %in% c('category','ordinal')) family <- 'binomial' ## use automatically judging
+    if (!family %in% c('gaussian','binomial', 'poisson')) {
+      message("Only gaussian,poisson, and binomial/category/ordinal are supported, please check and re-try!");return(FALSE);
+    }
+    family <- get(family, mode = "function", envir = parent.frame())
+  }
+  if (is.function(family))
+    family <- family()
   if (is.character(family))
     family <- get(family, mode = "function", envir = parent.frame())
   if (is.function(family))
     family <- family()
   if (!family$family %in% c('gaussian','binomial', 'poisson')) {
-    print(family)
-    stop("Only Gaussian Poisson, and Binomial are supported!!! \n")
+    message("Only gaussian,poisson, and binomial/category/ordinal are supported, please check and re-try!");return(FALSE);
   }
-
-  if(missing(method))
-    method<-'Bayesian'
+  if(missing(method)) method<-'Bayesian'
   if(grepl('Bayes',method,ignore.case = T)) method<-'Bayesian'
   if(grepl('MLE|MaxLikelihood',method,ignore.case = T)) method<-'MLE'
   method<-match.arg(method)
-
-
+  #sample name
+  if(is.null(colnames(mat))==TRUE & is.null(names(use_obs_class))==TRUE){
+    colnames(mat) <- paste0('Sample',1:ncol(mat))
+    names(use_obs_class) <- paste0('Sample',1:ncol(mat))
+  }
+  if(is.null(colnames(mat))==TRUE & is.null(names(use_obs_class))==FALSE){
+    colnames(mat) <- names(use_obs_class)
+  }
+  if(is.null(colnames(mat))==FALSE & is.null(names(use_obs_class))==TRUE){
+    names(use_obs_class) <- colnames(mat)
+  }
+  use_obs_class <- use_obs_class[colnames(mat)]
+  ##check sample class
+  class_order  <- intersect(class_order,use_obs_class)
+  if(length(class_order)<=1){message('Sample class order is smaller than two classes, please check and re-try!');return(FALSE);}
+  if(verbose==TRUE) message(sprintf('%d sample classes will be used in calculation and %s will be treated as control',length(class_order),class_order[1]))
+  ##generate comp
+  comp <- factor(use_obs_class,levels=class_order)
+  ##check input matrix
   #remove NAs
+  d <- mat
   nna<-apply(!is.na(d),2,all)
-  d<-d[,nna]
-  #comp<-comp[nna[-1]]
-
-  #d<-d[1,]
-  #cat(dim(d),'\n')
-  #cat(d[1,1],'\n')
-  d<-data.frame(t(d[,-1]))
-  #cat(dim(d),'\n')
-
-
-
-
-  dat<-data.frame(
-    response=
-      c(unlist(d[comp==levels(comp)[1],]),unlist(d[comp==levels(comp)[2],]))
-    ,
-    treatment=
-      factor(c(rep(levels(comp)[1],sum(comp==levels(comp)[1])*ncol(d)),rep(levels(comp)[2],sum(comp==levels(comp)[2])*ncol(d))))
-    ,
-    probe=
-      factor(c(rep(colnames(d),each=sum(comp==levels(comp)[1])),rep(colnames(d),each=sum(comp==levels(comp)[2]))))
-  )
-
-
-  #calculate FC
-  FC.val<-FC(dat$response,dat$treatment,logTransformed=logTransformed,log.base=log.base,average.method='geometric',pseudoCount=pseudoCount)
-
-  AveExp<-mean(dat$response)
-  n.levels<-nlevels(dat$probe)
-
-  rs<-c(FC=FC.val,AveExp=AveExp,n.levels=as.integer(n.levels))
-
-  #cat(rs,'\n')
-
-  if('arithmetic' %in% average.method){
-    FC.ari<-FC(dat$response,dat$treatment,logTransformed=logTransformed,log.base=log.base,average.method='arithmetic',pseudoCount=0)
-    rs<-c(FC.ari_raw=FC.ari,rs)
+  if(dim(d)[1]==1){ d <- t(as.matrix(d[,nna])); rownames(d) <- rownames(mat) }else{ d <- d[,nna]}
+  ##generate data frame
+  d   <- melt(t(d))
+  dat <- data.frame(response=d$value,treatment=rep(comp,length(unique(d$X2))),probe=d$X2)
+  ##calculate FC
+  n.levels<-length(unique(dat$probe)) ##
+  n.treatments<-length(unique(dat$treatment)) ## 2grp or mgrp
+  AveExpr<-mean(dat$response)
+  if(n.treatments==2){
+    FC.val<-FC(dat$response,dat$treatment,
+               logTransformed=logTransformed,log.base=log.base,
+               average.method=average.method,pseudoCount=pseudoCount)
+    res<-c(FC=FC.val,AveExpr=AveExpr,n.levels=as.integer(n.levels))
+  }else{
+    res<-c(AveExpr=AveExpr,n.levels=as.integer(n.levels))
   }
-
-
-  #re-standarize the input data
-  if(restand & sd(dat$response)>0)
+  ##re-strandarize the input data
+  if(std==TRUE & family$family=='Poisson'){
+    message('negative values not allowed for the Poisson family, please set std=FALSE and re-try!');return(FALSE)
+  }
+  if(std==TRUE & sd(dat$response)>0)
     dat$response<-0.5*(dat$response-mean(dat$response))/sd(dat$response)
 
-  #MLE approach to estimate parameters
-  if(method=='MLE'){
-    if(family$family=='gaussian'){
-      #comlete pooling
-      if('full'%in%pooling){
-        M.full<-glm(response ~ treatment, data=dat)
-        sum.tmp<-summary(M.full)
-        rs.full<-c(
-          coef.full=sum.tmp$coef[2,1],
-          se.full=sum.tmp$coef[2,2],
-          t.full=sum.tmp$coef[2,3],
-          pval.full=sum.tmp$coef[2,4],
-          #z.full=sign(sum.tmp$coef[2,1])*abs(qnorm(sum.tmp$coef[2,4]/2)),
-          df.full=sum.tmp$df.residual,
-          AIC.full=sum.tmp$aic,
-          BIC.full=AIC(M.full,k=log(nrow(dat))),
-          Dev.full=sum.tmp$deviance
-        )
-        rs<-c(rs,rs.full)
+  if(class_ordered==TRUE) dat$treatment <- as.ordered(dat$treatment) ## for multi-groups
+  if(n.treatments==2) class_ordered=FALSE
+  ## main part !!!
+  # inner functions
+  get_info_model<-function(M,dat,method=NULL,df_sta=NULL){
+    sum.tmp<-summary(M)
+    if('summary.glm' %in% class(sum.tmp) | 'summary.clm'  %in% class(sum.tmp)){
+      if('summary.glm' %in% class(sum.tmp) ) w1 <- grep('treatment|response',rownames(sum.tmp$coef))
+      if('summary.clm' %in% class(sum.tmp) ) w1 <- grep('\\||response',rownames(sum.tmp$coef))
+      if(is.null(df_sta)==TRUE){
+        if(method=='MLE') df_sta<-sum.tmp$df.residual else df_sta <- summary(M)$df.residual-summary(M)$df[1] ## ???
       }
-
-      #no pooling
-      if('no'%in%pooling){
-        if(n.levels>1)
-          M.no<-glm(response ~ treatment + probe, data=dat)
-        else
-          M.no<-glm(response ~ treatment, data=dat)
-
-        sum.tmp<-summary(M.no)
-        rs.no<-c(
-          coef.no=sum.tmp$coef[2,1],
-          se.no=sum.tmp$coef[2,2],
-          t.no=sum.tmp$coef[2,3],
-          pval.no=sum.tmp$coef[2,4],
-          #z.no=sign(coef.no)*abs(qnorm(pval.no/2)),
-          df.no=sum.tmp$df.residual,
-          AIC.no=sum.tmp$aic,
-          BIC.no=AIC(M.no,k=log(nrow(dat))),
-          Dev.no=sum.tmp$deviance
-        )
-        rs<-c(rs,rs.no)
-      }
-
-
-      #partial pooling with multilevel model of varing slopes and intercepts
-      if('partial'%in%pooling){
-        if(n.levels>1){
-          #consider sd==0 case
-          if(sd(dat$response)==0)
-          {
-            dat$response<-rnorm(nrow(dat),mean(dat$response),sd(dat$response)+0.001)
-          }
-          M.partial<-glmer(response ~ treatment + (treatment + 1 | probe), data=dat)
-          sum.tmp<-summary(M.partial)
-          t.partial<-sum.tmp$coef[2,3]
-          df.partial<-as.numeric(	sum.tmp$devcomp$dims['n']-	sum.tmp$devcomp$dims['p']-	sum.tmp$devcomp$dims['q'])
-          pval.partial<-2*pt(abs(t.partial),lower.tail=FALSE,df=df.partial)
-          z.partial<-sign(t.partial)*abs(qnorm(pval.partial/2))
-          #########################################
-          #Another way to calculate pvalue
-          #########################################
-          #M.null<-glmer(response ~ (treatment + 1 | probe), data=dat)
-          #anova(M.partial, M.null)
-          rs.partial<-c(
-            coef.partial=sum.tmp$coef[2,1],
-            se.partial=sum.tmp$coef[2,2],
-            t.partial=t.partial,
-            pval.partial=pval.partial,
-            z.partial=z.partial,
-            df.partial=df.partial,
-            AIC.partial=as.numeric(sum.tmp$AICtab[1]),
-            BIC.partial=as.numeric(sum.tmp$AICtab[2]),
-            REMLDev.partial=-as.numeric(sum.tmp$AICtab[5]),
-            logLik=-as.numeric(sum.tmp$AICtab[3]),
-            Dev.partial=-as.numeric(sum.tmp$AICtab[4])
-          )
+      if('z value' %in% colnames(sum.tmp$coef)){ ###
+        z_sta <- sum.tmp$coef[w1,'z value']
+        p_sta <- sum.tmp$coef[w1,4]
+        t_sta <- NA
+      } else{
+        t_sta <- sum.tmp$coef[w1,'t value']
+        if(length(grep('^Pr',colnames(sum.tmp$coef)))>0){
+          p_sta <- sum.tmp$coef[w1,grep('^Pr',colnames(sum.tmp$coef))]
         }else{
-          M.partial<-glm(response ~ treatment, data=dat)
-          sum.tmp<-summary(M.partial)
-          t.partial<-sum.tmp$coef[2,3]
-          df.partial<-sum.tmp$df.residual
-          pval.partial<-2*pt(abs(t.partial),lower.tail=FALSE,df=df.partial)
-          z.partial<-sign(t.partial)*abs(qnorm(pval.partial/2))
-          rs.partial<-c(
-            coef.partial=sum.tmp$coef[2,1],
-            se.partial=sum.tmp$coef[2,2],
-            t.partial=t.partial,
-            pval.partial=pval.partial,
-            z.partial=z.partial,
-            df.partial=df.partial,
-            AIC.partial=sum.tmp$aic,
-            BIC.partial=AIC(M.partial,k=log(nrow(dat))),
-            REMLDev.partial=sum.tmp$deviance,
-            logLik=logLik(M.partial),
-            Dev.partial=sum.tmp$deviance
-          )
+          p_sta<-2*pt(abs(t_sta),lower.tail=FALSE,df=df_sta)
         }
-        rs<-c(rs,rs.partial)
+        z_sta<-sign(t_sta)*abs(qnorm(p_sta/2))
       }
-    }else if(family$family=='binomial'){
-      if('full'%in%pooling){
-        M.full<-glm(treatment ~ response, data=dat, family=family)
-        sum.tmp<-summary(M.full)
-        rs.full<-c(
-          coef.full=sum.tmp$coef[2,1],
-          se.full=sum.tmp$coef[2,2],
-          z.full=sum.tmp$coef[2,3],
-          pval.full=sum.tmp$coef[2,4],
-          df.full=sum.tmp$df.residual,
-          AIC.full=sum.tmp$aic,
-          BIC.full=AIC(M.full,k=log(nrow(dat))),
-          Dev.full=sum.tmp$deviance
-        )
-        rs<-c(rs,rs.full)
-      }
-      if('no'%in%pooling){
-        if(n.levels>1)
-          M.no<-glm(treatment ~ response + probe, data=dat, family=family)
-        else
-          M.no<-glm(treatment ~ response, data=dat, family=family)
-
-        sum.tmp<-summary(M.no)
-        rs.no<-c(
-          coef.no=sum.tmp$coef[2,1],
-          se.no=sum.tmp$coef[2,2],
-          pval.no=sum.tmp$coef[2,4],
-          z.no=sum.tmp$coef[2,3],
-          df.no=sum.tmp$df.residual,
-          AIC.no=sum.tmp$aic,
-          BIC.no=AIC(M.no,k=log(nrow(dat))),
-          Dev.no=sum.tmp$deviance
-        )
-        rs<-c(rs,rs.no)
-      }
-
-      if('partial'%in%pooling){
-        if(n.levels>1){
-          M.partial<-glmer(treatment ~ response + (response + 1 | probe), data=dat, family=family)
-          sum.tmp<-summary(M.partial)
-          t.partial<-sum.tmp$coef[2,3]
-          df.partial<-as.numeric(sum.tmp$devcomp$dims['n']-sum.tmp$devcomp$dims['p']-sum.tmp$devcomp$dims['q'])
-          pval.partial<-2*pt(abs(sum.tmp$coef[2,3]),lower.tail=FALSE,df=df.partial)
-          z.partial<-sign(t.partial)*abs(qnorm(pval.partial/2))
-          rs.partial<-c(
-            coef.partial=sum.tmp$coef[2,1],
-            se.partial=sum.tmp$coef[2,2],
-            t.partial=t.partial,
-            pval.partial=pval.partial,
-            z.partial=z.partial,
-            df.partial=df.partial,
-            AIC.partial=as.numeric(sum.tmp$AICtab[1]),
-            BIC.partial=as.numeric(sum.tmp$AICtab[2]),
-            Dev.partial=as.numeric(sum.tmp$AICtab[4])
-          )
-        }else{
-          M.partial<-glm(treatment ~ response, data=dat, family=family)
-          sum.tmp<-summary(M.partial)
-          t.partial<-sum.tmp$coef[2,3]
-          df.partial<-sum.tmp$df.residual
-          pval.partial<-2*pt(abs(t.partial),lower.tail=FALSE,df=df.partial)
-          z.partial<-sign(t.partial)*abs(qnorm(pval.partial/2))
-          rs.partial<-c(
-            coef.partial=sum.tmp$coef[2,1],
-            se.partial=sum.tmp$coef[2,2],
-            t.partial=t.partial,
-            pval.partial=pval.partial,
-            z.partial=z.partial,
-            df.partial=df.partial,
-            AIC.partial=sum.tmp$aic,
-            BIC.partial=AIC(M.partial,k=log(nrow(dat))),
-            Dev.partial=sum.tmp$deviance
-          )
-        }
-        rs<-c(rs,rs.partial)
-      }
-
-
-    }else if(family$family=='poisson'){
-      #comlete pooling
-      if('full'%in%pooling){
-        M.full<-glm(response ~ treatment, data=dat,family='poisson')
-        sum.tmp<-summary(M.full)
-        rs.full<-c(
-          coef.full=sum.tmp$coef[2,1],
-          se.full=sum.tmp$coef[2,2],
-          t.full=sum.tmp$coef[2,3],
-          pval.full=sum.tmp$coef[2,4],
-          #z.full=sign(sum.tmp$coef[2,1])*abs(qnorm(sum.tmp$coef[2,4]/2)),
-          df.full=sum.tmp$df.residual,
-          AIC.full=sum.tmp$aic,
-          BIC.full=AIC(M.full,k=log(nrow(dat))),
-          Dev.full=sum.tmp$deviance
-        )
-        rs<-c(rs,rs.full)
-      }
-
-      #no pooling
-      if('no'%in%pooling){
-        if(n.levels>1)
-          M.no<-glm(response ~ treatment + probe, data=dat,family='poisson')
-        else
-          M.no<-glm(response ~ treatment, data=dat,family='poisson')
-
-        sum.tmp<-summary(M.no)
-        rs.no<-c(
-          coef.no=sum.tmp$coef[2,1],
-          se.no=sum.tmp$coef[2,2],
-          t.no=sum.tmp$coef[2,3],
-          pval.no=sum.tmp$coef[2,4],
-          #z.no=sign(coef.no)*abs(qnorm(pval.no/2)),
-          df.no=sum.tmp$df.residual,
-          AIC.no=sum.tmp$aic,
-          BIC.no=AIC(M.no,k=log(nrow(dat))),
-          Dev.no=sum.tmp$deviance
-        )
-        rs<-c(rs,rs.no)
-      }
-
-      #partial pooling with multilevel model of varing slopes and intercepts
-      if('partial'%in%pooling){
-        if(n.levels>1){
-          M.partial<-glmer(response ~ treatment + (treatment + 1 | probe), data=dat,family='poisson')
-          sum.tmp<-summary(M.partial)
-          t.partial<-sum.tmp$coef[2,3]
-          df.partial<-as.numeric(sum.tmp$devcomp$dims['n']-sum.tmp$devcomp$dims['p']-sum.tmp$devcomp$dims['q'])
-          pval.partial<-2*pt(abs(sum.tmp$coef[2,3]),lower.tail=FALSE,df=df.partial)
-          z.partial<-sign(t.partial)*abs(qnorm(pval.partial/2))
-          rs.partial<-c(
-            coef.partial=sum.tmp$coef[2,1],
-            se.partial=sum.tmp$coef[2,2],
-            t.partial=t.partial,
-            pval.partial=pval.partial,
-            z.partial=z.partial,
-            df.partial=df.partial,
-            AIC.partial=as.numeric(sum.tmp$AICtab[1]),
-            BIC.partial=as.numeric(sum.tmp$AICtab[2]),
-            #REMLDev.partial=-as.numeric(sum.tmp$AICtab[5]),
-            logLik=-as.numeric(sum.tmp$AICtab[3]),
-            Dev.partial=-as.numeric(sum.tmp$AICtab[4])
-          )
-        }else{
-          M.partial<-glm(response ~ treatment, data=dat,family='poisson')
-          sum.tmp<-summary(M.partial)
-          t.partial<-sum.tmp$coef[2,3]
-          df.partial<-sum.tmp$df.residual
-          pval.partial<-2*pt(abs(t.partial),lower.tail=FALSE,df=df.partial)
-          z.partial<-sign(t.partial)*abs(qnorm(pval.partial/2))
-          rs.partial<-c(
-            coef.partial=sum.tmp$coef[2,1],
-            se.partial=sum.tmp$coef[2,2],
-            t.partial=t.partial,
-            pval.partial=pval.partial,
-            z.partial=z.partial,
-            df.partial=df.partial,
-            AIC.partial=sum.tmp$aic,
-            BIC.partial=AIC(M.partial,k=log(nrow(dat))),
-            #REMLDev.partial=sum.tmp$deviance,
-            logLik=logLik(M.partial),
-            Dev.partial=sum.tmp$deviance
-          )
-        }
-        rs<-c(rs,rs.partial)
-      }
-
+      if(verbose==TRUE) print(sum.tmp$coef)
+      rs<-c(t=t_sta,'P.Value'=p_sta,'Z-statistics'=z_sta)
     }
-    else{
-      stop('Only liner model with gaussian or poisson distrn and binomial family model are supported !!! \n')
+    if('summary.merMod' %in% class(sum.tmp)){
+      if(verbose==TRUE) print(sum.tmp$coef)
+      w1 <- grep('treatment|response',rownames(sum.tmp$coef))
+      t_sta<-sum.tmp$coef[w1,3]
+      if(is.null(df_sta)==TRUE) df_sta<-as.numeric(sum.tmp$devcomp$dims['n']-sum.tmp$devcomp$dims['p']-sum.tmp$devcomp$dims['q'])
+      p_sta<-2*pt(abs(t_sta),lower.tail=FALSE,df=df_sta)
+      z_sta<-sign(t_sta)*abs(qnorm(p_sta/2))
+      rs<-c(t=t_sta,'P.Value'=p_sta,'Z-statistics'=z_sta)
+    }
+    if('summary.MCMCglmm' %in% class(sum.tmp)){
+      if(verbose==TRUE) print(sum.tmp$sol)
+      t_sta<-sum.tmp$sol[2,1]/sd(M$Sol[,2]) ## t
+      p_sta<-2*pt(-abs(t_sta),df=df_sta)
+      if(is.na(p_sta)) p_sta<-sum.tmp$sol[2,5]
+      z_sta<-sign(t_sta)*abs(qnorm(p_sta/2))
+      rs<-c(t=t_sta,'P.Value'=p_sta,'Z-statistics'=z_sta)
+    }
+    return(rs)
+  }
+  ## check sd
+  rs_NA <- c(t=0,'P.Value'=1,'Z-statistics'=0)
+  if(sd(dat$response)==0){rs <- rs_NA; return(rs);}
+  df_sta <- NULL
+  ################### in total: 2(MLE/Bayesian)*3(family)*3(pooling)*2(n.levels)=36 *2(random_effect)=72
+  ################### MLE, 6 conditions
+  #### gaussian/poisson
+  if(method=='MLE' & family$family %in% c('gaussian','poisson') & (n.levels==1 | pooling=='full')){ ## n.levels==1/full
+    if(class_ordered==TRUE){message('If need to get p-value between each group, try to set family to "ordinial"!');}
+    M <- glm(response ~ treatment, data=dat, family=family)
+  }
+  if(method=='MLE' & family$family %in% c('gaussian','poisson') & n.levels>1 & pooling=='no'){
+    if(class_ordered==TRUE){message('If need to get p-value between each group, try to set family to "ordinial"!');}
+    M <- glm(response ~ treatment + probe, data=dat,family=family)
+  }
+  if(method=='MLE' & family$family %in% c('gaussian','poisson') & n.levels>1 & pooling=='partial'){
+    if(class_ordered==TRUE){message('If need to get p-value between each group, try to set family to "ordinial"!');}
+    M <- lmer(response ~ treatment + (treatment + 1 | probe), data=dat)
+  }
+  #### binomial
+  if(method=='MLE' & family$family=='binomial' & (n.levels==1 | pooling=='full')){ ## n.levels==1
+    if(class_ordered==FALSE) M <- glm(treatment ~ response, data=dat, family=family)
+    if(class_ordered==TRUE) M <- clm(treatment ~ response, data=dat)
+  }
+  if(method=='MLE' & family$family=='binomial' & n.levels>1 & pooling=='no'){
+    if(class_ordered==FALSE) M <- glm(treatment ~ response + probe, data=dat,family=family)
+    if(class_ordered==TRUE) M <- clm(treatment ~ response + probe, data=dat)
+  }
+  if(method=='MLE' & family$family=='binomial' & n.levels>1 & pooling=='partial'){
+    if(class_ordered==FALSE) M <- glmer(treatment ~ response + (response + 1 | probe), data=dat,family=family)
+    if(class_ordered==TRUE){
+      if(length(levels(dat$probe))<3){message('Random-effect terms has less than three levels, treat as fix effect!');M <- clm(treatment ~ response + probe, data=dat)}
+      if(length(levels(dat$probe))>=3) M <- clmm(treatment ~ response + (response+1|probe), data=dat) ## clmm must have grouping factor larger than 3
     }
   }
-
-  #Bayesian approach
-  else if(method=='Bayesian'){
-    if(family$family=='gaussian'){
-      if('full'%in%pooling){
-        #comlete pooling
-        #				M.full<-bayesglm(response ~ treatment, data=dat,n.iter = n.iter)
-        if(sd(dat$response)>0){
-          M.full<-bayesglm(response ~ treatment, data=dat)
-          sum.tmp<-summary(M.full)
-
-          rs.full<-c(
-            coef.full=sum.tmp$coef[2,1],
-            se.full=sum.tmp$coef[2,2],
-            t.full=sum.tmp$coef[2,3],
-            pval.full=sum.tmp$coef[2,4],
-            z.full=sign(sum.tmp$coef[2,1])*abs(qnorm(sum.tmp$coef[2,4]/2)),
-            df.full=sum.tmp$df.residual-sum.tmp$df[1],
-            AIC.full=sum.tmp$aic,
-            BIC.full=AIC(M.full,k=log(nrow(dat))),
-            Dev.full=sum.tmp$deviance
-          )
-        }else{
-          rs.full<-c(
-            coef.full=0,
-            se.full=0,
-            t.full=0,
-            pval.full=1,
-            z.full=0,
-            df.full=NA,
-            AIC.full=NA,
-            BIC.full=NA,
-            Dev.full=NA
-          )
-        }
-        rs<-c(rs,rs.full)
-      }
-
-      if('no'%in%pooling){
-        #no pooling
-        if(n.levels>1)
-          #					M.no<-bayesglm(response ~ treatment + probe, data=dat, n.iter=n.iter)
-          M.no<-bayesglm(response ~ treatment + probe, data=dat)
-        else
-          #M.no<-bayesglm(response ~ treatment, data=dat, n.iter=n.iter)
-          M.no<-bayesglm(response ~ treatment, data=dat)
-        sum.tmp<-summary(M.no)
-
-        rs.no<-c(
-          coef.no=sum.tmp$coef[2,1],
-          se.no=sum.tmp$coef[2,2],
-          t.no=sum.tmp$coef[2,3],
-          pval.no=sum.tmp$coef[2,4],
-          #z.no=sign(coef.no)*abs(qnorm(pval.no/2)),
-          df.no=sum.tmp$df.residual-sum.tmp$df[1],
-          AIC.no=sum.tmp$aic,
-          BIC.no=AIC(M.no,k=log(nrow(dat))),
-          Dev.no=sum.tmp$deviance
-        )
-        rs<-c(rs,rs.no)
-
-      }
-
-      if('partial'%in%pooling){
-        #partial pooling with multilevel model of varing slopes and intercepts
-        prior<-list(R = list(V = prior.V.scale, nu=prior.R.nu), G = list(G1 = list(V = diag(2)*prior.V.scale, nu = prior.G.nu )))
-
-        if(n.levels>1){
-          M.partial<-MCMCglmm(response ~ treatment, random=~idh(treatment+1):probe, data=dat, prior=prior,verbose=FALSE, nitt=nitt, burnin = burnin,thin=thin)
-          df.partial<-nrow(dat)-(n.levels+1)*2
-        }else{
-          prior<-list(R = list(V = prior.V.scale, nu=prior.R.nu))
-
-          M.partial<-MCMCglmm(response ~ treatment, data=dat, prior=prior,verbose=FALSE, nitt=nitt, burnin = burnin,thin=thin)
-
-          df.partial<-nrow(dat)-2
-
-          #cat(n.levels,df.partial,'\n')
-        }
-        sum.tmp<-summary(M.partial)
-        t.partial<-sum.tmp$sol[2,1]/sd(M.partial$Sol[,2])
-        pval.partial<-2*pt(-abs(t.partial),df=df.partial)
-        if(is.na(pval.partial))
-          pval.partial<-sum.tmp$sol[2,5]
-        z.partial<-sign(t.partial)*abs(qnorm(pval.partial/2))
-        rs.partial<-c(
-          coef.partial=sum.tmp$sol[2,1],
-          'l-95% CI.partial'=sum.tmp$sol[2,2],
-          'u-95% CI.partial'=sum.tmp$sol[2,3],
-          t.partial=t.partial,
-          pval.partial=pval.partial,
-          z.partial=z.partial,
-          df.partial=df.partial,
-          #pMCMC
-          pvalMCMC.partial=sum.tmp$sol[2,5],
-          #z.partial=sign(sum.tmp$sol[2,1])*abs(qnorm(sum.tmp$sol[2,5]/2)),
-          #effective sample size
-          n.effet.partial=sum.tmp$sol[2,4],
-          n.MCMC.partial=sum.tmp$cstats[3],
-          #Standard Deviation
-          sd.partial=sd(M.partial$Sol[,2]),
-          #only DIC saved, set AIC, BIC as DIC
-          DIC.partial=sum.tmp$DIC,
-          Dev.partial=mean(M.partial$Deviance)
-        )
-        rs<-c(rs,rs.partial)
-      }
-
-    }else if(family$family=='binomial'){
-
-      if(family$link=='logit')
-        prior.scale<-2.5
-      else if(family$link=='probit')
-        prior.scale<-2.5*1.6
-
-      if('full'%in%pooling){
-        #M.full<-bayesglm(treatment ~ response, data=dat, family=family, n.iter = n.iter, prior.scale = prior.scale)
-        M.full<-bayesglm(treatment ~ response, data=dat, family=family, prior.scale = prior.scale)
-        sum.tmp<-summary(M.full)
-        rs.full<-c(
-          coef.full=sum.tmp$coef[2,1],
-          se.full=sum.tmp$coef[2,2],
-          z.full=sum.tmp$coef[2,3],
-          pval.full=sum.tmp$coef[2,4],
-          #a bug in bayeglm for summary, fix: total obs - rank of the model
-          df.full=sum.tmp$df.residual-sum.tmp$df[1],
-          AIC.full=sum.tmp$aic,
-          BIC.full=AIC(M.full,k=log(nrow(dat))),
-          Dev.full=sum.tmp$deviance
-        )
-        rs<-c(rs,rs.full)
-      }
-
-      if('no'%in%pooling){
-        if(n.levels>1)
-          #M.no<-bayesglm(treatment ~ response + probe, data=dat, family=family, n.iter=n.iter,prior.scale = prior.scale)
-          M.no<-bayesglm(treatment ~ response + probe, data=dat, family=family,prior.scale = prior.scale)
-        else
-          #M.no<-bayesglm(treatment ~ response, data=dat, family=family, n.iter=n.iter,prior.scale = prior.scale)
-          M.no<-bayesglm(treatment ~ response, data=dat, family=family, prior.scale = prior.scale)
-
-        sum.tmp<-summary(M.no)
-        rs.no<-c(
-          coef.no=sum.tmp$coef[2,1],
-          se.no=sum.tmp$coef[2,2],
-          pval.no=sum.tmp$coef[2,4],
-          z.no=sum.tmp$coef[2,3],
-          df.no=sum.tmp$df.residual-sum.tmp$df[1],
-          AIC.no=sum.tmp$aic,
-          BIC.no=AIC(M.no,k=log(nrow(dat))),
-          Dev.no=sum.tmp$deviance
-        )
-        rs<-c(rs,rs.no)
-      }
-      if('partial'%in%pooling){
-        #categorial=logit, ordinal=probit
-        if(family$link=='logit'){
-          glmm.family<-'categorial'
-          if(n.levels>1){
-            prior<-list(R = list(V = prior.V.scale, nu=n.levels), G = list(G1 = list(V = diag(2)*prior.V.scale, nu = n.levels+1)))
-          }else{
-            prior<-list(R = list(V = prior.V.scale, nu=n.levels))
-          }
-        }
-        else if(family$link=='probit'){
-          glmm.family<-'ordinal'
-          if(n.levels>1){
-            prior<-list(R = list(V = prior.V.scale, nu=n.levels+1), G = list(G1 = list(V = diag(2)*prior.V.scale, nu = n.levels+1)))
-          }else{
-            prior<-list(R = list(V = prior.V.scale, nu=n.levels+1))
-          }
-        }
-        else
-          stop('For multilevel model with Binomial family and Bayeisan method, only logit and probit model are supported!!! \n')
-
-        #			coef.scale<-ifelse(family$link=='logit', 2.5^2, (2.5*1.6)^2)
-        #			intercept.scale<-ifelse(family$link=='logit', 10^2, (10*1.6)^2)
-        #			scale<-var(dat$treatment)/var(dat$response)
-        ################################# prior to be modified #################################
-        #alpha.mu=rep(0,2),alpha.V=diag(2)*25^2)))
-        #########################################################################################
-        sd.threshold<-prior.scale*4
-        #coef.sign<- -sign(logFC)
-        #				while(sd.threshold>prior.scale*2){
-        if(n.levels>1){
-          M.partial<-MCMCglmm(treatment~response, random=~idh(1+response):probe,family=glmm.family, prior=prior, data=dat, verbose=FALSE, nitt = nitt, burnin = burnin,thin=thin)
-          df.partial<-nrow(dat)-(n.levels+1)*2
-        }else{
-          M.partial<-MCMCglmm(treatment~response,family=glmm.family, prior=prior, data=dat, verbose=FALSE, nitt = nitt, burnin = burnin,thin=thin)
-          df.partial<-nrow(dat)-2
-        }
-        sum.tmp<-summary(M.partial)
-        t.partial<-sum.tmp$sol[2,1]/sd(M.partial$Sol[,2])
-        pval.partial<-2*pt(-abs(t.partial),df=df.partial)
-        z.partial<-sign(t.partial)*abs(qnorm(pval.partial/2))
-        rs.partial<-c(
-          coef.partial=sum.tmp$sol[2,1],
-          'l-95% CI.partial'=sum.tmp$sol[2,2],
-          'u-95% CI.partial'=sum.tmp$sol[2,3],
-          t.partial=t.partial,
-          pval.partial=pval.partial,
-          z.partial=z.partial,
-          df.partial=df.partial,
-          #pMCMC
-          pvalMCMC.partial=sum.tmp$sol[2,5],
-          #						z.partial=sign(sum.tmp$sol[2,1])*abs(qnorm(sum.tmp$sol[2,5]/2)),
-          #effective sample size
-          n.effet.partial=sum.tmp$sol[2,4],
-          n.MCMC.partial=sum.tmp$cstats[3],
-          #Standard Deviation
-          sd.partial=sd(M.partial$Sol[,2]),
-          #only DIC saved, set AIC, BIC as DIC
-          DIC.partial=sum.tmp$DIC,
-          Dev.partial=mean(M.partial$Deviance)
-        )
-        #coef.sign<-sign(rs.partial['coef.partial'])
-        sd.threshold<-as.double(rs.partial['sd.partial'])
-        #				}
-        rs<-c(rs,rs.partial)
-      }
-    }else if(family$family=='poisson'){
-      if('full'%in%pooling){
-        #comlete pooling
-        #M.full<-bayesglm(response ~ treatment, data=dat,n.iter = n.iter,family='poisson')
-        M.full<-bayesglm(response ~ treatment, data=dat,family='poisson')
-
-        sum.tmp<-summary(M.full)
-        rs.full<-c(
-          coef.full=sum.tmp$coef[2,1],
-          se.full=sum.tmp$coef[2,2],
-          t.full=sum.tmp$coef[2,3],
-          pval.full=sum.tmp$coef[2,4],
-          #z.full=sign(sum.tmp$coef[2,1])*abs(qnorm(sum.tmp$coef[2,4]/2)),
-          df.full=sum.tmp$df.residual-sum.tmp$df[1],
-          AIC.full=sum.tmp$aic,
-          BIC.full=AIC(M.full,k=log(nrow(dat))),
-          Dev.full=sum.tmp$deviance
-        )
-        rs<-c(rs,rs.full)
-      }
-
-      if('no'%in%pooling){
-        #no pooling
-        if(n.levels>1)
-          #M.no<-bayesglm(response ~ treatment + probe, data=dat, n.iter=n.iter,family='poisson')
-          M.no<-bayesglm(response ~ treatment + probe, data=dat,family='poisson')
-        else
-          #M.no<-bayesglm(response ~ treatment, data=dat, n.iter=n.iter,family='poisson')
-          M.no<-bayesglm(response ~ treatment, data=dat,family='poisson')
-        sum.tmp<-summary(M.no)
-        rs.no<-c(
-          coef.no=sum.tmp$coef[2,1],
-          se.no=sum.tmp$coef[2,2],
-          t.no=sum.tmp$coef[2,3],
-          pval.no=sum.tmp$coef[2,4],
-          #z.no=sign(coef.no)*abs(qnorm(pval.no/2)),
-          df.no=sum.tmp$df.residual-sum.tmp$df[1],
-          AIC.no=sum.tmp$aic,
-          BIC.no=AIC(M.no,k=log(nrow(dat))),
-          Dev.no=sum.tmp$deviance
-        )
-        rs<-c(rs,rs.no)
-      }
-
-      if('partial'%in%pooling){
-        #partial pooling with multilevel model of varing slopes and intercepts
-        prior<-list(R = list(V = prior.V.scale, nu=prior.R.nu), G = list(G1 = list(V = diag(2)*prior.V.scale, nu = prior.G.nu )))
-
-        if(n.levels>1){
-          M.partial<-MCMCglmm(response ~ treatment, random=~idh(treatment+1):probe, data=dat, prior=prior,verbose=FALSE, nitt=nitt, burnin = burnin,thin=thin,family='poisson')
-          df.partial<-nrow(dat)-(n.levels+1)*2
-        }
-        else{
-          prior<-list(R = list(V = prior.V.scale, nu=prior.R.nu))
-          M.partial<-MCMCglmm(response ~ treatment, data=dat, prior=prior,verbose=FALSE, nitt=nitt, burnin = burnin,thin=thin,family='poisson')
-          df.partial<-nrow(dat)-2
-        }
-        sum.tmp<-summary(M.partial)
-        t.partial<-sum.tmp$sol[2,1]/sd(M.partial$Sol[,2])
-        pval.partial<-2*pt(-abs(t.partial),df=df.partial)
-        z.partial<-sign(t.partial)*abs(qnorm(pval.partial/2))
-        rs.partial<-c(
-          coef.partial=sum.tmp$sol[2,1],
-          'l-95% CI.partial'=sum.tmp$sol[2,2],
-          'u-95% CI.partial'=sum.tmp$sol[2,3],
-          t.partial=t.partial,
-          pval.partial=pval.partial,
-          z.partial=z.partial,
-          df.partial=df.partial,
-          #pMCMC
-          pvalMCMC.partial=sum.tmp$sol[2,5],
-          #					z.partial=sign(sum.tmp$sol[2,1])*abs(qnorm(sum.tmp$sol[2,5]/2)),
-          n.effet.partial=sum.tmp$sol[2,4],
-          n.MCMC.partial=sum.tmp$cstats[3],
-          #Standard Deviation
-          sd.partial=sd(M.partial$Sol[,2]),
-          #only DIC saved, set AIC, BIC as DIC
-          DIC.partial=sum.tmp$DIC,
-          Dev.partial=mean(M.partial$Deviance)
-        )
-        rs<-c(rs,rs.partial)
-      }
-    }else{
-      stop('Only liner model and binomial family model are supported !!! \n')
+  ################### Bayesian, 8 conditions
+  set.seed(use_seed)
+  if(family$link=='logit'){prior.scale<-2.5;glmm.family<-'categorial';}
+  if(family$link=='probit'){prior.scale<-2.5*1.6;glmm.family<-'ordinal';}
+  #### gaussian/poisson
+  if(method=='Bayesian' & family$family %in% c('gaussian','poisson') & (pooling=='full' | pooling=='no' & n.levels==1)){
+    if(class_ordered==TRUE){message('If need to get p-value between each group, try to set family to "ordinial"!');}
+    M <- bayesglm(response ~ treatment, data=dat, family=family)
+  }
+  if(method=='Bayesian' & family$family %in% c('gaussian','poisson') & n.levels>1 & pooling=='no'){
+    if(class_ordered==TRUE){message('If need to get p-value between each group, try to set family to "ordinial"!');}
+    M <- bayesglm(response ~ treatment + probe, data=dat,family=family)
+  }
+  #
+  prior<-list(R = list(V = prior.V.scale, nu=prior.R.nu)) ## default prior
+  if(method=='Bayesian' & family$family %in% c('gaussian','poisson') & n.levels==1 & pooling=='partial'){
+   if(class_ordered==TRUE){message('If need to get p-value between each group, try to set family to "ordinial"!');}
+   M <- MCMCglmm(response ~ treatment, data=dat, prior=prior,verbose=FALSE, nitt=nitt, burnin = burnin,thin=thin,family=family$family)
+   df_sta<-nrow(dat)-n.treatments
+  }
+  if(method=='Bayesian' & family$family %in% c('gaussian','poisson') & n.levels>1 & pooling=='partial'){
+    prior<-list(R = list(V = prior.V.scale, nu=prior.R.nu), G = list(G1 = list(V = diag(n.treatments)*prior.V.scale, nu = prior.G.nu)))
+    if(class_ordered==TRUE){message('If need to get p-value between each group, try to set family to "ordinial"!');}
+    M <- MCMCglmm(response ~ treatment, random=~idh(treatment+1):probe, data=dat, prior=prior,verbose=FALSE, nitt=nitt, burnin = burnin,thin=thin,family=family$family)
+    df_sta <-nrow(dat)-(n.levels+1)*n.treatments
+  }
+  #### binomial
+  if(method=='Bayesian' & family$family=='binomial' & (pooling=='full' | pooling=='no' & n.levels==1)){ ###
+    if(class_ordered==FALSE) M <- bayesglm(treatment ~ response, data=dat, family=family, prior.scale = prior.scale)
+    if(class_ordered==TRUE){
+      M <- MCMCglmm(treatment ~ response, data=dat, family='ordinal',prior=prior,verbose=FALSE, nitt=nitt, burnin = burnin,thin=thin)
+      df_sta<-nrow(dat)-2
     }
   }
-
-  #taking care of extreme cases where se or sd is zero
-  w1 <- grep('^t|^z',names(rs))
-  w2 <- grep('^se|^sd',names(rs))
-  w3 <- grep('^pval',names(rs))
-  if(rs[w2]==0 & is.na(rs[w1[1]])==TRUE){
-    rs[w1]<-0
-    rs[w3]<-1
+  if(method=='Bayesian' & family$family=='binomial' & n.levels>1 & pooling=='no'){ ###
+    if(class_ordered==FALSE) M <- bayesglm(treatment ~ response + probe, data=dat, family=family,prior.scale = prior.scale)
+    if(class_ordered==TRUE){
+      M <- MCMCglmm(treatment ~ response + probe, data=dat, family='ordinal',prior=prior,verbose=FALSE, nitt=nitt, burnin = burnin,thin=thin)
+      df_sta <-nrow(dat)-(n.levels+1)*2
+    }
   }
-  rs
+  # for partial
+  if(method=='Bayesian' & family$family=='binomial' & n.levels==1 & pooling=='partial'){
+    if(family$link=='logit'){prior<-list(R = list(V = prior.V.scale, nu=n.levels))}
+    if(family$link=='probit'){prior<-list(R = list(V = prior.V.scale, nu=n.levels+1))}
+    if(!family$link %in% c('probit','logit')){message('For partial pooling with Binomial family and Bayeisan method, only logit and probit model are supported!');return(FALSE)}
+    if(class_ordered==FALSE) M <- MCMCglmm(treatment~response,family=glmm.family, prior=prior, data=dat, verbose=FALSE, nitt = nitt, burnin = burnin,thin=thin)
+    if(class_ordered==TRUE) M <- MCMCglmm(treatment~response,family='ordinal', prior=prior, data=dat, verbose=FALSE, nitt = nitt, burnin = burnin,thin=thin)
+    df_sta<-nrow(dat)-2
+  }
+  if(method=='Bayesian' & family$family=='binomial' & n.levels>1 & pooling=='partial'){
+    if(family$link=='logit'){prior<-list(R = list(V = prior.V.scale, nu=n.levels), G = list(G1 = list(V = diag(2)*prior.V.scale, nu = n.levels+1)))}
+    if(family$link=='probit'){prior<-list(R = list(V = prior.V.scale, nu=n.levels+1), G = list(G1 = list(V = diag(2)*prior.V.scale, nu = n.levels+1)))}
+    if(!family$link %in% c('probit','logit')){message('For partial pooling with Binomial family and Bayeisan method, only logit and probit model are supported!');return(FALSE)}
+    if(class_ordered==FALSE) M <- MCMCglmm(treatment~response, random=~idh(1+response):probe,family=glmm.family, prior=prior, data=dat, verbose=FALSE, nitt = nitt, burnin = burnin,thin=thin)
+    if(class_ordered==TRUE) M <- MCMCglmm(treatment~response, random=~idh(1+response):probe,family='ordinal', prior=prior, data=dat, verbose=FALSE, nitt = nitt, burnin = burnin,thin=thin)
+    df_sta <-nrow(dat)-(n.levels+1)*2
+  }
+  ##
+  if(return_model==TRUE) return(M)
+  rs <- get_info_model(M=M,dat=dat,method=method,df_sta=df_sta); rs <- c(res,rs)
+  return(rs)
 }
 
-
-
-#comparsion of mult-igroups
-#only support linear Gausian model so far
-combRowEvid.multgrps<-function(d,comp,family=gaussian,method=c('MLE','Bayesian'),pooling=c('full','no','partial'), n.iter=1000,
-                               prior.V.scale=0.02, prior.R.nu=1, prior.G.nu=2, nitt = 13000, burnin = 3000,thin=10,restand=TRUE,logTransformed=TRUE,log.base=2,pseudoCount=0){
-
-  if(missing(pooling))
-    pooling<-c('full','no','partial')
-  else
-    pooling<-tolower(pooling)
-
-  pooling<-match.arg(pooling,several.ok=T)
-
-  if (is.character(family))
-    family <- get(family, mode = "function", envir = parent.frame())
-  if (is.function(family))
-    family <- family()
-  #	if (!family$family %in% c('gaussian','binomial', 'poisson')) {
-  if (!family$family %in% c('gaussian')) {
-    print(family)
-    #stop("Only Gaussian Poisson, and Binomial are supported!!! \n")
-    stop("Only Gaussian model is supported!!! \n")
-  }
-
-  if(missing(method))
-    method<-'Bayesian'
-  if(grepl('Bayes',method,ignore.case = T)) method<-'Bayesian'
-  if(grepl('MLE|MaxLikelihood',method,ignore.case = T)) method<-'MLE'
-  method<-match.arg(method)
-
-  d<-melt(t(d[,-1]))
-
-  dat<-data.frame(response=d$value,treatment=rep(comp,nlevels(d$X2)),probe=d$X2)
-
-  AveExp<-mean(dat$response)
-  n.levels<-nlevels(dat$probe)
-  n.treatments<-nlevels(dat$treatment)
-  rs<-c(AveExp=AveExp,n.levels=as.integer(n.levels))
-
-  #re-standarize the input data
-  if(restand & sd(dat$response)>0)
-    dat$response<-0.5*(dat$response-mean(dat$response))/sd(dat$response)
-
-  #MLE approach to estimate parameters
-  if(method=='MLE'){
-    if(family$family=='gaussian'){
-      #comlete pooling
-      if('full'%in%pooling){
-        M.full<-glm(response ~ as.ordered(treatment), data=dat)
-        sum.tmp<-summary(M.full)
-        rs.full<-c(
-          coef.full=sum.tmp$coef[-1,1],
-          se.full=sum.tmp$coef[-1,2],
-          t.full=sum.tmp$coef[-1,3],
-          pval.full=sum.tmp$coef[-1,4],
-          #z.full=sign(sum.tmp$coef[2,1])*abs(qnorm(sum.tmp$coef[2,4]/2)),
-          df.full=sum.tmp$df.residual,
-          AIC.full=sum.tmp$aic,
-          BIC.full=AIC(M.full,k=log(nrow(dat))),
-          Dev.full=sum.tmp$deviance
-        )
-        rs<-c(rs,rs.full)
-      }
-      #no pooling
-      if('no'%in%pooling){
-        if(n.levels>1)
-          M.no<-glm(response ~ treatment + probe, data=dat)
-        else
-          M.no<-glm(response ~ treatment, data=dat)
-
-        sum.tmp<-summary(M.no)
-        rs.no<-c(
-          coef.no=sum.tmp$coef[2:n.treatments,1],
-          se.no=sum.tmp$coef[2:n.treatments,2],
-          t.no=sum.tmp$coef[2:n.treatments,3],
-          pval.no=sum.tmp$coef[2:n.treatments,4],
-          #z.no=sign(coef.no)*abs(qnorm(pval.no/2)),
-          df.no=sum.tmp$df.residual,
-          AIC.no=sum.tmp$aic,
-          BIC.no=AIC(M.no,k=log(nrow(dat))),
-          Dev.no=sum.tmp$deviance
-        )
-        rs<-c(rs,rs.no)
-      }
-
-
-      #partial pooling with multilevel model of varing slopes and intercepts
-      if('partial'%in%pooling){
-        if(n.levels>1){
-          #consider sd==0 case
-          if(sd(dat$response)==0)
-          {
-            dat$response<-rnorm(nrow(dat),mean(dat$response),sd(dat$response)+0.001)
-          }
-          M.partial<-glmer(response ~ treatment + (treatment + 1 | probe), data=dat)
-          sum.tmp<-summary(M.partial)
-
-          t.partial<-sum.tmp$coef[-1,3]
-          df.partial<-as.numeric(sum.tmp$devcomp$dims['n']-sum.tmp$devcomp$dims['p']-sum.tmp$devcomp$dims['q'])
-          pval.partial<-2*pt(abs(t.partial),lower.tail=FALSE,df=df.partial)
-          z.partial<-sign(t.partial)*abs(qnorm(pval.partial/2))
-          #########################################
-          #Another way to calculate pvalue
-          #########################################
-          #M.null<-glmer(response ~ (treatment + 1 | probe), data=dat)
-          #anova(M.partial, M.null)
-          rs.partial<-c(
-            coef.partial=sum.tmp$coef[-1,1],
-            se.partial=sum.tmp$coef[-1,2],
-            t.partial=t.partial,
-            pval.partial=pval.partial,
-            z.partial=z.partial,
-            df.partial=df.partial,
-            AIC.partial=as.numeric(sum.tmp$AICtab[1]),
-            BIC.partial=as.numeric(sum.tmp$AICtab[2]),
-            REMLDev.partial=-as.numeric(sum.tmp$AICtab[5]),
-            logLik=-as.numeric(sum.tmp$AICtab[3]),
-            Dev.partial=-as.numeric(sum.tmp$AICtab[4])
-          )
-        }else{
-          M.partial<-glm(response ~ treatment, data=dat)
-          sum.tmp<-summary(M.partial)
-          t.partial<-sum.tmp$coef[-1,3]
-          df.partial<-sum.tmp$df.residual
-          pval.partial<-2*pt(abs(t.partial),lower.tail=FALSE,df=df.partial)
-          z.partial<-sign(t.partial)*abs(qnorm(pval.partial/2))
-          rs.partial<-c(
-            coef.partial=sum.tmp$coef[-1,1],
-            se.partial=sum.tmp$coef[-1,2],
-            t.partial=t.partial,
-            pval.partial=pval.partial,
-            z.partial=z.partial,
-            df.partial=df.partial,
-            AIC.partial=sum.tmp$aic,
-            BIC.partial=AIC(M.partial,k=log(nrow(dat))),
-            REMLDev.partial=sum.tmp$deviance,
-            logLik=logLik(M.partial),
-            Dev.partial=sum.tmp$deviance
-          )
-        }
-        rs<-c(rs,rs.partial)
-      }
-
-    }else if(family$family=='binomial'){
-      if('full'%in%pooling){
-        M.full<-glm(treatment ~ response, data=dat, family=family)
-        sum.tmp<-summary(M.full)
-        rs.full<-c(
-          coef.full=sum.tmp$coef[2,1],
-          se.full=sum.tmp$coef[2,2],
-          z.full=sum.tmp$coef[2,3],
-          pval.full=sum.tmp$coef[2,4],
-          df.full=sum.tmp$df.residual,
-          AIC.full=sum.tmp$aic,
-          BIC.full=AIC(M.full,k=log(nrow(dat))),
-          Dev.full=sum.tmp$deviance
-        )
-        rs<-c(rs,rs.full)
-      }
-      if('no'%in%pooling){
-        if(n.levels>1)
-          M.no<-glm(treatment ~ response + probe, data=dat, family=family)
-        else
-          M.no<-glm(treatment ~ response, data=dat, family=family)
-
-        sum.tmp<-summary(M.no)
-        rs.no<-c(
-          coef.no=sum.tmp$coef[2,1],
-          se.no=sum.tmp$coef[2,2],
-          pval.no=sum.tmp$coef[2,4],
-          z.no=sum.tmp$coef[2,3],
-          df.no=sum.tmp$df.residual,
-          AIC.no=sum.tmp$aic,
-          BIC.no=AIC(M.no,k=log(nrow(dat))),
-          Dev.no=sum.tmp$deviance
-        )
-        rs<-c(rs,rs.no)
-      }
-
-      if('partial'%in%pooling){
-        if(n.levels>1){
-          M.partial<-glmer(treatment ~ response + (response + 1 | probe), data=dat, family=family)
-          sum.tmp<-summary(M.partial)
-          t.partial<-sum.tmp$coef[2,3]
-          df.partial<-as.numeric(sum.tmp$devcomp$dims['n']-sum.tmp$devcomp$dims['p']-sum.tmp$devcomp$dims['q'])
-          pval.partial<-2*pt(abs(sum.tmp$coef[2,3]),lower.tail=FALSE,df=df.partial)
-          z.partial<-sign(t.partial)*abs(qnorm(pval.partial/2))
-          rs.partial<-c(
-            coef.partial=sum.tmp$coef[2,1],
-            se.partial=sum.tmp$coef[2,2],
-            t.partial=t.partial,
-            pval.partial=pval.partial,
-            z.partial=z.partial,
-            df.partial=df.partial,
-            AIC.partial=as.numeric(sum.tmp$AICtab[1]),
-            BIC.partial=as.numeric(sum.tmp$AICtab[2]),
-            Dev.partial=as.numeric(sum.tmp$AICtab[4])
-          )
-        }else{
-          M.partial<-glm(treatment ~ response, data=dat, family=family)
-          sum.tmp<-summary(M.partial)
-          t.partial<-sum.tmp$coef[2,3]
-          df.partial<-sum.tmp$df.residual
-          pval.partial<-2*pt(abs(t.partial),lower.tail=FALSE,df=df.partial)
-          z.partial<-sign(t.partial)*abs(qnorm(pval.partial/2))
-          rs.partial<-c(
-            coef.partial=sum.tmp$coef[2,1],
-            se.partial=sum.tmp$coef[2,2],
-            t.partial=t.partial,
-            pval.partial=pval.partial,
-            z.partial=z.partial,
-            df.partial=df.partial,
-            AIC.partial=sum.tmp$aic,
-            BIC.partial=AIC(M.partial,k=log(nrow(dat))),
-            Dev.partial=sum.tmp$deviance
-          )
-        }
-        rs<-c(rs,rs.partial)
-      }
-
-
-    }else if(family$family=='poisson'){
-      #comlete pooling
-      if('full'%in%pooling){
-        M.full<-glm(response ~ treatment, data=dat,family='poisson')
-        sum.tmp<-summary(M.full)
-        rs.full<-c(
-          coef.full=sum.tmp$coef[2,1],
-          se.full=sum.tmp$coef[2,2],
-          t.full=sum.tmp$coef[2,3],
-          pval.full=sum.tmp$coef[2,4],
-          #z.full=sign(sum.tmp$coef[2,1])*abs(qnorm(sum.tmp$coef[2,4]/2)),
-          df.full=sum.tmp$df.residual,
-          AIC.full=sum.tmp$aic,
-          BIC.full=AIC(M.full,k=log(nrow(dat))),
-          Dev.full=sum.tmp$deviance
-        )
-        rs<-c(rs,rs.full)
-      }
-
-      #no pooling
-      if('no'%in%pooling){
-        if(n.levels>1)
-          M.no<-glm(response ~ treatment + probe, data=dat,family='poisson')
-        else
-          M.no<-glm(response ~ treatment, data=dat,family='poisson')
-
-        sum.tmp<-summary(M.no)
-        rs.no<-c(
-          coef.no=sum.tmp$coef[2,1],
-          se.no=sum.tmp$coef[2,2],
-          t.no=sum.tmp$coef[2,3],
-          pval.no=sum.tmp$coef[2,4],
-          #z.no=sign(coef.no)*abs(qnorm(pval.no/2)),
-          df.no=sum.tmp$df.residual,
-          AIC.no=sum.tmp$aic,
-          BIC.no=AIC(M.no,k=log(nrow(dat))),
-          Dev.no=sum.tmp$deviance
-        )
-        rs<-c(rs,rs.no)
-      }
-
-      #partial pooling with multilevel model of varing slopes and intercepts
-      if('partial'%in%pooling){
-        if(n.levels>1){
-          M.partial<-glmer(response ~ treatment + (treatment + 1 | probe), data=dat,family='poisson')
-          sum.tmp<-summary(M.partial)
-          t.partial<-sum.tmp$coef[2,3]
-          df.partial<-as.numeric(sum.tmp$devcomp$dims['n']-sum.tmp$devcomp$dims['p']-sum.tmp$devcomp$dims['q'])
-          pval.partial<-2*pt(abs(sum.tmp$coef[2,3]),lower.tail=FALSE,df=df.partial)
-          z.partial<-sign(t.partial)*abs(qnorm(pval.partial/2))
-          rs.partial<-c(
-            coef.partial=sum.tmp$coef[2,1],
-            se.partial=sum.tmp$coef[2,2],
-            t.partial=t.partial,
-            pval.partial=pval.partial,
-            z.partial=z.partial,
-            df.partial=df.partial,
-            AIC.partial=as.numeric(sum.tmp$AICtab[1]),
-            BIC.partial=as.numeric(sum.tmp$AICtab[2]),
-            #REMLDev.partial=-as.numeric(sum.tmp$AICtab[5]),
-            logLik=-as.numeric(sum.tmp$AICtab[3]),
-            Dev.partial=-as.numeric(sum.tmp$AICtab[4])
-          )
-        }else{
-          M.partial<-glm(response ~ treatment, data=dat,family='poisson')
-          sum.tmp<-summary(M.partial)
-          t.partial<-sum.tmp$coef[2,3]
-          df.partial<-sum.tmp$df.residual
-          pval.partial<-2*pt(abs(t.partial),lower.tail=FALSE,df=df.partial)
-          z.partial<-sign(t.partial)*abs(qnorm(pval.partial/2))
-          rs.partial<-c(
-            coef.partial=sum.tmp$coef[2,1],
-            se.partial=sum.tmp$coef[2,2],
-            t.partial=t.partial,
-            pval.partial=pval.partial,
-            z.partial=z.partial,
-            df.partial=df.partial,
-            AIC.partial=sum.tmp$aic,
-            BIC.partial=AIC(M.partial,k=log(nrow(dat))),
-            #REMLDev.partial=sum.tmp$deviance,
-            logLik=logLik(M.partial),
-            Dev.partial=sum.tmp$deviance
-          )
-        }
-        rs<-c(rs,rs.partial)
-      }
-
-    }
-    else{
-      stop('Only liner model with gaussian or poisson distrn and binomial family model are supported !!! \n')
-    }
-  }
-
-  #Bayesian approach
-  else if(method=='Bayesian'){
-    require(arm)
-    require(MCMCglmm)
-    if(family$family=='gaussian'){
-      if('full'%in%pooling){
-        #comlete pooling
-        #M.full<-bayesglm(response ~ treatment, data=dat,n.iter = n.iter)
-        M.full<-bayesglm(response ~ treatment, data=dat)
-        sum.tmp<-summary(M.full)
-
-        rs.full<-c(
-          coef.full=sum.tmp$coef[-1,1],
-          se.full=sum.tmp$coef[-1,2],
-          t.full=sum.tmp$coef[-1,3],
-          pval.full=sum.tmp$coef[-1,4],
-          #z.full=sign(sum.tmp$coef[2,1])*abs(qnorm(sum.tmp$coef[2,4]/2)),
-          df.full=sum.tmp$df.residual-sum.tmp$df[1],
-          AIC.full=sum.tmp$aic,
-          BIC.full=AIC(M.full,k=log(nrow(dat))),
-          Dev.full=sum.tmp$deviance
-        )
-        rs<-c(rs,rs.full)
-      }
-
-      if('no'%in%pooling){
-        #no pooling
-        if(n.levels>1)
-          #					M.no<-bayesglm(response ~ treatment + probe, data=dat, n.iter=n.iter)
-          M.no<-bayesglm(response ~ treatment + probe, data=dat)
-        else
-          #					M.no<-bayesglm(response ~ treatment, data=dat, n.iter=n.iter)
-          M.no<-bayesglm(response ~ treatment, data=dat)
-        sum.tmp<-summary(M.no)
-        rs.no<-c(
-          coef.no=sum.tmp$coef[2:n.treatments,1],
-          se.no=sum.tmp$coef[2:n.treatments,2],
-          t.no=sum.tmp$coef[2:n.treatments,3],
-          pval.no=sum.tmp$coef[2:n.treatments,4],
-          #z.no=sign(coef.no)*abs(qnorm(pval.no/2)),
-          df.no=sum.tmp$df.residual-sum.tmp$df[1],
-          AIC.no=sum.tmp$aic,
-          BIC.no=AIC(M.no,k=log(nrow(dat))),
-          Dev.no=sum.tmp$deviance
-        )
-        rs<-c(rs,rs.no)
-      }
-
-      if('partial'%in%pooling){
-        #partial pooling with multilevel model of varing slopes and intercepts
-        prior<-list(R = list(V = prior.V.scale, nu=prior.R.nu), G = list(G1 = list(V = diag(nlevels(dat$treatment))*prior.V.scale, nu = prior.G.nu )))
-        if(n.levels>1){
-          M.partial<-MCMCglmm(response ~ treatment, random=~idh(treatment+1):probe, data=dat, prior=prior,verbose=FALSE, nitt=nitt, burnin = burnin,thin=thin)
-          df.partial<-nrow(dat)-(n.levels+1)*n.treatments
-        }else{
-          M.partial<-MCMCglmm(response ~ treatment, data=dat, prior=prior,verbose=FALSE, nitt=nitt, burnin = burnin,thin=thin)
-          df.partial<-nrow(dat)-n.treatments
-        }
-        sum.tmp<-summary(M.partial)
-        sd.partial<-apply(M.partial$Sol[,-1],2,sd)
-        t.partial<-sum.tmp$sol[-1,1]/sd.partial
-        pval.partial<-2*pt(-abs(t.partial),df=df.partial)
-        z.partial<-sign(t.partial)*abs(qnorm(pval.partial/2))
-
-        rs.partial<-c(
-          coef.partial=sum.tmp$sol[-1,1],
-          'l-95% CI.partial'=sum.tmp$sol[-1,2],
-          'u-95% CI.partial'=sum.tmp$sol[-1,3],
-          t.partial=t.partial,
-          pval.partial=pval.partial,
-          z.partial=z.partial,
-          df.partial=df.partial,
-          #pMCMC
-          pvalMCMC.partial=sum.tmp$sol[-1,5],
-          #effective sample size
-          n.effet.partial=sum.tmp$sol[-1,4],
-          n.MCMC.partial=sum.tmp$cstats[3],
-          #Standard Deviation
-          sd.partial=sd.partial,
-          #only DIC saved, set AIC, BIC as DIC
-          DIC.partial=sum.tmp$DIC,
-          Dev.partial=mean(M.partial$Deviance)
-        )
-        rs<-c(rs,rs.partial)
-      }
-    }else if(family$family=='binomial'){
-
-      if(family$link=='logit')
-        prior.scale<-2.5
-      else if(family$link=='probit')
-        prior.scale<-2.5*1.6
-
-      if('full'%in%pooling){
-        #M.full<-bayesglm(treatment ~ response, data=dat, family=family, n.iter = n.iter, prior.scale = prior.scale)
-        M.full<-bayesglm(treatment ~ response, data=dat, family=family, prior.scale = prior.scale)
-        sum.tmp<-summary(M.full)
-        rs.full<-c(
-          coef.full=sum.tmp$coef[2,1],
-          se.full=sum.tmp$coef[2,2],
-          z.full=sum.tmp$coef[2,3],
-          pval.full=sum.tmp$coef[2,4],
-          #a bug in bayeglm for summary, fix: total obs - rank of the model
-          df.full=sum.tmp$df.residual-sum.tmp$df[1],
-          AIC.full=sum.tmp$aic,
-          BIC.full=AIC(M.full,k=log(nrow(dat))),
-          Dev.full=sum.tmp$deviance
-        )
-        rs<-c(rs,rs.full)
-      }
-
-      if('no'%in%pooling){
-        if(n.levels>1)
-          #M.no<-bayesglm(treatment ~ response + probe, data=dat, family=family, n.iter=n.iter,prior.scale = prior.scale)
-          M.no<-bayesglm(treatment ~ response + probe, data=dat, family=family,prior.scale = prior.scale)
-        else
-          #					M.no<-bayesglm(treatment ~ response, data=dat, family=family, n.iter=n.iter,prior.scale = prior.scale)
-          M.no<-bayesglm(treatment ~ response, data=dat, family=family,prior.scale = prior.scale)
-
-        sum.tmp<-summary(M.no)
-        rs.no<-c(
-          coef.no=sum.tmp$coef[2,1],
-          se.no=sum.tmp$coef[2,2],
-          pval.no=sum.tmp$coef[2,4],
-          z.no=sum.tmp$coef[2,3],
-          df.no=sum.tmp$df.residual-sum.tmp$df[1],
-          AIC.no=sum.tmp$aic,
-          BIC.no=AIC(M.no,k=log(nrow(dat))),
-          Dev.no=sum.tmp$deviance
-        )
-        rs<-c(rs,rs.no)
-      }
-      if('partial'%in%pooling){
-        #categorial=logit, ordinal=probit
-        if(family$link=='logit'){
-          glmm.family<-'categorial'
-          prior<-list(R = list(V = prior.V.scale, nu=n.levels), G = list(G1 = list(V = diag(2)*prior.V.scale, nu = n.levels+1)))
-        }
-        else if(family$link=='probit'){
-          glmm.family<-'ordinal'
-          prior<-list(R = list(V = prior.V.scale, nu=n.levels+1), G = list(G1 = list(V = diag(2)*prior.V.scale, nu = n.levels+1)))
-        }
-        else
-          stop('For multilevel model with Binomial family and Bayeisan method, only logit and probit model are supported!!! \n')
-
-        #			coef.scale<-ifelse(family$link=='logit', 2.5^2, (2.5*1.6)^2)
-        #			intercept.scale<-ifelse(family$link=='logit', 10^2, (10*1.6)^2)
-        #			scale<-var(dat$treatment)/var(dat$response)
-        ################################# prior to be modified #################################
-        #alpha.mu=rep(0,2),alpha.V=diag(2)*25^2)))
-        #########################################################################################
-        sd.threshold<-prior.scale*4
-        #coef.sign<- -sign(logFC)
-        #				while(sd.threshold>prior.scale*2){
-        if(n.levels>1){
-          M.partial<-MCMCglmm(treatment~response, random=~idh(1+response):probe,family=glmm.family, prior=prior, data=dat, verbose=FALSE, nitt = nitt, burnin = burnin,thin=thin)
-          df.partial<-nrow(dat)-(n.levels+1)*2
-        }else{
-          M.partial<-MCMCglmm(treatment~response,family=glmm.family, prior=prior, data=dat, verbose=FALSE, nitt = nitt, burnin = burnin,thin=thin)
-          df.partial<-nrow(dat)-2
-        }
-        sum.tmp<-summary(M.partial)
-        t.partial<-sum.tmp$sol[2,1]/sd(M.partial$Sol[,2])
-        pval.partial<-2*pt(-abs(t.partial),df=df.partial)
-        z.partial<-sign(t.partial)*abs(qnorm(pval.partial/2))
-        rs.partial<-c(
-          coef.partial=sum.tmp$sol[2,1],
-          'l-95% CI.partial'=sum.tmp$sol[2,2],
-          'u-95% CI.partial'=sum.tmp$sol[2,3],
-          t.partial=t.partial,
-          pval.partial=pval.partial,
-          z.partial=z.partial,
-          df.partial=df.partial,
-          #pMCMC
-          pvalMCMC.partial=sum.tmp$sol[2,5],
-          #						z.partial=sign(sum.tmp$sol[2,1])*abs(qnorm(sum.tmp$sol[2,5]/2)),
-          #effective sample size
-          n.effet.partial=sum.tmp$sol[2,4],
-          n.MCMC.partial=sum.tmp$cstats[3],
-          #Standard Deviation
-          sd.partial=sd(M.partial$Sol[,2]),
-          #only DIC saved, set AIC, BIC as DIC
-          DIC.partial=sum.tmp$DIC,
-          Dev.partial=mean(M.partial$Deviance)
-        )
-        #coef.sign<-sign(rs.partial['coef.partial'])
-        sd.threshold<-as.double(rs.partial['sd.partial'])
-        #				}
-        rs<-c(rs,rs.partial)
-      }
-    }else if(family$family=='poisson'){
-      if('full'%in%pooling){
-        #comlete pooling
-        #M.full<-bayesglm(response ~ treatment, data=dat,n.iter = n.iter,family='poisson')
-        M.full<-bayesglm(response ~ treatment, data=dat,family='poisson')
-        sum.tmp<-summary(M.full)
-        rs.full<-c(
-          coef.full=sum.tmp$coef[2,1],
-          se.full=sum.tmp$coef[2,2],
-          t.full=sum.tmp$coef[2,3],
-          pval.full=sum.tmp$coef[2,4],
-          #z.full=sign(sum.tmp$coef[2,1])*abs(qnorm(sum.tmp$coef[2,4]/2)),
-          df.full=sum.tmp$df.residual-sum.tmp$df[1],
-          AIC.full=sum.tmp$aic,
-          BIC.full=AIC(M.full,k=log(nrow(dat))),
-          Dev.full=sum.tmp$deviance
-        )
-        rs<-c(rs,rs.full)
-      }
-
-      if('no'%in%pooling){
-        #no pooling
-        if(n.levels>1)
-          #					M.no<-bayesglm(response ~ treatment + probe, data=dat, n.iter=n.iter,family='poisson')
-          M.no<-bayesglm(response ~ treatment + probe, data=dat, family='poisson')
-        else
-          #					M.no<-bayesglm(response ~ treatment, data=dat, n.iter=n.iter,family='poisson')
-          M.no<-bayesglm(response ~ treatment, data=dat,family='poisson')
-        sum.tmp<-summary(M.no)
-        rs.no<-c(
-          coef.no=sum.tmp$coef[2,1],
-          se.no=sum.tmp$coef[2,2],
-          t.no=sum.tmp$coef[2,3],
-          pval.no=sum.tmp$coef[2,4],
-          #z.no=sign(coef.no)*abs(qnorm(pval.no/2)),
-          df.no=sum.tmp$df.residual-sum.tmp$df[1],
-          AIC.no=sum.tmp$aic,
-          BIC.no=AIC(M.no,k=log(nrow(dat))),
-          Dev.no=sum.tmp$deviance
-        )
-        rs<-c(rs,rs.no)
-      }
-
-      if('partial'%in%pooling){
-        #partial pooling with multilevel model of varing slopes and intercepts
-        prior<-list(R = list(V = prior.V.scale, nu=prior.R.nu), G = list(G1 = list(V = diag(2)*prior.V.scale, nu = prior.G.nu )))
-        if(n.levels>1){
-          M.partial<-MCMCglmm(response ~ treatment, random=~idh(treatment+1):probe, data=dat, prior=prior,verbose=FALSE, nitt=nitt, burnin = burnin,thin=thin,family='poisson')
-          df.partial<-nrow(dat)-(n.levels+1)*2
-        }
-        else{
-          M.partial<-MCMCglmm(response ~ treatment, data=dat, prior=prior,verbose=FALSE, nitt=nitt, burnin = burnin,thin=thin,family='poisson')
-          df.partial<-nrow(dat)-2
-        }
-        sum.tmp<-summary(M.partial)
-        t.partial<-sum.tmp$sol[2,1]/sd(M.partial$Sol[,2])
-        pval.partial<-2*pt(-abs(t.partial),df=df.partial)
-        z.partial<-sign(t.partial)*abs(qnorm(pval.partial/2))
-        rs.partial<-c(
-          coef.partial=sum.tmp$sol[2,1],
-          'l-95% CI.partial'=sum.tmp$sol[2,2],
-          'u-95% CI.partial'=sum.tmp$sol[2,3],
-          t.partial=t.partial,
-          pval.partial=pval.partial,
-          z.partial=z.partial,
-          df.partial=df.partial,
-          #pMCMC
-          pvalMCMC.partial=sum.tmp$sol[2,5],
-          #					z.partial=sign(sum.tmp$sol[2,1])*abs(qnorm(sum.tmp$sol[2,5]/2)),
-          n.effet.partial=sum.tmp$sol[2,4],
-          n.MCMC.partial=sum.tmp$cstats[3],
-          #Standard Deviation
-          sd.partial=sd(M.partial$Sol[,2]),
-          #only DIC saved, set AIC, BIC as DIC
-          DIC.partial=sum.tmp$DIC,
-          Dev.partial=mean(M.partial$Deviance)
-        )
-        rs<-c(rs,rs.partial)
-      }
-    }else{
-      stop('Only liner model and binomial family model are supported !!! \n')
-    }
-  }
-  rs
-}
 ##
-#fold change function
+#fold change function, inner function
+#first class is 0.
 #positive: class1/class0
 #negative: class0/class1
 FC <- function(x,cl,logTransformed = TRUE,
            log.base = 2,average.method = c('geometric', 'arithmetic'),
            pseudoCount = 0) {
-    x.class0 <- x[(cl == 0)] + pseudoCount
-    x.class1 <- x[(cl == 1)] + pseudoCount
+    x.class0 <- x[(cl == levels(cl)[1])] + pseudoCount
+    x.class1 <- x[(cl == levels(cl)[2])] + pseudoCount
     if (missing(average.method))
       average.method <- 'geometric'
     if (logTransformed) {

@@ -9,7 +9,7 @@ library(devtools)
 
 install_github("jyyulab/NetBID-dev",ref='master') 
 
-or download the release version from https://github.com/jyyulab/NetBID-dev/releases/download/NetBID2-R/NetBID2_0.1.0.tar.gz
+or download the release version from https://github.com/jyyulab/NetBID-dev/releases/download/NetBID2-R/NetBID2_0.1.1.tar.gz
 
 ## local install
 
@@ -17,17 +17,17 @@ download the directory to your workspace and then run:
 
 devtools::install(pkg='.') ## please input the path to the directory
 
-or get the source package file from server ('/research/projects/yu3grp/Network_JY/yu3grp/NetBID2/NetBID2_0.1.0.tar.gz') and install locally by:
+or get the source package file from server ('/research/projects/yu3grp/Network_JY/yu3grp/NetBID2/NetBID2_0.1.1.tar.gz') and install locally by:
 
-install.packages('NetBID2_0.1.0.tar.gz',repos=NULL) ## path to the directory
+install.packages('NetBID2_0.1.1.tar.gz',repos=NULL) ## path to the directory
 
 or directly install:
 
-install.packages('/research/projects/yu3grp/Network_JY/yu3grp/NetBID2/NetBID2_0.1.0.tar.gz',repos=NULL)
+install.packages('/research/projects/yu3grp/Network_JY/yu3grp/NetBID2/NetBID2_0.1.1.tar.gz',repos=NULL)
 
 # Manual & Tutorial
 
-manual: NetBID2_0.1.0.pdf
+manual: NetBID2_0.1.1.pdf
 
 tutorial: https://jyyulab.github.io/NetBID-dev/
 
@@ -62,5 +62,3 @@ analysis_and_plot_demo1.R
 * II.3: category plot for the expression/activity for each driver
 ### Part III: advanced plots
 * III.1: gene set-based activity analysis, including vocalno, heatmap, category and GSEA plot
-
-

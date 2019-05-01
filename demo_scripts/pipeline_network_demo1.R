@@ -3,17 +3,6 @@
 
 library(NetBID2)
 
-######## global parameters
-# currently some steps will be run on server, the fist two parameters is used for changing the path (local to server)
-# RP(run parameters)
-RP.main_dir      <- '/Volumes/project_space' ## local path
-RP.bash.main_dir <- '/research/projects/yu3grp' ## server path
-RP.python3.path  <- '/hpcf/apps/python/install/3.6.1/bin/python3.6' ## required
-RP.load          <- 'module load python/3.6.1' ## required
-RP.MICA.main     <- '/research/projects/yu3grp/Network_JY/yu3grp/NetBID2/scMINER-master/' ## required for MICA
-RP.SJAR.main     <- '/research/projects/yu3grp/Network_JY/yu3grp/NetBID2/SJARACNe-master/' ## required for SJAracne
-RP.SJAR.pre_cmd  <- sprintf("export SJARACNE_PATH=%s \nexport PYTHON_PATH=%s \n%s",RP.SJAR.main,RP.python3.path,RP.load) ## required
-
 ######### preload all knowledge info, choose species, use_level (gene/transcript)
 db.preload(use_level='gene',use_spe='human',update=FALSE)
 
@@ -119,18 +108,6 @@ for(i in 1:length(intgroup)){
   print(table(list(pred_label=pred_label,obs_label=get_obs_label(phe,intgroup[i]))))
 }
 draw.clustComp(pred_label,obs_label=get_obs_label(phe,intgroup[i])) ## display the comparison in detail
-# perform clustering based on MICA (current run on server !!)
-mat <- exprs(network.par$net.eset)
-outdir <- file.path(network.par$out.dir,'MICA') ## set the output directory, this should be run on server
-prj.name <- network.par$project.name
-SJ.MICA.prepare(mat,outdir=outdir,prjname=prj.name,all_k=2:6,retransformation="False",perplexity=5)
-# then run the two bash files on SJ server by the output instructions
-# when finished, plot functions:
-for(i in 1:length(intgroup)){
-  print(intgroup[i])
-  pred_label <- draw.MICA(outdir=outdir,prjname=prj.name,all_k = 2:6,obs_label=get_obs_label(phe,intgroup[i]))
-  print(table(list(pred_label=pred_label,obs_label=get_obs_label(phe,intgroup[i]))))
-}
 
 ######################################################### Step4: prepare SJARACNE (sjaracne-prep)
 # load from RData
@@ -152,16 +129,6 @@ SJAracne.prepare(eset=network.par$net.eset,use.samples=use.samples,
                     TF_list=use_list$tf,SIG_list=use_list$sig,
                     IQR.thre = 0.5,IQR.loose_thre = 0.1,
                     SJAR.project_name=prj.name,SJAR.main_dir=network.par$out.dir.SJAR)
-
-#### Old version for internal use in SJ
-result_info <- SJ.SJAracne.prepare(eset=network.par$net.eset,use.samples=use.samples,
-                                   TF_list=use_list$tf,SIG_list=use_list$sig,
-                                   IQR.thre = 0.5,IQR.loose_thre = 0.1,
-                                   SJAR.project_name=prj.name,SJAR.main_dir=network.par$out.dir.SJAR,mem=10240) ## memory shoud be definied !!!
-# check result_info$bash.tf result_info$bash.sig; and run on cluster !!!
-# or auto generate bash files for Step1, Step2, Step3, Step4 for all bash files under one directory
-SJ.SJAracne.step(network.par$out.dir.SJAR)
-# !!! then run four steps one by one
 
 ###################################### finish network generation part !!! Cheers !!! #########################################
 

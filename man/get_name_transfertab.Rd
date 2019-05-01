@@ -5,7 +5,7 @@
 \title{Gene ID conversion related functions.}
 \usage{
 get_name_transfertab(use_genes = NULL, transfer_tab = NULL,
-  from_type = NULL, to_type = NULL)
+  from_type = NULL, to_type = NULL, ignore_version = FALSE)
 }
 \arguments{
 \item{use_genes}{a vector of characters, gene list used for ID conversion.}
@@ -26,6 +26,8 @@ The type must be the gene type for the input \code{use_genes}.
 \item{to_type}{character, character, attribute name from the biomaRt package,
 the gene type will be convereted to.
 If NULL, will use the second column in the transfer table.}
+
+\item{ignore_version}{logical, whether to ignore version when from_type is 'ensembl_gene_id_version' or 'ensembl_transcript_id_version'. Default is FALSE.}
 }
 \value{
 \code{get_name_transfertab} will return the list for the converted IDs.

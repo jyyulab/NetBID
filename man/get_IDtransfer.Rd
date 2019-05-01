@@ -5,7 +5,7 @@
 \title{Gene ID conversion related functions.}
 \usage{
 get_IDtransfer(from_type = NULL, to_type = NULL, add_type = NULL,
-  use_genes = NULL, dataset = NULL)
+  use_genes = NULL, dataset = NULL, ignore_version = FALSE)
 }
 \arguments{
 \item{from_type}{character, attribute name from the biomaRt package,
@@ -25,6 +25,9 @@ If NULL, will extract all possible genes.}
 
 \item{dataset}{character, name for the dataset used for ID conversion, such as 'hsapiens_gene_ensembl'.
 If NULL, will use \code{db_info[1]} if run \code{db.preload} brefore. Default is NULL.}
+
+\item{ignore_version}{logical, whether to ignore version when from_type is 'ensembl_gene_id_version' or 'ensembl_transcript_id_version'.
+Default is FALSE.}
 }
 \value{
 \code{get_IDtransfer} will return a data.frame for the transfer table.
