@@ -6,7 +6,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=Edge">
   
 
-  <title>Home - </title>
+  <title>NetBID2 - </title>
   <link rel="stylesheet" href="http://localhost:4000/assets/css/just-the-docs.css">
   
   <script type="text/javascript" src="http://localhost:4000/assets/js/just-the-docs.js"></script>
@@ -29,7 +29,7 @@
         
           <li class="navigation-list-item active">
             
-            <a href="http://localhost:4000/" class="navigation-list-link active">Home</a>
+            <a href="http://localhost:4000/" class="navigation-list-link active">NetBID2</a>
             
           </li>
         
@@ -39,7 +39,17 @@
         
           <li class="navigation-list-item">
             
-            <a href="http://localhost:4000/docs/pre_request" class="navigation-list-link">pre request</a>
+            <a href="http://localhost:4000/docs/pre_request" class="navigation-list-link">Pre-requested</a>
+            
+          </li>
+        
+      
+    
+      
+        
+          <li class="navigation-list-item">
+            
+            <a href="http://localhost:4000/docs/network_generation" class="navigation-list-link">Network generation</a>
             
               
               <ul class="navigation-list-child-list ">
@@ -64,7 +74,7 @@
         
           <li class="navigation-list-item">
             
-            <a href="http://localhost:4000/docs/network_generation" class="navigation-list-link">network generation</a>
+            <a href="http://localhost:4000/docs/driver_estimation" class="navigation-list-link">Driver estimation</a>
             
               
               <ul class="navigation-list-child-list ">
@@ -89,32 +99,7 @@
         
           <li class="navigation-list-item">
             
-            <a href="http://localhost:4000/docs/driver_estimation" class="navigation-list-link">driver estimation</a>
-            
-              
-              <ul class="navigation-list-child-list ">
-                
-                  
-                
-                  
-                
-                  
-                
-                  
-                
-                  
-                
-              </ul>
-            
-          </li>
-        
-      
-    
-      
-        
-          <li class="navigation-list-item">
-            
-            <a href="http://localhost:4000/docs/advanced_analysis" class="navigation-list-link">advanced analysis</a>
+            <a href="http://localhost:4000/docs/advanced_analysis" class="navigation-list-link">Advanced analysis</a>
             
               
               <ul class="navigation-list-child-list ">
@@ -157,35 +142,134 @@
 
 <p class="fs-6 fw-300">This is the documentation for the usage of NetBID2.</p>
 
-<p><a href="#getting-started" class="btn btn-primary fs-5 mb-4 mb-md-0 mr-2">Get started now</a> <a href="https://github.com/jyyulab/NetBID-dev/tree/NetBID2-dev" class="btn fs-5">View it on GitHub</a></p>
+<p><a href="#getting-started" class="btn btn-primary fs-5 mb-4 mb-md-0 mr-2">Get started now</a> <a href="https://github.com/jyyulab/NetBID-dev" class="btn fs-5">View it on GitHub</a></p>
+
+<hr />
+
+<h2 id="overview">Overview</h2>
+
+<p>NetBID is a systems biology tool called data-driven network-based Bayesian inference of drivers, by integrating data from transcriptomics,proteomics and phosphoproteomics.</p>
+
+<p>The drivers could be transcription facotrs (<strong>TF</strong>) or signaling factors (<strong>SIG</strong>).</p>
+
+<p>NetBID2 is the second version of NetBID, which not only covers the main functions of NetBID, but also provides plenty of supporting functions and suggested workflow to finish a NetBID2-based analysis:</p>
+
+<p><strong>Provide data processing functions to assist</strong></p>
+
+<ul>
+  <li>Expression matrix pre-processing and quality assessment</li>
+  <li>SJAracne-based network construction</li>
+  <li>Activity calculation for drivers and gene sets</li>
+  <li>Estimation of differentiated expressed genes or differentiated activated drivers</li>
+  <li>Generation of master table for drivers</li>
+</ul>
+
+<p><strong>Provide visualization functions to assist</strong></p>
+
+<ul>
+  <li>Unsupervised clustering for samples and comparison with known labels</li>
+  <li>Display of a list of interested drivers, the profile of the significance and the feature of the target genes</li>
+  <li>Display of a specific driver, the profile of the significance, the feature of the target genes and the detailed network structure</li>
+</ul>
+
+<p><strong>Provide supporting functions to assist</strong></p>
+
+<ul>
+  <li>Gene/transcript ID conversion</li>
+  <li>Gene function enrichment analysis &amp; result visualization</li>
+  <li>Data and pipeline management</li>
+</ul>
 
 <hr />
 
 <h2 id="getting-started">Getting started</h2>
 
-<p>The version mentioned below are the tested version. Other versions may also work well but haven’t tested it yet.</p>
-
 <h3 id="dependencies">Dependencies</h3>
 
-<p>R, version 3.4.0</p>
+<p>R, version &gt;= 3.4.0</p>
 
 <p><a href="docs/pre_request">Pre-request R packages</a></p>
 
 <h3 id="quick-start-install-r-packages-netbid2">Quick start: install R packages (NetBID2)</h3>
+
+<ul>
+  <li>install the R packages from github (not published yet)</li>
+</ul>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">library</span><span class="p">(</span><span class="n">devtools</span><span class="p">)</span><span class="w">
+</span><span class="n">install_github</span><span class="p">(</span><span class="s2">"jyyulab/NetBID-dev"</span><span class="p">,</span><span class="n">ref</span><span class="o">=</span><span class="s1">'master'</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<ul>
+  <li>OR, download the released source package from <a href="https://github.com/jyyulab/NetBID-dev/releases/download/NetBID2-R/NetBID2_0.1.1.tar.gz">NetBID2_0.1.1.tar.gz</a> and local install</li>
+</ul>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">install.packages</span><span class="p">(</span><span class="s1">'NetBID2_0.1.1.tar.gz'</span><span class="p">,</span><span class="n">repos</span><span class="o">=</span><span class="kc">NULL</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<hr />
+
+<h2 id="design-manual">Design manual</h2>
+
+<p>The manual for all functions in NetBID2 could be obtained from <a href="https://github.com/jyyulab/NetBID-dev/blob/master/NetBID2_0.1.1.pdf">NetBID2_0.1.1.pdf</a>. All functions have the demo scripts.</p>
+
+<p>All 67 invokable functions could be grouped as shown in the figure below:</p>
+
+<p><img src="function_group.png" alt="function group" /></p>
+
+<p>NetBID2 has four functions focusing on suggested pipeline (not required):</p>
+
+<ul>
+  <li>
+    <p><code class="highlighter-rouge">NetBID.network.dir.create()</code> will generate a working directory structure for the network generation part in NetBID2. This function aims to assist researchers to organize the working directory.</p>
+  </li>
+  <li>
+    <p><code class="highlighter-rouge">NetBID.analysis.dir.create()</code>  will generate a working directory structure for the driver analysis part in NetBID2. This function aims to assist researchers to organize the working directory.</p>
+  </li>
+  <li>
+    <p><code class="highlighter-rouge">NetBID.saveRData()</code> save the dataset of one designated step  the step into file.</p>
+  </li>
+  <li>
+    <p><code class="highlighter-rouge">NetBID.loadRData()</code> load the dataset of one designated step from file.</p>
+  </li>
+</ul>
+
+<p>Users could save two complicate list object, <code class="highlighter-rouge">network.par</code> in the <strong>network generation part</strong> and <code class="highlighter-rouge">analysis.par</code> in the <strong>driver analysis part</strong>, into the data directory (<code class="highlighter-rouge">network.par$out.dir.DATA</code> or <code class="highlighter-rouge">analysis.par$out.dir.DATA</code>), with the name of the RData marked by step name. 
+The two lists could make user to save the whole related dataset in each step <code class="highlighter-rouge">NetBID.saveRData()</code> and easy to get them back by using <code class="highlighter-rouge">NetBID.loadRData()</code>. 
+The RData saved from each step could be used to run the following analysis without repeating the former steps.</p>
+
+<p>The pipeline steps are suggested in the figure below with detailed component for the list object in the final step in the two parts:</p>
+
+<p><img src="pipeline_part.png" alt="pipeline part" /></p>
+
+<p>Strongly suggest new users to follow the pipeline to manage the analysis project. The pipeline is included in the tutorial below. User could follow the demo in the tutorial for better understanding the design.</p>
+
+<p>Most of the functions in NetBID2 are not strictly dependent on the pipeline object, user could try to learn the usage of each function by running the example in each function and prepare the required input by themselves.</p>
+
+<h2 id="tutorial">Tutorial</h2>
+
+<p>We choose the demo dataset from GEO database: <a href="https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE116028">GSE116028</a>.</p>
+
+<p>This dataset contains microarray data for 13 adult medulloblastoma (MB) samples. 
+Three subgroups of adult MB were identified by distinct expression profiles, clinical features, pathological features, and prognosis, including 3 SHH, 4 WNT, and 6 Group4.
+From them, Group4 tumors had significantly worse progression-free and overall survival compared with tumors of the other molecular subtypes. 
+Here, we want to <strong>find potential hidden drivers in Group4 compared with the other subtypes by using NetBID2</strong>, for which may be related with the specific clinical feature for Group4 MB.</p>
+
+<p><strong>Though the dataset in the tutorial is microarray, we will include the usage of processing RNASeq dataset in each step.</strong></p>
+
+<p>The tutorials are divided by three ordered and relatively independent parts as follows:</p>
+
 <ol>
-  <li>install the R packages from github (not published yet)
-    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>devtools::install_github<span class="o">(</span><span class="s2">"jyyulab/NetBID-dev"</span>,ref<span class="o">=</span><span class="s1">'NetBID2-R)
-</span></code></pre></div>    </div>
+  <li>
+    <p><a href="docs/network_generation">Network generation</a></p>
+  </li>
+  <li>
+    <p><a href="docs/driver_estimation">Driver estimation</a></p>
+  </li>
+  <li>
+    <p><a href="docs/advanced_analysis">Advanced analysis</a></p>
   </li>
 </ol>
-
-<h3 id="overview">Overview</h3>
-
-<p>I. <a href="docs/network_generation">Network generation</a></p>
-
-<p>II. <a href="docs/driver_estimation">Driver estimation</a></p>
-
-<p>III: <a href="docs/advanced_analysis">Advanced analysis</a></p>
 
 <hr />
 

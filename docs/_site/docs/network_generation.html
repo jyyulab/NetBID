@@ -6,7 +6,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=Edge">
   
 
-  <title>network generation - </title>
+  <title>Network generation - </title>
   <link rel="stylesheet" href="http://localhost:4000/assets/css/just-the-docs.css">
   
   <script type="text/javascript" src="http://localhost:4000/assets/js/just-the-docs.js"></script>
@@ -29,7 +29,7 @@
         
           <li class="navigation-list-item">
             
-            <a href="http://localhost:4000/" class="navigation-list-link">Home</a>
+            <a href="http://localhost:4000/" class="navigation-list-link">NetBID2</a>
             
           </li>
         
@@ -39,22 +39,7 @@
         
           <li class="navigation-list-item">
             
-            <a href="http://localhost:4000/docs/pre_request" class="navigation-list-link">pre request</a>
-            
-              
-              <ul class="navigation-list-child-list ">
-                
-                  
-                
-                  
-                
-                  
-                
-                  
-                
-                  
-                
-              </ul>
+            <a href="http://localhost:4000/docs/pre_request" class="navigation-list-link">Pre-requested</a>
             
           </li>
         
@@ -64,7 +49,7 @@
         
           <li class="navigation-list-item active">
             
-            <a href="http://localhost:4000/docs/network_generation" class="navigation-list-link active">network generation</a>
+            <a href="http://localhost:4000/docs/network_generation" class="navigation-list-link active">Network generation</a>
             
               
               <ul class="navigation-list-child-list ">
@@ -89,7 +74,7 @@
         
           <li class="navigation-list-item">
             
-            <a href="http://localhost:4000/docs/driver_estimation" class="navigation-list-link">driver estimation</a>
+            <a href="http://localhost:4000/docs/driver_estimation" class="navigation-list-link">Driver estimation</a>
             
               
               <ul class="navigation-list-child-list ">
@@ -114,7 +99,7 @@
         
           <li class="navigation-list-item">
             
-            <a href="http://localhost:4000/docs/advanced_analysis" class="navigation-list-link">advanced analysis</a>
+            <a href="http://localhost:4000/docs/advanced_analysis" class="navigation-list-link">Advanced analysis</a>
             
               
               <ul class="navigation-list-child-list ">
@@ -157,13 +142,405 @@
         <div id="main-content" class="page-content" role="main">
           <h1 id="network-generation">Network Generation</h1>
 
-<p>Step1: load in gene expression datasets for network construction (exp-load)</p>
+<p>The purpose for the first part:</p>
 
-<p>Step2: normalization for the exp dataset (exp-QC)</p>
+<p><strong>generate a gene regulatory network based on a transcriptomic datasets</strong>.</p>
 
-<p>Step3: check sample cluster info, optional (exp-cluster)</p>
+<p>The full demo script for this part could be found in <a href="https://github.com/jyyulab/NetBID-dev/blob/master/demo_scripts/pipeline_network_demo1.R">pipeline_network_demo1.R</a>.</p>
 
-<p>Step4: prepare SJARACNE (sjaracne-prep)</p>
+<h2 id="step0-preparations">Step0: preparations</h2>
+
+<p>Before start, we need to library the installed NetBID2.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># library the package</span><span class="w">
+</span><span class="n">library</span><span class="p">(</span><span class="n">NetBID2</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<p>This tutorial is based on the suggested pipeline design in NetBID2. 
+So, we need to set up a main directory for the project in <code class="highlighter-rouge">project_main_dir</code>. 
+The main directory could have multiple projects under the path, separeted by the <code class="highlighter-rouge">project_name</code> as the name for the sub-directory. 
+So user could use the same main directory for another project. 
+But project related files with the same <code class="highlighter-rouge">project_main_dir</code> and <code class="highlighter-rouge">project_name</code> will be covered. 
+So, in the script below, user could add a time tag in the <code class="highlighter-rouge">project_name</code> to avoid this by accident.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">#set up paramters</span><span class="w">
+</span><span class="n">project_main_dir</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="s1">'test/'</span><span class="w"> </span><span class="c1">### user defined main directory for the project, one main directory could have multiple projects, separeted by project name</span><span class="w">
+</span><span class="n">current_date</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">format</span><span class="p">(</span><span class="n">Sys.time</span><span class="p">(),</span><span class="w"> </span><span class="s2">"%Y-%m-%d"</span><span class="p">)</span><span class="w"> </span><span class="c1">## current date for project running, suggested to add the time tag</span><span class="w">
+</span><span class="n">project_name</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'project_%s'</span><span class="p">,</span><span class="n">current_date</span><span class="p">)</span><span class="w"> </span><span class="c1">## project name for the project</span><span class="w">
+</span></code></pre></div></div>
+
+<p>Once decided the project_main_dir and project_name, user could run <code class="highlighter-rouge">NetBID.network.dir.create()</code> to generate the sub-directories for the working directory, including QC/ to save QC related files, DATA/ to save RData and SJAR/ to save data for running <a href="https://github.com/jyyulab/SJARACNe">SJARACNe</a>. Besides, a global list variable <code class="highlighter-rouge">network.par</code> will be returned by the function. 
+Attention, if the current environment already has this variable, the function will do nothing, report a warning message and return the original <code class="highlighter-rouge">network.par</code>.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">## network.par is very essential in the analysis, if the environment already has this parameter, strongly suggest to delete it first</span><span class="w">
+</span><span class="n">network.par</span><span class="w">  </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">NetBID.network.dir.create</span><span class="p">(</span><span class="n">project_main_dir</span><span class="o">=</span><span class="n">project_main_dir</span><span class="p">,</span><span class="n">prject_name</span><span class="o">=</span><span class="n">project_name</span><span class="p">)</span><span class="w"> </span><span class="c1">## create working directory</span><span class="w">
+</span></code></pre></div></div>
+
+<h2 id="step1-load-in-gene-expression-datasets-for-network-construction-exp-load">Step1: load in gene expression datasets for network construction (exp-load)</h2>
+
+<p>Here, we use the dataset from GEO database as the demo that we could directly download it from web by input the GSE ID and GPL ID.
+If set <code class="highlighter-rouge">getGPL=TRUE</code>, will download the gene annotation file. 
+The output of this function will be the <a href="https://www.rdocumentation.org/packages/Biobase/versions/2.32.0/topics/ExpressionSet">eSet</a> class object and will save the RData into <code class="highlighter-rouge">out.dir</code>.
+Next time by running this function, it will try to load the RData in the <code class="highlighter-rouge">out.dir/{GSE}_{GPL}.RData</code> first (if <code class="highlighter-rouge">update=FALSE</code>).</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># from GEO, need to provide GSE and GPL</span><span class="w">
+</span><span class="n">net_eset</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">load.exp.GEO</span><span class="p">(</span><span class="n">out.dir</span><span class="o">=</span><span class="n">network.par</span><span class="o">$</span><span class="n">out.dir.DATA</span><span class="p">,</span><span class="n">GSE</span><span class="o">=</span><span class="s1">'GSE116028'</span><span class="p">,</span><span class="n">GPL</span><span class="o">=</span><span class="s1">'GPL6480'</span><span class="p">,</span><span class="n">getGPL</span><span class="o">=</span><span class="kc">TRUE</span><span class="p">,</span><span class="n">update</span><span class="o">=</span><span class="kc">FALSE</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<p><em>Optional:</em>
+User could choose to update the feature data frame in the eSet object by <code class="highlighter-rouge">update_eset.feature()</code>. 
+This function allows user to change the main ID from <code class="highlighter-rouge">from_feature</code> to <code class="highlighter-rouge">to_feature</code> by inputting the transfer table <code class="highlighter-rouge">use_feature_info</code> and choosing the <code class="highlighter-rouge">merge_method</code>.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># ID conversion, or merge transcript level to expression level, use_feature_info can be other dataframe info; optional;</span><span class="w">
+</span><span class="n">net_eset</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">update_eset.feature</span><span class="p">(</span><span class="n">use_eset</span><span class="o">=</span><span class="n">net_eset</span><span class="p">,</span><span class="n">use_feature_info</span><span class="o">=</span><span class="n">fData</span><span class="p">(</span><span class="n">net_eset</span><span class="p">),</span><span class="n">from_feature</span><span class="o">=</span><span class="s1">'ID'</span><span class="p">,</span><span class="n">to_feature</span><span class="o">=</span><span class="s1">'GENE_SYMBOL'</span><span class="p">,</span><span class="n">merge_method</span><span class="o">=</span><span class="s1">'median'</span><span class="p">)</span><span class="w"> </span><span class="c1">### !!! need modify</span><span class="w">
+</span></code></pre></div></div>
+
+<p><em>Optional:</em>
+User could choose to update the phenotype data frame in the eSet object by <code class="highlighter-rouge">update_eset.phenotype()</code>. 
+This function allows user to get phenotype information from the data frame <code class="highlighter-rouge">use_phenotype_info</code> by indicating the column that matched the sample name.
+The <code class="highlighter-rouge">use_col</code> could be used to tell the function which column in <code class="highlighter-rouge">use_phenotype_info</code> will be kept. If set to ‘auto’, wil extract columns with unique sample feature ranges from 2 to sample size-1. 
+If set to ‘GEO-auto’, will extract columns: ‘geo_accession’,’title’,’source_name_ch1’,and columns end with ‘:ch1’.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># select phenotype columns or user add phenotype info; optional</span><span class="w">
+</span><span class="n">net_eset</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">update_eset.phenotype</span><span class="p">(</span><span class="n">use_eset</span><span class="o">=</span><span class="n">net_eset</span><span class="p">,</span><span class="n">use_phenotype_info</span><span class="o">=</span><span class="n">pData</span><span class="p">(</span><span class="n">net_eset</span><span class="p">),</span><span class="n">use_sample_col</span><span class="o">=</span><span class="s1">'geo_accession'</span><span class="p">,</span><span class="n">use_col</span><span class="o">=</span><span class="s1">'GEO-auto'</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<p>Now, we need to check the data quality of the eSet by <code class="highlighter-rouge">draw.eset.QC()</code>. 
+The QC report html mainly contains four parts, <em>heatmap</em>, <em>pca</em>, <em>density</em> and <em>meansd</em>.
+The <code class="highlighter-rouge">intgroup</code> could be used to indicate which column from the <code class="highlighter-rouge">fData(eset)</code> will be used in the plot (<em>heatmap</em>, <em>pca</em>, <em>density</em>).
+If set to NULL, will automatcially extract all possible groups by <code class="highlighter-rouge">get_int_group()</code>.</p>
+
+<p>For the usage of <code class="highlighter-rouge">draw.eset.QC</code>, pandoc is required for <code class="highlighter-rouge">generate_html=TRUE</code>. 
+If <code class="highlighter-rouge">pandoc_available()=FALSE</code>, please install pandoc and set environment of pandoc by <code class="highlighter-rouge">Sys.setenv(RSTUDIO_PANDOC=---installed path---)</code>.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># QC for the raw expdatasets</span><span class="w">
+</span><span class="c1"># if intgroup==NULL, will auto get intgroup</span><span class="w">
+</span><span class="c1"># prefix: prefix for the pdf files</span><span class="w">
+</span><span class="n">draw.eset.QC</span><span class="p">(</span><span class="n">network.par</span><span class="o">$</span><span class="n">net.eset</span><span class="p">,</span><span class="n">outdir</span><span class="o">=</span><span class="n">network.par</span><span class="o">$</span><span class="n">out.dir.QC</span><span class="p">,</span><span class="n">intgroup</span><span class="o">=</span><span class="kc">NULL</span><span class="p">,</span><span class="n">do.logtransform</span><span class="o">=</span><span class="kc">FALSE</span><span class="p">,</span><span class="n">prefix</span><span class="o">=</span><span class="s1">'beforeQC_'</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<ul>
+  <li>What to check for the QC report html <a href="beforeQC_QC.html">before_QC.html</a> ? 
+The number of samples and genes (probes/transcripts/…);
+All samples will be clustered by the expression pattern from all genes, check possible mis-labeled samples; 
+The density plots show the range and distribution for the expression values, may judge whether the original dataset has been log transformed;
+The meansd plots show the relationship between the mean and standard deviation of the genes, used to verify whether there is a dependence of the standard deviation (or variance) on the mean.</li>
+</ul>
+
+<p>Now, basic processing steps are finished for the input expression dataset. Save it to <code class="highlighter-rouge">network.par</code>.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># add the variable into network.par, very essential !</span><span class="w">
+</span><span class="n">network.par</span><span class="o">$</span><span class="n">net.eset</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">net_eset</span><span class="w">
+</span></code></pre></div></div>
+
+<p>Save <code class="highlighter-rouge">network.par</code> into the RData file and give the step name to it, e.g <code class="highlighter-rouge">exp-load</code>. 
+The RData could be found in <code class="highlighter-rouge">network.par$out.dir.DATA/network.par.Step.{exp-load}.RData</code>.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># save to RData</span><span class="w">
+</span><span class="n">NetBID.saveRData</span><span class="p">(</span><span class="n">network.par</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">network.par</span><span class="p">,</span><span class="n">step</span><span class="o">=</span><span class="s1">'exp-load'</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<hr />
+<h3 id="input-rnaseq-dataset"><em>Input RNASeq dataset</em></h3>
+
+<ul>
+  <li>
+    <p>Another two functions can be applied to load expression dataset from RNASeq, <code class="highlighter-rouge">load.exp.RNASeq.demo()</code> and <code class="highlighter-rouge">load.exp.RNASeq.demoSalmon()</code>. 
+<strong>BUT</strong> this two function are just demo functions, which do not support complicated options in <code class="highlighter-rouge">tximport()</code> and <code class="highlighter-rouge">DESeq()</code>. 
+Besides, the output format may be different by using different dataset as reference that these two load functions may not work well.
+Suggest to use the original functions if have some experience of coding.</p>
+  </li>
+  <li>
+    <p>If try to use <code class="highlighter-rouge">load.exp.RNASeq.demo()</code> and <code class="highlighter-rouge">load.exp.RNASeq.demoSalmon()</code>, be <strong>ATTENTION</strong> to the <code class="highlighter-rouge">return_type</code> option in the functions.</p>
+    <ul>
+      <li>‘txi’ is the output of <code class="highlighter-rouge">tximport()</code>, a simple list containing matrices: abundance, counts, length.</li>
+      <li>‘counts’ is the output of raw count matrix.</li>
+      <li>‘tpm’ is the output of raw tpm.</li>
+      <li>‘dds’ is the DESeqDataSet class object, the data has been processed by <code class="highlighter-rouge">DESeq()</code>.</li>
+      <li>‘eset’ is the ExpressionSet class object, the expression data matrix has been processed by <code class="highlighter-rouge">DESeq(), vst()</code>.</li>
+    </ul>
+
+    <p>Default is ‘eset’. If user do not choose ‘eset’, the output will not be directly used in the following scripts in the tutorial. Check the <strong><em>Input expression matrix</em></strong> section below.</p>
+  </li>
+</ul>
+
+<hr />
+<h3 id="input-expression-matrix"><em>Input expression matrix</em></h3>
+<ul>
+  <li>If the user decide to prepare the expression matrix by themselves. The eSet object could be directly obtained by using <code class="highlighter-rouge">generate.eset()</code>.
+For example for RNASeq dataset with ‘tpm’ as the output:
+    <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">#tpm &lt;- load.exp.RNASeq.demo(XXX)</span><span class="w">
+</span><span class="n">tmp_mat</span><span class="w">  </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">log2</span><span class="p">(</span><span class="n">tpm</span><span class="p">)</span><span class="w">
+</span><span class="n">tmp_eset</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">generate.eset</span><span class="p">(</span><span class="n">exp_mat</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tmp_mat</span><span class="p">,</span><span class="w"> </span><span class="n">phenotype_info</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">NULL</span><span class="p">,</span><span class="n">feature_info</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">NULL</span><span class="p">,</span><span class="w"> </span><span class="n">annotation_info</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">""</span><span class="p">)</span><span class="w">
+</span></code></pre></div>    </div>
+    <p>For the option of <code class="highlighter-rouge">generate.eset()</code>, 
+if <code class="highlighter-rouge">phenotype_info = NULL</code>, a one column named with ‘group’ will be automatically generated. 
+if <code class="highlighter-rouge">feature_info = NULL</code>, a one column named with ‘gene’ will be automatically generated.</p>
+  </li>
+</ul>
+
+<hr />
+
+<h2 id="step2-normalization-for-the-expression-dataset-exp-qc">Step2: normalization for the expression dataset (exp-QC)</h2>
+
+<p>Before start, load the RData from the previous step if user want to re-run the following steps or re-open the R session. 
+Remember to set the temporary <code class="highlighter-rouge">network.par</code> if re-open the R session and <code class="highlighter-rouge">network.par$out.dir.DATA</code> will be used to find the correct RData file. 
+No need to run this if continue working from the previous step.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># load from RData</span><span class="w">
+</span><span class="c1">#network.par &lt;- list()</span><span class="w">
+</span><span class="c1">#network.par$out.dir.DATA &lt;- 'test//project_2019-05-02//DATA/'</span><span class="w">
+</span><span class="n">NetBID.loadRData</span><span class="p">(</span><span class="n">network.par</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">network.par</span><span class="p">,</span><span class="n">step</span><span class="o">=</span><span class="s1">'exp-load'</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<p>Following basic QC steps are suggested procedure for <strong>microarray</strong> dataset, all of the steps are <strong><em>optional</em></strong>.</p>
+
+<p>Firstly, check the <code class="highlighter-rouge">NA</code> values in the expression dataset by counting the number of <code class="highlighter-rouge">NA</code> values for each sample and for each gene (or probes/transcripts/…). 
+If one sample or gene with too many <code class="highlighter-rouge">NA</code> values, user could choose to remove that gene or sample or do imputation by <code class="highlighter-rouge">impute.knn()</code>.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">## following QC steps are optional !!!!</span><span class="w">
+</span><span class="n">mat</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">exprs</span><span class="p">(</span><span class="n">network.par</span><span class="o">$</span><span class="n">net.eset</span><span class="p">)</span><span class="w">
+</span><span class="c1"># remove possible NA? or imputation ? ## need to user-decide</span><span class="w">
+</span><span class="n">sample_na_count</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">apply</span><span class="p">(</span><span class="n">mat</span><span class="p">,</span><span class="m">1</span><span class="p">,</span><span class="k">function</span><span class="p">(</span><span class="n">x</span><span class="p">){</span><span class="nf">length</span><span class="p">(</span><span class="n">which</span><span class="p">(</span><span class="nf">is.na</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">==</span><span class="kc">TRUE</span><span class="p">))})</span><span class="w">
+</span><span class="n">print</span><span class="p">(</span><span class="n">table</span><span class="p">(</span><span class="n">sample_na_count</span><span class="p">))</span><span class="w">
+</span><span class="n">gene_na_count</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">apply</span><span class="p">(</span><span class="n">mat</span><span class="p">,</span><span class="m">2</span><span class="p">,</span><span class="k">function</span><span class="p">(</span><span class="n">x</span><span class="p">){</span><span class="nf">length</span><span class="p">(</span><span class="n">which</span><span class="p">(</span><span class="nf">is.na</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">==</span><span class="kc">TRUE</span><span class="p">))})</span><span class="w">
+</span><span class="n">print</span><span class="p">(</span><span class="n">table</span><span class="p">(</span><span class="n">gene_na_count</span><span class="p">))</span><span class="w">
+</span><span class="k">if</span><span class="p">(</span><span class="nf">sum</span><span class="p">(</span><span class="n">sample_na_count</span><span class="p">)</span><span class="o">+</span><span class="nf">sum</span><span class="p">(</span><span class="n">gene_na_count</span><span class="p">)</span><span class="o">&gt;</span><span class="m">0</span><span class="p">)</span><span class="w"> </span><span class="n">mat</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">impute.knn</span><span class="p">(</span><span class="n">mat</span><span class="p">)</span><span class="o">$</span><span class="n">data</span><span class="w">
+</span></code></pre></div></div>
+
+<p>Secondly, the log2 transformation. Sometimes it is hard to know whether the original dataset has been log2 transformed or not. 
+Here, we provide an experienced judging threshold for the median value. This is may not be suitable for all conditions.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># log2 transformation</span><span class="w">
+</span><span class="n">med_val</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">median</span><span class="p">(</span><span class="n">apply</span><span class="p">(</span><span class="n">mat</span><span class="p">,</span><span class="m">2</span><span class="p">,</span><span class="n">median</span><span class="p">));</span><span class="n">print</span><span class="p">(</span><span class="n">med_val</span><span class="p">)</span><span class="w">
+</span><span class="k">if</span><span class="p">(</span><span class="n">med_val</span><span class="o">&gt;</span><span class="m">16</span><span class="p">){</span><span class="n">mat</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">log2</span><span class="p">(</span><span class="n">mat</span><span class="p">)}</span><span class="w">
+</span></code></pre></div></div>
+
+<p>Thirdly, the quantile normalization between samples. This is suggested for dealing with microarray dataset and not for RNASeq, even the log2tpm etc.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># quantile normalization</span><span class="w">
+</span><span class="n">mat</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">normalizeQuantiles</span><span class="p">(</span><span class="n">mat</span><span class="p">)</span><span class="w"> </span><span class="c1">## limma quantile normalization</span><span class="w">
+</span></code></pre></div></div>
+
+<p>Fourthly, remove low expressed genes across nearly all samples. 
+The suggested threshold is shown below, try to remove genes that in more than 90% samples, the expression value is lower than 5%.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># remove low expressed genes, such as whether in more than 90% samples, the expression value is lower than 5%</span><span class="w">
+</span><span class="n">choose1</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">apply</span><span class="p">(</span><span class="n">mat</span><span class="o">&lt;=</span><span class="w"> </span><span class="n">quantile</span><span class="p">(</span><span class="n">mat</span><span class="p">,</span><span class="w"> </span><span class="n">probs</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">0.05</span><span class="p">),</span><span class="w"> </span><span class="m">1</span><span class="p">,</span><span class="w"> </span><span class="n">sum</span><span class="p">)</span><span class="o">&lt;=</span><span class="w"> </span><span class="n">ncol</span><span class="p">(</span><span class="n">mat</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="m">0.90</span><span class="w">
+</span><span class="n">print</span><span class="p">(</span><span class="n">table</span><span class="p">(</span><span class="n">choose1</span><span class="p">))</span><span class="w">
+</span><span class="n">mat</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">mat</span><span class="p">[</span><span class="n">choose1</span><span class="p">,]</span><span class="w">
+</span></code></pre></div></div>
+
+<p>Now, the expression matrix has been updated, need to save into the eSet class object by using <code class="highlighter-rouge">generate.eset()</code>. 
+Update the <code class="highlighter-rouge">network.par$net.eset</code>, generate the QC report html by <code class="highlighter-rouge">draw.eset.QC()</code> and save to RData by <code class="highlighter-rouge">NetBID.saveRData()</code>.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># update eset</span><span class="w">
+</span><span class="n">net_eset</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">generate.eset</span><span class="p">(</span><span class="n">exp_mat</span><span class="o">=</span><span class="n">mat</span><span class="p">,</span><span class="w"> </span><span class="n">phenotype_info</span><span class="o">=</span><span class="n">pData</span><span class="p">(</span><span class="n">network.par</span><span class="o">$</span><span class="n">net.eset</span><span class="p">)[</span><span class="n">colnames</span><span class="p">(</span><span class="n">mat</span><span class="p">),],</span><span class="w">
+                          </span><span class="n">feature_info</span><span class="o">=</span><span class="n">fData</span><span class="p">(</span><span class="n">network.par</span><span class="o">$</span><span class="n">net.eset</span><span class="p">)[</span><span class="n">rownames</span><span class="p">(</span><span class="n">mat</span><span class="p">),],</span><span class="w">
+                          </span><span class="n">annotation_info</span><span class="o">=</span><span class="n">annotation</span><span class="p">(</span><span class="n">network.par</span><span class="o">$</span><span class="n">net.eset</span><span class="p">))</span><span class="w">
+</span><span class="n">network.par</span><span class="o">$</span><span class="n">net.eset</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">net_eset</span><span class="w">
+</span><span class="n">draw.eset.QC</span><span class="p">(</span><span class="n">network.par</span><span class="o">$</span><span class="n">net.eset</span><span class="p">,</span><span class="n">outdir</span><span class="o">=</span><span class="n">network.par</span><span class="o">$</span><span class="n">out.dir.QC</span><span class="p">,</span><span class="n">intgroup</span><span class="o">=</span><span class="kc">NULL</span><span class="p">,</span><span class="n">do.logtransform</span><span class="o">=</span><span class="kc">FALSE</span><span class="p">,</span><span class="n">prefix</span><span class="o">=</span><span class="s1">'afterQC_'</span><span class="p">)</span><span class="w">
+</span><span class="c1"># save to RData</span><span class="w">
+</span><span class="n">NetBID.saveRData</span><span class="p">(</span><span class="n">network.par</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">network.par</span><span class="p">,</span><span class="n">step</span><span class="o">=</span><span class="s1">'exp-QC'</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<ul>
+  <li>What to check for the QC report html after QC steps <a href="afterQC_QC.html">after_QC.html</a>? 
+The number of samples and genes (probes/transcripts/…), whether large amount of genes/samples are removed;
+All samples will be clustered by the expression pattern from all genes, check possible mis-labeled samples; 
+The density plots show the range and distribution for the expression values, whether the low expressed genes have been removed;
+The meansd plots show the relationship between the mean and standard deviation of the genes, used to verify whether there is a dependence of the standard deviation (or variance) on the mean.</li>
+</ul>
+
+<hr />
+<h3 id="qc-for-rnaseq-dataset"><em>QC for RNASeq dataset</em></h3>
+<ul>
+  <li>No matter what strategy is used to input the RNASeq dataset, only the fourth step ‘remove low expressed genes’ is suggested. 
+For example, if use <code class="highlighter-rouge">load.exp.RNASeq.demo()</code> or <code class="highlighter-rouge">load.exp.RNASeq.demoSalmon()</code> and output <code class="highlighter-rouge">dds</code>, no previous normlization is required.</li>
+  <li>If user use the raw count as the expression matrix, the <code class="highlighter-rouge">RNASeqCount.normalize.scale()</code> could be used to normalize the count data, followed by ‘log2 transformation’.</li>
+  <li>For the fpkm(Fragments per kilobase of exon per million reads mapped ), tpm(Transcripts Per Million), cpm(Counts Per Million), 
+the second step ‘log2 transformation’ is suggested.</li>
+  <li>User is strongly suggested to judge which QC step to use for their own dataset or follow the pipeline suggested by the different calling software.</li>
+</ul>
+
+<hr />
+<h3 id="combine-two-datasets"><em>Combine two datasets</em></h3>
+<ul>
+  <li>If user want to combine two datasets, <code class="highlighter-rouge">merge_eset()</code> could be used.</li>
+  <li>If the original two datasets are generated from the same platform with the same expression gene list, no Z-transformation will be performed; 
+otherwise Z-transformation will be performed before merging the dataset.</li>
+  <li>The merged eSet will automatically generate one phenotype column named by <code class="highlighter-rouge">group_col_name</code>. By default, the function will not remove batches between the two datasets. 
+Strongly suggest to remove the batch for microarray dataset but not for RNASeq dataset. 
+For the RNASeq dataset, user could follow the tutorial in the Step3 for detailed sample clustering checking and re-run the code in this step.</li>
+</ul>
+
+<hr />
+
+<h2 id="step3-check-sample-cluster-information-optional-exp-cluster">Step3: check sample cluster information, optional (exp-cluster)</h2>
+
+<p>Before start, load the RData from the previous step if user want to re-run the following steps or re-open the R session. 
+Remember to set the temporary <code class="highlighter-rouge">network.par</code> if re-open the R session and <code class="highlighter-rouge">network.par$out.dir.DATA</code> will be used to find the correct RData file. 
+No need to run this if continue working from the previous step.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># load from RData</span><span class="w">
+</span><span class="c1">#network.par &lt;- list()</span><span class="w">
+</span><span class="c1">#network.par$out.dir.DATA &lt;- 'test//project_2019-05-02//DATA/'</span><span class="w">
+</span><span class="n">NetBID.loadRData</span><span class="p">(</span><span class="n">network.par</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">network.par</span><span class="p">,</span><span class="n">step</span><span class="o">=</span><span class="s1">'exp-QC'</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<p>Select the most variable genes for the sample clustering analysis by <code class="highlighter-rouge">IQR.filter()</code>. 
+In the script below, the most 50% variable genes will be used. 
+For the <code class="highlighter-rouge">IQR.filter()</code> function, it allows user to input a list of genes (<code class="highlighter-rouge">loose_gene</code>), which can be applied to <code class="highlighter-rouge">loose_thre</code>. 
+This is applicable when user need to keep more interested genes (e.g transcription factors) by using a looser threshold for filteration.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># use most variable genes for cluster</span><span class="w">
+</span><span class="n">mat</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">exprs</span><span class="p">(</span><span class="n">network.par</span><span class="o">$</span><span class="n">net.eset</span><span class="p">)</span><span class="w">
+</span><span class="n">choose1</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">IQR.filter</span><span class="p">(</span><span class="n">exp_mat</span><span class="o">=</span><span class="n">mat</span><span class="p">,</span><span class="n">use_genes</span><span class="o">=</span><span class="n">rownames</span><span class="p">(</span><span class="n">mat</span><span class="p">),</span><span class="n">thre</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">0.5</span><span class="p">,</span><span class="n">loose_gene</span><span class="o">=</span><span class="kc">NULL</span><span class="p">,</span><span class="n">loose_thre</span><span class="o">=</span><span class="m">0.1</span><span class="p">)</span><span class="w">
+</span><span class="n">print</span><span class="p">(</span><span class="n">table</span><span class="p">(</span><span class="n">choose1</span><span class="p">))</span><span class="w">
+</span><span class="n">mat</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">mat</span><span class="p">[</span><span class="n">choose1</span><span class="p">,]</span><span class="w">
+</span></code></pre></div></div>
+
+<p>Generate a temporary eSet and get the html QC report <a href="Cluster_QC.html">Cluster_QC.html</a>. 
+Here give a first galance of sample clustering results Vs. pre-defined sample groups.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># generate tmp eset</span><span class="w">
+</span><span class="n">tmp_net_eset</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">generate.eset</span><span class="p">(</span><span class="n">exp_mat</span><span class="o">=</span><span class="n">mat</span><span class="p">,</span><span class="w"> </span><span class="n">phenotype_info</span><span class="o">=</span><span class="n">pData</span><span class="p">(</span><span class="n">network.par</span><span class="o">$</span><span class="n">net.eset</span><span class="p">)[</span><span class="n">colnames</span><span class="p">(</span><span class="n">mat</span><span class="p">),],</span><span class="w">
+                          </span><span class="n">feature_info</span><span class="o">=</span><span class="n">fData</span><span class="p">(</span><span class="n">network.par</span><span class="o">$</span><span class="n">net.eset</span><span class="p">)[</span><span class="n">rownames</span><span class="p">(</span><span class="n">mat</span><span class="p">),],</span><span class="w"> </span><span class="n">annotation_info</span><span class="o">=</span><span class="n">annotation</span><span class="p">(</span><span class="n">network.par</span><span class="o">$</span><span class="n">net.eset</span><span class="p">))</span><span class="w">
+</span><span class="c1"># QC plots</span><span class="w">
+</span><span class="n">draw.eset.QC</span><span class="p">(</span><span class="n">tmp_net_eset</span><span class="p">,</span><span class="n">outdir</span><span class="o">=</span><span class="n">network.par</span><span class="o">$</span><span class="n">out.dir.QC</span><span class="p">,</span><span class="n">intgroup</span><span class="o">=</span><span class="kc">NULL</span><span class="p">,</span><span class="n">do.logtransform</span><span class="o">=</span><span class="kc">FALSE</span><span class="p">,</span><span class="n">prefix</span><span class="o">=</span><span class="s1">'Cluster_'</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<p>In the following scripts, user could get lots of plots. 
+Firstly, get the phenotype information data frame <code class="highlighter-rouge">pData(network.par$net.eset)</code> and all possible phenotype classes <code class="highlighter-rouge">intgroup</code>.</p>
+
+<p>For each <code class="highlighter-rouge">intgroup</code>, use could choose to use <code class="highlighter-rouge">draw.pca.kmeans()</code> or <code class="highlighter-rouge">draw.umap.kmeans()</code> to display the sample clustering results between the observed label and predicted label. The prediction is performed by kmeans based on pca or umap dimension reduction results. 
+If user use <a href="https://github.com/jyyulab/scMINER/tree/master/MICA">MICA</a> for clustering, <code class="highlighter-rouge">draw.MICA()</code> also could be used for result display.</p>
+
+<p>The output for those functions will be the predicted label for the best <code class="highlighter-rouge">k</code> if setting <code class="highlighter-rouge">return_type='optimal'</code> or the results for <code class="highlighter-rouge">all_k</code> if <code class="highlighter-rouge">return_type='all'</code>.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># more cluster functions (will not directly save to file, but actively layout)</span><span class="w">
+</span><span class="n">phe</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">pData</span><span class="p">(</span><span class="n">network.par</span><span class="o">$</span><span class="n">net.eset</span><span class="p">)</span><span class="w">
+</span><span class="n">intgroup</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">get_int_group</span><span class="p">(</span><span class="n">network.par</span><span class="o">$</span><span class="n">net.eset</span><span class="p">)</span><span class="w">
+</span><span class="c1"># pca+kmeans in 2D</span><span class="w">
+</span><span class="k">for</span><span class="p">(</span><span class="n">i</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="m">1</span><span class="o">:</span><span class="nf">length</span><span class="p">(</span><span class="n">intgroup</span><span class="p">)){</span><span class="w">
+  </span><span class="n">print</span><span class="p">(</span><span class="n">intgroup</span><span class="p">[</span><span class="n">i</span><span class="p">])</span><span class="w">
+  </span><span class="n">pred_label</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">draw.pca.kmeans</span><span class="p">(</span><span class="n">mat</span><span class="o">=</span><span class="n">mat</span><span class="p">,</span><span class="n">all_k</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">NULL</span><span class="p">,</span><span class="n">obs_label</span><span class="o">=</span><span class="n">get_obs_label</span><span class="p">(</span><span class="n">phe</span><span class="p">,</span><span class="n">intgroup</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p>Take <code class="highlighter-rouge">subgroup</code> as an example, the following scripts will generate:</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">use_int</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="s1">'subgroup'</span><span class="w">
+</span><span class="n">pred_label</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">draw.pca.kmeans</span><span class="p">(</span><span class="n">mat</span><span class="o">=</span><span class="n">mat</span><span class="p">,</span><span class="n">all_k</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">NULL</span><span class="p">,</span><span class="n">obs_label</span><span class="o">=</span><span class="n">get_obs_label</span><span class="p">(</span><span class="n">phe</span><span class="p">,</span><span class="n">use_int</span><span class="p">),</span><span class="n">plot_type</span><span class="o">=</span><span class="s1">'2D'</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<p><img src="sample_cluster_1.pdf" alt="sample_cluster_1" /></p>
+
+<p>This is the basic scatter plot to display the samples with color coded by observed and predicted label. 
+The statistics in the right figure is the score between predicted label and observed label by <code class="highlighter-rouge">get_clustComp()</code>. 
+ARI stands for ‘adjusted rand index’, which ranges from 0 to 1 with higher value indicates higher similarity.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">pred_label</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">draw.pca.kmeans</span><span class="p">(</span><span class="n">mat</span><span class="o">=</span><span class="n">mat</span><span class="p">,</span><span class="n">all_k</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">NULL</span><span class="p">,</span><span class="n">obs_label</span><span class="o">=</span><span class="n">get_obs_label</span><span class="p">(</span><span class="n">phe</span><span class="p">,</span><span class="n">use_int</span><span class="p">),</span><span class="n">plot_type</span><span class="o">=</span><span class="s1">'2D.ellipse'</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<p><img src="sample_cluster_2.pdf" alt="sample_cluster_2" /></p>
+
+<p>This is the scatter plot with ellipse to cover the points belong to one class.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">pred_label</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">draw.pca.kmeans</span><span class="p">(</span><span class="n">mat</span><span class="o">=</span><span class="n">mat</span><span class="p">,</span><span class="n">all_k</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">NULL</span><span class="p">,</span><span class="n">obs_label</span><span class="o">=</span><span class="n">get_obs_label</span><span class="p">(</span><span class="n">phe</span><span class="p">,</span><span class="n">use_int</span><span class="p">),</span><span class="n">plot_type</span><span class="o">=</span><span class="s1">'2D.text'</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<p><img src="sample_cluster_3.pdf" alt="sample_cluster_3" /></p>
+
+<p>This is the scatter plot with sample name directly labelled on the plot, which is useful for outlier checking.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">pred_label</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">draw.pca.kmeans</span><span class="p">(</span><span class="n">mat</span><span class="o">=</span><span class="n">mat</span><span class="p">,</span><span class="n">all_k</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">NULL</span><span class="p">,</span><span class="n">obs_label</span><span class="o">=</span><span class="n">get_obs_label</span><span class="p">(</span><span class="n">phe</span><span class="p">,</span><span class="n">use_int</span><span class="p">),</span><span class="n">plot_type</span><span class="o">=</span><span class="s1">'3D'</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<p><img src="sample_cluster_4.pdf" alt="sample_cluster_4" /></p>
+
+<p>This is the 3D scatter plot.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">print</span><span class="p">(</span><span class="n">table</span><span class="p">(</span><span class="nf">list</span><span class="p">(</span><span class="n">pred_label</span><span class="o">=</span><span class="n">pred_label</span><span class="p">,</span><span class="n">obs_label</span><span class="o">=</span><span class="n">get_obs_label</span><span class="p">(</span><span class="n">phe</span><span class="p">,</span><span class="w"> </span><span class="n">use_int</span><span class="p">))))</span><span class="w">
+</span><span class="n">draw.clustComp</span><span class="p">(</span><span class="n">pred_label</span><span class="p">,</span><span class="n">obs_label</span><span class="o">=</span><span class="n">get_obs_label</span><span class="p">(</span><span class="n">phe</span><span class="p">,</span><span class="n">use_int</span><span class="p">),</span><span class="n">outlier_cex</span><span class="o">=</span><span class="m">1</span><span class="p">,</span><span class="n">low_K</span><span class="o">=</span><span class="m">10</span><span class="p">)</span><span class="w"> </span><span class="c1">## display the comparison in detail</span><span class="w">
+</span></code></pre></div></div>
+
+<p><img src="sample_cluster_5.pdf" alt="sample_cluster_4" /></p>
+
+<p>This is the table to display the detailed difference between predicted label and observed label. We can see from the table here, 4 WNTs are further separated into two groups.</p>
+
+<p>In this demo dataset, no clear outlier samples are observed. If user find some somes need to remove, please remove the samples and re-run the exp-QC steps.</p>
+
+<h2 id="step4-prepare-sjaracne-sjaracne-prep">Step4: prepare SJARACNE (sjaracne-prep)</h2>
+
+<p>Before start, load the RData from the ‘exp-QC’ step if user want to re-run the following steps or re-open the R session. 
+Remember to set the temporary <code class="highlighter-rouge">network.par</code> if re-open the R session and <code class="highlighter-rouge">network.par$out.dir.DATA</code> will be used to find the correct RData file. 
+No need to run this if continue working from the previous step.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># load from RData</span><span class="w">
+</span><span class="c1">#network.par &lt;- list()</span><span class="w">
+</span><span class="c1">#network.par$out.dir.DATA &lt;- 'test//project_2019-05-02//DATA/'</span><span class="w">
+</span><span class="n">NetBID.loadRData</span><span class="p">(</span><span class="n">network.par</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">network.par</span><span class="p">,</span><span class="n">step</span><span class="o">=</span><span class="s1">'exp-QC'</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<p>Load the transcription facotrs (<strong>TF</strong>) and signaling factors (<strong>SIG</strong>) list from database by <code class="highlighter-rouge">db.preload()</code>.NetBID2 has prepared both ‘gene’ and ‘transcript’ level RData files for human.</p>
+
+<p>If user’s input is not human, could run <code class="highlighter-rouge">db.preload()</code> to prepare the database files. 
+If leave <code class="highlighter-rouge">main.dir=NULL</code>, the RData will be saved to <code class="highlighter-rouge">system.file(package = "NetBID2")/db/</code>. 
+If NetBID2 is installed in a public place with no permission to user, just set <code class="highlighter-rouge">main.dir</code> to another place and remember to use the same path next time using it.</p>
+
+<p>For the TF and SIG list, NetBID2 has provided the files in ‘external_gene_name’ and ‘ensembl_gene_id’ ID type for human and mouse. (e.g <code class="highlighter-rouge">MOUSE_SIG_ensembl_gene_id.txt</code> in <code class="highlighter-rouge">system.file(package = "NetBID2")/db/</code>). 
+The function will automatically use those files if set <code class="highlighter-rouge">TF_list=NULL</code> or <code class="highlighter-rouge">SIG_list=NULL</code>. 
+User could also input their own list and input by setting <code class="highlighter-rouge">TF_list</code> or <code class="highlighter-rouge">SIG_list</code>.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># load database</span><span class="w">
+</span><span class="n">db.preload</span><span class="p">(</span><span class="n">use_level</span><span class="o">=</span><span class="s1">'gene'</span><span class="p">,</span><span class="n">use_spe</span><span class="o">=</span><span class="s1">'human'</span><span class="p">,</span><span class="n">update</span><span class="o">=</span><span class="kc">FALSE</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<p>After loading the database, user need to set the ID attribute type <code class="highlighter-rouge">use_gene_type</code> for the input expression matrix. Check <strong><em>ID conversion</em></strong> section below for detailed description of ID conversion issue.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># ID convertion, get TF/SIG list !!!!</span><span class="w">
+</span><span class="n">use_gene_type</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="s1">'external_gene_name'</span><span class="w"> </span><span class="c1">## this should user-defined !!!</span><span class="w">
+</span><span class="n">use_genes</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">rownames</span><span class="p">(</span><span class="n">fData</span><span class="p">(</span><span class="n">network.par</span><span class="o">$</span><span class="n">net.eset</span><span class="p">))</span><span class="w">
+</span><span class="n">use_list</span><span class="w">  </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">get.TF_SIG.list</span><span class="p">(</span><span class="n">use_genes</span><span class="p">,</span><span class="n">use_gene_type</span><span class="o">=</span><span class="n">use_gene_type</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<p>The above two steps are not required if user could get the <code class="highlighter-rouge">TF_list</code> and <code class="highlighter-rouge">SIG_list</code> with the same ID type as the expression matrix, just input in the <code class="highlighter-rouge">SJAracne.prepare()</code>.</p>
+
+<p>The final step is to prepare the input for running SJAracne. User could choose to use part of the samples or use all. 
+The <code class="highlighter-rouge">IQR.thre</code> and <code class="highlighter-rouge">IQR.loose_thre</code> will be passed to <code class="highlighter-rouge">IQR.filter()</code>. The <code class="highlighter-rouge">loose_gene</code> in this function will be the genes in <code class="highlighter-rouge">TF_list</code> and <code class="highlighter-rouge">SIG_list</code> as we want to keep more possible drivers in the network generation.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># select sample for analysis</span><span class="w">
+</span><span class="n">phe</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">pData</span><span class="p">(</span><span class="n">network.par</span><span class="o">$</span><span class="n">net.eset</span><span class="p">)</span><span class="w">
+</span><span class="n">use.samples</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">rownames</span><span class="p">(</span><span class="n">phe</span><span class="p">)</span><span class="w"> </span><span class="c1">## use all samples, or choose to use some samples</span><span class="w">
+</span><span class="n">prj.name</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">network.par</span><span class="o">$</span><span class="n">project.name</span><span class="w"> </span><span class="c1"># can use other names, if need to run different use samples</span><span class="w">
+</span><span class="n">SJAracne.prepare</span><span class="p">(</span><span class="n">eset</span><span class="o">=</span><span class="n">network.par</span><span class="o">$</span><span class="n">net.eset</span><span class="p">,</span><span class="n">use.samples</span><span class="o">=</span><span class="n">use.samples</span><span class="p">,</span><span class="w">
+                    </span><span class="n">TF_list</span><span class="o">=</span><span class="n">use_list</span><span class="o">$</span><span class="n">tf</span><span class="p">,</span><span class="n">SIG_list</span><span class="o">=</span><span class="n">use_list</span><span class="o">$</span><span class="n">sig</span><span class="p">,</span><span class="w">
+                    </span><span class="n">IQR.thre</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">0.5</span><span class="p">,</span><span class="n">IQR.loose_thre</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">0.1</span><span class="p">,</span><span class="w">
+                    </span><span class="n">SJAR.project_name</span><span class="o">=</span><span class="n">prj.name</span><span class="p">,</span><span class="n">SJAR.main_dir</span><span class="o">=</span><span class="n">network.par</span><span class="o">$</span><span class="n">out.dir.SJAR</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<p>Next is to follow the message to run <a href="https://github.com/jyyulab/SJARACNe">SJAracne</a>. 
+As SJAracne will consume lots of memory in running, which may be not suitable in R session, user need to follow the instructions to run SJAracne.</p>
+
+<hr />
+<h3 id="id-conversion"><em>ID conversion</em></h3>
+
+<p>We will use the ID name from <a href="https://bioconductor.org/packages/release/bioc/vignettes/biomaRt/inst/doc/biomaRt.html">biomaRt</a>.
+Some common attribute names are ‘ensembl_transcript_id’, ‘ensembl_gene_id’, ‘external_transcript_name’, ‘external_gene_name’, ‘hgnc_symbol’, ‘entrezgene’, ‘refseq_mrna’. 
+If the original input is ‘ensembl_gene_id_version’ or ‘ensembl_transcript_id_version’, user could set <code class="highlighter-rouge">ignore_version=TRUE</code> to neglect the version number.</p>
+
+<p><strong>ATTENTION!</strong></p>
+<ul>
+  <li>biomaRt will use the newest version number of <a href="https://www.gencodegenes.org">GENCODE</a> and all the ID conversion related functions <code class="highlighter-rouge">db.preload(), get.TF_SIG.list(), get_IDtransfer(), get_IDtransfer2symbol2type(), get_IDtransfer_betweenSpecies()</code> will remotely call the database from biomaRt through the web link.
+So, the version number may be different when running the same code at different time.</li>
+  <li><code class="highlighter-rouge">get_IDtransfer(), get_IDtransfer2symbol2type(), get_IDtransfer_betweenSpecies()</code> will output a transfer table used for <code class="highlighter-rouge">get_name_transfertab()</code>. User could use their curated one.</li>
+</ul>
+
+<hr />
+
+<p>Finish network generation part !!! Cheers !!!</p>
+
 
 
           

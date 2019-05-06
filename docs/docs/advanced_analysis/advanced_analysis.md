@@ -1,6 +1,6 @@
 ---
 layout: default
-title: advanced analysis
+title: Advanced analysis
 nav_order: 4
 has_children: true
 permalink: /docs/advanced_analysis

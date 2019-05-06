@@ -1,6 +1,6 @@
 ---
 layout: default
-title: driver estimation
+title: Driver estimation
 nav_order: 3
 has_children: true
 permalink: /docs/driver_estimation
