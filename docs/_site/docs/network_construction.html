@@ -6,7 +6,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=Edge">
   
 
-  <title>Network generation - </title>
+  <title>Network construction - </title>
   <link rel="stylesheet" href="http://localhost:4000/assets/css/just-the-docs.css">
   
   <script type="text/javascript" src="http://localhost:4000/assets/js/just-the-docs.js"></script>
@@ -49,7 +49,7 @@
         
           <li class="navigation-list-item active">
             
-            <a href="http://localhost:4000/docs/network_generation" class="navigation-list-link active">Network generation</a>
+            <a href="http://localhost:4000/docs/network_construction" class="navigation-list-link active">Network construction</a>
             
               
               <ul class="navigation-list-child-list ">
@@ -140,9 +140,9 @@
           
         
         <div id="main-content" class="page-content" role="main">
-          <h1 id="network-generation">Network Generation</h1>
+          <h1 id="network-construction">Network Construction</h1>
 
-<p>The purpose for the first part:</p>
+<p>The purpose for this part:</p>
 
 <p><strong>generate a gene regulatory network based on a transcriptomic datasets</strong>.</p>
 
@@ -169,7 +169,7 @@ So, in the script below, user could add a time tag in the <code class="highlight
 </span><span class="n">project_name</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'project_%s'</span><span class="p">,</span><span class="n">current_date</span><span class="p">)</span><span class="w"> </span><span class="c1">## project name for the project</span><span class="w">
 </span></code></pre></div></div>
 
-<p>Once decided the project_main_dir and project_name, user could run <code class="highlighter-rouge">NetBID.network.dir.create()</code> to generate the sub-directories for the working directory, including QC/ to save QC related files, DATA/ to save RData and SJAR/ to save data for running <a href="https://github.com/jyyulab/SJARACNe">SJARACNe</a>. Besides, a global list variable <code class="highlighter-rouge">network.par</code> will be returned by the function. 
+<p>Once decided the <code class="highlighter-rouge">project_main_dir</code> and <code class="highlighter-rouge">project_name</code>, user could run <code class="highlighter-rouge">NetBID.network.dir.create()</code> to generate the sub-directories for the working directory, including QC/ to save QC related files, DATA/ to save RData and SJAR/ to save data for running <a href="https://github.com/jyyulab/SJARACNe">SJARACNe</a>. Besides, a global list variable <code class="highlighter-rouge">network.par</code> will be returned by the function. 
 Attention, if the current environment already has this variable, the function will do nothing, report a warning message and return the original <code class="highlighter-rouge">network.par</code>.</p>
 
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">## network.par is very essential in the analysis, if the environment already has this parameter, strongly suggest to delete it first</span><span class="w">
@@ -178,7 +178,8 @@ Attention, if the current environment already has this variable, the function wi
 
 <h2 id="step1-load-in-gene-expression-datasets-for-network-construction-exp-load">Step1: load in gene expression datasets for network construction (exp-load)</h2>
 
-<p>Here, we use the dataset from GEO database as the demo that we could directly download it from web by input the GSE ID and GPL ID.
+<p>Here, we use same demo dataset for network construction and following analysis (Check the <strong><em>The choice of expression dataset for network construction</em></strong> section below). 
+This dataset could be directly downloaded from GEO database by input the GSE ID and GPL ID.
 If set <code class="highlighter-rouge">getGPL=TRUE</code>, will download the gene annotation file. 
 The output of this function will be the <a href="https://www.rdocumentation.org/packages/Biobase/versions/2.32.0/topics/ExpressionSet">eSet</a> class object and will save the RData into <code class="highlighter-rouge">out.dir</code>.
 Next time by running this function, it will try to load the RData in the <code class="highlighter-rouge">out.dir/{GSE}_{GPL}.RData</code> first (if <code class="highlighter-rouge">update=FALSE</code>).</p>
@@ -241,6 +242,29 @@ The RData could be found in <code class="highlighter-rouge">network.par$out.dir.
 </span></code></pre></div></div>
 
 <hr />
+<h3 id="the-choice-of-expression-dataset-for-network-construction"><em>The choice of expression dataset for network construction</em></h3>
+
+<ul>
+  <li>
+    <p>For a NetBID2 project, the analysis expression dataset is selected first to assist the investigation of a biological story. 
+The network construction expression dataset could be the same as the analysis expression dataset but need to consider some other factors.</p>
+
+    <ul>
+      <li>The theory of using expression dataset to infer gene regulatory networks is based on <a href="https://academic.oup.com/bioinformatics/advance-article/doi/10.1093/bioinformatics/bty907/5156064">SJARACNe</a>. 
+ It uses an information theoretic approach to eliminate the majority of indirect interactions inferred by co-expression methods. More samples, higher sensitivity and precision will be obtained by experiment. 
+ Typically, more than 100 samples is a better choice.</li>
+      <li>Large size public datasets from the same tissue, cell line or biological background as the analysis dataset are recommended. User could search the databases such as GEO, TCGA.</li>
+      <li>Computational inferred networks will surely have false positive edges, especially for those with relative small mutual information (MI) score. Functions related with network processing will be described in the <a href="../driver_estimation">Driver estimation</a> part.</li>
+      <li>Once a high quality network is generated, user could put them into a common shared place that multiple projects with similar biological background could rely on that.</li>
+    </ul>
+  </li>
+  <li>
+    <p>The demo used in the tutorial actually is not a good network construction expression dataset in real practice. Just used to assist user get familar with the procedure of NetBID2.</p>
+  </li>
+</ul>
+
+<hr />
+
 <h3 id="input-rnaseq-dataset"><em>Input RNASeq dataset</em></h3>
 
 <ul>
@@ -505,10 +529,15 @@ User could also input their own list and input by setting <code class="highlight
 </span><span class="n">use_list</span><span class="w">  </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">get.TF_SIG.list</span><span class="p">(</span><span class="n">use_genes</span><span class="p">,</span><span class="n">use_gene_type</span><span class="o">=</span><span class="n">use_gene_type</span><span class="p">)</span><span class="w">
 </span></code></pre></div></div>
 
-<p>The above two steps are not required if user could get the <code class="highlighter-rouge">TF_list</code> and <code class="highlighter-rouge">SIG_list</code> with the same ID type as the expression matrix, just input in the <code class="highlighter-rouge">SJAracne.prepare()</code>.</p>
+<p>The above two steps are <em>not required</em> if user could get the <code class="highlighter-rouge">TF_list</code> and <code class="highlighter-rouge">SIG_list</code> with the same ID type as the expression matrix, just input them in the <code class="highlighter-rouge">SJAracne.prepare()</code>.</p>
 
-<p>The final step is to prepare the input for running SJAracne. User could choose to use part of the samples or use all. 
-The <code class="highlighter-rouge">IQR.thre</code> and <code class="highlighter-rouge">IQR.loose_thre</code> will be passed to <code class="highlighter-rouge">IQR.filter()</code>. The <code class="highlighter-rouge">loose_gene</code> in this function will be the genes in <code class="highlighter-rouge">TF_list</code> and <code class="highlighter-rouge">SIG_list</code> as we want to keep more possible drivers in the network generation.</p>
+<p>The final step is to prepare the input for running SJAracne.</p>
+
+<p>User could choose to use part of the samples or use all. 
+And in one project, multiple networks could be generated by setting different <code class="highlighter-rouge">prj.name</code>. For example, if want to generate Group4 specific network, user could choose to use samples in Group4 by setting the <code class="highlighter-rouge">use.samples</code> and give it an easily identified project name such as <code class="highlighter-rouge">prj.name='Group4_net'</code>. This <code class="highlighter-rouge">prj.name</code> is important in the <a href="../driver_estimation">Driver estimation</a> part.</p>
+
+<p>The <code class="highlighter-rouge">IQR.thre</code> and <code class="highlighter-rouge">IQR.loose_thre</code> will be passed to <code class="highlighter-rouge">IQR.filter()</code>. The <code class="highlighter-rouge">loose_gene</code> in this function will be the genes in <code class="highlighter-rouge">TF_list</code> and <code class="highlighter-rouge">SIG_list</code> as we want to keep more possible drivers in the network construction.
+In the demo network of NetBID2, in order to control the file size, the <code class="highlighter-rouge">IQR.thre=0.9</code> and <code class="highlighter-rouge">IQR.loose_thre=0.7</code>. In real practice, <code class="highlighter-rouge">IQR.thre=0.5</code> and <code class="highlighter-rouge">IQR.loose_thre=0.1</code> is recommended.</p>
 
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># select sample for analysis</span><span class="w">
 </span><span class="n">phe</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">pData</span><span class="p">(</span><span class="n">network.par</span><span class="o">$</span><span class="n">net.eset</span><span class="p">)</span><span class="w">
@@ -539,7 +568,7 @@ So, the version number may be different when running the same code at different 
 
 <hr />
 
-<p>Finish network generation part !!! Cheers !!!</p>
+<p>Finish network construction part !!! Cheers !!!</p>
 
 
 

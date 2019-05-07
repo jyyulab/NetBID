@@ -76,13 +76,13 @@ install.packages('NetBID2_0.1.1.tar.gz',repos=NULL)
 
 The manual for all functions in NetBID2 could be obtained from [NetBID2_0.1.1.pdf](https://github.com/jyyulab/NetBID-dev/blob/master/NetBID2_0.1.1.pdf). All functions have the demo scripts.
 
-All 67 invokable functions could be grouped as shown in the figure below:
+All 66 invokable functions could be grouped as shown in the figure below:
 
 ![function group](function_group.png)
 
 NetBID2 has four functions focusing on suggested pipeline (not required):
 
-- `NetBID.network.dir.create()` will generate a working directory structure for the network generation part in NetBID2. This function aims to assist researchers to organize the working directory. 
+- `NetBID.network.dir.create()` will generate a working directory structure for the network construction part in NetBID2. This function aims to assist researchers to organize the working directory. 
 
 - `NetBID.analysis.dir.create()`  will generate a working directory structure for the driver analysis part in NetBID2. This function aims to assist researchers to organize the working directory. 
 
@@ -90,7 +90,7 @@ NetBID2 has four functions focusing on suggested pipeline (not required):
 
 - `NetBID.loadRData()` load the dataset of one designated step from file.
 
-Users could save two complicate list object, `network.par` in the **network generation part** and `analysis.par` in the **driver analysis part**, into the data directory (`network.par$out.dir.DATA` or `analysis.par$out.dir.DATA`), with the name of the RData marked by step name. 
+Users could save two complicate list object, `network.par` in the **network construction part** and `analysis.par` in the **driver analysis part**, into the data directory (`network.par$out.dir.DATA` or `analysis.par$out.dir.DATA`), with the name of the RData marked by step name. 
 The two lists could make user to save the whole related dataset in each step `NetBID.saveRData()` and easy to get them back by using `NetBID.loadRData()`. 
 The RData saved from each step could be used to run the following analysis without repeating the former steps.
 
@@ -115,11 +115,11 @@ Here, we want to **find potential hidden drivers in Group4 compared with the oth
  
 The tutorials are divided by three ordered and relatively independent parts as follows:
 
-1. [Network generation](docs/network_generation)
+1. [Network construction](docs/network_construction)
 
-2. [Driver estimation](docs/driver_estimation)
+2. [Driver estimation (master table generation)](docs/driver_estimation)
 
-3. [Advanced analysis](docs/advanced_analysis)
+3. [Advanced analysis (result visualization)](docs/advanced_analysis)
 
 ---
 

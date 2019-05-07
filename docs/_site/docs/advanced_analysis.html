@@ -49,7 +49,7 @@
         
           <li class="navigation-list-item">
             
-            <a href="http://localhost:4000/docs/network_generation" class="navigation-list-link">Network generation</a>
+            <a href="http://localhost:4000/docs/network_construction" class="navigation-list-link">Network construction</a>
             
               
               <ul class="navigation-list-child-list ">
@@ -142,37 +142,183 @@
         <div id="main-content" class="page-content" role="main">
           <h1 id="advanced-analysis">Advanced analysis</h1>
 
-<h2 id="part-i-for-top-drivers">Part I: for top drivers</h2>
+<p>The purpose for this part:</p>
 
-<h3 id="i1-volcano-plot-for-deda-p-value-vs-fold-change">I.1: volcano plot for DE/DA, p-value Vs. fold-change</h3>
+<p><strong>further analyze and visualize the results for drivers</strong>.</p>
 
-<h3 id="i2-heatmap-for-top-drivers">I.2: Heatmap for top drivers</h3>
+<p>The full demo script for this part could be found in <a href="https://github.com/jyyulab/NetBID-dev/blob/master/demo_scripts/analysis_and_plot_demo1.R">analysis_and_plot_demo1.R</a>.</p>
 
-<h3 id="i3-function-enrichment-plot-for-top-drivers">I.3: Function enrichment plot for top drivers</h3>
+<p>In this part, we will use the question-induced strategy to assist user for the choice and usage of those visualization functions. 
+The main purpose is that we want to <strong>find potential hidden drivers in Group4 compared with the other subtypes by using NetBID2</strong>, for which may be related with the specific clinical feature for Group4 MB.</p>
 
-<h3 id="i4-bubble-plot-for-top-drivers">I.4: Bubble plot for top drivers</h3>
+<h2 id="preparations">Preparations</h2>
 
-<h3 id="i5-gsea-plot-for-top-driver">I.5: GSEA plot for top driver</h3>
+<p>Library the installed NetBID2, set the directory to get the pre-saved RData in the <code class="highlighter-rouge">ms-tab</code> step. Here, we could use the demo in NetBID2 package.
+Print the <code class="highlighter-rouge">analysis.par$out.dir.PLOT</code> to get know where the plot figures will be saved. User could also choose to change to another local writable path.</p>
 
-<h2 id="part-ii-for-each-driver">Part II: for each driver</h2>
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># library the package</span><span class="w">
+</span><span class="n">library</span><span class="p">(</span><span class="n">NetBID2</span><span class="p">)</span><span class="w">
+</span><span class="c1"># set the directory to get the pre-saved RData</span><span class="w">
+</span><span class="n">analysis.par</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">list</span><span class="p">()</span><span class="w">
+</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.DATA</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">system.file</span><span class="p">(</span><span class="s1">'demo1'</span><span class="p">,</span><span class="s1">'driver/DATA/'</span><span class="p">,</span><span class="n">package</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"NetBID2"</span><span class="p">)</span><span class="w">
+</span><span class="n">NetBID.loadRData</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">=</span><span class="n">analysis.par</span><span class="p">,</span><span class="n">step</span><span class="o">=</span><span class="s1">'ms-tab'</span><span class="p">)</span><span class="w">
+</span><span class="n">print</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.PLOT</span><span class="p">)</span><span class="w">
+</span><span class="c1">#analysis.par$out.dir.PLOT &lt;- 'test/driver/PLOT' ## directory to save the plot figures</span><span class="w">
+</span></code></pre></div></div>
 
-<h3 id="ii1-gsea-plot-for-each-driver">II.1: GSEA plot for each driver</h3>
+<h2 id="part-i-for-the-top-list-of-significant-drivers">Part I: for the top list of significant drivers</h2>
 
-<h3 id="ii2-target-network-structure-for-each-driver-or-two-drivers-overlap-testing">II.2: target network structure for each driver, or two drivers (overlap testing)</h3>
+<h3 id="qi1-how-to-get-the-top-list-of-drivers-with-significantly-different-activity-da-in-g4-vs-other-subtypes-">QI.1: How to get the top list of drivers with significantly different activity (DA) in G4 Vs. other subtypes ?</h3>
 
-<h3 id="ii3-category-plot-for-the-expressionactivity-for-each-driver">II.3: category plot for the expression/activity for each driver</h3>
+<p>For simplicity, save the final master table to another variable <code class="highlighter-rouge">ms_tab</code> and set the comparison name <code class="highlighter-rouge">comp_name</code>. 
+Here we choose the <code class="highlighter-rouge">G4.Vs.others</code> as the demo.
+Before detailed analysis, the target size for the driver could be used as a filteration, drivers with too small target size (e.g &lt;30) or too large target size (e.g &gt;1000) will not be used.</p>
 
-<h2 id="part-iii-advanced-plots">Part III: advanced plots</h2>
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">ms_tab</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">analysis.par</span><span class="o">$</span><span class="n">final_ms_tab</span><span class="w"> </span><span class="c1">## get the master table data frame</span><span class="w">
+</span><span class="n">ms_tab</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">ms_tab</span><span class="p">[</span><span class="n">which</span><span class="p">(</span><span class="n">ms_tab</span><span class="o">$</span><span class="n">Size</span><span class="o">&gt;=</span><span class="m">30</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">ms_tab</span><span class="o">$</span><span class="n">Size</span><span class="w"> </span><span class="o">&lt;=</span><span class="m">1000</span><span class="p">),]</span><span class="w"> </span><span class="c1">## target size filteration</span><span class="w">
+</span><span class="n">comp_name</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="s1">'G4.Vs.others'</span><span class="w"> </span><span class="c1">## get the comparison name</span><span class="w">
+</span></code></pre></div></div>
 
-<h3 id="iii1-input-driver-and-target-get-shortest-path-and-draw-subnetwork">III.1: input driver and target, get shortest path and draw subnetwork</h3>
+<p>We will use <code class="highlighter-rouge">draw.volcanoPlot()</code> to get the list of top DA drivers and plot the results. 
+The input is the data frame containing the columns of <code class="highlighter-rouge">label_col</code>, <code class="highlighter-rouge">logFC_col</code> and <code class="highlighter-rouge">Pv_col</code>. 
+User need to input the threshold for logFC (<code class="highlighter-rouge">logFC_thre</code>) and P.Value (<code class="highlighter-rouge">Pv_thre</code>).
+This function could choose not to display figures by setting <code class="highlighter-rouge">show_plot=FALSE</code> and only output the list of significant top drivers.
+If choose <code class="highlighter-rouge">show_label=TRUE</code>, the number of the drivers passed the threshold may not be very high as too many labels displayed on the figure will become a mess.</p>
 
-<h3 id="iii2-gene-set-based-activity-analysis-including-vocalno-heatmap-category-and-gsea-plot">III.2: gene set-based activity analysis, including vocalno, heatmap, category and GSEA plot</h3>
+<p>For the activity value, the threshold for logFC may not be very high especially setting <code class="highlighter-rouge">std=TRUE</code> in <code class="highlighter-rouge">cal.Activity()</code>.</p>
 
-<h3 id="iii3-sinba-plot-for-synergistic-effect">III.3: SINBA plot for synergistic effect</h3>
+<p>Top drivers with DA passed absolute logFC≥0.4 and P-value≤1e-8, with detailed label information is shown:</p>
 
-<h2 id="part-iv-supplementary-usage-for-different-conditions">Part IV: Supplementary usage for different conditions</h2>
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">sig_driver</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">draw.volcanoPlot</span><span class="p">(</span><span class="n">dat</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">,</span><span class="n">label_col</span><span class="o">=</span><span class="s1">'gene_label'</span><span class="p">,</span><span class="n">logFC_col</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'logFC.%s_DA'</span><span class="p">,</span><span class="n">comp_name</span><span class="p">),</span><span class="w">
+                               </span><span class="n">Pv_col</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'P.Value.%s_DA'</span><span class="p">,</span><span class="n">comp_name</span><span class="p">),</span><span class="n">logFC_thre</span><span class="o">=</span><span class="m">0.4</span><span class="p">,</span><span class="n">Pv_thre</span><span class="o">=</span><span class="m">1e-8</span><span class="p">,</span><span class="w">
+                               </span><span class="n">main</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'Volcano Plot for %s_DA'</span><span class="p">,</span><span class="n">comp_name</span><span class="p">),</span><span class="n">show_label</span><span class="o">=</span><span class="kc">TRUE</span><span class="p">,</span><span class="w">
+                               </span><span class="n">pdf_file</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'%s/vocalno_label_DA.pdf'</span><span class="p">,</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.PLOT</span><span class="p">),</span><span class="n">label_cex</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">1</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
 
-<h3 id="iv1-if-want-to-get-mean-expressionactivity-value-for-each-phenotype-cluster">IV.1: if want to get mean expression/activity value for each phenotype cluster</h3>
+<p><img src="vocalno_label_DA.pdf" alt="vocalno_label_DA" /></p>
+
+<p>Top drivers with DE passed absolute logFC≥1.5 and P-value≤1e-4 is shown:</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">sig_gene</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">draw.volcanoPlot</span><span class="p">(</span><span class="n">dat</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">,</span><span class="n">label_col</span><span class="o">=</span><span class="s1">'geneSymbol'</span><span class="p">,</span><span class="n">logFC_col</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'logFC.%s_DE'</span><span class="p">,</span><span class="n">comp_name</span><span class="p">),</span><span class="w">
+                             </span><span class="n">Pv_col</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'P.Value.%s_DE'</span><span class="p">,</span><span class="n">comp_name</span><span class="p">),</span><span class="n">logFC_thre</span><span class="o">=</span><span class="m">1.5</span><span class="p">,</span><span class="n">Pv_thre</span><span class="o">=</span><span class="m">1e-4</span><span class="p">,</span><span class="w">
+                             </span><span class="n">main</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'Volcano Plot for %s_DE'</span><span class="p">,</span><span class="n">comp_name</span><span class="p">),</span><span class="n">show_label</span><span class="o">=</span><span class="kc">TRUE</span><span class="p">,</span><span class="w">
+                             </span><span class="n">pdf_file</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'%s/vocalno_label_DE.pdf'</span><span class="p">,</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.PLOT</span><span class="p">))</span><span class="w">
+</span></code></pre></div></div>
+
+<p><img src="vocalno_label_DE.pdf" alt="vocalno_label_DE" /></p>
+
+<p><code class="highlighter-rouge">sig_driver</code> and <code class="highlighter-rouge">sig_gene</code> are the data frame containing drivers and genes passed the threshold with detailed logFC and P.value statistics.</p>
+
+<h3 id="qi2-how-to-understand-the-significance-of-those-top-da-drivers-">QI.2: How to understand the significance of those top DA drivers ?</h3>
+
+<p>Those drivers are significant due to their activity difference in Group4 Vs. other subtypes. 
+The activity is calculated based on the expression pattern of their target genes.
+If the driver’s activity is significantly up-regulated in Group4, which means that its positively regulated target genes are significantly up-regulated in Group4 and negative target genes are down-regulated.
+Based on this, we could use <code class="highlighter-rouge">draw.GSEA.NetBID()</code> to visualize this trend for top drivers.</p>
+
+<p>First, the differentiated expression (DE) profile in Group4 Vs. others should be used to estimate the performance of the target genes. And <code class="highlighter-rouge">driver_list</code> is used to extract out the driver’s name from above.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">DE</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">analysis.par</span><span class="o">$</span><span class="n">DE</span><span class="p">[[</span><span class="n">comp_name</span><span class="p">]]</span><span class="w">
+</span><span class="n">driver_list</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">rownames</span><span class="p">(</span><span class="n">sig_driver</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">draw.GSEA.NetBID</span><span class="p">(</span><span class="n">DE</span><span class="o">=</span><span class="n">DE</span><span class="p">,</span><span class="n">profile_col</span><span class="o">=</span><span class="s1">'logFC'</span><span class="p">,</span><span class="n">profile_trend</span><span class="o">=</span><span class="s1">'neg2pos'</span><span class="p">,</span><span class="n">name_col</span><span class="o">=</span><span class="s1">'ID'</span><span class="p">,</span><span class="w">
+                 </span><span class="n">driver_list</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">driver_list</span><span class="p">,</span><span class="w">
+                 </span><span class="n">show_label</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'gene_label'</span><span class="p">],</span><span class="w">
+                 </span><span class="n">driver_DA_Z</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'Z.G4.Vs.others_DA'</span><span class="p">],</span><span class="w">
+                 </span><span class="n">driver_DE_Z</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'Z.G4.Vs.others_DE'</span><span class="p">],</span><span class="w">
+                 </span><span class="n">target_list</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.network</span><span class="o">$</span><span class="n">target_list</span><span class="p">,</span><span class="w">
+                 </span><span class="n">top_driver_number</span><span class="o">=</span><span class="m">30</span><span class="p">,</span><span class="n">target_nrow</span><span class="o">=</span><span class="m">2</span><span class="p">,</span><span class="n">target_col</span><span class="o">=</span><span class="s1">'RdBu'</span><span class="p">,</span><span class="w">
+                 </span><span class="n">left_annotation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'high in others'</span><span class="p">,</span><span class="n">right_annotation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'high in G4'</span><span class="p">,</span><span class="w">
+                 </span><span class="n">main</span><span class="o">=</span><span class="s1">'test'</span><span class="p">,</span><span class="n">target_col_type</span><span class="o">=</span><span class="s1">'DE'</span><span class="p">,</span><span class="n">Z_sig_thre</span><span class="o">=</span><span class="m">1.64</span><span class="p">,</span><span class="n">profile_sig_thre</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">1.64</span><span class="p">,</span><span class="w">
+                 </span><span class="n">pdf_file</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'%s/NetBID_GSEA_demo1.pdf'</span><span class="p">,</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.PLOT</span><span class="p">))</span><span class="w">
+</span></code></pre></div></div>
+
+<p><img src="NetBID_GSEA_demo1.pdf" alt="NetBID_GSEA_demo1" /></p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">draw.GSEA.NetBID</span><span class="p">(</span><span class="n">DE</span><span class="o">=</span><span class="n">DE</span><span class="p">,</span><span class="n">profile_col</span><span class="o">=</span><span class="s1">'t'</span><span class="p">,</span><span class="n">profile_trend</span><span class="o">=</span><span class="s1">'pos2neg'</span><span class="p">,</span><span class="w">
+                 </span><span class="n">driver_list</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">driver_list</span><span class="p">,</span><span class="w">
+                 </span><span class="n">show_label</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'gene_label'</span><span class="p">],</span><span class="w">
+                 </span><span class="n">driver_DA_Z</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'Z.G4.Vs.others_DA'</span><span class="p">],</span><span class="w">
+                 </span><span class="n">driver_DE_Z</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'Z.G4.Vs.others_DE'</span><span class="p">],</span><span class="w">
+                 </span><span class="n">target_list</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.network</span><span class="o">$</span><span class="n">target_list</span><span class="p">,</span><span class="w">
+                 </span><span class="n">top_driver_number</span><span class="o">=</span><span class="m">30</span><span class="p">,</span><span class="n">target_nrow</span><span class="o">=</span><span class="m">2</span><span class="p">,</span><span class="n">target_col</span><span class="o">=</span><span class="s1">'RdBu'</span><span class="p">,</span><span class="w">
+                 </span><span class="n">left_annotation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'high in G4'</span><span class="p">,</span><span class="n">right_annotation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'high in others'</span><span class="p">,</span><span class="w">
+                 </span><span class="n">main</span><span class="o">=</span><span class="s1">'test'</span><span class="p">,</span><span class="n">target_col_type</span><span class="o">=</span><span class="s1">'PN'</span><span class="p">,</span><span class="n">Z_sig_thre</span><span class="o">=</span><span class="m">1.64</span><span class="p">,</span><span class="n">profile_sig_thre</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">1.64</span><span class="p">,</span><span class="w">
+                 </span><span class="n">pdf_file</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'%s/NetBID_GSEA_demo2.pdf'</span><span class="p">,</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.PLOT</span><span class="p">))</span><span class="w">
+</span></code></pre></div></div>
+
+<p><img src="NetBID_GSEA_demo2.pdf" alt="NetBID_GSEA_demo2" /></p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">draw.GSEA.NetBID</span><span class="p">(</span><span class="n">DE</span><span class="o">=</span><span class="n">DE</span><span class="p">,</span><span class="n">profile_col</span><span class="o">=</span><span class="s1">'t'</span><span class="p">,</span><span class="n">profile_trend</span><span class="o">=</span><span class="s1">'pos2neg'</span><span class="p">,</span><span class="w">
+                 </span><span class="n">driver_list</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">driver_list</span><span class="p">,</span><span class="w">
+                 </span><span class="n">show_label</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'gene_label'</span><span class="p">],</span><span class="w">
+                 </span><span class="n">driver_DA_Z</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'Z.G4.Vs.others_DA'</span><span class="p">],</span><span class="w">
+                 </span><span class="n">driver_DE_Z</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'Z.G4.Vs.others_DE'</span><span class="p">],</span><span class="w">
+                 </span><span class="n">target_list</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.network</span><span class="o">$</span><span class="n">target_list</span><span class="p">,</span><span class="w">
+                 </span><span class="n">top_driver_number</span><span class="o">=</span><span class="m">30</span><span class="p">,</span><span class="n">target_nrow</span><span class="o">=</span><span class="m">2</span><span class="p">,</span><span class="n">target_col</span><span class="o">=</span><span class="s1">'black'</span><span class="p">,</span><span class="w">
+                 </span><span class="n">left_annotation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'high in G4'</span><span class="p">,</span><span class="n">right_annotation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'high in others'</span><span class="p">,</span><span class="w">
+                 </span><span class="n">main</span><span class="o">=</span><span class="s1">'test'</span><span class="p">,</span><span class="n">target_col_type</span><span class="o">=</span><span class="s1">'PN'</span><span class="p">,</span><span class="n">Z_sig_thre</span><span class="o">=</span><span class="m">1.64</span><span class="p">,</span><span class="n">profile_sig_thre</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">1.64</span><span class="p">,</span><span class="w">
+                 </span><span class="n">pdf_file</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'%s/NetBID_GSEA_demo3.pdf'</span><span class="p">,</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.PLOT</span><span class="p">))</span><span class="w">
+</span></code></pre></div></div>
+
+<p><img src="NetBID_GSEA_demo3.pdf" alt="NetBID_GSEA_demo3" /></p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">draw.GSEA.NetBID</span><span class="p">(</span><span class="n">DE</span><span class="o">=</span><span class="n">DE</span><span class="p">,</span><span class="n">profile_col</span><span class="o">=</span><span class="s1">'t'</span><span class="p">,</span><span class="n">profile_trend</span><span class="o">=</span><span class="s1">'pos2neg'</span><span class="p">,</span><span class="w">
+                 </span><span class="n">driver_list</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">driver_list</span><span class="p">,</span><span class="w">
+                 </span><span class="n">show_label</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'gene_label'</span><span class="p">],</span><span class="w">
+                 </span><span class="n">driver_DA_Z</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'Z.G4.Vs.others_DA'</span><span class="p">],</span><span class="w">
+                 </span><span class="n">driver_DE_Z</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'Z.G4.Vs.others_DE'</span><span class="p">],</span><span class="w">
+                 </span><span class="n">target_list</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.network</span><span class="o">$</span><span class="n">target_list</span><span class="p">,</span><span class="w">
+                 </span><span class="n">top_driver_number</span><span class="o">=</span><span class="m">30</span><span class="p">,</span><span class="n">target_nrow</span><span class="o">=</span><span class="m">1</span><span class="p">,</span><span class="n">target_col</span><span class="o">=</span><span class="s1">'RdBu'</span><span class="p">,</span><span class="w">
+                 </span><span class="n">left_annotation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'high in G4'</span><span class="p">,</span><span class="n">right_annotation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'high in others'</span><span class="p">,</span><span class="w">
+                 </span><span class="n">main</span><span class="o">=</span><span class="s1">'test'</span><span class="p">,</span><span class="n">target_col_type</span><span class="o">=</span><span class="s1">'DE'</span><span class="p">,</span><span class="n">Z_sig_thre</span><span class="o">=</span><span class="m">1.64</span><span class="p">,</span><span class="n">profile_sig_thre</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">1.64</span><span class="p">,</span><span class="w">
+                 </span><span class="n">pdf_file</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'%s/NetBID_GSEA_demo4.pdf'</span><span class="p">,</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.PLOT</span><span class="p">))</span><span class="w">
+</span></code></pre></div></div>
+
+<p><img src="NetBID_GSEA_demo4.pdf" alt="NetBID_GSEA_demo4" /></p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">draw.GSEA.NetBID</span><span class="p">(</span><span class="n">DE</span><span class="o">=</span><span class="n">DE</span><span class="p">,</span><span class="n">profile_col</span><span class="o">=</span><span class="s1">'t'</span><span class="p">,</span><span class="n">profile_trend</span><span class="o">=</span><span class="s1">'pos2neg'</span><span class="p">,</span><span class="w">
+                 </span><span class="n">driver_list</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">driver_list</span><span class="p">,</span><span class="w">
+                 </span><span class="n">show_label</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'gene_label'</span><span class="p">],</span><span class="w">
+                 </span><span class="n">driver_DA_Z</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'Z.G4.Vs.others_DA'</span><span class="p">],</span><span class="w">
+                 </span><span class="n">driver_DE_Z</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'Z.G4.Vs.others_DE'</span><span class="p">],</span><span class="w">
+                 </span><span class="n">target_list</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.network</span><span class="o">$</span><span class="n">target_list</span><span class="p">,</span><span class="w">
+                 </span><span class="n">top_driver_number</span><span class="o">=</span><span class="m">30</span><span class="p">,</span><span class="n">target_nrow</span><span class="o">=</span><span class="m">1</span><span class="p">,</span><span class="n">target_col</span><span class="o">=</span><span class="s1">'black'</span><span class="p">,</span><span class="w">
+                 </span><span class="n">left_annotation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'high in G4'</span><span class="p">,</span><span class="n">right_annotation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'high in others'</span><span class="p">,</span><span class="w">
+                 </span><span class="n">main</span><span class="o">=</span><span class="s1">'test'</span><span class="p">,</span><span class="n">target_col_type</span><span class="o">=</span><span class="s1">'PN'</span><span class="p">,</span><span class="n">Z_sig_thre</span><span class="o">=</span><span class="m">1.64</span><span class="p">,</span><span class="n">profile_sig_thre</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">1.64</span><span class="p">,</span><span class="w">
+                 </span><span class="n">pdf_file</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'%s/NetBID_GSEA_demo5.pdf'</span><span class="p">,</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.PLOT</span><span class="p">))</span><span class="w">
+</span></code></pre></div></div>
+
+<p><img src="NetBID_GSEA_demo5.pdf" alt="NetBID_GSEA_demo5" /></p>
+
+<h3 id="qi3-what-is-the-expressionactivity-pattern-of-those-top-da-drivers-">QI.3: What is the expression/activity pattern of those top DA drivers ?</h3>
+<p>Heatmap for top drivers</p>
+
+<h3 id="qi4-what-is-the-biological-function-of-those-top-da-drivers-">QI.4: What is the biological function of those top DA drivers ?</h3>
+<p>Function enrichment plot for top drivers</p>
+
+<h3 id="qi5-what-is-the-biological-function-of-the-target-genes-of-those-top-da-drivers-">QI.5: What is the biological function of the target genes of those top DA drivers ?</h3>
+<p>Bubble plot for top drivers</p>
+
+<h2 id="part-ii-for-a-selected-interested-driver">Part II: for a selected interested driver</h2>
+
+<h3 id="qii1-how-to-understand-the-significance-of-the-selected-driver-">QII.1: How to understand the significance of the selected driver ?</h3>
+<p>GSEA plot for each driver</p>
+
+<h3 id="qii2-how-to-visualize-the-network-structure-of-the-selected-driver-">QII.2: How to visualize the network structure of the selected driver ?</h3>
+<p>target network structure for each driver, or two drivers (overlap testing)</p>
+
+<h3 id="qii3-what-is-the-expressionactivity-for-this-selected-driver-in-samples-with-different-subtypes-">QII.3: What is the expression/activity for this selected driver in samples with different subtypes ?</h3>
+<p>category plot</p>
+
+<h2 id="part-iii-further-analysis">Part III: further analysis</h2>
+
+<h3 id="qiii1-what-are-the-activities-of-the-curated-gene-sets-in-all-samples-and-what-are-the-top-significantly-differed-gene-sets-">QIII.1: What are the activities of the curated gene sets in all samples and what are the top significantly differed gene sets ?</h3>
+<p>gene set-based activity analysis, including vocalno, heatmap, category and GSEA plot</p>
+
+<h3 id="qiii2-how-to-find-drivers-with-significantly-overlapped-target-genes-">QIII.2: How to find drivers with significantly overlapped target genes ?</h3>
+<p>bubble plot for target gene list</p>
 
 
 

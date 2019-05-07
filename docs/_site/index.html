@@ -49,7 +49,7 @@
         
           <li class="navigation-list-item">
             
-            <a href="http://localhost:4000/docs/network_generation" class="navigation-list-link">Network generation</a>
+            <a href="http://localhost:4000/docs/network_construction" class="navigation-list-link">Network construction</a>
             
               
               <ul class="navigation-list-child-list ">
@@ -213,7 +213,7 @@
 
 <p>The manual for all functions in NetBID2 could be obtained from <a href="https://github.com/jyyulab/NetBID-dev/blob/master/NetBID2_0.1.1.pdf">NetBID2_0.1.1.pdf</a>. All functions have the demo scripts.</p>
 
-<p>All 67 invokable functions could be grouped as shown in the figure below:</p>
+<p>All 66 invokable functions could be grouped as shown in the figure below:</p>
 
 <p><img src="function_group.png" alt="function group" /></p>
 
@@ -221,7 +221,7 @@
 
 <ul>
   <li>
-    <p><code class="highlighter-rouge">NetBID.network.dir.create()</code> will generate a working directory structure for the network generation part in NetBID2. This function aims to assist researchers to organize the working directory.</p>
+    <p><code class="highlighter-rouge">NetBID.network.dir.create()</code> will generate a working directory structure for the network construction part in NetBID2. This function aims to assist researchers to organize the working directory.</p>
   </li>
   <li>
     <p><code class="highlighter-rouge">NetBID.analysis.dir.create()</code>  will generate a working directory structure for the driver analysis part in NetBID2. This function aims to assist researchers to organize the working directory.</p>
@@ -234,7 +234,7 @@
   </li>
 </ul>
 
-<p>Users could save two complicate list object, <code class="highlighter-rouge">network.par</code> in the <strong>network generation part</strong> and <code class="highlighter-rouge">analysis.par</code> in the <strong>driver analysis part</strong>, into the data directory (<code class="highlighter-rouge">network.par$out.dir.DATA</code> or <code class="highlighter-rouge">analysis.par$out.dir.DATA</code>), with the name of the RData marked by step name. 
+<p>Users could save two complicate list object, <code class="highlighter-rouge">network.par</code> in the <strong>network construction part</strong> and <code class="highlighter-rouge">analysis.par</code> in the <strong>driver analysis part</strong>, into the data directory (<code class="highlighter-rouge">network.par$out.dir.DATA</code> or <code class="highlighter-rouge">analysis.par$out.dir.DATA</code>), with the name of the RData marked by step name. 
 The two lists could make user to save the whole related dataset in each step <code class="highlighter-rouge">NetBID.saveRData()</code> and easy to get them back by using <code class="highlighter-rouge">NetBID.loadRData()</code>. 
 The RData saved from each step could be used to run the following analysis without repeating the former steps.</p>
 
@@ -261,13 +261,13 @@ Here, we want to <strong>find potential hidden drivers in Group4 compared with t
 
 <ol>
   <li>
-    <p><a href="docs/network_generation">Network generation</a></p>
+    <p><a href="docs/network_construction">Network construction</a></p>
   </li>
   <li>
-    <p><a href="docs/driver_estimation">Driver estimation</a></p>
+    <p><a href="docs/driver_estimation">Driver estimation (master table generation)</a></p>
   </li>
   <li>
-    <p><a href="docs/advanced_analysis">Advanced analysis</a></p>
+    <p><a href="docs/advanced_analysis">Advanced analysis (result visualization)</a></p>
   </li>
 </ol>
 

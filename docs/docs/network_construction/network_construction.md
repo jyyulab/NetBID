@@ -1,14 +1,14 @@
 ---
 layout: default
-title: Network generation
+title: Network construction
 nav_order: 2
 has_children: true
-permalink: /docs/network_generation
+permalink: /docs/network_construction
 ---
 
-# Network Generation
+# Network Construction
 
-The purpose for the first part: 
+The purpose for this part: 
 
 **generate a gene regulatory network based on a transcriptomic datasets**.
 
@@ -37,7 +37,7 @@ current_date <- format(Sys.time(), "%Y-%m-%d") ## current date for project runni
 project_name <- sprintf('project_%s',current_date) ## project name for the project
 ```
 
-Once decided the project_main_dir and project_name, user could run `NetBID.network.dir.create()` to generate the sub-directories for the working directory, including QC/ to save QC related files, DATA/ to save RData and SJAR/ to save data for running [SJARACNe](https://github.com/jyyulab/SJARACNe). Besides, a global list variable `network.par` will be returned by the function. 
+Once decided the `project_main_dir` and `project_name`, user could run `NetBID.network.dir.create()` to generate the sub-directories for the working directory, including QC/ to save QC related files, DATA/ to save RData and SJAR/ to save data for running [SJARACNe](https://github.com/jyyulab/SJARACNe). Besides, a global list variable `network.par` will be returned by the function. 
 Attention, if the current environment already has this variable, the function will do nothing, report a warning message and return the original `network.par`.  
 
 ```R
@@ -47,7 +47,8 @@ network.par  <- NetBID.network.dir.create(project_main_dir=project_main_dir,prje
 
 ## Step1: load in gene expression datasets for network construction (exp-load)
 
-Here, we use the dataset from GEO database as the demo that we could directly download it from web by input the GSE ID and GPL ID.
+Here, we use same demo dataset for network construction and following analysis (Check the ***The choice of expression dataset for network construction*** section below). 
+This dataset could be directly downloaded from GEO database by input the GSE ID and GPL ID.
 If set `getGPL=TRUE`, will download the gene annotation file. 
 The output of this function will be the [eSet](https://www.rdocumentation.org/packages/Biobase/versions/2.32.0/topics/ExpressionSet) class object and will save the RData into `out.dir`.
 Next time by running this function, it will try to load the RData in the `out.dir/{GSE}_{GPL}.RData` first (if `update=FALSE`).
@@ -114,6 +115,22 @@ NetBID.saveRData(network.par = network.par,step='exp-load')
 ```
 
 ----------
+### *The choice of expression dataset for network construction*
+
+- For a NetBID2 project, the analysis expression dataset is selected first to assist the investigation of a biological story. 
+The network construction expression dataset could be the same as the analysis expression dataset but need to consider some other factors. 
+
+   - The theory of using expression dataset to infer gene regulatory networks is based on [SJARACNe](https://academic.oup.com/bioinformatics/advance-article/doi/10.1093/bioinformatics/bty907/5156064). 
+   It uses an information theoretic approach to eliminate the majority of indirect interactions inferred by co-expression methods. More samples, higher sensitivity and precision will be obtained by experiment. 
+   Typically, more than 100 samples is a better choice. 
+   - Large size public datasets from the same tissue, cell line or biological background as the analysis dataset are recommended. User could search the databases such as GEO, TCGA. 
+   - Computational inferred networks will surely have false positive edges, especially for those with relative small mutual information (MI) score. Functions related with network processing will be described in the [Driver estimation](../driver_estimation) part. 
+   - Once a high quality network is generated, user could put them into a common shared place that multiple projects with similar biological background could rely on that. 
+
+- The demo used in the tutorial actually is not a good network construction expression dataset in real practice. Just used to assist user get familar with the procedure of NetBID2. 
+
+----------
+
 ### *Input RNASeq dataset*   
 
 - Another two functions can be applied to load expression dataset from RNASeq, `load.exp.RNASeq.demo()` and `load.exp.RNASeq.demoSalmon()`. 
@@ -384,10 +401,15 @@ use_genes <- rownames(fData(network.par$net.eset))
 use_list  <- get.TF_SIG.list(use_genes,use_gene_type=use_gene_type)
 ```
 
-The above two steps are not required if user could get the `TF_list` and `SIG_list` with the same ID type as the expression matrix, just input in the `SJAracne.prepare()`. 
+The above two steps are *not required* if user could get the `TF_list` and `SIG_list` with the same ID type as the expression matrix, just input them in the `SJAracne.prepare()`. 
 
-The final step is to prepare the input for running SJAracne. User could choose to use part of the samples or use all. 
-The `IQR.thre` and `IQR.loose_thre` will be passed to `IQR.filter()`. The `loose_gene` in this function will be the genes in `TF_list` and `SIG_list` as we want to keep more possible drivers in the network generation.
+The final step is to prepare the input for running SJAracne. 
+
+User could choose to use part of the samples or use all. 
+And in one project, multiple networks could be generated by setting different `prj.name`. For example, if want to generate Group4 specific network, user could choose to use samples in Group4 by setting the `use.samples` and give it an easily identified project name such as `prj.name='Group4_net'`. This `prj.name` is important in the [Driver estimation](../driver_estimation) part. 
+
+The `IQR.thre` and `IQR.loose_thre` will be passed to `IQR.filter()`. The `loose_gene` in this function will be the genes in `TF_list` and `SIG_list` as we want to keep more possible drivers in the network construction.
+In the demo network of NetBID2, in order to control the file size, the `IQR.thre=0.9` and `IQR.loose_thre=0.7`. In real practice, `IQR.thre=0.5` and `IQR.loose_thre=0.1` is recommended.
 
 ```R
 # select sample for analysis
@@ -417,7 +439,7 @@ So, the version number may be different when running the same code at different 
 
 ----------
 
-Finish network generation part !!! Cheers !!!
+Finish network construction part !!! Cheers !!!
 
 
 
