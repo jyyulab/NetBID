@@ -145,7 +145,7 @@ Suggest to use the original functions if have some experience of coding.
     - 'dds' is the DESeqDataSet class object, the data has been processed by `DESeq()`.
     - 'eset' is the ExpressionSet class object, the expression data matrix has been processed by `DESeq(), vst()`.
     
-    Default is 'eset'. If user do not choose 'eset', the output will not be directly used in the following scripts in the tutorial. Check the ***Input expression matrix*** section below.
+    Default is 'tpm'. If user do not choose 'eset', the output will not be directly used in the following scripts in the tutorial. Check the ***Input expression matrix*** section below.
 
 ----------
 ### *Input expression matrix*   
