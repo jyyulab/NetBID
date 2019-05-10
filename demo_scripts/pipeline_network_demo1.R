@@ -1,19 +1,16 @@
 ## This script aims to generate network ##
-############# preparations ###############
 
+############# Step0: preparations ###############
+######### library the package
 library(NetBID2)
 
-######### preload all knowledge info, choose species, use_level (gene/transcript)
-db.preload(use_level='gene',use_spe='human',update=FALSE)
+######### set up paramters
+project_main_dir <- 'test/' ### user defined main directory for the project, one main directory could have multiple projects, separeted by project name
+current_date <- format(Sys.time(), "%Y-%m-%d") ## current date for project running, suggested to add the time tag
+project_name <- sprintf('project_%s',current_date) ## project name for the project
 
-######### write in paramters
-project_main_dir <- 'test/' ### user definied !!!!
-current_date <- format(Sys.time(), "%Y-%m-%d") ## current date for project running
-project_name <- sprintf('project_%s',current_date) ## recommend to add time tag
-
-## network.par is very essential in the analysis!!
-if(exists('network.par')==TRUE) rm(network.par)
-network.par  <- NetBID.network.dir.create(project_main_dir=project_main_dir,prject_name=project_name)
+## network.par is very essential in the analysis, if the environment already has this parameter, strongly suggest to delete it first
+network.par  <- NetBID.network.dir.create(project_main_dir=project_main_dir,prject_name=project_name) ## create working directory
 
 ########### !!!!!!!!!! pipelines !!!!!!!!!! ############
 
@@ -37,7 +34,7 @@ draw.eset.QC(network.par$net.eset,outdir=network.par$out.dir.QC,intgroup=NULL,do
 # save to RData
 NetBID.saveRData(network.par = network.par,step='exp-load')
 
-######################################################### Step2: normalization for the exp dataset (exp-QC)
+######################################################### Step2: normalization for the expression dataset (exp-QC)
 # load from RData
 NetBID.loadRData(network.par = network.par,step='exp-load')
 
@@ -48,7 +45,7 @@ sample_na_count <- apply(mat,1,function(x){length(which(is.na(x)==TRUE))})
 print(table(sample_na_count))
 gene_na_count <- apply(mat,2,function(x){length(which(is.na(x)==TRUE))})
 print(table(gene_na_count))
-mat <- impute.knn(mat)$data
+if(sum(sample_na_count)+sum(gene_na_count)>0) mat <- impute.knn(mat)$data
 # log2 transformation
 med_val <- median(apply(mat,2,median));print(med_val)
 if(med_val>16){mat <- log2(mat)}
@@ -71,7 +68,7 @@ draw.eset.QC(network.par$net.eset,outdir=network.par$out.dir.QC,intgroup=NULL,do
 # save to RData
 NetBID.saveRData(network.par = network.par,step='exp-QC')
 
-######################################################### Step3: check sample cluster info, optional (exp-cluster)
+######################################################### Step3: check sample cluster information, optional (exp-cluster)
 # load from RData
 NetBID.loadRData(network.par = network.par,step='exp-QC')
 # use most variable genes for cluster
@@ -79,20 +76,13 @@ mat <- exprs(network.par$net.eset)
 choose1 <- IQR.filter(exp_mat=mat,use_genes=rownames(mat),thre = 0.5,loose_gene=NULL,loose_thre=0.1)
 print(table(choose1))
 mat <- mat[choose1,]
-# update eset
-net_eset <- generate.eset(exp_mat=mat, phenotype_info=pData(network.par$net.eset)[colnames(mat),],
+# generate tmp eset
+tmp_net_eset <- generate.eset(exp_mat=mat, phenotype_info=pData(network.par$net.eset)[colnames(mat),],
                           feature_info=fData(network.par$net.eset)[rownames(mat),], annotation_info=annotation(network.par$net.eset))
-network.par$net.eset <- net_eset
 # QC plots
-draw.eset.QC(network.par$net.eset,outdir=network.par$out.dir.QC,intgroup=NULL,do.logtransform=FALSE,prefix='Cluster_')
-# save to RData
-NetBID.saveRData(network.par = network.par,step='exp-cluster')
+draw.eset.QC(tmp_net_eset,outdir=network.par$out.dir.QC,intgroup=NULL,do.logtransform=FALSE,prefix='Cluster_')
 
-# more cluster functions (will not directly save to file, but avtively layout)
-# load from RData
-NetBID.loadRData(network.par = network.par,step='exp-cluster')
-#
-mat <- exprs(network.par$net.eset)
+# more cluster functions (will not directly save to file, but actively layout)
 phe <- pData(network.par$net.eset)
 intgroup <- get_int_group(network.par$net.eset)
 # pca+kmeans in 2D
@@ -107,11 +97,20 @@ for(i in 1:length(intgroup)){
   pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,intgroup[i]),plot_type='3D')
   print(table(list(pred_label=pred_label,obs_label=get_obs_label(phe,intgroup[i]))))
 }
-draw.clustComp(pred_label,obs_label=get_obs_label(phe,intgroup[i])) ## display the comparison in detail
+use_int <- 'subgroup'
+pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,use_int),plot_type='2D')
+pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,use_int),plot_type='2D.ellipse')
+pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,use_int),plot_type='2D.text')
+pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,use_int),plot_type='3D')
+print(table(list(pred_label=pred_label,obs_label=get_obs_label(phe, use_int))))
+draw.clustComp(pred_label,obs_label=get_obs_label(phe,use_int),outlier_cex=1,low_K=10) ## display the comparison in detail
+
 
 ######################################################### Step4: prepare SJARACNE (sjaracne-prep)
 # load from RData
 NetBID.loadRData(network.par = network.par,step='exp-QC') ## do not load file from exp-cluster
+
+# load database
 db.preload(use_level='gene',use_spe='human',update=FALSE)
 
 # ID convertion, get TF/SIG list !!!!
@@ -130,5 +129,5 @@ SJAracne.prepare(eset=network.par$net.eset,use.samples=use.samples,
                     IQR.thre = 0.5,IQR.loose_thre = 0.1,
                     SJAR.project_name=prj.name,SJAR.main_dir=network.par$out.dir.SJAR)
 
-###################################### finish network generation part !!! Cheers !!! #########################################
+###################################### finish network construction part !!! Cheers !!! #########################################
 

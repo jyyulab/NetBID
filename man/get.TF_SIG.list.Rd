@@ -5,7 +5,7 @@
 \title{Get transcription factor (TF) and signaling factor (SIG) list for the input gene/transcript type}
 \usage{
 get.TF_SIG.list(use_genes = NULL, use_gene_type = "ensembl_gene_id",
-  dataset = NULL)
+  ignore_version = FALSE, dataset = NULL)
 }
 \arguments{
 \item{use_genes}{a vector of characters, all possible genes used in network generation.
@@ -17,6 +17,9 @@ Full list could be obtained by
 \code{listAttributes(mart)$name}, where \code{mart} is the output of \code{useMart} function.
 (e.g mart <- useMart('ensembl',db_info[1]))
 The type must be the gene type for the input \code{use_genes}. Default is 'ensembl_gene_id'.}
+
+\item{ignore_version}{logical, whether to ignore version when from_type is 'ensembl_gene_id_version' or 'ensembl_transcript_id_version'.
+Default is FALSE.}
 
 \item{dataset}{character, name for the dataset used for ID conversion,
 such as 'hsapiens_gene_ensembl'.

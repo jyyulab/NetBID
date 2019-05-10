@@ -25,7 +25,8 @@ running \code{get.SJAracne.network}.}
 such as 'ensembl_gene_id', 'ensembl_gene_id_version', 'ensembl_transcript_id', 'ensembl_transcript_id_version', 'refseq_mrna'. Full list could be obtained by
 \code{listAttributes(mart)$name}, where \code{mart} is the output of \code{useMart} function.}
 
-\item{transfer_tab}{data.frame, the transfer table for ID conversion, could be obtained by \code{get_IDtransfer}.}
+\item{transfer_tab}{data.frame, the transfer table for ID conversion, could be obtained by \code{get_IDtransfer}.
+If NULL, will automatically get the transfer table within the function if the \code{main_id_type} is not in the column names of `tf_sigs`. Default is NULL.}
 
 \item{tf_sigs}{list, which contain the detailed information for the TF and SIGs, this can be obtained by running \code{db.preload}.}
 

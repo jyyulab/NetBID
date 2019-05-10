@@ -6,7 +6,7 @@
 \usage{
 draw.targetNet(source_label = "", source_z = NULL, edge_score = NULL,
   label_cex = 0.7, source_cex = 1, pdf_file = NULL,
-  arrow_direction = "out")
+  arrow_direction = "out", n_layer = 1)
 }
 \arguments{
 \item{source_label}{the label for the driver displayed on the plot.}
@@ -25,6 +25,8 @@ The names for the vector is the gene labels displayed on the plot.}
 \item{pdf_file}{character, file path for the pdf file to save the figure into pdf format.If NULL, will not generate pdf file. Default is NULL.}
 
 \item{arrow_direction}{character, choose from 'in' or 'out'. Default is 'out'.}
+
+\item{n_layer}{integer, number of circle layers to display, default is 1.}
 }
 \value{
 Will return logical value indicating whether the plot has been successfully generated
@@ -43,6 +45,8 @@ edge_score <- (sample(1:200,size=100,replace=TRUE)-100)/100
 names(edge_score) <- paste0('G',1:100)
 draw.targetNet(source_label=source_label,source_z=source_z,
                edge_score=edge_score)
+draw.targetNet(source_label=source_label,source_z=source_z,
+               edge_score=edge_score,n_layer=2)
 draw.targetNet(source_label=source_label,source_z=source_z,
                edge_score=edge_score,
                arrow_direction='in',

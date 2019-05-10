@@ -20,8 +20,11 @@ db.preload(use_level = "transcript", use_spe = "human",
 
 \item{SIG_list}{a character vector,input the list of SIG names, if NULL, will use pre-defined list in the package, default NULL}
 
-\item{input_attr_type}{character, input the type for the list of TF_list, SIG_list. If no input for TF_list, SIG_list, just leave it to NULL, default NULL.
-See biomaRt \url{https://bioconductor.org/packages/release/bioc/vignettes/biomaRt/inst/doc/biomaRt.html} for more details.}
+\item{input_attr_type}{character, input the type for the list of TF_list, SIG_list.
+See biomaRt \url{https://bioconductor.org/packages/release/bioc/vignettes/biomaRt/inst/doc/biomaRt.html} for more details.
+If no input for TF_list, SIG_list, will use the list in db/${use_spe}_TF_${input_attr_type}.txt and db/${use_spe}_SIG_${input_attr_type}.txt,
+and only support external_gene_name and ensembl_gene_id.
+Default is external_gene_name.}
 
 \item{main.dir}{character, main file path for NetBID2,
 if NULL, will set to \code{system.file(package = "NetBID2")}. Default is NULL.}

@@ -4,7 +4,7 @@
 \alias{getDE.BID.2G}
 \title{Get differential expression (DE)/differential activity (DA) between case and control sample groups by Bayesian Inference.}
 \usage{
-getDE.BID.2G(eset, ouput_id_column = NULL, G1 = NULL, G0 = NULL,
+getDE.BID.2G(eset, output_id_column = NULL, G1 = NULL, G0 = NULL,
   G1_name = NULL, G0_name = NULL, method = "Bayesian",
   family = gaussian, pooling = "full", logTransformed = TRUE,
   verbose = TRUE)
@@ -12,7 +12,7 @@ getDE.BID.2G(eset, ouput_id_column = NULL, G1 = NULL, G0 = NULL,
 \arguments{
 \item{eset}{ExpressionSet class object, the input gene expression or driver activity.}
 
-\item{ouput_id_column}{character, the column in the fData(eset) used for output the results.
+\item{output_id_column}{character, the column in the fData(eset) used for output the results.
 This option is used in the condition that the original expression matrix is at transcript-level,
 but the statistics can be gene-level if the relation is provided in the feature of the eset.
 If NULL, will use the rownames of the fData(eset).
@@ -74,13 +74,13 @@ colnames(mat) <-  c('Case-rep1','Case-rep2','Case-rep3',
 tmp_eset <- generate.eset(mat,feature_info=data.frame(row.names=rownames(mat),
             probe=rownames(mat),gene=rep('GeneX',2),
             stringsAsFactors = FALSE))
-res1 <- getDE.BID.2G(tmp_eset,ouput_id_column='probe',
+res1 <- getDE.BID.2G(tmp_eset,output_id_column='probe',
         G1=c('Case-rep1','Case-rep2','Case-rep3'),
         G0=c('Control-rep1','Control-rep2','Control-rep3'))
-res2 <- getDE.BID.2G(tmp_eset,ouput_id_column='gene',
+res2 <- getDE.BID.2G(tmp_eset,output_id_column='gene',
         G1=c('Case-rep1','Case-rep2','Case-rep3'),
         G0=c('Control-rep1','Control-rep2','Control-rep3'))
-res3 <- getDE.BID.2G(tmp_eset,ouput_id_column='gene',
+res3 <- getDE.BID.2G(tmp_eset,output_id_column='gene',
         G1=c('Case-rep1','Case-rep2','Case-rep3'),
         G0=c('Control-rep1','Control-rep2','Control-rep3'),
         pooling='partial')

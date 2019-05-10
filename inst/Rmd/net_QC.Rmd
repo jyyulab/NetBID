@@ -10,7 +10,7 @@ library(kableExtra)
 ```
 
 ```{r echo=FALSE}
-deg <- degree(net,mode='out')
+deg <- igraph::degree(net,mode='out')
 source_list <- names(deg)[which(deg>0)]
 c1 <- components(net)
 if(weighted==TRUE) edge_weight <- E(net)$weight else edge_weight<-NULL
@@ -36,9 +36,9 @@ net_statistic$mean_distance <- mean_distance(net,directed=directed)
   
 ## nodes
 # degree
-if(directed==TRUE) c1 <- degree(net, mode="out", normalized=FALSE) ## Centralize a graph according to the degrees of vertices
-if(directed==TRUE) c2 <- degree(net, mode="in", normalized=FALSE) ## Centralize a graph according to the degrees of vertices
-c3 <- degree(net, mode="all", normalized=FALSE) ## Centralize a graph according to the degrees of vertices
+if(directed==TRUE) c1 <- igraph::degree(net, mode="out", normalized=FALSE) ## Centralize a graph according to the degrees of vertices
+if(directed==TRUE) c2 <- igraph::degree(net, mode="in", normalized=FALSE) ## Centralize a graph according to the degrees of vertices
+c3 <- igraph::degree(net, mode="all", normalized=FALSE) ## Centralize a graph according to the degrees of vertices
 if(directed==TRUE) net_detail$degree_out <- c1
 if(directed==TRUE) net_detail$degree_in  <- c2
 net_detail$degree_all <- c3

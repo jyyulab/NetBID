@@ -1,0 +1,20 @@
+library(NetBID2)
+fData
+fData()
+library(DESeq2)
+?ggplot2
+ggplot2
+ggplot2()
+genefilter
+genefilter()
+## This script aims to generate network ###
+#
+############# Step0: preparations ################
+######### library the package#
+library(NetBID2)
+fData
+library(NetBID2)
+import(Biobase)
+library(DESeq2)
+ggplot
+gplot

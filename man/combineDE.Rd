@@ -5,7 +5,8 @@
 \title{Combine the differential expression (DE)/differential activity (DA) results.}
 \usage{
 combineDE(DE_list, DE_name = NULL, transfer_tab = NULL,
-  method = "Stouffer", twosided = TRUE, signed = FALSE)
+  main_id = NULL, method = "Stouffer", twosided = TRUE,
+  signed = TRUE)
 }
 \arguments{
 \item{DE_list}{list of DE results.}
@@ -19,6 +20,8 @@ This transfer table is used for ID mapping for the results of DE_list.
 The column names must match the DE_name.
 If NULL, will treat the ID column for each DE results in DE_list as the same type of ID.
 Default is NULL.}
+
+\item{main_id}{character, the main id for specifying the ID column, must be one of the name in DE_list. If NULL, will use the first name. Default is NULL.}
 
 \item{method}{character, choose from Stouffer or Fisher, default is "Stouffer".}
 

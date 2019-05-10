@@ -21,7 +21,7 @@ a matrix containing the normalized RNASeq count.
 \code{RNASeqCount.normalize.scale} is a simple version function to normalize the RNASeq read count data.
 }
 \details{
-Strongly suggest to follow the DESeq2 pipeline to process the RNASeq datasets.
+Another choice, \code{load.exp.RNASeq.demo} will follow the DESeq2 pipeline to process the RNASeq datasets.
 \code{load.exp.RNASeq.demo} and \code{load.exp.RNASeq.demoSalmon} is included in NetBID2 but may not suit for all conditions.
 }
 \examples{

@@ -4,8 +4,8 @@
 \alias{cal.Activity}
 \title{Calculate activity value for all possible drivers}
 \usage{
-cal.Activity(target_list = NULL, cal_mat = NULL, es.method = "mean",
-  std = TRUE)
+cal.Activity(target_list = NULL, cal_mat = NULL,
+  es.method = "weightedmean", std = TRUE)
 }
 \arguments{
 \item{target_list}{a list for the target gene information for the drivers.
@@ -17,9 +17,9 @@ by \code{get_net2target_list} by running
 \item{cal_mat}{numeric matrix,the expression matrix for all genes/transcripts for calculation.}
 
 \item{es.method}{character, strategy to calculate the activity for the driver,
-choose from mean, weighted mean, maxmean, absmean;
+choose from mean, weightedmean, maxmean, absmean;
 in which the weighted in the weighted mean is the MI (mutual information) value * sign of correlation (use the spearman correlation sign).
-Default is 'mean'.}
+Default is 'weightedmean'.}
 
 \item{std}{logical, whether to perform std to the original expression matrix. Default is TRUE.}
 }

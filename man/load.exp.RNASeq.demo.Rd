@@ -6,7 +6,7 @@
 \usage{
 load.exp.RNASeq.demo(files, type = "salmon", tx2gene = NULL,
   use_phenotype_info = NULL, use_sample_col = NULL,
-  use_design_col = NULL, return_type = "eset", merge_level = "gene")
+  use_design_col = NULL, return_type = "tpm", merge_level = "gene")
 }
 \arguments{
 \item{files}{a vector of characters,filenames for the transcript-level abundances, will be passed to \code{tximport}.
@@ -23,9 +23,13 @@ Check for detail.}
 
 \item{use_design_col}{character, the column name to indicate which column in \code{use_phenotype_info} should be used as the design feature of the samples.}
 
-\item{return_type}{character, the class of the return object, choose from 'eset','dds','tpm-dds'. 'eset' is the ExpressionSet class object,
-'dds' is the DESeqDataSet class object.'tpm-dds' is the original tpm without DESeq2.
-Default is 'eset'}
+\item{return_type}{character, the class of the return object, choose from 'txi','counts','tpm','eset' and 'dds'.
+'txi' is the output of \code{tximport}, a simple list containing matrices: abundance, counts, length.
+'counts' is the output of raw count matrix.
+'tpm' is the output of raw tpm.
+'dds' is the DESeqDataSet class object, the data has been processed by \code{DESeq}.
+'eset' is the ExpressionSet class object,the expression data matrix has been processed by \code{DESeq} and \code{vst}.
+Default is 'tpm'}
 
 \item{merge_level}{character, choose from 'gene' and 'transcript',
 if choose 'gene' and original salmon results is mapped to the transcriptome,

@@ -5,6 +5,7 @@
 \title{Plot for combined DE (differentiated expressed)/DA (differentiated activity) Vs. original DE/DA}
 \usage{
 draw.combineDE(DE_list = NULL, main_id = NULL, top_number = 30,
+  display_col = "P.Value", z_col = "Z-statistics", digit_num = 2,
   row_cex = 1, column_cex = 1, text_cex = 1, pdf_file = NULL)
 }
 \arguments{
@@ -16,6 +17,12 @@ If NULL, will use the first name. Default is NULL.}
 
 \item{top_number}{number for the top significant genes/drivers in the combine results to be displayed on the plot.
 Default is 30.}
+
+\item{display_col}{character, column names used to display. Default is 'P.Value'.}
+
+\item{z_col}{character, column names for Z statistics used for background color bar. Default is 'Z-statistics'.}
+
+\item{digit_num}{integer, number of digits to display on the plot. Default is 2.}
 
 \item{row_cex}{numeric, \code{cex} for the row labels displayed on the plot. Default is 1}
 

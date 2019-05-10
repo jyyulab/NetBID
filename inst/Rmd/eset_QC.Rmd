@@ -11,11 +11,15 @@ library(kableExtra)
 
 ```{r echo=FALSE}
 dt <- pData(eset)
+if(nrow(dt)<20){
 kable(dt,align = "c") %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed")) %>%
   scroll_box(width = "100%", height = "100%")
-intgroup <- get_int_group(eset)
-use_mat  <- exprs(eset)
+}else{
+  kable(dt,align = "c") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed")) %>%
+  scroll_box(width = "100%", height = "500px")
+}
 ```
 
 
@@ -26,7 +30,7 @@ in which `r length(intgroup)` sample class: `r intgroup` will used for basic clu
 
 Distance between samples is calculated by dist2().
 
-```{r echo=FALSE,fig.width=10, fig.height=10}
+```{r echo=FALSE,fig.width=12, fig.height=12}
 nrow <- ceiling(length(intgroup)/2)
 par(mfrow = c(nrow, 2))
 par(mar = c(6, 6, 6, 6))
@@ -41,7 +45,7 @@ par(mar = c(6, 6, 6, 6))
 
 Original expression matrix is transformed by PCA (principal component analysis) and the first two components are visualized.  
 
-```{r echo=FALSE, fig.width=12, fig.height=10}
+```{r echo=FALSE, fig.width=12, fig.height=6}
 nrow <- ceiling(length(intgroup)/2)
 par(mfrow = c(nrow, 2))
    pca <- prcomp(t(na.omit(use_mat)))
@@ -65,7 +69,7 @@ par(mfrow = c(nrow, 2))
 
 The density for the expression value in each sample is ploted with colored grouped by the sample class. 
 
-```{r echo=FALSE ,fig.width=12, fig.height=10}
+```{r echo=FALSE ,fig.width=12, fig.height=8}
 nrow <- ceiling(length(intgroup)/2)
 par(mfrow = c(nrow, 2))
 par(mar = c(3, 3, 3, 3))

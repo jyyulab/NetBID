@@ -21,7 +21,7 @@ If NULL, will use all possible K. Default is NULL.}
 
 \item{legend_cex}{numeric, cex for the legend displayed on the plot. Default is 0.8.}
 
-\item{plot_type}{character, the type for the plot, choose from '2D' or '2D.ellipse' or '3D'. Default is '2D.ellipse'.}
+\item{plot_type}{character, the type for the plot, choose from '2D', '2D.ellipse', '2D.text' and '3D'. Default is '2D.ellipse'.}
 
 \item{point_cex}{numeric, cex for the point in the plot. Default is 1.}
 
