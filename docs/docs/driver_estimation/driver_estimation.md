@@ -245,13 +245,20 @@ analysis.par$DA[[comp_name]] <- DA_driver_comb$combine
 
 User could use `draw.combineDE()` to visualize the top significant DE/DA combining results compared with previous ones.
 
-`draw.combineDE(DE_gene_comb)`
+```R
+draw.combineDE(DE_gene_comb)
+draw.combineDE(DE_gene_comb,pdf_file=sprintf('%s/combineDE.pdf',analysis.par$out.dir.PLOT))
+```
 
-![`draw.combineDE(DE_gene_comb)`](combineDE.pdf)
+![`combineDE`](combineDE.pdf)
 
-`draw.combineDE(DA_driver_comb)`
+```R
+draw.combineDE(DA_driver_comb)
+draw.combineDE(DA_driver_comb,pdf_file=sprintf('%s/combineDA.pdf',analysis.par$out.dir.PLOT))
+```
 
-![`draw.combineDE(DA_driver_comb)`](combineDA.pdf)
+![`combineDA`](combineDA.pdf)
+
 
 Also, user could choose to combine the sample list first and call DE/DA between the two sample lists. The results may be different from the above `combineDE` strategy as they are different in the statistical hypothesis stating. 
 
@@ -272,6 +279,17 @@ When finished, save to RData.
 # save to RData
 NetBID.saveRData(analysis.par=analysis.par,step='act-DA')
 ```
+Now, for the calculation part, we have obtained the top DA/DE list, we could directly draw the statistics for them (by default the top 30 drivers will be displayed):
+
+```R
+draw.NetBID(DA_list=analysis.par$DA,DE_list=analysis.par$DE,main_id='G4.Vs.others')
+draw.NetBID(DA_list=analysis.par$DA,DE_list=analysis.par$DE,main_id='G4.Vs.others',pdf_file=sprintf('%s/NetBID_TOP.pdf',analysis.par$out.dir.PLOT),text_cex=0.8)
+```
+
+![`NetBID_TOP`](NetBID_TOP.pdf)
+
+User could choose which column to display in DA/DE results, check `?draw.NetBID` for detailed instruction. 
+**ATTENTION** for real practice, user may choose to display one comparison result, and the input of `DA_list` and `DE_list` must be the list class with names on it.
 
 ## Step4: generate master table (ms-tab)
 

@@ -76,7 +76,7 @@ install.packages('NetBID2_0.1.1.tar.gz',repos=NULL)
 
 The manual for all functions in NetBID2 could be obtained from [NetBID2_0.1.1.pdf](https://github.com/jyyulab/NetBID-dev/blob/master/NetBID2_0.1.1.pdf). All functions have the demo scripts.
 
-All 66 invokable functions could be grouped as shown in the figure below:
+All 67 invokable functions could be grouped as shown in the figure below:
 
 ![function group](function_group.png)
 
@@ -108,7 +108,7 @@ We choose the demo dataset from GEO database: [GSE116028](https://www.ncbi.nlm.n
 
 This dataset contains microarray data for 13 adult medulloblastoma (MB) samples. 
 Three subgroups of adult MB were identified by distinct expression profiles, clinical features, pathological features, and prognosis, including 3 SHH, 4 WNT, and 6 Group4.
-From them, Group4 tumors had significantly worse progression-free and overall survival compared with tumors of the other molecular subtypes. 
+From them, Group4 tumors in adult had significantly worse progression-free and overall survival compared with tumors of the other molecular subtypes. 
 Here, we want to **find potential hidden drivers in Group4 compared with the other subtypes by using NetBID2**, for which may be related with the specific clinical feature for Group4 MB.
  
 **Though the dataset in the tutorial is microarray, we will include the usage of processing RNASeq dataset in each step.**  

@@ -248,23 +248,76 @@ draw.heatmap(mat=ac_mat,use_genes= gene_list,use_gene_label=ms_tab[gene_list,'ge
 
 ### QI.4: What is the biological function of those top DA drivers ?
 
-Function enrichment plot for top drivers
+In order to study the function of those drivers, we could import curated gene sets from [MSigDB](http://software.broadinstitute.org/gsea/msigdb).
+
+NetBID2 has provided one function `gs.preload()` to automatically download curated gene sets from MSigDB (based on [msigdbr](https://cran.r-project.org/web/packages/msigdbr/index.html)). 
+The only input is the species name, full list of available species name could be found by msigdbr_show_species(). Default is 'Homo sapiens'. 
+The dataset for human is already packed in NetBID2 R package. 
+Similar as `db.preload()`, if leave `main.dir=NULL`, the RData will be saved to `system.file(package = "NetBID2")/db/`. 
+If NetBID2 is installed in a public place with no permission to user, just set `main.dir` to another place and remember to use the same path next time using it.
+
+User can print `all_gs2gene_info` to check the detailed information of the global variable `all_gs2gene`. 
+The column `Category` and `Sub-Category` will be used as the label to extract categories of gene sets for use.  
 
 ```R
+# load RData for all_gs2gene
+gs.preload(use_spe='Homo sapiens',update=FALSE)
+print(all_gs2gene_info)
+```
 
-res_up <- funcEnrich.Fisher(input_list=ms_tab[driver_list_up,'geneSymbol'],bg_list=unique(ms_tab[,'geneSymbol']),use_gs=c('H','CP:REACTOME','BP'),
+![all_gs2gene_info](all_gs2gene_info.png)
+
+Now, user could choose to use the pre-loaded gene sets to perform Fisher based Gene Set enrichment analysis by `funcEnrich.Fisher()`. 
+The `input_list` and `bg_list` must be the gene symbol. This is easily obtained by using the `geneSymbol` column in the master table.
+
+`gs2gene` is the list for geneset to genes, the name for the list is the gene set name and the content in each list is the vector for genes belong to that gene set. 
+If NULL, will use `all_gs2gene` loaded by using `gs.preload()`. User do not need to prepare this if want to use MSigDB.
+
+`use_gs` is the vector of category name used in analysis, this could be the mixture of category names from `Category` and `Sub-Category`. 
+Do not worry about the redundant issue, all gene sets will be passed into `merge_gs()` and the gene sets with the same gene set name will be merged. 
+
+```R
+res_up <- funcEnrich.Fisher(input_list=ms_tab[driver_list_up,'geneSymbol'],bg_list=unique(ms_tab[,'geneSymbol']),use_gs=c('H','CP:REACTOME','BP','CGP'),
                            Pv_thre=0.1,Pv_adj = 'none',min_gs_size = 30, max_gs_size = 500)
-                           
-res_down <- funcEnrich.Fisher(input_list=ms_tab[driver_list_down,'geneSymbol'],bg_list=unique(ms_tab[,'geneSymbol']),use_gs=c('H','CP:REACTOME','BP'),
+res_down <- funcEnrich.Fisher(input_list=ms_tab[driver_list_down,'geneSymbol'],bg_list=unique(ms_tab[,'geneSymbol']),use_gs=c('H','CP:REACTOME','BP','CGP'),
                            Pv_thre=0.1,Pv_adj = 'none',min_gs_size = 30, max_gs_size = 500)                       
-                           
+```
+
+`funcEnrich.Fisher()` will return detailed results for enrichment analysis, use `?funcEnrich.Fisher` to check the detail. And the [results](fisher_res.xlsx) could be output to excel file by `out2excel()`. 
+
+```R
+out2excel(list(up=res_up,down=res_down),out.xlsx=sprintf('%s/fisher_res.xlsx',analysis.par$out.dir.PLOT))
+```
+
+Meanwhile, the enrichment analysis results can be visualized by barplot (`draw.funcEnrich.bar()`) and cluster plot (`draw.funcEnrich.cluster()`).
+
+The barplot is a simply way to display the enriched P-value, with the example of intersected genes (if set `display_genes=TRUE`).
+
+```R
 # draw barplot
 draw.funcEnrich.bar(funcEnrich_res= res_up,top_number=30,main='Function Enrichment for Top drivers',pdf_file=sprintf('%s/funcEnrich_bar_nogene.pdf',analysis.par$out.dir.PLOT))
 draw.funcEnrich.bar(funcEnrich_res= res_up,top_number=30,main='Function Enrichment for Top drivers',display_genes = TRUE,gs_cex=0.6,
                     pdf_file=sprintf('%s/funcEnrich_bar_withgene.pdf',analysis.par$out.dir.PLOT))
+```
 
+![funcEnrich_bar_withgene](funcEnrich_bar_withgene.pdf)
+
+Considering the function redudancy of gene sets and the cluster of genes by function similarity, the function cluster plot could be used. 
+
+```R
 draw.funcEnrich.cluster(funcEnrich_res= res_up,top_number=30,gs_cex = 1.4,gene_cex=1.5,pv_cex=1.2,pdf_file = sprintf('%s/funcEnrich_clusterBOTH.pdf',analysis.par$out.dir.PLOT),
-                        cluster_gs=TRUE,cluster_gene = TRUE,h=0.75)
+                        cluster_gs=TRUE,cluster_gene = TRUE,h=0.95)
+```
+
+In the figure below, top 30 enriched terms could be clustered into 6 clusters (cluster size adjusted by `h`). 
+We could easily get to know the related genes for each function clusters. 
+Here, top enriched gene sets are related with lipid biosynthetic process, with detailed description from: e.g ['GO_LIPID_BIOSYNTHETIC_PROCESS'](http://software.broadinstitute.org/gsea/msigdb/geneset_page.jsp?geneSetName=GO_LIPID_BIOSYNTHETIC_PROCESS)
+
+![funcEnrich_clusterBOTH](funcEnrich_clusterBOTH.pdf)
+
+Try the below scripts and check the difference of the output figure:
+
+```R
 draw.funcEnrich.cluster(funcEnrich_res= res_up,top_number=30,gs_cex = 0.8,gene_cex=0.9,pv_cex=0.8,pdf_file = sprintf('%s/funcEnrich_clusterGS.pdf',analysis.par$out.dir.PLOT),
                         cluster_gs=TRUE,cluster_gene = FALSE)
 draw.funcEnrich.cluster(funcEnrich_res= res_up,top_number=30,gs_cex = 0.8,gene_cex=0.9,pv_cex=0.8,pdf_file = sprintf('%s/funcEnrich_clusterGENE.pdf',analysis.par$out.dir.PLOT),
@@ -273,16 +326,64 @@ draw.funcEnrich.cluster(funcEnrich_res= res_up,top_number=30,gs_cex = 1.5,gene_c
                         cluster_gs=FALSE,cluster_gene = FALSE)
 ```
 
-
-gs.preload()
-merge_gs()
-funcEnrich.Fisher()
-draw.funcEnrich.bar()
-draw.funcEnrich.cluster()
-
-
 ### QI.5: What is the biological function of the target genes of those top DA drivers ?
-Bubble plot for top drivers
+
+The function of those drivers is to regulate their target genes. Then, we will ask what is the biological function of the target genes of those top DA drivers ?
+NetBID2 has one function `draw.bubblePlot()` to calculate and visualize this purpose. 
+
+Before that, we only accept gene symbol as the ID for gene set annotation (for the general usage, other kinds of usage will be shown in the last part of this section), so, we need to prepare a transfer table to transfer the originalID into gene symbol for all drivers and target genes.
+This transfer table is already saved in the `analysis.par`.
+
+```R
+transfer_tab <- analysis.par$transfer_tab
+```
+
+This function has 21 options, but for the first trial, just follow the demo and the only thing to prepare is the transfer table (`transfer2symbol2type`). 
+Lots of parameters are the same as in `funcEnrich.Fisher()`. 
+
+```R
+## draw
+draw.bubblePlot(driver_list= driver_list,show_label=ms_tab[driver_list,'gene_label'],
+                Z_val=ms_tab[driver_list,'Z.G4.Vs.others_DA'],
+                driver_type=ms_tab[driver_list,'gene_biotype'],
+                target_list=analysis.par$merge.network$target_list,transfer2symbol2type=transfer_tab,
+                bg_list=ms_tab[,'geneSymbol'],min_gs_size=5,max_gs_size=500,use_gs=c('H'),
+                top_geneset_number=30,top_driver_number=10,
+                pdf_file = sprintf('%s/bubblePlot.pdf',analysis.par$out.dir.PLOT),
+                main='Bubbleplot for top driver targets')
+```
+
+Each column in this plot is one driver, each row is the curated gene set, and the circle in the main plot region shows the significance of the target genes for the driver in the corresponding gene set.
+The size of the circle is the intersected gene number (legend on the top) and the color of the circle represents the significance of the P-value (legend on the right). The color boxes down below the main figure are the significance of the drivers (user need to input the Z-statistics), followed by the barplots showing the target size of the driver (filtered by protein coding), and the color cicles below showing the drivers' type (optional, if user input the `driver_type`).
+
+The figure could tell user that, e.g the target genes of the Group4 up-regulated driver`PDE7B_SIG` are significantly enriched in `KEGG_AXON_GUIDANCE` with 17 intersected genes and P-value at about 1e-10. 
+
+![bubblePlot](bubblePlot.pdf)
+
+Try the following script to get familiar with the options in the function. 
+
+```R
+draw.bubblePlot(driver_list= driver_list,show_label=ms_tab[driver_list,'gene_label'],
+                Z_val=ms_tab[driver_list,'Z.G4.Vs.others_DA'],
+                driver_type=ms_tab[driver_list,'gene_biotype'],
+                target_list=analysis.par$merge.network$target_list,transfer2symbol2type=transfer_tab,
+                bg_list=ms_tab[,'geneSymbol'],min_gs_size=10,max_gs_size=300,use_gs=c('CP:KEGG'),
+                top_geneset_number=30,top_driver_number=30,
+                pdf_file = sprintf('%s/bubblePlot_KEGG.pdf',analysis.par$out.dir.PLOT),
+                main='Bubbleplot for top driver targets')
+# add marker gene
+mark_gene <- c('KCNA1','EOMES','KHDRBS2','RBM24','UNC5D') ## marker for Group4
+draw.bubblePlot(driver_list= driver_list,show_label=ms_tab[rownames(sig_driver),'gene_label'],
+                Z_val=ms_tab[driver_list,'Z.G4.Vs.others_DA'],
+                driver_type=ms_tab[driver_list,'gene_biotype'],
+                target_list=analysis.par$merge.network$target_list,transfer2symbol2type=transfer_tab,
+                bg_list=ms_tab[,'geneSymbol'],min_gs_size=10,max_gs_size=300,use_gs=c('CP:KEGG','CP:BIOCARTA','H'),
+                top_geneset_number=30,top_driver_number=80,
+                pdf_file = sprintf('%s/bubblePlot_combine.pdf',analysis.par$out.dir.PLOT),
+                main='Bubbleplot for top driver targets',
+                mark_gene=ms_tab[which(ms_tab$geneSymbol %in% mark_gene),'originalID_label'],gs_cex = 1,driver_cex=1.2)
+```
+
 
 ## Part II: for a selected interested driver
 
