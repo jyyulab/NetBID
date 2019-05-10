@@ -50,15 +50,27 @@ pipeline_analysis_demo1.R
 
 ## demo scripts for following analysis, mainly focus on visualization
 analysis_and_plot_demo1.R
-### Part I: for top drivers
-* I.1: volcano plot for DE/DA, p-value Vs. fold-change
-* I.2: Heatmap for top drivers
-* I.3: Function enrichment plot for top drivers
-* I.4: Bubble plot for top drivers
-* I.5: GSEA plot for top driver
-### Part II: for each driver
-* II.1: GSEA plot for each driver
-* II.2: target network structure for each driver, or two drivers (overlap testing)
-* II.3: category plot for the expression/activity for each driver
-### Part III: advanced plots
-* III.1: gene set-based activity analysis, including vocalno, heatmap, category and GSEA plot
+
+Part I: for the top list of significant drivers QI.1: How to get the top list of drivers with significantly different activity (DA) in G4 Vs. other subtypes ?
+
+QI.2: How to understand the significance of those top DA drivers ?
+
+QI.3: What is the expression/activity pattern of those top DA drivers in samples with different subtype ?
+
+QI.4: What is the biological function of those top DA drivers ?
+
+QI.5: What is the biological function of the target genes of those top DA drivers ?
+
+Part II: for a selected interested driver
+
+QII.1: How to understand the significance of the selected driver ?
+
+QII.2: How to visualize the network structure of the selected driver ?
+
+QII.3: What is the expression/activity for this selected driver in samples with different subtypes ?
+
+Part III: further analysis
+
+QIII.1: What are the activities of the curated gene sets in all samples and what are the top significantly differed gene sets ?
+
+QIII.2: How to find drivers with significantly overlapped target genes ?
