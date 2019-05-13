@@ -375,13 +375,13 @@ The output will be a list of DE/DA results, with one more component named “com
 </span><span class="n">draw.combineDE</span><span class="p">(</span><span class="n">DE_gene_comb</span><span class="p">,</span><span class="n">pdf_file</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'%s/combineDE.pdf'</span><span class="p">,</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.PLOT</span><span class="p">))</span><span class="w">
 </span></code></pre></div></div>
 
-<p><img src="combineDE.pdf" alt="`combineDE`" /></p>
+<p><img src="combineDE.png" alt="`combineDE`" /></p>
 
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">draw.combineDE</span><span class="p">(</span><span class="n">DA_driver_comb</span><span class="p">)</span><span class="w">
 </span><span class="n">draw.combineDE</span><span class="p">(</span><span class="n">DA_driver_comb</span><span class="p">,</span><span class="n">pdf_file</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'%s/combineDA.pdf'</span><span class="p">,</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.PLOT</span><span class="p">))</span><span class="w">
 </span></code></pre></div></div>
 
-<p><img src="combineDA.pdf" alt="`combineDA`" /></p>
+<p><img src="combineDA.png" alt="`combineDA`" /></p>
 
 <p>Also, user could choose to combine the sample list first and call DE/DA between the two sample lists. The results may be different from the above <code class="highlighter-rouge">combineDE</code> strategy as they are different in the statistical hypothesis stating.</p>
 
@@ -406,7 +406,7 @@ The output will be a list of DE/DA results, with one more component named “com
 </span><span class="n">draw.NetBID</span><span class="p">(</span><span class="n">DA_list</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">DA</span><span class="p">,</span><span class="n">DE_list</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">DE</span><span class="p">,</span><span class="n">main_id</span><span class="o">=</span><span class="s1">'G4.Vs.others'</span><span class="p">,</span><span class="n">pdf_file</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'%s/NetBID_TOP.pdf'</span><span class="p">,</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.PLOT</span><span class="p">),</span><span class="n">text_cex</span><span class="o">=</span><span class="m">0.8</span><span class="p">)</span><span class="w">
 </span></code></pre></div></div>
 
-<p><img src="NetBID_TOP.pdf" alt="`NetBID_TOP`" /></p>
+<p><img src="NetBID_TOP.png" alt="`NetBID_TOP`" /></p>
 
 <p>User could choose which column to display in DA/DE results, check <code class="highlighter-rouge">?draw.NetBID</code> for detailed instruction. 
 <strong>ATTENTION</strong> for real practice, user may choose to display one comparison result, and the input of <code class="highlighter-rouge">DA_list</code> and <code class="highlighter-rouge">DE_list</code> must be the list class with names on it.</p>

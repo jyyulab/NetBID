@@ -250,14 +250,14 @@ draw.combineDE(DE_gene_comb)
 draw.combineDE(DE_gene_comb,pdf_file=sprintf('%s/combineDE.pdf',analysis.par$out.dir.PLOT))
 ```
 
-![`combineDE`](combineDE.pdf)
+![`combineDE`](combineDE.png)
 
 ```R
 draw.combineDE(DA_driver_comb)
 draw.combineDE(DA_driver_comb,pdf_file=sprintf('%s/combineDA.pdf',analysis.par$out.dir.PLOT))
 ```
 
-![`combineDA`](combineDA.pdf)
+![`combineDA`](combineDA.png)
 
 
 Also, user could choose to combine the sample list first and call DE/DA between the two sample lists. The results may be different from the above `combineDE` strategy as they are different in the statistical hypothesis stating. 
@@ -286,7 +286,7 @@ draw.NetBID(DA_list=analysis.par$DA,DE_list=analysis.par$DE,main_id='G4.Vs.other
 draw.NetBID(DA_list=analysis.par$DA,DE_list=analysis.par$DE,main_id='G4.Vs.others',pdf_file=sprintf('%s/NetBID_TOP.pdf',analysis.par$out.dir.PLOT),text_cex=0.8)
 ```
 
-![`NetBID_TOP`](NetBID_TOP.pdf)
+![`NetBID_TOP`](NetBID_TOP.png)
 
 User could choose which column to display in DA/DE results, check `?draw.NetBID` for detailed instruction. 
 **ATTENTION** for real practice, user may choose to display one comparison result, and the input of `DA_list` and `DE_list` must be the list class with names on it.

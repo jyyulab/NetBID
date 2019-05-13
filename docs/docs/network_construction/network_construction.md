@@ -323,7 +323,7 @@ use_int <- 'subgroup'
 pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,use_int),plot_type='2D')
 ```
 
-![sample_cluster_1](sample_cluster_1.pdf)
+![sample_cluster_1](sample_cluster_1.png)
 
 This is the basic scatter plot to display the samples with color coded by observed and predicted label. 
 The statistics in the right figure is the score between predicted label and observed label by `get_clustComp()`. 
@@ -333,7 +333,7 @@ ARI stands for 'adjusted rand index', which ranges from 0 to 1 with higher value
 pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,use_int),plot_type='2D.ellipse')
 ```
 
-![sample_cluster_2](sample_cluster_2.pdf)
+![sample_cluster_2](sample_cluster_2.png)
 
 This is the scatter plot with ellipse to cover the points belong to one class. 
 
@@ -341,7 +341,7 @@ This is the scatter plot with ellipse to cover the points belong to one class.
 pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,use_int),plot_type='2D.text')
 ```
 
-![sample_cluster_3](sample_cluster_3.pdf)
+![sample_cluster_3](sample_cluster_3.png)
 
 This is the scatter plot with sample name directly labelled on the plot, which is useful for outlier checking. 
 
@@ -349,7 +349,7 @@ This is the scatter plot with sample name directly labelled on the plot, which i
 pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,use_int),plot_type='3D')
 ```
 
-![sample_cluster_4](sample_cluster_4.pdf)
+![sample_cluster_4](sample_cluster_4.png)
 
 This is the 3D scatter plot.
 
@@ -358,7 +358,7 @@ print(table(list(pred_label=pred_label,obs_label=get_obs_label(phe, use_int))))
 draw.clustComp(pred_label,obs_label=get_obs_label(phe,use_int),outlier_cex=1,low_K=10) ## display the comparison in detail
 ```
 
-![sample_cluster_4](sample_cluster_5.pdf)
+![sample_cluster_4](sample_cluster_5.png)
 
 This is the table to display the detailed difference between predicted label and observed label. We can see from the table here, 4 WNTs are further separated into two groups.
 

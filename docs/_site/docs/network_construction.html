@@ -458,7 +458,7 @@ If user use <a href="https://github.com/jyyulab/scMINER/tree/master/MICA">MICA</
 </span><span class="n">pred_label</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">draw.pca.kmeans</span><span class="p">(</span><span class="n">mat</span><span class="o">=</span><span class="n">mat</span><span class="p">,</span><span class="n">all_k</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">NULL</span><span class="p">,</span><span class="n">obs_label</span><span class="o">=</span><span class="n">get_obs_label</span><span class="p">(</span><span class="n">phe</span><span class="p">,</span><span class="n">use_int</span><span class="p">),</span><span class="n">plot_type</span><span class="o">=</span><span class="s1">'2D'</span><span class="p">)</span><span class="w">
 </span></code></pre></div></div>
 
-<p><img src="sample_cluster_1.pdf" alt="sample_cluster_1" /></p>
+<p><img src="sample_cluster_1.png" alt="sample_cluster_1" /></p>
 
 <p>This is the basic scatter plot to display the samples with color coded by observed and predicted label. 
 The statistics in the right figure is the score between predicted label and observed label by <code class="highlighter-rouge">get_clustComp()</code>. 
@@ -467,21 +467,21 @@ ARI stands for ‘adjusted rand index’, which ranges from 0 to 1 with higher v
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">pred_label</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">draw.pca.kmeans</span><span class="p">(</span><span class="n">mat</span><span class="o">=</span><span class="n">mat</span><span class="p">,</span><span class="n">all_k</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">NULL</span><span class="p">,</span><span class="n">obs_label</span><span class="o">=</span><span class="n">get_obs_label</span><span class="p">(</span><span class="n">phe</span><span class="p">,</span><span class="n">use_int</span><span class="p">),</span><span class="n">plot_type</span><span class="o">=</span><span class="s1">'2D.ellipse'</span><span class="p">)</span><span class="w">
 </span></code></pre></div></div>
 
-<p><img src="sample_cluster_2.pdf" alt="sample_cluster_2" /></p>
+<p><img src="sample_cluster_2.png" alt="sample_cluster_2" /></p>
 
 <p>This is the scatter plot with ellipse to cover the points belong to one class.</p>
 
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">pred_label</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">draw.pca.kmeans</span><span class="p">(</span><span class="n">mat</span><span class="o">=</span><span class="n">mat</span><span class="p">,</span><span class="n">all_k</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">NULL</span><span class="p">,</span><span class="n">obs_label</span><span class="o">=</span><span class="n">get_obs_label</span><span class="p">(</span><span class="n">phe</span><span class="p">,</span><span class="n">use_int</span><span class="p">),</span><span class="n">plot_type</span><span class="o">=</span><span class="s1">'2D.text'</span><span class="p">)</span><span class="w">
 </span></code></pre></div></div>
 
-<p><img src="sample_cluster_3.pdf" alt="sample_cluster_3" /></p>
+<p><img src="sample_cluster_3.png" alt="sample_cluster_3" /></p>
 
 <p>This is the scatter plot with sample name directly labelled on the plot, which is useful for outlier checking.</p>
 
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">pred_label</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">draw.pca.kmeans</span><span class="p">(</span><span class="n">mat</span><span class="o">=</span><span class="n">mat</span><span class="p">,</span><span class="n">all_k</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">NULL</span><span class="p">,</span><span class="n">obs_label</span><span class="o">=</span><span class="n">get_obs_label</span><span class="p">(</span><span class="n">phe</span><span class="p">,</span><span class="n">use_int</span><span class="p">),</span><span class="n">plot_type</span><span class="o">=</span><span class="s1">'3D'</span><span class="p">)</span><span class="w">
 </span></code></pre></div></div>
 
-<p><img src="sample_cluster_4.pdf" alt="sample_cluster_4" /></p>
+<p><img src="sample_cluster_4.png" alt="sample_cluster_4" /></p>
 
 <p>This is the 3D scatter plot.</p>
 
@@ -489,7 +489,7 @@ ARI stands for ‘adjusted rand index’, which ranges from 0 to 1 with higher v
 </span><span class="n">draw.clustComp</span><span class="p">(</span><span class="n">pred_label</span><span class="p">,</span><span class="n">obs_label</span><span class="o">=</span><span class="n">get_obs_label</span><span class="p">(</span><span class="n">phe</span><span class="p">,</span><span class="n">use_int</span><span class="p">),</span><span class="n">outlier_cex</span><span class="o">=</span><span class="m">1</span><span class="p">,</span><span class="n">low_K</span><span class="o">=</span><span class="m">10</span><span class="p">)</span><span class="w"> </span><span class="c1">## display the comparison in detail</span><span class="w">
 </span></code></pre></div></div>
 
-<p><img src="sample_cluster_5.pdf" alt="sample_cluster_4" /></p>
+<p><img src="sample_cluster_5.png" alt="sample_cluster_4" /></p>
 
 <p>This is the table to display the detailed difference between predicted label and observed label. We can see from the table here, 4 WNTs are further separated into two groups.</p>
 

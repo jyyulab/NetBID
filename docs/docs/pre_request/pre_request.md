@@ -32,8 +32,6 @@ Users do not need to digest the information below.
 |plot3D|scatter3D|Visualization|3D plot|
 |plotrix|draw.ellipse|Visualization|drawing ellipse|
 |umap|umap|Visualization|data dimension reduction and visualization|
-|vsn|meanSdPlot|Visualization|meansd plot|
-|hexbin|hexbin|Visualization|meansd plot|
 |ComplexHeatmap|Heatmap|Visualization|heatmap drawing|
 |ordinal|clm,clmm|bid|Cumulative Link Mixed Models|
 |MCMCglmm|MCMCglmm|bid|Multivariate Generalized Linear Mixed Models|
