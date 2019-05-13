@@ -23,8 +23,6 @@ Depends:
     plot3D (>= 1.1.1),
     plotrix (>= 3.7-3),
     umap (>= 0.2.0.0),
-    vsn (>= 3.48.1),
-    hexbin (>= 1.27.2),
     ComplexHeatmap (>= 1.17.1),
     ordinal (>= 2019.4-25),
     MCMCglmm (>= 2.26),

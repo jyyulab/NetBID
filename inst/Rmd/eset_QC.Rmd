@@ -7,6 +7,57 @@ output:
 ```{r include=FALSE}
 library(NetBID2)
 library(kableExtra)
+draw.meanSdPlot <- function(eset){
+    exp_mat <- exprs(eset)
+    mean_g <- apply(exp_mat,1,mean)
+    mean_g <- rank(mean_g)
+    sd_g <- apply(exp_mat,1,sd)
+    n <- 50
+    mean_g_c <- cut(mean_g,breaks = n)
+    sd_g_c <- cut(sd_g,breaks = n)
+    mat <- table(cbind(list(mean_g_c,sd_g_c)))
+    tmp1 <- aggregate(sd_g,list(mean_g_c),mean); rownames(tmp1) <- tmp1$Group.1
+    sd_g_v <- tmp1[levels(mean_g_c),'x']
+    #
+    mean_g_l <- t(sapply(levels(mean_g_c),function(x)as.numeric(strsplit(gsub('\\(|\\]','\\1',x),',')[[1]])))
+    sd_g_l <- t(sapply(levels(sd_g_c),function(x)as.numeric(strsplit(gsub('\\(|\\]','\\1',x),',')[[1]])))
+    mean_g_l_m <- rowMeans(mean_g_l)
+    sd_g_l_m <- rowMeans(sd_g_l)
+    # col=get_transparent(brewer.pal(8,'Set1')[2],alpha=0.1)
+    par(mai=c(1,1,1,2))
+    dat <- spline(x=mean_g_l_m,y=sd_g_v,n=n*10)
+    plot(y~x,data=dat,type='l',col=brewer.pal(8,'Set1')[1],lwd=2,xlab='rank(mean)',ylab='sd',
+         ylim=c(0,max(sd_g)),xlim=c(0,max(mean_g)),cex.lab=1.2)
+    pp <- par()$usr
+    ##
+    ag <- 30
+    r <- max(mean_g)/(2*nrow(mat))
+    rx <- r/cos(ag*pi/180)*par.pos2inch()[1] # x-inch
+    ry <- rx
+    x1 <- c(rx*cos(ag*pi/180),rx*cos(ag*pi/180),0,-rx*cos(ag*pi/180),-rx*cos(ag*pi/180),0,rx*cos(ag*pi/180))
+    y1 <- c(ry*sin(ag*pi/180),-ry*sin(ag*pi/180),-ry,-ry*sin(ag*pi/180),+ry*sin(ag*pi/180),ry,ry*sin(ag*pi/180))
+    #print(x1/par.pos2inch()[1]);print(y1/par.pos2inch()[2])
+    simplehexbin <- function(x,y,r,col){
+       polygon(x=x+x1/par.pos2inch()[1],y=y+y1/par.pos2inch()[2],col=col,border = 'white',lwd=0.1)
+    }
+    mm <- max(as.numeric(mat))
+    cc <- colorRampPalette(brewer.pal(9,'Blues')[c(2:9)])(mm)
+    cc <- rev(cc)
+    for(i in 1:nrow(mat)){
+      for(j in 1:ncol(mat)){
+        if(mat[i,j]>0){
+          if(j%%2==0) simplehexbin(x=mean_g_l_m[i],y=sd_g_l_m[j],col=cc[mat[i,j]])
+          if(j%%2==1) simplehexbin(x=mean_g_l_m[i]-r,y=sd_g_l_m[j],col=cc[mat[i,j]])
+        }
+      }
+    }
+    lines(y~x,data=dat,col=brewer.pal(8,'Set1')[1],lwd=2)
+    ypos <- seq(pp[4]-par.char2pos()[2]*2,pp[3]+(pp[4]-pp[3])/2,length.out=length(cc)+1)
+    text(x=pp[2]+par.char2pos()[1]*1.5,y=pp[4]-par.char2pos()[2],pos=4,'Count',xpd=TRUE)
+    rect(xleft=pp[2]+par.char2pos()[1],xright=pp[2]+par.char2pos()[1]*1.5,ybottom=ypos[1:(length(ypos)-1)],ytop=ypos[2:length(ypos)],col=rev(cc),border=NA,xpd=TRUE)
+    text(x=pp[2]+par.char2pos()[1]*1.5,y=quantile(ypos,probs=c(0,0.5,1)),c(1,round(mm/2),mm),xpd=TRUE,pos=4)
+    return(TRUE)
+  }
 ```
 
 ```{r echo=FALSE}
@@ -96,8 +147,8 @@ for(i in 1:length(intgroup)){
 
 The standard deviations versus means for each probe/transcript/gene is plotted. 
 
-```{r echo=FALSE}
-    meanSdPlot(eset)
+```{r echo=FALSE,fig.width=8, fig.height=8}
+    draw.meanSdPlot(eset)
 ```
 
 

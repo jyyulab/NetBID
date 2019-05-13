@@ -8,7 +8,8 @@ draw.targetNet.TWO(source1_label = "", source2_label = "",
   source1_z = NULL, source2_z = NULL, edge_score1 = NULL,
   edge_score2 = NULL, arrow1_direction = "out",
   arrow2_direction = "out", label_cex = 0.7, source_cex = 1,
-  pdf_file = NULL, total_possible_target = NULL, show_test = FALSE)
+  pdf_file = NULL, total_possible_target = NULL, show_test = FALSE,
+  n_layer = 1, alphabetical_order = FALSE)
 }
 \arguments{
 \item{source1_label}{the label for the first(left) driver displayed on the plot.}
@@ -44,6 +45,10 @@ This parameter will be passed to function \code{test.targetNet.overlap} to test 
 If NULL, will do not perform this test. Default is NULL.}
 
 \item{show_test}{logical, indicating whether the testing results will be printed and returned. Default is FALSE.}
+
+\item{n_layer}{integer, number of circle layers to display, default is 1.}
+
+\item{alphabetical_order}{logical, whether the target gene labels are sorted by the alphabetical order, if FALSE will be ordered by statistics. Default is FALSE.}
 }
 \value{
 if \code{show_test}==FALSE, will return logical value indicating whether the plot has been successfully generated, otherwise will return the statistics of testing.

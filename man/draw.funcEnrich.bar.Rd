@@ -71,10 +71,10 @@ res1 <- funcEnrich.Fisher(input_list=ms_tab[rownames(sig_driver),'geneSymbol'],
 draw.funcEnrich.bar(funcEnrich_res=res1,top_number=5,
                    main='Function Enrichment for Top drivers',
                    gs_cex=0.4,gene_cex=0.5)
-draw.funcEnrich.bar(funcEnrich_res=res1,top_number=5,
+draw.funcEnrich.bar(funcEnrich_res=res1,top_number=3,
                    main='Function Enrichment for Top drivers',
                    display_genes = TRUE,eg_num=3,
-                   gs_cex=0.6,gene_cex=0.5)
+                   gs_cex=0.3,gene_cex=0.3)
 \dontrun{
 analysis.par <- list()
 analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")

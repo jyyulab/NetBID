@@ -12,11 +12,9 @@
 #' @importFrom graphics plot
 #' @importFrom aricode clustComp
 #' @importFrom GSVA gsva
-#' @importFrom hexbin hexbin
 #' @importFrom MCMCglmm MCMCglmm
 #' @importFrom arm bayesglm
 #' @importFrom reshape melt
-#' @importFrom vsn meanSdPlot
 #' @importFrom ordinal clm clmm
 #' @importFrom rmarkdown render
 
@@ -1822,7 +1820,7 @@ getDE.BID.2G <-function(eset,output_id_column=NULL,G1=NULL, G0=NULL,G1_name=NULL
 #' DE_list <- list(DE=DE_gene_limma,DA=DA_driver_limma)
 #' g1 <- gsub('(.*)_.*','\\1',DE_list$DA$ID)
 #' transfer_tab <- data.frame(DE=g1,DA=DE_list$DA$ID,stringsAsFactors = FALSE)
-#' res1 <- combineDE(DE_list,transfer_tab=transfer_tab)
+#' res1 <- combineDE(DE_list,transfer_tab=transfer_tab,main_id='DA')
 #'
 #' \dontrun{
 #' each_subtype <- 'G4'
@@ -2707,7 +2705,8 @@ draw.clustComp <- function(pred_label, obs_label,strategy='ARI',
   }
   t1 <- table(list(pred_label[nn],obs_label[nn]))
   layout(1)
-  par(mar=c(2,12,3,4))
+  textWidth <- max(strwidthMod(colnames(t1),units='inch',cex=clust_cex))+par.char2inch()[1]*1.5
+  par(mai=c(0.5,textWidth,1,1))
   if(use_col==TRUE){
     image(t1,col=c('white',colorRampPalette(brewer.pal(8,'Reds'))(length(unique(as.numeric(t1)))-1)),bty='n',xaxt='n',yaxt='n',
           main=mm)
@@ -2724,9 +2723,9 @@ draw.clustComp <- function(pred_label, obs_label,strategy='ARI',
   yyy <- (yy[1:(length(yy)-1)]+yy[2:length(yy)])/2
 
   abline(h=yy);abline(v=xx)
-  text(pp[1],yyy,colnames(t1),adj=1,xpd=TRUE,col=ifelse(colnames(t1) %in% highlight_clust,2,1),cex=clust_cex)
-  text(xxx,pp[4]+max(strheightMod(rownames(t1),units='inches',cex=1))/12,rownames(t1),adj=0.5,srt=0,xpd=TRUE,
-       col=ifelse(rownames(t1) %in% highlight_clust,2,1),cex=clust_cex)
+  text(pp[1]-par.char2pos()[1],yyy,colnames(t1),adj=1,xpd=TRUE,col=ifelse(colnames(t1) %in% highlight_clust,2,1),cex=clust_cex)
+  text(xxx,pp[4],rownames(t1),srt=0,xpd=TRUE,
+       col=ifelse(rownames(t1) %in% highlight_clust,2,1),cex=clust_cex,pos=3)
 
   for(i in 1:nrow(t1)){
     for(j in 1:ncol(t1)){
@@ -2766,6 +2765,7 @@ z2col <- function(x,n_len=60,sig_thre=0.01,col_min_thre=0.01,col_max_thre=3,
                   red_col=brewer.pal(9,'Set1')[1]){
   ## create vector for z-score, can change sig threshold
   x[which(is.na(x)==TRUE)] <- 0
+  #if(length(x!=Inf & x!= -Inf)==0) x <- 35*sign(x)
   x[which(x==Inf)]<-  max(x[which(x!=Inf)])+1
   x[which(x==-Inf)]<- min(x[which(x!=-Inf)])-1
   if(col_min_thre<0) col_min_thre<-0.01
@@ -2876,10 +2876,10 @@ boxtext <- function(x, y, labels = NA, col.text = NULL, col.bg = NA,
     }
   }
   ## Width and height of text
-  textHeight <- graphics::strheightMod(labels, cex = theCex, font = font)
-  textWidth <- graphics::strwidthMod(labels, cex = theCex, font = font)
+  textHeight <- graphics::strheight(labels, cex = theCex, font = font)
+  textWidth <- graphics::strwidth(labels, cex = theCex, font = font)
   ## Width of one character:
-  charWidth <- graphics::strwidthMod("e", cex = theCex, font = font)
+  charWidth <- graphics::strwidth("e", cex = theCex, font = font)
   ## Is 'adj' of length 1 or 2?
   if (!is.null(adj)){
     if (length(adj == 1)){
@@ -3268,12 +3268,61 @@ draw.eset.QC <- function(eset,outdir = '.',do.logtransform = FALSE,intgroup=NULL
     message('Finish Heatmap plot !')
   }
 
-
+  draw.meanSdPlot <- function(eset){
+    exp_mat <- exprs(eset)
+    mean_g <- apply(exp_mat,1,mean)
+    mean_g <- rank(mean_g)
+    sd_g <- apply(exp_mat,1,sd)
+    n <- 50
+    mean_g_c <- cut(mean_g,breaks = n)
+    sd_g_c <- cut(sd_g,breaks = n)
+    mat <- table(cbind(list(mean_g_c,sd_g_c)))
+    tmp1 <- aggregate(sd_g,list(mean_g_c),mean); rownames(tmp1) <- tmp1$Group.1
+    sd_g_v <- tmp1[levels(mean_g_c),'x']
+    #
+    mean_g_l <- t(sapply(levels(mean_g_c),function(x)as.numeric(strsplit(gsub('\\(|\\]','\\1',x),',')[[1]])))
+    sd_g_l <- t(sapply(levels(sd_g_c),function(x)as.numeric(strsplit(gsub('\\(|\\]','\\1',x),',')[[1]])))
+    mean_g_l_m <- rowMeans(mean_g_l)
+    sd_g_l_m <- rowMeans(sd_g_l)
+    # col=get_transparent(brewer.pal(8,'Set1')[2],alpha=0.1)
+    par(mai=c(1,1,1,2))
+    dat <- spline(x=mean_g_l_m,y=sd_g_v,n=n*10)
+    plot(y~x,data=dat,type='l',col=brewer.pal(8,'Set1')[1],lwd=2,xlab='rank(mean)',ylab='sd',
+         ylim=c(0,max(sd_g)),xlim=c(0,max(mean_g)),cex.lab=1.2)
+    pp <- par()$usr
+    ag <- 30
+    r <- max(mean_g)/(2*nrow(mat))
+    rx <- r/cos(ag*pi/180)*par.pos2inch()[1] # x-inch
+    ry <- rx
+    x1 <- c(rx*cos(ag*pi/180),rx*cos(ag*pi/180),0,-rx*cos(ag*pi/180),-rx*cos(ag*pi/180),0,rx*cos(ag*pi/180))
+    y1 <- c(ry*sin(ag*pi/180),-ry*sin(ag*pi/180),-ry,-ry*sin(ag*pi/180),+ry*sin(ag*pi/180),ry,ry*sin(ag*pi/180))
+    #print(x1/par.pos2inch()[1]);print(y1/par.pos2inch()[2])
+    simplehexbin <- function(x,y,r,col){
+       polygon(x=x+x1/par.pos2inch()[1],y=y+y1/par.pos2inch()[2],col=col,border = 'white',lwd=0.1)
+    }
+    mm <- max(as.numeric(mat))
+    cc <- colorRampPalette(brewer.pal(9,'Blues')[c(2:9)])(mm)
+    cc <- rev(cc)
+    for(i in 1:nrow(mat)){
+      for(j in 1:ncol(mat)){
+        if(mat[i,j]>0){
+          if(j%%2==0) simplehexbin(x=mean_g_l_m[i],y=sd_g_l_m[j],col=cc[mat[i,j]])
+          if(j%%2==1) simplehexbin(x=mean_g_l_m[i]-r,y=sd_g_l_m[j],col=cc[mat[i,j]])
+        }
+      }
+    }
+    lines(y~x,data=dat,col=brewer.pal(8,'Set1')[1],lwd=2)
+    ypos <- seq(pp[4]-par.char2pos()[2]*2,pp[3]+(pp[4]-pp[3])/2,length.out=length(cc)+1)
+    text(x=pp[2]+par.char2pos()[1]*1.15,y=pp[4]-par.char2pos()[2],pos=4,'Count',xpd=TRUE)
+    rect(xleft=pp[2]+par.char2pos()[1],xright=pp[2]+par.char2pos()[1]*1.5,ybottom=ypos[1:(length(ypos)-1)],ytop=ypos[2:length(ypos)],col=rev(cc),border=NA,xpd=TRUE)
+    text(x=pp[2]+par.char2pos()[1]*1.5,y=quantile(ypos,probs=c(0,0.5,1)),c(1,round(mm/2),mm),xpd=TRUE,pos=4)
+    return(TRUE)
+  }
   ## meansd
   if('meansd' %in% choose_plot){
     fp <- file.path(outdir, sprintf("%s%s.pdf", prefix, 'meansd'))
     pdf(fp, width = 12, height = 9)
-    meanSdPlot(eset)
+    draw.meanSdPlot(eset)
     dev.off()
     message('Finish MeanSD plot !')
   }
@@ -4568,10 +4617,10 @@ funcEnrich.Fisher <- function(input_list=NULL,bg_list=NULL,
 #' draw.funcEnrich.bar(funcEnrich_res=res1,top_number=5,
 #'                    main='Function Enrichment for Top drivers',
 #'                    gs_cex=0.4,gene_cex=0.5)
-#' draw.funcEnrich.bar(funcEnrich_res=res1,top_number=5,
+#' draw.funcEnrich.bar(funcEnrich_res=res1,top_number=3,
 #'                    main='Function Enrichment for Top drivers',
 #'                    display_genes = TRUE,eg_num=3,
-#'                    gs_cex=0.6,gene_cex=0.5)
+#'                    gs_cex=0.3,gene_cex=0.3)
 #' \dontrun{
 #' analysis.par <- list()
 #' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
@@ -5047,7 +5096,8 @@ draw.bubblePlot <- function(driver_list=NULL,show_label=driver_list,Z_val=NULL,d
   f_mat <- lapply(f_res,function(x){
     as.data.frame(x)[all_path,5:6]
   })
-  f_mat2 <- do.call(rbind,lapply(f_mat,function(x)qnorm(1-x[[2]])))
+  f_mat2 <- do.call(rbind,lapply(f_mat,function(x)-qnorm(x[[2]])))
+#  print(do.call(rbind,lapply(f_mat,function(x)x[[2]])))
   f_mat2[which(is.na(f_mat2)==TRUE | f_mat2==-Inf)] <- 0
   f_mat1 <- do.call(rbind,lapply(f_mat,function(x)x[,1]))
   colnames(f_mat1) <- all_path
@@ -5090,6 +5140,7 @@ draw.bubblePlot <- function(driver_list=NULL,show_label=driver_list,Z_val=NULL,d
     }else{
       rw <- 6*par.char2inch()[1]
     }
+    gsWidth <- max(gsWidth,+par.char2inch()[1]*10+strwidthMod('target_size\n(protein_coding)','inches',cex=0.8,ori=ori))
     ## output to pdf
     # width:gsWidth|nc*0.5|rw
     # height:driverWidth|2*0.5|(nr)*0.5|0.5|1
@@ -5298,10 +5349,6 @@ draw.GSEA <- function(rank_profile=NULL,use_genes=NULL,use_direction=NULL,main="
   #### start plot
   pos_col <- brewer.pal(12,'Paired')[8]
   neg_col <- brewer.pal(12,'Paired')[4]
-
-  if(is.null(pdf_file)==FALSE){
-    pdf(pdf_file,width=10,height=10)
-  }
   if(is.null(use_direction)==FALSE){
     new_rank_profile <- c(rank_profile,-rank_profile)
     names(new_rank_profile) <- c(paste0('POS_',names(rank_profile)),paste0('NEG_',names(rank_profile)))
@@ -5312,98 +5359,113 @@ draw.GSEA <- function(rank_profile=NULL,use_genes=NULL,use_direction=NULL,main="
   rank_profile <- sort(rank_profile,decreasing = TRUE)
   r_len <- length(rank_profile)
   use_pos <- which(names(rank_profile) %in% use_genes)
-  layout(matrix(c(rep(4,10),3,2,rep(1,10)),ncol=1))
-  # plot
-  ## rank for all
-  par(mar=c(10,6,0,2))
-  mm <- max(abs(rank_profile))
-  y1 <- seq(-mm,mm,length.out=7); y1 <- round(y1,1)
-  unit <- r_len/10; unit <- round(unit/100)*100
-  x1 <- seq(0,r_len,by=unit);x1 <- unique(x1); x1 <- c(x1,max(x1)+unit)
-  par(usr=c(0,max(x1),-mm,mm))
-  plot(rank_profile,col='grey',pch=16,xaxt='n',yaxt='n',xlab="",ylab="",bty='n',type='n',ylim=c(-mm,mm))
-  polygon(x=c(0,1:r_len,r_len),y=c(0,rank_profile,0),col='grey',border=NA)
-  if(is.null(left_annotation)==FALSE) text(0+r_len/100,mm,adj=0,left_annotation,col='red',xpd=TRUE)
-  if(is.null(right_annotation)==FALSE) text(r_len-r_len/100,-mm,adj=1,right_annotation,col='blue',xpd=TRUE)
-  #axis(side=2,at=y1,labels=y1,las=2);
-  pp <- par()$usr
-  segments(0,0,r_len,0,lwd=0.5)
-  segments(0,min(y1),0,max(y1),lwd=1.5)
-  text(-(pp[2]-pp[1])/50,y1,y1,adj=1,xpd=TRUE)
-  segments(-(pp[2]-pp[1])/100,y1,0,y1,lwd=1.5)
-  mtext(side=2,line = 2,'Ranked list metric (PreRanked)',cex=1.2)
-  mtext(side=1,line = 3,'Rank in Ordered Dataset',cex=1.2)
-  if(is.null(use_direction)==FALSE){
-    axis(side=1,at=x1,labels=get_label_manual(x1/2))
-  }else{
-    axis(side=1,at=x1,labels=get_label_manual(x1))
-  }
-  # get zero cross
-  w1 <- which.min(abs(rank_profile))
-  abline(v=w1,lty=2,col='grey')
-  if(is.null(use_direction)==FALSE){
-    text(w1,-mm/4,sprintf('Zero cross at %s',round(w1/2)),adj=0.5)
-  }else{
-    text(w1,-mm/4,sprintf('Zero cross at %d',w1),adj=0.5)
-  }
-  if(is.null(use_direction)==FALSE){
-    legend(w1,pp[3]-(pp[4]-pp[3])/4,lty=1,lwd=2,c('Enrichment profile','Hits_positive_direction','Hits_negative_direction','Ranking metric scores'),
-           col=c('green',pos_col,neg_col,'grey'),xpd=TRUE,horiz=TRUE,xjust=0.5,cex=1.2)
-  }else{
-    legend(w1,pp[3]-(pp[4]-pp[3])/4,lty=1,lwd=2,c('Enrichment profile','Hits','Ranking metric scores'),
-           col=c('green','black','grey'),xpd=TRUE,horiz=TRUE,xjust=0.5,cex=1.2)
-  }
 
-  pm <- par()$usr
-  ## get image bar
-  par(mar=c(0,6,0,2))
-  use_col <- z2col(rank_profile,sig_thre = 0,n_len = 30,blue_col='blue',red_col='red')
-  image(x=as.matrix(1:r_len),col=use_col,bty='n',xaxt='n',yaxt='n',xlim=c(pm[1],pm[2])/r_len)
-  abline(v=use_pos/r_len,col='grey')
-  ## mark gene position;
-  par(mar=c(0,6,0,2))
-  plot(1,col='white',xlab="",ylab="",bty='n',xlim=c(1,r_len),xaxt='n',yaxt='n')
-  if(is.null(use_direction)==FALSE){
-    use_pos_P <- which(names(rank_profile) %in% use_genes[grep('POS',use_genes)])
-    use_pos_N <- which(names(rank_profile) %in% use_genes[grep('NEG',use_genes)])
-    abline(v=use_pos_P,col=pos_col)
-    abline(v=use_pos_N,col=neg_col)
-  }else{
-    abline(v=use_pos)
+  plot_part <- function(ori=FALSE,before_off=FALSE){
+    if(before_off==TRUE) dev.off()
+    if(is.null(pdf_file)==FALSE){
+      pdf(pdf_file,width=10,height=10)
+    }
+    # height: 4|3|2|1
+    layout(matrix(c(rep(4,10),3,2,rep(1,10)),ncol=1))
+    # plot
+    ## rank for all, 1
+    par(mar=c(10,6,0.5,2))
+    mm <- max(abs(rank_profile))
+    y1 <- seq(-mm,mm,length.out=7); y1 <- round(y1,1)
+    unit <- r_len/10; unit <- round(unit/100)*100
+    x1 <- seq(0,r_len,by=unit);x1 <- unique(x1); x1 <- c(x1,max(x1)+unit)
+    par(usr=c(0,max(x1),-mm,mm))
+    plot(rank_profile,col='grey',pch=16,xaxt='n',xlab="",ylab="",bty='l',type='n',ylim=c(-mm,mm),xaxs='i',las=1,yaxs='i')
+    polygon(x=c(0,1:r_len,r_len),y=c(0,rank_profile,0),col='grey',border=NA)
+    if(is.null(left_annotation)==FALSE) text(0,mm-par.char2pos()[2],pos=4,left_annotation,col='red',xpd=TRUE)
+    if(is.null(right_annotation)==FALSE) text(r_len,-mm+par.char2pos()[2],pos=2,right_annotation,col='blue',xpd=TRUE)
+    pp <- par()$usr
+    mtext(side=2,line = 3,'Ranked list metric (PreRanked)',cex=1.2)
+    mtext(side=1,line = 3.5,'Rank in Ordered Dataset',cex=1.2)
+    if(is.null(use_direction)==FALSE){
+      x1 <- x1[which(x1<length(rank_profile))];
+      x1[length(x1)] <- length(rank_profile)
+      segments(x0=x1,x1=x1,y0=pp[3]-par.char2pos()[2]/5,y1=pp[3],xpd=TRUE)
+      text(x1,pp[3]-par.char2pos()[2]/2,get_label_manual(x1/2),adj=1,xpd=TRUE)
+    }else{
+      x1 <- x1[which(x1<length(rank_profile))]
+      x1[length(x1)] <- length(rank_profile)
+      segments(x0=x1,x1=x1,y0=pp[3]-par.char2pos()[2]/5,y1=pp[3],xpd=TRUE)
+      text(x1,pp[3]-par.char2pos()[2]/2,get_label_manual(x1),adj=1,xpd=TRUE)
+    }
+    # get zero cross
+    w1 <- which.min(abs(rank_profile))
+    abline(v=w1,lty=2,col='grey')
+    if(is.null(use_direction)==FALSE){
+      text(w1,-mm/4,sprintf('Zero cross at %s',round(w1/2)),adj=0.5)
+    }else{
+      text(w1,-mm/4,sprintf('Zero cross at %d',w1),adj=0.5)
+    }
+    if(is.null(use_direction)==FALSE){
+      legend(w1,pp[3]-(pp[4]-pp[3])/4,lty=1,lwd=2,c('Enrichment profile','Hits_positive_direction','Hits_negative_direction','Ranking metric scores'),
+             col=c('green',pos_col,neg_col,'grey'),xpd=TRUE,horiz=TRUE,xjust=0.5,cex=1.2,bty='n')
+    }else{
+      legend(w1,pp[3]-(pp[4]-pp[3])/4,lty=1,lwd=2,c('Enrichment profile','Hits','Ranking metric scores'),
+             col=c('green','black','grey'),xpd=TRUE,horiz=TRUE,xjust=0.5,cex=1.2,bty='n')
+    }
+    pm <- par()$usr
+    ## get image bar, 2
+    par(mar=c(0,6,0,2))
+    use_col <- z2col(rank_profile,sig_thre = 0,n_len = 100,blue_col='blue',red_col='red')
+    image(x=as.matrix(1:r_len),col=use_col,bty='n',xaxt='n',yaxt='n',xlim=c(pm[1],pm[2])/r_len)
+    abline(v=use_pos/r_len,col='grey')
+    #if(is.null(use_direction)==FALSE){
+    #  use_pos_P <- which(names(rank_profile) %in% use_genes[grep('POS',use_genes)])
+    #  use_pos_N <- length(rank_profile)-which(names(rank_profile) %in% use_genes[grep('NEG',use_genes)])
+    #  abline(v=use_pos_P/r_len,col='grey')
+    #  abline(v=use_pos_N/r_len,col='grey')
+    #}else{
+    #  abline(v=use_pos/r_len,col='grey')
+    #}
+    ## mark gene position; 3
+    par(mar=c(0,6,0,2))
+    plot(1,col='white',xlab="",ylab="",bty='n',xlim=c(1,r_len),ylim=c(0,1),xaxt='n',yaxt='n',xaxs='i')
+    if(is.null(use_direction)==FALSE){
+      use_pos_P <- which(names(rank_profile) %in% use_genes[grep('POS',use_genes)])
+      use_pos_N <- length(rank_profile)-which(names(rank_profile) %in% use_genes[grep('NEG',use_genes)])
+      segments(y0=1,y1=0.5,x0=use_pos_P,x1=use_pos_P,col=pos_col)
+      segments(y0=0,y1=0.5,x0=use_pos_N,x1=use_pos_N,col=neg_col)
+      abline(h=0.5,col='light grey')
+    }else{
+      abline(v=use_pos)
+    }
+    ## GSEA ES, 4
+    par(mar=c(0,6,5,2))
+    # get ES score
+    es_res <- get_ES(rank_profile,use_genes)
+    y2 <- seq(min(es_res$RES),max(es_res$RES),length.out=7); y2 <- round(y2,1)
+    if(is.null(use_direction)==FALSE){
+      plot(es_res$RES,col='green',xaxt='n',xlab="",ylab="",bty='n',
+           xlim=c(1,r_len),type='l',lwd=3,ylim=c(min(es_res$RES),max(y2)),main=main,xpd=TRUE,xaxs='i',las=1)
+    }else{
+      plot(es_res$RES,col='green',xaxt='n',xlab="",ylab="",bty='n',
+           xlim=c(1,r_len),type='l',lwd=3,ylim=c(min(es_res$RES),max(y2)),main=main,xpd=TRUE,xaxs='i',las=1)
+    }
+    abline(h=0,lty=2,col='dark grey')
+    pp <- par()$usr
+    mtext(side=2,line = 3,'Enrichment score (ES)',cex=1.2)
+    # add annotation
+    if(is.null(annotation)==TRUE){
+      pv <- ks.test(rank_profile,rank_profile[use_genes])$p.value
+      #print(t.test(rank_profile,rank_profile[use_genes]))
+      if(pv==0){
+        pv <- '<2.2e-16'
+      }else{
+        if(pv<0.01) pv <- format(pv,digits = 3,scientific = TRUE)
+      }
+      annotation <- sprintf("KS test p-value:%s",pv)
+    }
+    if(es_res$RES[which.max(abs(es_res$RES))]>0)
+      text(r_len,max(y2)-par.char2pos()[2],annotation,pos=2,cex=annotation_cex,xpd=TRUE)
+    else
+      text(0,min(y2)+par.char2pos()[2],annotation,pos=4,cex=annotation_cex,xpd=TRUE)
   }
-  ## GSEA ES
-  par(mar=c(0,6,5,2))
-  # get ES score
-  es_res <- get_ES(rank_profile,use_genes)
-  y2 <- seq(min(es_res$RES),max(es_res$RES),length.out=7); y2 <- round(y2,1)
-  if(is.null(use_direction)==FALSE){
-    plot(es_res$RES,col='green',xaxt='n',yaxt='n',xlab="",ylab="",bty='n',
-         xlim=c(1,r_len),type='l',lwd=3,ylim=c(min(es_res$RES),max(y2)),main=main,xpd=TRUE)
-  }else{
-    plot(es_res$RES,col='green',xaxt='n',yaxt='n',xlab="",ylab="",bty='n',
-         xlim=c(1,r_len),type='l',lwd=3,ylim=c(min(es_res$RES),max(y2)),main=main,xpd=TRUE)
-  }
-
-  pp <- par()$usr
-  #abline(h=0)
-  #axis(side=2,at=y2,label=y2,las=2)
-  segments(0,0,r_len,0,lwd=1.5)
-  segments(0,min(y2),0,max(y2),lwd=1.5)
-  text(-(pp[2]-pp[1])/50,y2,y2,adj=1,xpd=TRUE)
-  segments(-(pp[2]-pp[1])/100,y2,0,y2,lwd=1.5)
-  mtext(side=2,line = 2,'Enrichment score (ES)',cex=1.2)
-  # add annotation
-  if(is.null(annotation)==TRUE){
-    annotation <- sprintf("KS test p-value:%s",format(ks.test(rank_profile,rank_profile[use_genes])$p.value,digits = 3,scientific = TRUE))
-  }
-  if(es_res$RES[which.max(abs(es_res$RES))]>0)
-    text(r_len-r_len/50,max(y2),annotation,adj=1,cex=annotation_cex,xpd=TRUE)
-  else
-    text(0+r_len/50,min(y2)+(max(y2)-min(y2))/10,annotation,adj=0,cex=annotation_cex,xpd=TRUE)
-  if(is.null(pdf_file)==FALSE){
-    dev.off()
-  }
-  layout(1);
+  if(is.null(pdf_file)==FALSE){plot_part(ori=TRUE);dev.off()} else {plot_part()}
   return(TRUE)
 }
 
@@ -5994,119 +6056,126 @@ draw.GSEA.NetBID.GS <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_t
   #names(DE_profile) <- rownames(DE)
   n_gene <- length(DE_profile)
   n_driver <- length(sig_gs_list)
-  gswidth <- max(strwidthMod(sig_gs_list,units='inches',cex=1))
-  ratio1 <- ceiling(1.2*n_driver/15) ## profile height to rows
-  ratio2 <- 4 ## width of profile to DA/DE
-  rr1 <- ceiling(gswidth/2)
-  rr2 <- 1
-  #
-  if(is.null(pdf_file)==FALSE){
-    pdf(pdf_file,width=(rr1+rr2+ratio2)*1.5,height=(ratio1+rr2)*1.5)
-  }
-  # get layout
-  layout(matrix(c(rep(0,length.out=rr1),rep(1,length.out=ratio2),rep(0,length.out=rr2*1),
-                  rep(c(rep(4,length.out=rr1),rep(2,length.out=ratio2),rep(3,length.out=rr2*1)),
-                      length.out=ratio1*(ratio2+rr1+rr2))),
-                ncol=c(ratio2+rr1+rr2),byrow=TRUE))
-  print(matrix(c(rep(0,length.out=rr1),rep(1,length.out=ratio2),rep(0,length.out=rr2*1),
-                 rep(c(rep(4,length.out=rr1),rep(2,length.out=ratio2),rep(3,length.out=rr2*1)),
-                     length.out=ratio1*(ratio2+rr1+rr2))),
-               ncol=c(ratio2+rr1+rr2),byrow=TRUE))
-  ## plot 1
-  par(mar=c(1.5,1.5,4,0))
-  mm <- quantile(DE_profile,probs=c(0.0001,0.9999));
-  mm <- max(abs(mm)); mm <- c(-mm,mm)
-  y1 <- seq(mm[1],mm[2],length.out=5); y1 <- round(y1,1)
-  unit <- n_gene/10; unit <- round(unit/100)*100
-  x1 <- seq(0,n_gene,by=unit);x1 <- unique(x1); x1 <- c(x1,max(x1)+unit)
-  par(usr=c(0,length(DE_profile),mm[1],mm[2]))
-  plot(DE_profile,col='white',pch=16,xaxt='n',yaxt='n',xlab="",ylab="",bty='n',type='n',ylim=c(mm[1],mm[2]),main=main,cex.main=1.8)
-  pp <- par()$usr; rr <- (pp[2]-pp[1])/n_gene
-  polygon(x=c(pp[1],c(1:n_gene)*rr+pp[1],pp[2]),y=c(0,DE_profile,0),col='grey',border='grey',xpd=TRUE,lwd=0.3)
-  if(profile_trend=='pos2neg'){
-    if(is.null(left_annotation)==FALSE) text(pp[1]+(pp[2]-pp[1])/100,mm[2]*0.8,adj=0,left_annotation,col=brewer.pal(9,'Reds')[6],xpd=TRUE,cex=1.2)
-    if(is.null(right_annotation)==FALSE) text(pp[2]-(pp[2]-pp[1])/100,mm[1]*0.8,adj=1,right_annotation,col=brewer.pal(9,'Blues')[6],xpd=TRUE,cex=1.2)
-  }else{
-    if(is.null(left_annotation)==FALSE) text(pp[1]+(pp[2]-pp[1])/100,mm[1]*0.8,adj=0,left_annotation,col=brewer.pal(9,'Reds')[6],xpd=TRUE,cex=1.2)
-    if(is.null(right_annotation)==FALSE) text(pp[2]-(pp[2]-pp[1])/100,mm[2]*0.8,adj=1,right_annotation,col=brewer.pal(9,'Blues')[6],xpd=TRUE,cex=1.2)
-  }
-  axis(side=2,at=y1,labels=y1)
-  mtext(side=2,line = 2.5,profile_col,cex=1)
-  segments(pp[1],mm[1],pp[2],mm[1],xpd=TRUE)
-  segments(x1*rr,mm[1]-(mm[2]-mm[1])/30,x1*rr,mm[1],xpd=TRUE)
-  text(x1*rr,mm[1]-(mm[2]-mm[1])/10,get_label_manual(x1),adj=0.5,xpd=TRUE)
-  ## plot2
-  par(mar=c(2,1.5,2,0))
-  plot(1,col='white',xlab="",ylab="",xlim=c(0,n_gene),xaxt='n',yaxt='n')
-  pp <- par()$usr;rr <- (pp[2]-pp[1])/n_gene
-  yy1 <- seq(from=pp[3],to=pp[4],length.out=n_driver+1)
-  segments(x0=pp[1],x1=pp[2],y0=yy1,y1=yy1,lwd=0.2,col='light grey')
-  yy2 <- seq(from=pp[3],to=pp[4],length.out=length(sig_gs_list)+1)
-  segments(x0=pp[1],x1=pp[2],y0=yy2,y1=yy2,lwd=2,col='white')
-  segments(x0=pp[1],x1=pp[2],y0=yy2,y1=yy2,lwd=1.2,col='dark grey')
-  # add columns
-  use_target_list <- use_gs2gene[sig_gs_list]
-  cc <- z2col(DE_profile,sig_thre=profile_sig_thre,n_len=100,red_col = brewer.pal(9,'Reds')[5:9],blue_col=brewer.pal(9,'Blues')[5:9],
-              col_max_thre=max(abs(DE_profile)))
-  cc[which(cc=='white')] <- 'light grey'
-  for(i in 1:length(sig_gs_list)){
-    t1 <- use_target_list[[sig_gs_list[i]]]
-    w0 <- which(DE_profile_name %in% t1)
-    w1 <- w0*rr+pp[1]
-    if(target_col=='black'){
-      segments(x0=w1,x1=w1,y0=yy1[i],y1=yy1[i+1],col='black',lwd=1)
-    }else{
-      segments(x0=w1,x1=w1,y0=yy1[i],y1=yy1[i+1],lwd=1.5,col=cc[w0])
+  plot_part <- function(ori=FALSE,before_off=FALSE){
+    gswidth <- max(strwidthMod(sig_gs_list,units='inches',cex=1))
+    gsheight <- max(strheightMod(sig_gs_list,units='inches',cex=1))*n_driver*1.5
+    gswidth <- ceiling(gswidth)
+    ratio1 <- ceiling(gsheight/1.5)
+    ratio2 <- 4 ## width of main profile
+    rr1 <- gswidth
+    rr2 <- 1
+    # width: rr1|ratio2|rr2
+    # height: 1.5|gsheight
+    if(before_off==TRUE) dev.off()
+    if(is.null(pdf_file)==FALSE){
+      pdf(pdf_file,width=rr1+rr2+ratio2,height=gsheight*(ratio1+1))
     }
-  }
-  ## plot 3
-  par(mar=c(2,0.5,2,2))
-  plot(1,col='white',xlab="",ylab="",xlim=c(0,1),xaxt='n',yaxt='n',bty='n')
-  pp <- par()$usr
-  rect(xleft=pp[1],xright=pp[2],ybottom=pp[3],ytop=pp[4])
-  yy2 <- seq(from=pp[3],to=pp[4],length.out=length(sig_gs_list)+1)
-  segments(x0=pp[1],x1=pp[2],y0=yy2,y1=yy2,lwd=2,col='white',xpd=TRUE)
-  segments(x0=pp[1],x1=pp[2],y0=yy2,y1=yy2,lwd=1.2,col='dark grey',xpd=TRUE)
-  ## add text
-  mm_min <- min(abs(gs_DA_Z[sig_gs_list]),na.rm=TRUE)*0.9
-  mm_min <- max(mm_min,Z_sig_thre)
-  mm_max <- max(abs(gs_DA_Z[sig_gs_list]),na.rm=TRUE)*1.1
-  c1 <- z2col(gs_DA_Z[sig_gs_list],sig_thre=Z_sig_thre,n_len=100,red_col = brewer.pal(9,'Reds')[7],blue_col=brewer.pal(9,'Blues')[7],
-              col_min_thre=mm_min,col_max_thre=mm_max)
-  for(i in 1:length(sig_gs_list)){
-    z1 <- gs_DA_Z[sig_gs_list[i]]
-    p1 <- get_z2p(z1)
-    rect(xleft=pp[1],xright=pp[2],ybottom=yy2[i],ytop=yy2[i+1],col=c1[i],border='dark grey',xpd=TRUE)
-    text(x=(pp[1]+pp[2])/2,y=(yy2[i]+yy2[i+1])/2,p1,adj=0.5)
-  }
-  textheight <- strheightMod('DA',units='user',cex=1.5)
-  text((pp[1]+pp[2])/2,pp[4]+textheight,'DA',xpd=TRUE,cex=1.5)
-  ## plot 4
-  par(mar=c(2,6,2,0.2))
-  plot(1,col='white',xlab="",ylab="",xlim=c(0,2),xaxt='n',yaxt='n',bty='n')
-  pp <- par()$usr
-  yy2 <- seq(from=pp[3],to=pp[4],length.out=length(sig_gs_list)+1)
-  yy22 <- (yy2[1:(length(yy2)-1)]+yy2[2:length(yy2)])/2
-  dyy <- yy22[2]-yy22[1]
-  # add target size
-  target_size <- unlist(lapply(use_gs2gene,length))
-  mm <- max(target_size)
-  rr <- ceiling(gswidth)*1.5
-  tt_left <- pp[2]-(pp[2]-pp[1])/(1+rr)
-  tt <- (pp[2]-pp[1])/(1+rr)
-  text(show_label,x=tt_left-tt/25,y=yy22,xpd=TRUE,adj=1)
-  for(i in 1:length(sig_gs_list)){
-    rect(xleft=tt_left,xright=tt_left+target_size[i]/mm*tt,
-         ybottom=yy22[i]-dyy*0.2,ytop=yy22[i]+dyy*0.2,col='dark grey',border=NA)
-  }
-  segments(x0=tt_left,x1=pp[2],y0=pp[4],y1=pp[4],xpd=TRUE)
-  sst <- round(seq(0,mm,length.out=3))
-  ss <- sst*tt/mm+tt_left
-  segments(x0=ss,x1=ss,y0=pp[4],y1=pp[4]+(pp[4]-pp[3])/150,xpd=TRUE)
-  text(x=ss,y=pp[4]+(pp[4]-pp[3])/100,srt=90,sst,xpd=TRUE,adj=0,cex=0.8)
-  text('Size',x=tt_left-tt/10,y=pp[4]+(pp[4]-pp[3])/50,adj=1,xpd=TRUE,cex=0.8)
+    # get layout
+    layout(matrix(c(rep(0,length.out=rr1),rep(1,length.out=ratio2),rep(0,length.out=rr2*1),
+                    rep(c(rep(4,length.out=rr1),rep(2,length.out=ratio2),rep(3,length.out=rr2*1)),
+                        length.out=ratio1*(ratio2+rr1+rr2))),
+                  ncol=c(ratio2+rr1+rr2),byrow=TRUE))
+    print(matrix(c(rep(0,length.out=rr1),rep(1,length.out=ratio2),rep(0,length.out=rr2*1),
+                   rep(c(rep(4,length.out=rr1),rep(2,length.out=ratio2),rep(3,length.out=rr2*1)),
+                       length.out=ratio1*(ratio2+rr1+rr2))),
+                 ncol=c(ratio2+rr1+rr2),byrow=TRUE))
+    # 0|1|0
+    # 4|2|3
+    ## plot 1
+    par(mar=c(1.5,1.5,4,0))
+    mm <- quantile(DE_profile,probs=c(0.0001,0.9999));
+    mm <- max(abs(mm)); mm <- c(-mm,mm)
+    y1 <- seq(mm[1],mm[2],length.out=5); y1 <- round(y1,1)
+    unit <- n_gene/10; unit <- round(unit/100)*100
+    x1 <- seq(0,n_gene,by=unit);x1 <- unique(x1); x1 <- c(x1[1:(length(x1)-1)],n_gene)
+    par(usr=c(0,length(DE_profile),mm[1],mm[2]))
+    plot(DE_profile,col='white',pch=16,xaxt='n',yaxt='n',xlab="",ylab="",bty='n',type='n',ylim=c(mm[1],mm[2]),main=main,cex.main=1.8)
+    pp <- par()$usr; rr <- (pp[2]-pp[1])/n_gene
+    polygon(x=c(pp[1],c(1:n_gene)*rr+pp[1],pp[2]),y=c(0,DE_profile,0),col='grey',border='grey',xpd=TRUE,lwd=0.3)
+    if(profile_trend=='pos2neg'){
+      if(is.null(left_annotation)==FALSE) text(pp[1]+(pp[2]-pp[1])/100,mm[2]*0.8,adj=0,left_annotation,col=brewer.pal(9,'Reds')[6],xpd=TRUE,cex=1.2)
+      if(is.null(right_annotation)==FALSE) text(pp[2]-(pp[2]-pp[1])/100,mm[1]*0.8,adj=1,right_annotation,col=brewer.pal(9,'Blues')[6],xpd=TRUE,cex=1.2)
+    }else{
+      if(is.null(left_annotation)==FALSE) text(pp[1]+(pp[2]-pp[1])/100,mm[1]*0.8,adj=0,left_annotation,col=brewer.pal(9,'Blues')[6],xpd=TRUE,cex=1.2)
+      if(is.null(right_annotation)==FALSE) text(pp[2]-(pp[2]-pp[1])/100,mm[2]*0.8,adj=1,right_annotation,col=brewer.pal(9,'Reds')[6],xpd=TRUE,cex=1.2)
+    }
+    axis(side=2,at=y1,labels=y1)
+    mtext(side=2,line = 2.5,profile_col,cex=1)
+    segments(pp[1],mm[1],pp[2],mm[1],xpd=TRUE)
+    segments(x1*rr+pp[1],mm[1]-(mm[2]-mm[1])/30,x1*rr+pp[1],mm[1],xpd=TRUE)
+    text(x1*rr+pp[1],mm[1]-(mm[2]-mm[1])/10,get_label_manual(x1),adj=1,xpd=TRUE)
+    ## plot2
+    par(mar=c(2,1.5,2,0))
+    plot(1,col='white',xlab="",ylab="",xlim=c(0,n_gene),xaxt='n',yaxt='n')
+    pp <- par()$usr;rr <- (pp[2]-pp[1])/n_gene
+    yy1 <- seq(from=pp[3],to=pp[4],length.out=n_driver+1)
+    yy2 <- seq(from=pp[3],to=pp[4],length.out=length(sig_gs_list)+1)
+    # add columns
+    use_target_list <- use_gs2gene[sig_gs_list]
+    cc <- z2col(DE_profile,sig_thre=profile_sig_thre,n_len=100,red_col = brewer.pal(9,'Reds')[5:9],blue_col=brewer.pal(9,'Blues')[5:9],
+                col_max_thre=max(abs(DE_profile)))
+    cc[which(cc=='white')] <- 'light grey'
+    for(i in 1:length(sig_gs_list)){
+      t1 <- use_target_list[[sig_gs_list[i]]]
+      w0 <- which(DE_profile_name %in% t1)
+      w1 <- w0*rr+pp[1]
+      if(target_col=='black'){
+        segments(x0=w1,x1=w1,y0=yy1[i],y1=yy1[i+1],col='black',lwd=1)
+      }else{
+        segments(x0=w1,x1=w1,y0=yy1[i],y1=yy1[i+1],lwd=1.5,col=cc[w0])
+      }
+    }
+    segments(x0=pp[1],x1=pp[2],y0=yy1,y1=yy1,lwd=0.2,col='light grey')
+    segments(x0=pp[1],x1=pp[2],y0=yy2,y1=yy2,lwd=2,col='white')
+    segments(x0=pp[1],x1=pp[2],y0=yy2,y1=yy2,lwd=1.2,col='dark grey')
+    ## plot 3
+    par(mar=c(2,0.5,2,2))
+    plot(1,col='white',xlab="",ylab="",xlim=c(0,1),xaxt='n',yaxt='n',bty='n')
+    pp <- par()$usr
+    rect(xleft=pp[1],xright=pp[2],ybottom=pp[3],ytop=pp[4])
+    yy2 <- seq(from=pp[3],to=pp[4],length.out=length(sig_gs_list)+1)
+    segments(x0=pp[1],x1=pp[2],y0=yy2,y1=yy2,lwd=2,col='white',xpd=TRUE)
+    segments(x0=pp[1],x1=pp[2],y0=yy2,y1=yy2,lwd=1.2,col='dark grey',xpd=TRUE)
+    ## add text
+    mm_min <- min(abs(gs_DA_Z[sig_gs_list]),na.rm=TRUE)*0.9
+    mm_min <- max(mm_min,Z_sig_thre)
+    mm_max <- max(abs(gs_DA_Z[sig_gs_list]),na.rm=TRUE)*1.1
+    c1 <- z2col(gs_DA_Z[sig_gs_list],sig_thre=Z_sig_thre,n_len=100,red_col = brewer.pal(9,'Reds')[7],blue_col=brewer.pal(9,'Blues')[7],
+                col_min_thre=mm_min,col_max_thre=mm_max)
+    for(i in 1:length(sig_gs_list)){
+      z1 <- gs_DA_Z[sig_gs_list[i]]
+      p1 <- get_z2p(z1)
+      rect(xleft=pp[1],xright=pp[2],ybottom=yy2[i],ytop=yy2[i+1],col=c1[i],border='dark grey',xpd=TRUE)
+      text(x=(pp[1]+pp[2])/2,y=(yy2[i]+yy2[i+1])/2,p1,adj=0.5)
+    }
+    text((pp[1]+pp[2])/2,pp[4],'DA',xpd=TRUE,cex=1.5,pos=3)
+    ## plot 4
+    par(mar=c(2,6,2,0.2))
+    plot(1,col='white',xlab="",ylab="",xlim=c(0,2),xaxt='n',yaxt='n',bty='n')
+    pp <- par()$usr
+    yy2 <- seq(from=pp[3],to=pp[4],length.out=length(sig_gs_list)+1)
+    yy22 <- (yy2[1:(length(yy2)-1)]+yy2[2:length(yy2)])/2
+    dyy <- yy22[2]-yy22[1]
+    # add target size
+    target_size <- unlist(lapply(use_gs2gene,length))
+    mm <- max(target_size)
+    rr <- ceiling(gswidth)*1.5
+    tt_left <- pp[2]-(pp[2]-pp[1])/(1+rr)
+    tt <- (pp[2]-pp[1])/(1+rr)
+    text(show_label,x=tt_left-tt/25,y=yy22,xpd=TRUE,adj=1)
+    for(i in 1:length(sig_gs_list)){
+      rect(xleft=tt_left,xright=tt_left+target_size[i]/mm*tt,
+           ybottom=yy22[i]-dyy*0.2,ytop=yy22[i]+dyy*0.2,col='dark grey',border=NA)
+    }
+    segments(x0=tt_left,x1=pp[2],y0=pp[4],y1=pp[4],xpd=TRUE)
+    sst <- round(seq(0,mm,length.out=3))
+    ss <- sst*tt/mm+tt_left
+    segments(x0=ss,x1=ss,y0=pp[4],y1=pp[4]+(pp[4]-pp[3])/150,xpd=TRUE)
+    text(x=ss,y=pp[4]+(pp[4]-pp[3])/100,srt=90,sst,xpd=TRUE,adj=0,cex=0.8)
+    text('Size',x=tt_left-tt/10,y=pp[4]+(pp[4]-pp[3])/50,adj=1,xpd=TRUE,cex=0.8)
   ##
-  if(is.null(pdf_file)==FALSE) dev.off()
+  }
+  if(is.null(pdf_file)==FALSE){plot_part(ori=TRUE);plot_part(ori=TRUE,before_off=TRUE);dev.off();dev.off();} else {plot_part()}
   layout(1);
   return(TRUE)
 }
@@ -6330,6 +6399,7 @@ get_label_manual <- function(x){
 #' @param arrow_direction character, choose from 'in' or 'out'. Default is 'out'.
 #' @param pdf_file character, file path for the pdf file to save the figure into pdf format.If NULL, will not generate pdf file. Default is NULL.
 #' @param n_layer integer, number of circle layers to display, default is 1.
+#' @param alphabetical_order logical, whether the target gene labels are sorted by the alphabetical order, if FALSE will be ordered by statistics. Default is FALSE.
 #'
 #' @return Will return logical value indicating whether the plot has been successfully generated
 #'
@@ -6361,7 +6431,7 @@ get_label_manual <- function(x){
 #' @export
 draw.targetNet <- function(source_label="",source_z=NULL,edge_score=NULL,
                            label_cex=0.7,source_cex=1,
-                           pdf_file=NULL,arrow_direction='out',n_layer=1){
+                           pdf_file=NULL,arrow_direction='out',n_layer=1,alphabetical_order=FALSE){
   pos_col <- brewer.pal(12,'Paired')[8]
   neg_col <- brewer.pal(12,'Paired')[4]
   edge_score<- sort(edge_score)
@@ -6373,6 +6443,7 @@ draw.targetNet <- function(source_label="",source_z=NULL,edge_score=NULL,
   edge_score <- tmp1
   edge_score<- edge_score[order(abs(edge_score),decreasing = TRUE)]
   g1 <- names(edge_score)
+  if(alphabetical_order==TRUE)  g1 <- sort(g1)
   ec <- z2col(edge_score*100,sig_thre=0,n_len=length(edge_score),red_col=pos_col,blue_col=neg_col);names(ec) <- names(edge_score)
   ec <- get_transparent(ec,alpha=0.8); names(ec) <- g1
   ew <- 2*label_cex*(abs(edge_score)-min(abs(edge_score)))/(max(abs(edge_score))-min(abs(edge_score)))+label_cex/2; names(ew) <- names(edge_score)
@@ -6380,64 +6451,68 @@ draw.targetNet <- function(source_label="",source_z=NULL,edge_score=NULL,
     t2p <- pi*2 * tt
     list(x = radius * cos(t2p), y = radius * sin(t2p))
   }
-  geneWidth <- max(strwidthMod(g1,'inches',cex=label_cex))
-  if(is.null(pdf_file)==FALSE) pdf(pdf_file,width=6+2*geneWidth,height=6+2*geneWidth)
-  par(mai=c(1,1,1,1))
-  plot(1,xlim=c(-1,1),ylim=c(-1,1),bty='n',col='white',xlab="",ylab="",xaxt='n',yaxt='n')
-  pp <- par()$usr
-  ## add target label
-  #tt <- seq(-0.5,0.5,length.out=length(g1)+1)[-1]; ## g1
-  rad_v <- seq(from=max(0.6,1-n_layer*0.1),to=1,length.out=n_layer)
-  if(n_layer==1) rad_v=0.8
-  #tmp1 <- ceiling(length(g1)/sum(rad_v)*rad_v)
-  uu <- ceiling(length(g1)/length(rad_v))
-  tmp1 <- rep(uu,length.out=length(rad_v))
-  if(n_layer>1) tmp1[length(tmp1)] <- length(g1)-sum(tmp1[1:(length(tmp1)-1)]) else tmp1 <- length(g1)
-  tmp1<-cumsum(tmp1)
-  all_g1 <- list()
-  for(i in 1:n_layer){
-    if(i==1) all_g1[[i]] <- g1[1:tmp1[i]] else all_g1[[i]]  <- g1[(tmp1[i-1]+1):tmp1[i]]
-  }
-  all_g1 <- lapply(all_g1,function(x)x[order(edge_score[x])])
-  #all_tt <- lapply(1:n_layer,function(i)seq(-0.5,0.5,length.out=length(all_g1[[i]])+1)[-1])
-  all_tt <- lapply(1:n_layer,function(i){
-    if(i==1) return(seq(-0.5,0.5,length.out=uu+1)[-1][1:length(all_g1[[i]])])
-    if(i>1) return(seq(-0.5-(i-1)/(n_layer*uu),0.5-(i-1)/(n_layer*uu),length.out=uu+1)[-1][1:length(all_g1[[i]])])
-  })
-  all_p <- lapply(1:n_layer,function(i)t2xy(all_tt[[i]],radius=rad_v[i]))
-  # add line
-  for(i in 1:n_layer){
-    each_v <- rad_v[i]
-    p1 <- all_p[[i]]
-    g1_use <- all_g1[[i]]
-    tt <- all_tt[[i]]
-    geneWidth <- strwidthMod(source_label,'user',cex=source_cex)
-    if(arrow_direction=='out'){
-      p2<-t2xy(tt,radius=each_v-label_cex/36);
-      p3<-t2xy(tt,radius=each_v-label_cex/48);
-      arrows(x0=0,y0=0,x1=p2$x,y1=p2$y,col=ec[g1_use],lwd=ew[g1_use],angle=10,length=0.1*label_cex);
-    }else{
-      p2<-t2xy(tt,radius=each_v-label_cex/36);
-      p3<-t2xy(tt,radius=each_v-label_cex/36);
-      p4<-t2xy(tt,radius=geneWidth/2);
-      arrows(x0=p2$x,y0=p2$y,x1=p4$x,y1=p4$y,col=ec[g1_use],lwd=ew[g1_use],angle=5,length=0.1*label_cex);
+  plot_part <- function(ori=FALSE,before_off=FALSE){
+    geneWidth <- max(strwidthMod(g1,'inches',cex=label_cex))
+    if(before_off==TRUE) dev.off()
+    if(is.null(pdf_file)==FALSE) pdf(pdf_file,width=6+2*geneWidth,height=6+2*geneWidth)
+    par(mai=c(1,1,1,1))
+    plot(1,xlim=c(-1,1),ylim=c(-1,1),bty='n',col='white',xlab="",ylab="",xaxt='n',yaxt='n')
+    pp <- par()$usr
+    ## add target label
+    #tt <- seq(-0.5,0.5,length.out=length(g1)+1)[-1]; ## g1
+    rad_v <- seq(from=0.5,to=1,length.out=n_layer)
+    if(n_layer==1) rad_v=0.8
+    #tmp1 <- ceiling(length(g1)/sum(rad_v)*rad_v)
+    uu <- ceiling(length(g1)/length(rad_v))
+    tmp1 <- rep(uu,length.out=length(rad_v))
+    if(n_layer>1) tmp1[length(tmp1)] <- length(g1)-sum(tmp1[1:(length(tmp1)-1)]) else tmp1 <- length(g1)
+    tmp1<-cumsum(tmp1)
+    all_g1 <- list()
+    for(i in 1:n_layer){
+      if(i==1) all_g1[[i]] <- g1[1:tmp1[i]] else all_g1[[i]]  <- g1[(tmp1[i-1]+1):tmp1[i]]
     }
-    points(p3$x,p3$y,pch=16,col='dark grey',cex=label_cex)
+    if(alphabetical_order==FALSE) all_g1 <- lapply(all_g1,function(x)x[order(edge_score[x])])
+    #all_tt <- lapply(1:n_layer,function(i)seq(-0.5,0.5,length.out=length(all_g1[[i]])+1)[-1])
+    all_tt <- lapply(1:n_layer,function(i){
+      if(i==1) return(seq(-0.5,0.5,length.out=uu+1)[-1][1:length(all_g1[[i]])])
+      if(i>1) return(seq(-0.5-(i-1)/(n_layer*uu),0.5-(i-1)/(n_layer*uu),length.out=uu+1)[-1][1:length(all_g1[[i]])])
+    })
+    all_p <- lapply(1:n_layer,function(i)t2xy(all_tt[[i]],radius=rad_v[i]))
+    # add line
+    for(i in 1:n_layer){
+      each_v <- rad_v[i]
+      p1 <- all_p[[i]]
+      g1_use <- all_g1[[i]]
+      tt <- all_tt[[i]]
+      geneWidth <- strwidthMod(source_label,'user',cex=source_cex)
+      if(arrow_direction=='out'){
+        p2<-t2xy(tt,radius=each_v-label_cex/36);
+        p3<-t2xy(tt,radius=each_v-label_cex/48);
+        arrows(x0=0,y0=0,x1=p2$x,y1=p2$y,col=ec[g1_use],lwd=ew[g1_use],angle=10,length=0.1*label_cex);
+      }else{
+        p2<-t2xy(tt,radius=each_v-label_cex/36);
+        p3<-t2xy(tt,radius=each_v-label_cex/36);
+        p4<-t2xy(tt,radius=geneWidth/2);
+        arrows(x0=p2$x,y0=p2$y,x1=p4$x,y1=p4$y,col=ec[g1_use],lwd=ew[g1_use],angle=5,length=0.1*label_cex);
+      }
+      points(p3$x,p3$y,pch=16,col='dark grey',cex=label_cex)
+    }
+    # add label
+    for(j in 1:n_layer){
+      p1 <- all_p[[j]]
+      g1_use <- all_g1[[j]]
+      for(i in 1:length(p1$x)) text(p1$x[i],p1$y[i],g1_use[i],cex=label_cex,srt=180*atan(p1$y[i]/p1$x[i])/pi,adj=ifelse(p1$x[i]>0,0,1),xpd=TRUE)
+    }
+    ## add source label
+    if(is.null(source_z)==TRUE){
+      draw.ellipse(0,0,a=1.05*geneWidth/2,b=1.05*geneWidth/2,col='light grey',border=NA)
+    }else{
+      draw.ellipse(0,0,a=1.05*geneWidth/2,b=1.05*geneWidth/2,col=z2col(source_z),border=NA)
+    }
+    text(0,0,source_label,adj=0.5,xpd=TRUE,cex=source_cex)
+    legend(x=pp[1],y=pp[3],fill=c(pos_col,neg_col),c('Positively-regulated','Negatively-regulated'),bty='n',xpd=T,border=NA,cex=label_cex,horiz = TRUE)
   }
-  # add label
-  for(j in 1:n_layer){
-    p1 <- all_p[[j]]
-    g1_use <- all_g1[[j]]
-    for(i in 1:length(p1$x)) text(p1$x[i],p1$y[i],g1_use[i],cex=label_cex,srt=180*atan(p1$y[i]/p1$x[i])/pi,adj=ifelse(p1$x[i]>0,0,1),xpd=TRUE)
-  }
-  ## add source label
-  if(is.null(source_z)==TRUE){
-    draw.ellipse(0,0,a=1.05*geneWidth/2,b=1.05*geneWidth/2,col='light grey',border=NA)
-  }else{
-    draw.ellipse(0,0,a=1.05*geneWidth/2,b=1.05*geneWidth/2,col=z2col(source_z),border=NA)
-  }
-  text(0,0,source_label,adj=0.5,xpd=TRUE,cex=source_cex)
-  if(is.null(pdf_file)==FALSE) dev.off()
+  if(is.null(pdf_file)==FALSE){plot_part(ori=TRUE);plot_part(ori=TRUE,before_off=TRUE);dev.off();dev.off()} else {plot_part()}
   return(TRUE)
 }
 
@@ -6470,6 +6545,8 @@ draw.targetNet <- function(source_label="",source_z=NULL,edge_score=NULL,
 #' This parameter will be passed to function \code{test.targetNet.overlap} to test whether the target genes of the two drivers are significantly intersected.
 #' If NULL, will do not perform this test. Default is NULL.
 #' @param show_test logical, indicating whether the testing results will be printed and returned. Default is FALSE.
+#' @param n_layer integer, number of circle layers to display, default is 1.
+#' @param alphabetical_order logical, whether the target gene labels are sorted by the alphabetical order, if FALSE will be ordered by statistics. Default is FALSE.
 #'
 #' @return if \code{show_test}==FALSE, will return logical value indicating whether the plot has been successfully generated, otherwise will return the statistics of testing.
 #'
@@ -6514,7 +6591,7 @@ draw.targetNet.TWO <- function(source1_label="",source2_label="",
                                edge_score1=NULL,edge_score2=NULL,
                                arrow1_direction='out',arrow2_direction='out',
                                label_cex=0.7,source_cex=1,pdf_file=NULL,
-                               total_possible_target=NULL,show_test=FALSE){
+                               total_possible_target=NULL,show_test=FALSE,n_layer=1,alphabetical_order=FALSE){
   pos_col <- brewer.pal(12,'Paired')[8]
   neg_col <- brewer.pal(12,'Paired')[4]
   tmp1 <- sapply(unique(names(edge_score1)),function(x){
@@ -6534,93 +6611,162 @@ draw.targetNet.TWO <- function(source1_label="",source2_label="",
   ec2 <- z2col(edge_score2*100,sig_thre=0,n_len=length(edge_score2),red_col=pos_col,blue_col=neg_col);names(ec2) <- names(edge_score2)
   ew1 <- 2*label_cex*(abs(edge_score1)-min(abs(edge_score1)))/(max(abs(edge_score1))-min(abs(edge_score1)))+label_cex/2; names(ew1) <- names(edge_score1)
   ew2 <- 2*label_cex*(abs(edge_score2)-min(abs(edge_score2)))/(max(abs(edge_score2))-min(abs(edge_score2)))+label_cex/2; names(ew2) <- names(edge_score2)
-  t2xy <- function(tt,radius=1) {
+  t2xy <- function(tt,radius=1,init.angle=0) {
     t2p <- pi*2 * tt + init.angle * pi/180
     list(x = radius * cos(t2p), y = radius * sin(t2p))
   }
-  geneWidth <- max(strwidthMod(g1,'inches',cex=label_cex))
-
-  if(is.null(pdf_file)==FALSE) pdf(pdf_file,width=10+4*geneWidth,height=8+2*geneWidth)
-  plot(1,xlim=c(-1,1),ylim=c(-1,1),bty='n',col='white',xlab="",ylab="",xaxt='n',yaxt='n')
-  par(mai=c(1,1,1,1))
-
-  geneWidth1 <- strwidthMod(source1_label,'user',cex=source_cex)
-  geneWidth2 <- strwidthMod(source2_label,'user',cex=source_cex)
-
-  if(length(g1)>0){
-    tt <- seq(-0.225,0.225,length.out=length(g1));init.angle <- -180;p1<-t2xy(tt,radius=0.8);
-    for(i in 1:length(p1$x)) text(p1$x[i],p1$y[i],g1[i],cex=label_cex,srt=180*atan(p1$y[i]/p1$x[i])/pi,adj=ifelse(p1$x[i]>0,0,1),xpd=TRUE)
-    p1<-t2xy(tt,radius=0.8-label_cex/36);
-    if(arrow1_direction=='out'){
-      p2<-t2xy(tt,radius=0.8-label_cex/36);
-      p3<-t2xy(tt,radius=0.8-label_cex/48);
-      arrows(x0=-0.2,y0=0,x1=p1$x,y1=p1$y,col=ec1[g1],lwd=ew1[g1],angle=10,length=0.1*label_cex);
-    }else{
-      p2<-t2xy(tt,radius=0.8-label_cex/36);
-      p3<-t2xy(tt,radius=0.8-label_cex/36);
-      p4<-t2xy(tt,radius=geneWidth1/2);
-      arrows(x0=p2$x,y0=p2$y,x1=p4$x-0.2,y1=p4$y,col=ec1[g1],lwd=ew1[g1],angle=5,length=0.1*label_cex);
-    }
-    points(p3$x,p3$y,pch=16,col='dark grey',cex=label_cex)
+  #g1|g12|g2
+  if(alphabetical_order==TRUE){
+    g1 <- sort(g1);
+    g2 <- sort(g2);
+    g12 <- sort(g12);
   }
-  if(length(g2)>0){
-    tt <- seq(-0.225,0.225,length.out=length(g2));init.angle <- 0;
-    p1<-t2xy(tt,radius=0.8);
-    for(i in 1:length(p1$x)) text(p1$x[i],p1$y[i],g2[i],cex=label_cex,srt=180*atan(p1$y[i]/p1$x[i])/pi,adj=ifelse(p1$x[i]>0,0,1),xpd=TRUE)
-    p1<-t2xy(tt,radius=0.8-label_cex/36);
-    if(arrow2_direction=='out'){
-      p2<-t2xy(tt,radius=0.8-label_cex/36);
-      p3<-t2xy(tt,radius=0.8-label_cex/48);
-      arrows(x0=0.2,y0=0,x1=p1$x,y1=p1$y,col=ec2[g2],lwd=ew2[g2],angle=10,length=0.1*label_cex);
-    }else{
-      p2<-t2xy(tt,radius=0.8-label_cex/36);
-      p3<-t2xy(tt,radius=0.8-label_cex/36);
-      p4<-t2xy(tt,radius=geneWidth2/2);
-      arrows(x0=p2$x,y0=p2$y,x1=p4$x+0.2,y1=p4$y,col=ec2[g2],lwd=ew2[g2],angle=5,length=0.1*label_cex);
+  plot_part <- function(ori=FALSE,before_off=FALSE){
+    geneWidth <- max(strwidthMod(g1,'inches',cex=label_cex))
+    if(before_off==TRUE) dev.off()
+    if(is.null(pdf_file)==FALSE) pdf(pdf_file,width=10+4*geneWidth,height=8+2*geneWidth)
+    plot(1,xlim=c(-1.4,1.4),ylim=c(-1,1),bty='n',col='white',xlab="",ylab="",xaxt='n',yaxt='n')
+    par(mai=c(1,1,1,1))
+
+    geneWidth1 <- strwidthMod(source1_label,'user',cex=source_cex)
+    geneWidth2 <- strwidthMod(source2_label,'user',cex=source_cex)
+    geneWidth <- max(geneWidth1,geneWidth2)
+
+    ag <- 0.245-0.01*n_layer
+    lp <- 0.4
+    rad_v <- seq(from=0.6,to=1,length.out=n_layer)
+    if(n_layer==1) rad_v=0.8
+
+    if(length(g1)>0){
+      # get info
+      uu <- ceiling(length(g1)/length(rad_v))
+      tmp1 <- rep(uu,length.out=length(rad_v))
+      if(n_layer>1) tmp1[length(tmp1)] <- length(g1)-sum(tmp1[1:(length(tmp1)-1)]) else tmp1 <- length(g1)
+      tmp1<-cumsum(tmp1)
+      all_g1 <- list()
+      for(i in 1:n_layer){
+        if(i==1) all_g1[[i]] <- g1[1:tmp1[i]] else all_g1[[i]]  <- g1[(tmp1[i-1]+1):tmp1[i]]
+      }
+      #all_g1 <- lapply(all_g1,function(x)x[order(edge_score[x])])
+      all_tt <- lapply(1:n_layer,function(i){
+        if(i==1) return(seq(-ag,ag,length.out=uu)[1:length(all_g1[[i]])])
+        if(i>1) return(seq(-ag-(i-1)/(n_layer*uu),ag-(i-1)/(n_layer*uu),length.out=uu)[1:length(all_g1[[i]])])
+      })
+      all_p <- lapply(1:n_layer,function(i)t2xy(all_tt[[i]],radius=rad_v[i],init.angle= -180))
+
+      # add line
+      for(i in 1:n_layer){
+        each_v <- rad_v[i]
+        p1 <- all_p[[i]]
+        g1_use <- all_g1[[i]]
+        tt <- all_tt[[i]]
+        if(arrow1_direction=='out'){
+          p2<-t2xy(tt,radius=each_v-label_cex/36,init.angle= -180);
+          p3<-t2xy(tt,radius=each_v-label_cex/48,init.angle= -180);
+          arrows(x0=-lp,y0=0,x1=p2$x-lp,y1=p2$y,col=ec1[g1_use],lwd=ew1[g1_use],angle=10,length=0.1*label_cex);
+        }else{
+          p2<-t2xy(tt,radius=each_v-label_cex/36,init.angle= -180);
+          p3<-t2xy(tt,radius=each_v-label_cex/36,init.angle= -180);
+          p4<-t2xy(tt,radius=geneWidth/2,init.angle= -180);
+          arrows(x0=p2$x-lp,y0=p2$y,x1=p4$x-lp,y1=p4$y,col=ec1[g1_use],lwd=ew1[g1_use],angle=5,length=0.1*label_cex);
+        }
+        points(p3$x-lp,p3$y,pch=16,col='dark grey',cex=label_cex)
+      }
+      # add label
+      for(j in 1:n_layer){
+        p1 <- all_p[[j]]
+        g1_use <- all_g1[[j]]
+        for(i in 1:length(p1$x)) text(p1$x[i]-lp,p1$y[i],g1_use[i],cex=label_cex,srt=180*atan(p1$y[i]/p1$x[i])/pi,adj=ifelse(p1$x[i]>0,0,1),xpd=TRUE)
+      }
     }
-    points(p3$x,p3$y,pch=16,col='dark grey',cex=label_cex)
+    ##
+    if(length(g2)>0){
+      # get info
+      uu <- ceiling(length(g2)/length(rad_v))
+      tmp1 <- rep(uu,length.out=length(rad_v))
+      if(n_layer>1) tmp1[length(tmp1)] <- length(g2)-sum(tmp1[1:(length(tmp1)-1)]) else tmp1 <- length(g2)
+      tmp1<-cumsum(tmp1)
+      all_g1 <- list()
+      for(i in 1:n_layer){
+        if(i==1) all_g1[[i]] <- g2[1:tmp1[i]] else all_g1[[i]]  <- g2[(tmp1[i-1]+1):tmp1[i]]
+      }
+      #all_g1 <- lapply(all_g1,function(x)x[order(edge_score[x])])
+      all_tt <- lapply(1:n_layer,function(i){
+        if(i==1) return(seq(-ag,ag,length.out=uu)[1:length(all_g1[[i]])])
+        if(i>1) return(seq(-ag-(i-1)/(n_layer*uu),ag-(i-1)/(n_layer*uu),length.out=uu)[1:length(all_g1[[i]])])
+      })
+      all_p <- lapply(1:n_layer,function(i)t2xy(all_tt[[i]],radius=rad_v[i],init.angle=0))
+
+      # add line
+      for(i in 1:n_layer){
+        each_v <- rad_v[i]
+        p1 <- all_p[[i]]
+        g1_use <- all_g1[[i]]
+        tt <- all_tt[[i]]
+        if(arrow2_direction=='out'){
+          p2<-t2xy(tt,radius=each_v-label_cex/36);
+          p3<-t2xy(tt,radius=each_v-label_cex/48);
+          arrows(x0=lp,y0=0,x1=p2$x+lp,y1=p2$y,col=ec2[g1_use],lwd=ew2[g1_use],angle=10,length=0.1*label_cex);
+        }else{
+          p2<-t2xy(tt,radius=each_v-label_cex/36);
+          p3<-t2xy(tt,radius=each_v-label_cex/36);
+          p4<-t2xy(tt,radius=geneWidth/2);
+          arrows(x0=p2$x+lp,y0=p2$y,x1=p4$x+lp,y1=p4$y,col=ec2[g1_use],lwd=ew2[g1_use],angle=5,length=0.1*label_cex);
+        }
+        points(p3$x+lp,p3$y,pch=16,col='dark grey',cex=label_cex)
+      }
+      # add label
+      for(j in 1:n_layer){
+        p1 <- all_p[[j]]
+        g1_use <- all_g1[[j]]
+        for(i in 1:length(p1$x)) text(p1$x[i]+0.4,p1$y[i],g1_use[i],cex=label_cex,srt=180*atan(p1$y[i]/p1$x[i])/pi,adj=ifelse(p1$x[i]>0,0,1),xpd=TRUE)
+      }
+    }
+    ##
+    if(length(g12)>0){
+      rm <- min(0.1*length(g12),1)
+      dd <- par.char2pos()[2]/2; nr <-ceiling(length(g12)/(rm*2/dd));each_col_n<-ceiling(length(g12)/nr)
+      tt <- seq(rm,-rm,length.out=each_col_n);
+      xx <- seq(-lp+geneWidth,lp-geneWidth,length.out=nr)
+      tt <- unlist(lapply(tt,function(x)rep(x,length.out=nr)))[1:length(g12)]
+      xx <- rep(xx,length.out=length(xx)*each_col_n)[1:length(g12)]
+
+      if(arrow1_direction=='out'){
+        arrows(x0=-lp,y0=0,x1=xx,y1=tt,col=ec1[g12],lwd=ew1[g12],angle=10,length=0.1*label_cex)
+      }else{
+        p4<-t2xy(tt,radius=geneWidth/2);
+        arrows(x0=xx,y0=tt,x1=-lp,y1=0,col=ec1[g12],lwd=ew1[g12],angle=5,length=0.1*label_cex);
+      }
+      if(arrow2_direction=='out'){
+        arrows(x0=lp,y0=0,x1=xx,y1=tt,col=ec2[g12],lwd=ew2[g12],angle=10,length=0.1*label_cex)
+      }else{
+        p4<-t2xy(tt,radius=geneWidth/2);
+        arrows(x0=xx,y0=tt,x1=lp,y1=0,col=ec1[g12],lwd=ew1[g12],angle=5,length=0.1*label_cex);
+      }
+      boxtext(xx,tt,labels=g12,col.bg=get_transparent('light grey',0.3),cex=label_cex)
+    }
+    if(is.null(source2_z)==TRUE)
+      draw.ellipse(lp,0,a=geneWidth/2,b=geneWidth/2,col='light grey',border=NA)
+    else
+      draw.ellipse(lp,0,a=geneWidth/2,b=geneWidth/2,col=z2col(source2_z),border=NA)
+
+    text(lp,0,source2_label,adj=0.5,cex=source_cex)
+
+    if(is.null(source1_z)==TRUE)
+      draw.ellipse(-lp,0,a=geneWidth/2,b=geneWidth/2,col='light grey',border=NA)
+    else
+      draw.ellipse(-lp,0,a=geneWidth/2,b=geneWidth/2,col=z2col(source1_z),border=NA)
+    text(-lp,0,source1_label,adj=0.5,cex=source_cex)
+    pp <- par()$usr
+    legend(x=pp[1],y=pp[3],fill=c(pos_col,neg_col),c('Positively-regulated','Negatively-regulated'),bty='n',xpd=T,border=NA,cex=label_cex,horiz = TRUE)
   }
-  if(length(g12)>0){
-    tt <- seq(min(0.1*length(g12),0.7),-min(0.1*length(g12),0.7),length.out=length(g12));
-    if(arrow1_direction=='out'){
-      arrows(x0=-0.2,y0=0,x1=0,y1=tt,col=ec1[g12],lwd=ew1[g12],angle=10,length=0.1*label_cex)
-    }else{
-      p4<-t2xy(tt,radius=geneWidth1/2);
-      arrows(x0=0,y0=tt,x1=-0.2,y1=0,col=ec1[g12],lwd=ew1[g12],angle=5,length=0.1*label_cex);
-      #arrows(x0=-0.2,y0=0,x1=0,y1=tt,col=ec1[g12],lwd=ew1[g12],angle=10,length=0.1*label_cex)
-    }
-    if(arrow2_direction=='out'){
-      arrows(x0=0.2,y0=0,x1=0,y1=tt,col=ec2[g12],lwd=ew2[g12],angle=10,length=0.1*label_cex)
-    }else{
-      p4<-t2xy(tt,radius=geneWidth2/2);
-      arrows(x0=0,y0=tt,x1=0.2,y1=0,col=ec1[g12],lwd=ew1[g12],angle=5,length=0.1*label_cex);
-      #arrows(x0=0.2,y0=0,x1=0,y1=tt,col=ec2[g12],lwd=ew2[g12],angle=10,length=0.1*label_cex)
-    }
-    #segments(x0=-0.2,y0=0,x1=0,y1=tt,col=ec1[g12],lwd=ew1[g12])
-    #segments(x0=0.2,y0=0,x1=0,y1=tt,col=ec2[g12],lwd=ew2[g12])
-    boxtext(0,tt,labels=g12,col.bg=get_transparent('light grey',0.3),cex=label_cex)
-  }
-
-  if(is.null(source2_z)==TRUE)
-    draw.ellipse(0.2,0,a=geneWidth1/2,b=geneWidth1/2,col='light grey',border=NA)
-  else
-    draw.ellipse(0.2,0,a=geneWidth1/2,b=geneWidth1/2,col=z2col(source2_z),border=NA)
-
-  text(0.2,0,source2_label,adj=0.5,cex=source_cex)
-
-  if(is.null(source1_z)==TRUE)
-    draw.ellipse(-0.2,0,a=geneWidth1/2,b=geneWidth1/2,col='light grey',border=NA)
-  else
-    draw.ellipse(-0.2,0,a=geneWidth1/2,b=geneWidth1/2,col=z2col(source1_z),border=NA)
-
-  text(-0.2,0,source1_label,adj=0.5,cex=source_cex)
   # fisher test for target
+  if(is.null(pdf_file)==FALSE){plot_part(ori=TRUE);plot_part(ori=TRUE,before_off=TRUE);dev.off();dev.off()} else {plot_part()}
+
   if(is.null(total_possible_target)==FALSE & show_test==TRUE){
     res <- test.targetNet.overlap(source1_label,source2_label,names(edge_score1),names(edge_score2),total_possible_target)
-    if(is.null(pdf_file)==FALSE) dev.off()
     return(res)
   }
-  if(is.null(pdf_file)==FALSE) dev.off()
   return(TRUE)
 }
 

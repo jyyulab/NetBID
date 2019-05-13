@@ -56,7 +56,7 @@ DA_driver_limma <- getDE.limma.2G(eset=analysis.par$merge.ac.eset,
 DE_list <- list(DE=DE_gene_limma,DA=DA_driver_limma)
 g1 <- gsub('(.*)_.*','\\\\1',DE_list$DA$ID)
 transfer_tab <- data.frame(DE=g1,DA=DE_list$DA$ID,stringsAsFactors = FALSE)
-res1 <- combineDE(DE_list,transfer_tab=transfer_tab)
+res1 <- combineDE(DE_list,transfer_tab=transfer_tab,main_id='DA')
 
 \dontrun{
 each_subtype <- 'G4'

@@ -6,7 +6,7 @@
 \usage{
 draw.targetNet(source_label = "", source_z = NULL, edge_score = NULL,
   label_cex = 0.7, source_cex = 1, pdf_file = NULL,
-  arrow_direction = "out", n_layer = 1)
+  arrow_direction = "out", n_layer = 1, alphabetical_order = FALSE)
 }
 \arguments{
 \item{source_label}{the label for the driver displayed on the plot.}
@@ -27,6 +27,8 @@ The names for the vector is the gene labels displayed on the plot.}
 \item{arrow_direction}{character, choose from 'in' or 'out'. Default is 'out'.}
 
 \item{n_layer}{integer, number of circle layers to display, default is 1.}
+
+\item{alphabetical_order}{logical, whether the target gene labels are sorted by the alphabetical order, if FALSE will be ordered by statistics. Default is FALSE.}
 }
 \value{
 Will return logical value indicating whether the plot has been successfully generated
