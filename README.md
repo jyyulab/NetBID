@@ -51,7 +51,9 @@ pipeline_analysis_demo1.R
 ## demo scripts for following analysis, mainly focus on visualization
 analysis_and_plot_demo1.R
 
-Part I: for the top list of significant drivers QI.1: How to get the top list of drivers with significantly different activity (DA) in G4 Vs. other subtypes ?
+Part I: for the top list of significant drivers 
+
+QI.1: How to get the top list of drivers with significantly different activity (DA) in G4 Vs. other subtypes ?
 
 QI.2: How to understand the significance of those top DA drivers ?
 

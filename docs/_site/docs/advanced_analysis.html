@@ -9,6 +9,8 @@
   <title>Advanced analysis - </title>
   <link rel="stylesheet" href="http://localhost:4000/assets/css/just-the-docs.css">
   
+  <script type="text/javascript" src="http://localhost:4000/assets/js/vendor/lunr.min.js"></script>
+  
   <script type="text/javascript" src="http://localhost:4000/assets/js/just-the-docs.js"></script>
 
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -39,32 +41,7 @@
         
           <li class="navigation-list-item">
             
-            <a href="http://localhost:4000/docs/pre_request" class="navigation-list-link">Pre-requested</a>
-            
-          </li>
-        
-      
-    
-      
-        
-          <li class="navigation-list-item">
-            
             <a href="http://localhost:4000/docs/network_construction" class="navigation-list-link">Network construction</a>
-            
-              
-              <ul class="navigation-list-child-list ">
-                
-                  
-                
-                  
-                
-                  
-                
-                  
-                
-                  
-                
-              </ul>
             
           </li>
         
@@ -76,21 +53,6 @@
             
             <a href="http://localhost:4000/docs/driver_estimation" class="navigation-list-link">Driver estimation</a>
             
-              
-              <ul class="navigation-list-child-list ">
-                
-                  
-                
-                  
-                
-                  
-                
-                  
-                
-                  
-                
-              </ul>
-            
           </li>
         
       
@@ -101,20 +63,25 @@
             
             <a href="http://localhost:4000/docs/advanced_analysis" class="navigation-list-link active">Advanced analysis</a>
             
-              
-              <ul class="navigation-list-child-list ">
-                
-                  
-                
-                  
-                
-                  
-                
-                  
-                
-                  
-                
-              </ul>
+          </li>
+        
+      
+    
+      
+        
+          <li class="navigation-list-item">
+            
+            <a href="http://localhost:4000/docs/QA" class="navigation-list-link">Navigation&FAQ</a>
+            
+          </li>
+        
+      
+    
+      
+        
+          <li class="navigation-list-item">
+            
+            <a href="http://localhost:4000/docs/pre_request" class="navigation-list-link">Pre-requested</a>
             
           </li>
         
@@ -131,6 +98,14 @@
     <div class="main-content-wrap">
       <div class="page-header">
         <div class="main-content">
+          
+          <div class="search js-search">
+            <div class="search-input-wrap">
+              <input type="text" class="js-search-input search-input" tabindex="0" placeholder="Search " aria-label="Search " autocomplete="off">
+              <svg width="14" height="14" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg" class="search-icon"><title>Search</title><g fill-rule="nonzero"><path d="M17.332 20.735c-5.537 0-10-4.6-10-10.247 0-5.646 4.463-10.247 10-10.247 5.536 0 10 4.601 10 10.247s-4.464 10.247-10 10.247zm0-4c3.3 0 6-2.783 6-6.247 0-3.463-2.7-6.247-6-6.247s-6 2.784-6 6.247c0 3.464 2.7 6.247 6 6.247z"/><path d="M11.672 13.791L.192 25.271 3.02 28.1 14.5 16.62z"/></g></svg>
+            </div>
+            <div class="js-search-results search-results-wrap"></div>
+          </div>
           
           
         </div>
@@ -150,6 +125,38 @@
 
 <p>In this part, we will use the question-induced strategy to assist user for the choice and usage of those visualization functions. 
 The main purpose is that we want to <strong>find potential hidden drivers in Group4 compared with the other subtypes by using NetBID2</strong>, for which may be related with the specific clinical feature for Group4 MB.</p>
+
+<hr />
+<h2 id="quick-navigation-for-this-page">Quick Navigation for this page</h2>
+
+<ul>
+  <li><a href="#preparations">Preparations</a></li>
+  <li><a href="#part-i-for-the-top-list-of-significant-drivers">Part I: for the top list of significant drivers</a>
+    <ul>
+      <li><a href="#qi1-how-to-get-the-top-list-of-drivers-with-significantly-different-activity-da-in-g4-vs-other-subtypes-">QI.1: How to get the top list of drivers with significantly different activity (DA) in G4 Vs. other subtypes ?</a></li>
+      <li><a href="#qi2-how-to-understand-the-significance-of-those-top-da-drivers-">QI.2: How to understand the significance of those top DA drivers ?</a></li>
+      <li><a href="#qi3-what-is-the-expressionactivity-pattern-of-those-top-da-drivers-in-samples-with-different-subtype-">QI.3: What is the expression/activity pattern of those top DA drivers in samples with different subtype ?</a></li>
+      <li><a href="#qi4-what-is-the-biological-function-of-those-top-da-drivers-">QI.4: What is the biological function of those top DA drivers ?</a></li>
+      <li><a href="#qi5-what-is-the-biological-function-of-the-target-genes-of-those-top-da-drivers-">QI.5: What is the biological function of the target genes of those top DA drivers ?</a></li>
+    </ul>
+  </li>
+  <li><a href="#part-ii-for-a-selected-interested-driver">Part II: for a selected interested driver</a>
+    <ul>
+      <li><a href="#qii1-how-to-understand-the-significance-of-the-selected-driver-">QII.1: How to understand the significance of the selected driver ?</a></li>
+      <li><a href="#qii2-how-to-visualize-the-network-structure-of-the-selected-driver-">QII.2: How to visualize the network structure of the selected driver ?</a></li>
+      <li><a href="#qii3-what-is-the-expressionactivity-for-this-selected-driver-in-samples-with-different-subtypes-">QII.3: What is the expression/activity for this selected driver in samples with different subtypes ?</a></li>
+      <li><a href="#qii4-what-is-the-function-of-the-target-genes-for-this-selected-driver-">QII.4: What is the function of the target genes for this selected driver ?</a></li>
+    </ul>
+  </li>
+  <li><a href="#part-iii-further-analysis">Part III: further analysis</a>
+    <ul>
+      <li><a href="#qiii1-what-are-the-activities-of-the-curated-gene-sets-in-all-samples-and-what-are-the-top-significantly-differed-gene-sets-">QIII.1: What are the activities of the curated gene sets in all samples and what are the top significantly differed gene sets ?</a></li>
+      <li><a href="#qiii2-how-to-find-drivers-with-significantly-overlapped-target-genes-">QIII.2: How to find drivers with significantly overlapped target genes ?</a></li>
+    </ul>
+  </li>
+</ul>
+
+<hr />
 
 <h2 id="preparations">Preparations</h2>
 
@@ -241,8 +248,8 @@ We could study from the figure that, the positively regulated target genes for t
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">draw.GSEA.NetBID</span><span class="p">(</span><span class="n">DE</span><span class="o">=</span><span class="n">DE</span><span class="p">,</span><span class="n">profile_col</span><span class="o">=</span><span class="s1">'logFC'</span><span class="p">,</span><span class="n">profile_trend</span><span class="o">=</span><span class="s1">'neg2pos'</span><span class="p">,</span><span class="n">name_col</span><span class="o">=</span><span class="s1">'ID'</span><span class="p">,</span><span class="w">
                  </span><span class="n">driver_list</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">driver_list</span><span class="p">,</span><span class="w">
                  </span><span class="n">show_label</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'gene_label'</span><span class="p">],</span><span class="w">
-                 </span><span class="n">driver_DA_Z</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'Z.G4.Vs.others_DA'</span><span class="p">],</span><span class="w">
-                 </span><span class="n">driver_DE_Z</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'Z.G4.Vs.others_DE'</span><span class="p">],</span><span class="w">
+                 </span><span class="n">driver_DA_Z</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'Z.%s_DA'</span><span class="p">,</span><span class="n">comp_name</span><span class="p">)],</span><span class="w">
+                 </span><span class="n">driver_DE_Z</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'Z.%s_DE'</span><span class="p">,</span><span class="n">comp_name</span><span class="p">)],</span><span class="w">
                  </span><span class="n">target_list</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.network</span><span class="o">$</span><span class="n">target_list</span><span class="p">,</span><span class="w">
                  </span><span class="n">top_driver_number</span><span class="o">=</span><span class="m">30</span><span class="p">,</span><span class="n">target_nrow</span><span class="o">=</span><span class="m">2</span><span class="p">,</span><span class="n">target_col</span><span class="o">=</span><span class="s1">'RdBu'</span><span class="p">,</span><span class="w">
                  </span><span class="n">left_annotation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'high in others'</span><span class="p">,</span><span class="n">right_annotation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'high in G4'</span><span class="p">,</span><span class="w">
@@ -260,8 +267,8 @@ The color for those target genes are the same for positively-regulaion or negati
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">draw.GSEA.NetBID</span><span class="p">(</span><span class="n">DE</span><span class="o">=</span><span class="n">DE</span><span class="p">,</span><span class="n">profile_col</span><span class="o">=</span><span class="s1">'t'</span><span class="p">,</span><span class="n">profile_trend</span><span class="o">=</span><span class="s1">'pos2neg'</span><span class="p">,</span><span class="w">
                  </span><span class="n">driver_list</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">driver_list</span><span class="p">,</span><span class="w">
                  </span><span class="n">show_label</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'gene_label'</span><span class="p">],</span><span class="w">
-                 </span><span class="n">driver_DA_Z</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'Z.G4.Vs.others_DA'</span><span class="p">],</span><span class="w">
-                 </span><span class="n">driver_DE_Z</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'Z.G4.Vs.others_DE'</span><span class="p">],</span><span class="w">
+                 </span><span class="n">driver_DA_Z</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'Z.%s_DA'</span><span class="p">,</span><span class="n">comp_name</span><span class="p">)],</span><span class="w">
+                 </span><span class="n">driver_DE_Z</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'Z.%s_DE'</span><span class="p">,</span><span class="n">comp_name</span><span class="p">)],</span><span class="w">
                  </span><span class="n">target_list</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.network</span><span class="o">$</span><span class="n">target_list</span><span class="p">,</span><span class="w">
                  </span><span class="n">top_driver_number</span><span class="o">=</span><span class="m">30</span><span class="p">,</span><span class="n">target_nrow</span><span class="o">=</span><span class="m">2</span><span class="p">,</span><span class="n">target_col</span><span class="o">=</span><span class="s1">'RdBu'</span><span class="p">,</span><span class="w">
                  </span><span class="n">left_annotation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'high in G4'</span><span class="p">,</span><span class="n">right_annotation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'high in others'</span><span class="p">,</span><span class="w">
@@ -278,8 +285,8 @@ The color for those target genes are the same for positively-regulaion or negati
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">draw.GSEA.NetBID</span><span class="p">(</span><span class="n">DE</span><span class="o">=</span><span class="n">DE</span><span class="p">,</span><span class="n">profile_col</span><span class="o">=</span><span class="s1">'t'</span><span class="p">,</span><span class="n">profile_trend</span><span class="o">=</span><span class="s1">'pos2neg'</span><span class="p">,</span><span class="w">
                  </span><span class="n">driver_list</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">driver_list</span><span class="p">,</span><span class="w">
                  </span><span class="n">show_label</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'gene_label'</span><span class="p">],</span><span class="w">
-                 </span><span class="n">driver_DA_Z</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'Z.G4.Vs.others_DA'</span><span class="p">],</span><span class="w">
-                 </span><span class="n">driver_DE_Z</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'Z.G4.Vs.others_DE'</span><span class="p">],</span><span class="w">
+                 </span><span class="n">driver_DA_Z</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'Z.%s_DA'</span><span class="p">,</span><span class="n">comp_name</span><span class="p">)],</span><span class="w">
+                 </span><span class="n">driver_DE_Z</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'Z.%s_DE'</span><span class="p">,</span><span class="n">comp_name</span><span class="p">)],</span><span class="w">
                  </span><span class="n">target_list</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.network</span><span class="o">$</span><span class="n">target_list</span><span class="p">,</span><span class="w">
                  </span><span class="n">top_driver_number</span><span class="o">=</span><span class="m">30</span><span class="p">,</span><span class="n">target_nrow</span><span class="o">=</span><span class="m">2</span><span class="p">,</span><span class="n">target_col</span><span class="o">=</span><span class="s1">'black'</span><span class="p">,</span><span class="w">
                  </span><span class="n">left_annotation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'high in G4'</span><span class="p">,</span><span class="n">right_annotation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'high in others'</span><span class="p">,</span><span class="w">
@@ -296,8 +303,8 @@ The color for those target genes are the same for positively-regulaion or negati
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">draw.GSEA.NetBID</span><span class="p">(</span><span class="n">DE</span><span class="o">=</span><span class="n">DE</span><span class="p">,</span><span class="n">profile_col</span><span class="o">=</span><span class="s1">'t'</span><span class="p">,</span><span class="n">profile_trend</span><span class="o">=</span><span class="s1">'pos2neg'</span><span class="p">,</span><span class="w">
                  </span><span class="n">driver_list</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">driver_list</span><span class="p">,</span><span class="w">
                  </span><span class="n">show_label</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'gene_label'</span><span class="p">],</span><span class="w">
-                 </span><span class="n">driver_DA_Z</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'Z.G4.Vs.others_DA'</span><span class="p">],</span><span class="w">
-                 </span><span class="n">driver_DE_Z</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'Z.G4.Vs.others_DE'</span><span class="p">],</span><span class="w">
+                 </span><span class="n">driver_DA_Z</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'Z.%s_DA'</span><span class="p">,</span><span class="n">comp_name</span><span class="p">)],</span><span class="w">
+                 </span><span class="n">driver_DE_Z</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'Z.%s_DE'</span><span class="p">,</span><span class="n">comp_name</span><span class="p">)],</span><span class="w">
                  </span><span class="n">target_list</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.network</span><span class="o">$</span><span class="n">target_list</span><span class="p">,</span><span class="w">
                  </span><span class="n">top_driver_number</span><span class="o">=</span><span class="m">30</span><span class="p">,</span><span class="n">target_nrow</span><span class="o">=</span><span class="m">1</span><span class="p">,</span><span class="n">target_col</span><span class="o">=</span><span class="s1">'RdBu'</span><span class="p">,</span><span class="w">
                  </span><span class="n">left_annotation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'high in G4'</span><span class="p">,</span><span class="n">right_annotation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'high in others'</span><span class="p">,</span><span class="w">
@@ -314,8 +321,8 @@ The color for those target genes are the same for positively-regulaion or negati
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">draw.GSEA.NetBID</span><span class="p">(</span><span class="n">DE</span><span class="o">=</span><span class="n">DE</span><span class="p">,</span><span class="n">profile_col</span><span class="o">=</span><span class="s1">'t'</span><span class="p">,</span><span class="n">profile_trend</span><span class="o">=</span><span class="s1">'pos2neg'</span><span class="p">,</span><span class="w">
                  </span><span class="n">driver_list</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">driver_list</span><span class="p">,</span><span class="w">
                  </span><span class="n">show_label</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'gene_label'</span><span class="p">],</span><span class="w">
-                 </span><span class="n">driver_DA_Z</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'Z.G4.Vs.others_DA'</span><span class="p">],</span><span class="w">
-                 </span><span class="n">driver_DE_Z</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'Z.G4.Vs.others_DE'</span><span class="p">],</span><span class="w">
+                 </span><span class="n">driver_DA_Z</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'Z.%s_DA'</span><span class="p">,</span><span class="n">comp_name</span><span class="p">)],</span><span class="w">
+                 </span><span class="n">driver_DE_Z</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'Z.%s_DE'</span><span class="p">,</span><span class="n">comp_name</span><span class="p">)],</span><span class="w">
                  </span><span class="n">target_list</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.network</span><span class="o">$</span><span class="n">target_list</span><span class="p">,</span><span class="w">
                  </span><span class="n">top_driver_number</span><span class="o">=</span><span class="m">30</span><span class="p">,</span><span class="n">target_nrow</span><span class="o">=</span><span class="m">1</span><span class="p">,</span><span class="n">target_col</span><span class="o">=</span><span class="s1">'black'</span><span class="p">,</span><span class="w">
                  </span><span class="n">left_annotation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'high in G4'</span><span class="p">,</span><span class="n">right_annotation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'high in others'</span><span class="p">,</span><span class="w">
@@ -428,7 +435,9 @@ Do not worry about the redundant issue, all gene sets will be passed into <code 
 
 <p>Meanwhile, the enrichment analysis results can be visualized by barplot (<code class="highlighter-rouge">draw.funcEnrich.bar()</code>) and cluster plot (<code class="highlighter-rouge">draw.funcEnrich.cluster()</code>).</p>
 
-<p>The barplot is a simply way to display the enriched P-value, with the example of intersected genes (if set <code class="highlighter-rouge">display_genes=TRUE</code>).</p>
+<ul>
+  <li>The barplot is a simply way to display the enriched P-value, with the example of intersected genes (if set <code class="highlighter-rouge">display_genes=TRUE</code>).</li>
+</ul>
 
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># draw barplot</span><span class="w">
 </span><span class="n">draw.funcEnrich.bar</span><span class="p">(</span><span class="n">funcEnrich_res</span><span class="o">=</span><span class="w"> </span><span class="n">res_up</span><span class="p">,</span><span class="n">top_number</span><span class="o">=</span><span class="m">30</span><span class="p">,</span><span class="n">main</span><span class="o">=</span><span class="s1">'Function Enrichment for Top drivers'</span><span class="p">,</span><span class="n">pdf_file</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'%s/funcEnrich_bar_nogene.pdf'</span><span class="p">,</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.PLOT</span><span class="p">))</span><span class="w">
@@ -438,7 +447,9 @@ Do not worry about the redundant issue, all gene sets will be passed into <code 
 
 <p><img src="funcEnrich_bar_withgene.png" alt="funcEnrich_bar_withgene" /></p>
 
-<p>Considering the function redudancy of gene sets and the cluster of genes by function similarity, the function cluster plot could be used.</p>
+<ul>
+  <li>Considering the function redudancy of gene sets and the cluster of genes by function similarity, the function cluster plot could be used.</li>
+</ul>
 
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">draw.funcEnrich.cluster</span><span class="p">(</span><span class="n">funcEnrich_res</span><span class="o">=</span><span class="w"> </span><span class="n">res_up</span><span class="p">,</span><span class="n">top_number</span><span class="o">=</span><span class="m">30</span><span class="p">,</span><span class="n">gs_cex</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">1.4</span><span class="p">,</span><span class="n">gene_cex</span><span class="o">=</span><span class="m">1.5</span><span class="p">,</span><span class="n">pv_cex</span><span class="o">=</span><span class="m">1.2</span><span class="p">,</span><span class="n">pdf_file</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'%s/funcEnrich_clusterBOTH.pdf'</span><span class="p">,</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.PLOT</span><span class="p">),</span><span class="w">
                         </span><span class="n">cluster_gs</span><span class="o">=</span><span class="kc">TRUE</span><span class="p">,</span><span class="n">cluster_gene</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">TRUE</span><span class="p">,</span><span class="n">h</span><span class="o">=</span><span class="m">0.95</span><span class="p">)</span><span class="w">
@@ -471,12 +482,14 @@ This transfer table is already saved in the <code class="highlighter-rouge">anal
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">transfer_tab</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">analysis.par</span><span class="o">$</span><span class="n">transfer_tab</span><span class="w">
 </span></code></pre></div></div>
 
-<p>This function has 21 options, but for the first trial, just follow the demo and the only thing to prepare is the transfer table (<code class="highlighter-rouge">transfer2symbol2type</code>). 
-Lots of parameters are the same as in <code class="highlighter-rouge">funcEnrich.Fisher()</code>.</p>
+<ul>
+  <li>This function has 21 options, but for the first trial, just follow the demo and the only thing to prepare is the transfer table (<code class="highlighter-rouge">transfer2symbol2type</code>). 
+Lots of parameters are the same as in <code class="highlighter-rouge">funcEnrich.Fisher()</code>. <code class="highlighter-rouge">display_gs_list</code> could be user defined if some other testing is performed and user only want to display some of the selected gene sets.</li>
+</ul>
 
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">## draw</span><span class="w">
 </span><span class="n">draw.bubblePlot</span><span class="p">(</span><span class="n">driver_list</span><span class="o">=</span><span class="w"> </span><span class="n">driver_list</span><span class="p">,</span><span class="n">show_label</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'gene_label'</span><span class="p">],</span><span class="w">
-                </span><span class="n">Z_val</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'Z.G4.Vs.others_DA'</span><span class="p">],</span><span class="w">
+                </span><span class="n">Z_val</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'Z.%s_DA'</span><span class="p">,</span><span class="n">comp_name</span><span class="p">)],</span><span class="w">
                 </span><span class="n">driver_type</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'gene_biotype'</span><span class="p">],</span><span class="w">
                 </span><span class="n">target_list</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.network</span><span class="o">$</span><span class="n">target_list</span><span class="p">,</span><span class="n">transfer2symbol2type</span><span class="o">=</span><span class="n">transfer_tab</span><span class="p">,</span><span class="w">
                 </span><span class="n">bg_list</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[,</span><span class="s1">'geneSymbol'</span><span class="p">],</span><span class="n">min_gs_size</span><span class="o">=</span><span class="m">5</span><span class="p">,</span><span class="n">max_gs_size</span><span class="o">=</span><span class="m">500</span><span class="p">,</span><span class="n">use_gs</span><span class="o">=</span><span class="nf">c</span><span class="p">(</span><span class="s1">'H'</span><span class="p">),</span><span class="w">
@@ -485,8 +498,10 @@ Lots of parameters are the same as in <code class="highlighter-rouge">funcEnrich
                 </span><span class="n">main</span><span class="o">=</span><span class="s1">'Bubbleplot for top driver targets'</span><span class="p">)</span><span class="w">
 </span></code></pre></div></div>
 
-<p>Each column in this plot is one driver, each row is the curated gene set, and the circle in the main plot region shows the significance of the target genes for the driver in the corresponding gene set.
-The size of the circle is the intersected gene number (legend on the top) and the color of the circle represents the significance of the P-value (legend on the right). The color boxes down below the main figure are the significance of the drivers (user need to input the Z-statistics), followed by the barplots showing the target size of the driver (filtered by protein coding), and the color cicles below showing the drivers’ type (optional, if user input the <code class="highlighter-rouge">driver_type</code>).</p>
+<ul>
+  <li>Each column in this plot is one driver, each row is the curated gene set, and the circle in the main plot region shows the significance of the target genes for the driver in the corresponding gene set.
+The size of the circle is the intersected gene number (legend on the top) and the color of the circle represents the significance of the P-value (legend on the right). The color boxes down below the main figure are the significance of the drivers (user need to input the Z-statistics), followed by the barplots showing the target size of the driver (filtered by protein coding), and the color cicles below showing the drivers’ type (optional, if user input the <code class="highlighter-rouge">driver_type</code>).</li>
+</ul>
 
 <p>The figure could tell user that, e.g the target genes of the Group4 up-regulated driver<code class="highlighter-rouge">PDE7B_SIG</code> are significantly enriched in <code class="highlighter-rouge">KEGG_AXON_GUIDANCE</code> with 17 intersected genes and P-value at about 1e-10.</p>
 
@@ -495,7 +510,7 @@ The size of the circle is the intersected gene number (legend on the top) and th
 <p>Try the following script to get familiar with the options in the function.</p>
 
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">draw.bubblePlot</span><span class="p">(</span><span class="n">driver_list</span><span class="o">=</span><span class="w"> </span><span class="n">driver_list</span><span class="p">,</span><span class="n">show_label</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'gene_label'</span><span class="p">],</span><span class="w">
-                </span><span class="n">Z_val</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'Z.G4.Vs.others_DA'</span><span class="p">],</span><span class="w">
+                </span><span class="n">Z_val</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'Z.%s_DA'</span><span class="p">,</span><span class="n">comp_name</span><span class="p">)],</span><span class="w">
                 </span><span class="n">driver_type</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'gene_biotype'</span><span class="p">],</span><span class="w">
                 </span><span class="n">target_list</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.network</span><span class="o">$</span><span class="n">target_list</span><span class="p">,</span><span class="n">transfer2symbol2type</span><span class="o">=</span><span class="n">transfer_tab</span><span class="p">,</span><span class="w">
                 </span><span class="n">bg_list</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[,</span><span class="s1">'geneSymbol'</span><span class="p">],</span><span class="n">min_gs_size</span><span class="o">=</span><span class="m">10</span><span class="p">,</span><span class="n">max_gs_size</span><span class="o">=</span><span class="m">300</span><span class="p">,</span><span class="n">use_gs</span><span class="o">=</span><span class="nf">c</span><span class="p">(</span><span class="s1">'CP:KEGG'</span><span class="p">),</span><span class="w">
@@ -505,7 +520,7 @@ The size of the circle is the intersected gene number (legend on the top) and th
 </span><span class="c1"># add marker gene</span><span class="w">
 </span><span class="n">mark_gene</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="s1">'KCNA1'</span><span class="p">,</span><span class="s1">'EOMES'</span><span class="p">,</span><span class="s1">'KHDRBS2'</span><span class="p">,</span><span class="s1">'RBM24'</span><span class="p">,</span><span class="s1">'UNC5D'</span><span class="p">)</span><span class="w"> </span><span class="c1">## marker for Group4</span><span class="w">
 </span><span class="n">draw.bubblePlot</span><span class="p">(</span><span class="n">driver_list</span><span class="o">=</span><span class="w"> </span><span class="n">driver_list</span><span class="p">,</span><span class="n">show_label</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">rownames</span><span class="p">(</span><span class="n">sig_driver</span><span class="p">),</span><span class="s1">'gene_label'</span><span class="p">],</span><span class="w">
-                </span><span class="n">Z_val</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'Z.G4.Vs.others_DA'</span><span class="p">],</span><span class="w">
+                </span><span class="n">Z_val</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'Z.%s_DA'</span><span class="p">,</span><span class="n">comp_name</span><span class="p">)],</span><span class="w">
                 </span><span class="n">driver_type</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'gene_biotype'</span><span class="p">],</span><span class="w">
                 </span><span class="n">target_list</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.network</span><span class="o">$</span><span class="n">target_list</span><span class="p">,</span><span class="n">transfer2symbol2type</span><span class="o">=</span><span class="n">transfer_tab</span><span class="p">,</span><span class="w">
                 </span><span class="n">bg_list</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[,</span><span class="s1">'geneSymbol'</span><span class="p">],</span><span class="n">min_gs_size</span><span class="o">=</span><span class="m">10</span><span class="p">,</span><span class="n">max_gs_size</span><span class="o">=</span><span class="m">300</span><span class="p">,</span><span class="n">use_gs</span><span class="o">=</span><span class="nf">c</span><span class="p">(</span><span class="s1">'CP:KEGG'</span><span class="p">,</span><span class="s1">'CP:BIOCARTA'</span><span class="p">,</span><span class="s1">'H'</span><span class="p">),</span><span class="w">
@@ -518,12 +533,18 @@ The size of the circle is the intersected gene number (legend on the top) and th
 <h2 id="part-ii-for-a-selected-interested-driver">Part II: for a selected interested driver</h2>
 
 <h3 id="qii1-how-to-understand-the-significance-of-the-selected-driver-">QII.1: How to understand the significance of the selected driver ?</h3>
-<p>GSEA plot for each driver</p>
+
+<p>For each driver, NetBID2 provides function <code class="highlighter-rouge">draw.GSEA()</code> to draw the traditional style GSEA plot to understand the significance of the driver.
+Similar to <code class="highlighter-rouge">draw.GSEA.NetBID()</code>, firstly we need to prepare the profile for the differentiated expressed genes.</p>
 
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">DE</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">analysis.par</span><span class="o">$</span><span class="n">DE</span><span class="p">[[</span><span class="n">comp_name</span><span class="p">]]</span><span class="w">
 </span><span class="n">DE_profile</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">DE</span><span class="o">$</span><span class="n">`Z-statistics`</span><span class="p">;</span><span class="w"> 
 </span><span class="nf">names</span><span class="p">(</span><span class="n">DE_profile</span><span class="p">)</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">rownames</span><span class="p">(</span><span class="n">DE</span><span class="p">)</span><span class="w">
 </span></code></pre></div></div>
+
+<p>Then, extract out the target gene list and the direction of the target genes for the selected driver.
+The annotation could use the p-value from master table. 
+Traditional GSEA test may have different significance statistics, user could calculate first and put it into the annotation.</p>
 
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">use_driver</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">driver_list</span><span class="p">[</span><span class="m">1</span><span class="p">]</span><span class="w">
 </span><span class="n">use_target_genes</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.network</span><span class="o">$</span><span class="n">target_list</span><span class="p">[[</span><span class="n">use_driver</span><span class="p">]]</span><span class="o">$</span><span class="n">target</span><span class="w">
@@ -541,7 +562,7 @@ The size of the circle is the intersected gene number (legend on the top) and th
 
 <p><img src="GSEA_each_direction.png" alt="GSEA_each_direction" /></p>
 
-<p>If do not enter direction information, it will be normal GSEA plot.</p>
+<p>If do not enter direction information, it will be traditional GSEA plot.</p>
 
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">## GSEA plot without direction, without annotation, traditional GSEA plot</span><span class="w">
 </span><span class="n">draw.GSEA</span><span class="p">(</span><span class="n">rank_profile</span><span class="o">=</span><span class="n">DE_profile</span><span class="p">,</span><span class="n">use_genes</span><span class="o">=</span><span class="n">use_target_genes</span><span class="p">,</span><span class="n">use_direction</span><span class="o">=</span><span class="kc">NULL</span><span class="p">,</span><span class="w">
@@ -553,37 +574,53 @@ The size of the circle is the intersected gene number (legend on the top) and th
 
 <h3 id="qii2-how-to-visualize-the-network-structure-of-the-selected-driver-">QII.2: How to visualize the network structure of the selected driver ?</h3>
 
-<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">use_driver</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">driver_list</span><span class="p">[</span><span class="m">1</span><span class="p">]</span><span class="w">
-</span><span class="n">use_driver2</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">driver_list</span><span class="p">[</span><span class="m">2</span><span class="p">]</span><span class="w">
+<p>The sub-network structure of the driver is very simple, the driver (source node) and its target genes (target nodes).
+The edge information could be the <code class="highlighter-rouge">mutual information</code> value with direction signed by <code class="highlighter-rouge">spearman</code>.</p>
 
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">use_driver</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">driver_list</span><span class="p">[</span><span class="m">1</span><span class="p">]</span><span class="w">
 </span><span class="n">edge_score</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.network</span><span class="o">$</span><span class="n">target_list</span><span class="p">[[</span><span class="n">use_driver</span><span class="p">]]</span><span class="o">$</span><span class="n">MI</span><span class="o">*</span><span class="nf">sign</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.network</span><span class="o">$</span><span class="n">target_list</span><span class="p">[[</span><span class="n">use_driver</span><span class="p">]]</span><span class="o">$</span><span class="n">spearman</span><span class="p">)</span><span class="w">
 </span><span class="nf">names</span><span class="p">(</span><span class="n">edge_score</span><span class="p">)</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.network</span><span class="o">$</span><span class="n">target_list</span><span class="p">[[</span><span class="n">use_driver</span><span class="p">]]</span><span class="o">$</span><span class="n">target</span><span class="w">
-</span><span class="c1">#</span><span class="w">
-</span><span class="n">edge_score2</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.network</span><span class="o">$</span><span class="n">target_list</span><span class="p">[[</span><span class="n">use_driver2</span><span class="p">]]</span><span class="o">$</span><span class="n">MI</span><span class="o">*</span><span class="nf">sign</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.network</span><span class="o">$</span><span class="n">target_list</span><span class="p">[[</span><span class="n">use_driver2</span><span class="p">]]</span><span class="o">$</span><span class="n">spearman</span><span class="p">)</span><span class="w">
-</span><span class="nf">names</span><span class="p">(</span><span class="n">edge_score2</span><span class="p">)</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.network</span><span class="o">$</span><span class="n">target_list</span><span class="p">[[</span><span class="n">use_driver2</span><span class="p">]]</span><span class="o">$</span><span class="n">target</span><span class="w">
 </span></code></pre></div></div>
 
-<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">draw.targetNet</span><span class="p">(</span><span class="n">source_label</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">use_driver</span><span class="p">,</span><span class="s1">'gene_label'</span><span class="p">],</span><span class="n">source_z</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">use_driver</span><span class="p">,</span><span class="s1">'Z.G4.Vs.others_DA'</span><span class="p">],</span><span class="w">
-               </span><span class="n">edge_score</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">edge_score</span><span class="p">,</span><span class="n">pdf_file</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'%s/targetNet_out.pdf'</span><span class="p">,</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.PLOT</span><span class="p">),</span><span class="n">label_cex</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">0.4</span><span class="p">,</span><span class="n">n_layer</span><span class="o">=</span><span class="m">4</span><span class="p">)</span><span class="w">
+<ul>
+  <li>User could set up the <code class="highlighter-rouge">n_layer</code> if the number of target genes is very large and adjust <code class="highlighter-rouge">label_cex</code> to get a better visualization. 
+By default, the <code class="highlighter-rouge">alphabetical_order=FALSE</code> and the edges are sorted by the edge score. If <code class="highlighter-rouge">alphabetical_order=TRUE</code>, the target genes are sorted by the alphabetical order from inner layer to outer.</li>
+</ul>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">draw.targetNet</span><span class="p">(</span><span class="n">source_label</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">use_driver</span><span class="p">,</span><span class="s1">'gene_label'</span><span class="p">],</span><span class="n">source_z</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">use_driver</span><span class="p">,</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'Z.%s_DA'</span><span class="p">,</span><span class="n">comp_name</span><span class="p">)],</span><span class="w">
+               </span><span class="n">edge_score</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">edge_score</span><span class="p">,</span><span class="n">pdf_file</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'%s/targetNet_out.pdf'</span><span class="p">,</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.PLOT</span><span class="p">),</span><span class="n">label_cex</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">0.4</span><span class="p">,</span><span class="n">n_layer</span><span class="o">=</span><span class="m">4</span><span class="p">,</span><span class="w"> </span><span class="n">alphabetical_order</span><span class="o">=</span><span class="kc">TRUE</span><span class="p">)</span><span class="w">
 </span></code></pre></div></div>
 
 <p><img src="targetNet_out.png" alt="targetNet_out" /></p>
 
-<p>The arrow direction could be changed:</p>
+<ul>
+  <li>The arrow direction could be changed to ‘in’ (target to source) and set <code class="highlighter-rouge">alphabetical_order=FALSE</code>, the target genes are sorted by the edge score (positive to negative) from inner layer to outer.</li>
+</ul>
 
-<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">draw.targetNet</span><span class="p">(</span><span class="n">source_label</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">use_driver</span><span class="p">,</span><span class="s1">'gene_label'</span><span class="p">],</span><span class="n">source_z</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">use_driver</span><span class="p">,</span><span class="s1">'Z.G4.Vs.others_DA'</span><span class="p">],</span><span class="w">
-               </span><span class="n">edge_score</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">edge_score</span><span class="p">,</span><span class="n">pdf_file</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'%s/targetNet_in.pdf'</span><span class="p">,</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.PLOT</span><span class="p">),</span><span class="n">label_cex</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">0.4</span><span class="p">,</span><span class="n">arrow_direction</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'in'</span><span class="p">,,</span><span class="n">n_layer</span><span class="o">=</span><span class="m">4</span><span class="p">)</span><span class="w">
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">draw.targetNet</span><span class="p">(</span><span class="n">source_label</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">use_driver</span><span class="p">,</span><span class="s1">'gene_label'</span><span class="p">],</span><span class="n">source_z</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">use_driver</span><span class="p">,</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'Z.%s_DA'</span><span class="p">,</span><span class="n">comp_name</span><span class="p">)],</span><span class="w">
+               </span><span class="n">edge_score</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">edge_score</span><span class="p">,</span><span class="n">pdf_file</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'%s/targetNet_in.pdf'</span><span class="p">,</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.PLOT</span><span class="p">),</span><span class="n">label_cex</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">0.35</span><span class="p">,</span><span class="n">arrow_direction</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'in'</span><span class="p">,</span><span class="n">n_layer</span><span class="o">=</span><span class="m">6</span><span class="p">)</span><span class="w">
 </span></code></pre></div></div>
 
+<p><img src="targetNet_in.png" alt="targetNet_in" /></p>
+
+<ul>
+  <li>Similarly, <code class="highlighter-rouge">draw.targetNet.TWO()</code> could be used to display the network structure for two drivers. Here <code class="highlighter-rouge">n_layer</code> and <code class="highlighter-rouge">alphabetical_order</code> could also be used to modify the figure. Different from <code class="highlighter-rouge">draw.targetNet()</code>, if set <code class="highlighter-rouge">show_test=TRUE</code>, the intersected test between the target gene list of two drivers will be performed and displayed. The background gene list could be the all possible target genes in the network. User could also directly input the total number for calculation.</li>
+</ul>
+
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># for two target</span><span class="w">
+</span><span class="n">use_driver2</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">driver_list</span><span class="p">[</span><span class="m">2</span><span class="p">]</span><span class="w">
+</span><span class="n">edge_score2</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.network</span><span class="o">$</span><span class="n">target_list</span><span class="p">[[</span><span class="n">use_driver2</span><span class="p">]]</span><span class="o">$</span><span class="n">MI</span><span class="o">*</span><span class="nf">sign</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.network</span><span class="o">$</span><span class="n">target_list</span><span class="p">[[</span><span class="n">use_driver2</span><span class="p">]]</span><span class="o">$</span><span class="n">spearman</span><span class="p">)</span><span class="w">
+</span><span class="nf">names</span><span class="p">(</span><span class="n">edge_score2</span><span class="p">)</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.network</span><span class="o">$</span><span class="n">target_list</span><span class="p">[[</span><span class="n">use_driver2</span><span class="p">]]</span><span class="o">$</span><span class="n">target</span><span class="w">
 </span><span class="n">use_genes</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">unique</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.network</span><span class="o">$</span><span class="n">network_dat</span><span class="o">$</span><span class="n">target.symbol</span><span class="p">)</span><span class="w">
 </span><span class="n">draw.targetNet.TWO</span><span class="p">(</span><span class="n">source1_label</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">use_driver</span><span class="p">,</span><span class="s1">'gene_label'</span><span class="p">],</span><span class="n">edge_score1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">edge_score</span><span class="p">,</span><span class="w">
                    </span><span class="n">source2_label</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">use_driver2</span><span class="p">,</span><span class="s1">'gene_label'</span><span class="p">],</span><span class="n">edge_score2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">edge_score2</span><span class="p">,</span><span class="w">
-                   </span><span class="n">source1_z</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">use_driver</span><span class="p">,</span><span class="s1">'Z.G4.Vs.others_DA'</span><span class="p">],</span><span class="n">source2_z</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">use_driver2</span><span class="p">,</span><span class="s1">'Z.G4.Vs.others_DA'</span><span class="p">],</span><span class="w">
+                   </span><span class="n">source1_z</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">use_driver</span><span class="p">,</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'Z.%s_DA'</span><span class="p">,</span><span class="n">comp_name</span><span class="p">)],</span><span class="n">source2_z</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">use_driver</span><span class="p">,</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'Z.%s_DA'</span><span class="p">,</span><span class="n">comp_name</span><span class="p">),</span><span class="w">
                    </span><span class="n">pdf_file</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'%s/targetNetTWO.pdf'</span><span class="p">,</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.PLOT</span><span class="p">),</span><span class="n">total_possible_target</span><span class="o">=</span><span class="n">use_genes</span><span class="p">,</span><span class="n">show_test</span><span class="o">=</span><span class="kc">TRUE</span><span class="p">,</span><span class="n">label_cex</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">0.2</span><span class="p">)</span><span class="w">
 </span></code></pre></div></div>
 
-<p><img src="targetNetTWO.png" alt="targetNetTWO.pdf" /></p>
+<p><img src="targetNetTWO.png" alt="targetNetTWO" /></p>
+
+<p>The inner function of the test <code class="highlighter-rouge">test.targetNet.overlap()</code> could be directly called.</p>
 
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># or directly get the test result</span><span class="w">
 </span><span class="n">test.targetNet.overlap</span><span class="p">(</span><span class="n">source1_label</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">use_driver</span><span class="p">,</span><span class="s1">'gene_label'</span><span class="p">],</span><span class="n">source2_label</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">use_driver2</span><span class="p">,</span><span class="s1">'gene_label'</span><span class="p">],</span><span class="w">
@@ -592,8 +629,12 @@ The size of the circle is the intersected gene number (legend on the top) and th
 
 <h3 id="qii3-what-is-the-expressionactivity-for-this-selected-driver-in-samples-with-different-subtypes-">QII.3: What is the expression/activity for this selected driver in samples with different subtypes ?</h3>
 
+<ul>
+  <li>For a specific driver, user could choose to display the activity and expression in different subtypes of the samples to check the level trend. Here, <code class="highlighter-rouge">draw.categoryValue()</code> could be used for this purpose. The sample to class vector could be prepared by <code class="highlighter-rouge">get_obs_label()</code>. 
+The sample class order and combination of sample classes could be modified in this function.</li>
+</ul>
+
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">use_obs_class</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">get_obs_label</span><span class="p">(</span><span class="n">phe_info</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">phe_info</span><span class="p">,</span><span class="s1">'subgroup'</span><span class="p">)</span><span class="w">
-</span><span class="c1">#</span><span class="w">
 </span><span class="n">draw.categoryValue</span><span class="p">(</span><span class="n">ac_val</span><span class="o">=</span><span class="n">ac_mat</span><span class="p">[</span><span class="n">use_driver</span><span class="p">,],</span><span class="n">exp_val</span><span class="o">=</span><span class="n">exp_mat</span><span class="p">[</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">use_driver</span><span class="p">,</span><span class="s1">'originalID'</span><span class="p">],],</span><span class="n">use_obs_class</span><span class="o">=</span><span class="n">use_obs_class</span><span class="p">,</span><span class="w">
                    </span><span class="n">class_order</span><span class="o">=</span><span class="nf">c</span><span class="p">(</span><span class="s1">'WNT'</span><span class="p">,</span><span class="s1">'SHH'</span><span class="p">,</span><span class="s1">'G4'</span><span class="p">),</span><span class="n">class_srt</span><span class="o">=</span><span class="m">30</span><span class="p">,</span><span class="n">main_ac</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ms_tab</span><span class="p">[</span><span class="n">use_driver</span><span class="p">,</span><span class="s1">'gene_label'</span><span class="p">],</span><span class="n">main_exp</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">use_driver</span><span class="p">,</span><span class="s1">'geneSymbol'</span><span class="p">],</span><span class="w">
                    </span><span class="n">pdf_file</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'%s/categoryValue_demo1.pdf'</span><span class="p">,</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.PLOT</span><span class="p">))</span><span class="w">
@@ -612,9 +653,14 @@ The size of the circle is the intersected gene number (legend on the top) and th
 
 <h3 id="qii4-what-is-the-function-of-the-target-genes-for-this-selected-driver-">QII.4: What is the function of the target genes for this selected driver ?</h3>
 
+<ul>
+  <li>Similar as the process for top drivers, the target genes for a specific diver could also be used for functional enrichment analysis. 
+If the original ID is not gene symbol, <code class="highlighter-rouge">get_name_transfertab()</code> could be used for ID conversion.</li>
+</ul>
+
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">use_driver</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">driver_list</span><span class="p">[</span><span class="m">1</span><span class="p">]</span><span class="w">
 </span><span class="n">use_target_genes</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.network</span><span class="o">$</span><span class="n">target_list</span><span class="p">[[</span><span class="n">use_driver</span><span class="p">]]</span><span class="o">$</span><span class="n">target</span><span class="w">
-</span><span class="n">use_target_genes</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">get_name_transfertab</span><span class="p">(</span><span class="n">use_genes</span><span class="o">=</span><span class="w"> </span><span class="n">use_target_genes</span><span class="p">,</span><span class="n">transfer_tab</span><span class="o">=</span><span class="n">transfer_tab</span><span class="p">,</span><span class="n">ignore_version</span><span class="o">=</span><span class="kc">TRUE</span><span class="p">)</span><span class="w">	
+</span><span class="c1">#use_target_genes &lt;- get_name_transfertab(use_genes= use_target_genes,transfer_tab=transfer_tab,ignore_version=TRUE)	# optional</span><span class="w">
 </span><span class="n">bg_list</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">get_name_transfertab</span><span class="p">(</span><span class="n">use_genes</span><span class="o">=</span><span class="w"> </span><span class="n">unique</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.network</span><span class="o">$</span><span class="n">network_dat</span><span class="o">$</span><span class="n">target</span><span class="p">),</span><span class="n">transfer_tab</span><span class="o">=</span><span class="n">transfer_tab</span><span class="p">,</span><span class="n">ignore_version</span><span class="o">=</span><span class="kc">TRUE</span><span class="p">)</span><span class="w">	
 </span><span class="n">res</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">funcEnrich.Fisher</span><span class="p">(</span><span class="n">input_list</span><span class="o">=</span><span class="w"> </span><span class="n">use_target_genes</span><span class="p">,</span><span class="n">bg_list</span><span class="o">=</span><span class="w"> </span><span class="n">bg_list</span><span class="p">,</span><span class="n">use_gs</span><span class="o">=</span><span class="nf">c</span><span class="p">(</span><span class="s1">'H'</span><span class="p">,</span><span class="s1">'CP:REACTOME'</span><span class="p">,</span><span class="s1">'BP'</span><span class="p">,</span><span class="s1">'CGP'</span><span class="p">,</span><span class="s1">'CP:KEGG'</span><span class="p">),</span><span class="w">
                            </span><span class="n">Pv_thre</span><span class="o">=</span><span class="m">0.1</span><span class="p">,</span><span class="n">Pv_adj</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'none'</span><span class="p">,</span><span class="n">min_gs_size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">30</span><span class="p">,</span><span class="w"> </span><span class="n">max_gs_size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">500</span><span class="p">)</span><span class="w">
@@ -629,16 +675,24 @@ The size of the circle is the intersected gene number (legend on the top) and th
 
 <h3 id="qiii1-what-are-the-activities-of-the-curated-gene-sets-in-all-samples-and-what-are-the-top-significantly-differed-gene-sets-">QIII.1: What are the activities of the curated gene sets in all samples and what are the top significantly differed gene sets ?</h3>
 
+<p>The study of drivers is to treat their target genes as a gene set (or regulon) and measure their activity values. Similarly, for the curated gene sets from public datasets, we could also calculate their activity values and do similar statistical testing.</p>
+
+<p>Firstly, the expression matrix with row names to gene symbols must be prepared.</p>
+
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">db.preload</span><span class="p">(</span><span class="n">use_level</span><span class="o">=</span><span class="s1">'gene'</span><span class="p">,</span><span class="n">use_spe</span><span class="o">=</span><span class="s1">'human'</span><span class="p">,</span><span class="n">update</span><span class="o">=</span><span class="kc">FALSE</span><span class="p">)</span><span class="w">
 </span><span class="n">exp_mat</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">exprs</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">cal.eset</span><span class="p">)</span><span class="w"> </span><span class="c1">## expression,the rownames must be the originalID</span><span class="w">
 </span><span class="c1">## get expression matrix for the transfered gene name, if original is gene-based expression matrix, just use the exp_mat</span><span class="w">
 </span><span class="n">exp_mat_gene</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">exp_mat</span><span class="w">
 </span></code></pre></div></div>
 
+<p>Secondly, choose the gene sets for use, if user want to combine categories, <code class="highlighter-rouge">merge_gs()</code> could be used. Then, calculate the activity values for the gene sets across all samples by <code class="highlighter-rouge">cal.Activity.GS()</code>.</p>
+
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">## calculate activity for all genesets</span><span class="w">
 </span><span class="n">use_gs2gene</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">merge_gs</span><span class="p">(</span><span class="n">all_gs2gene</span><span class="o">=</span><span class="n">all_gs2gene</span><span class="p">,</span><span class="n">use_gs</span><span class="o">=</span><span class="nf">c</span><span class="p">(</span><span class="s1">'H'</span><span class="p">,</span><span class="s1">'CP:BIOCARTA'</span><span class="p">,</span><span class="s1">'CP:REACTOME'</span><span class="p">,</span><span class="s1">'CP:KEGG'</span><span class="p">,</span><span class="s1">'C5'</span><span class="p">))</span><span class="w">
 </span><span class="n">ac_gs</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">cal.Activity.GS</span><span class="p">(</span><span class="n">use_gs2gene</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">use_gs2gene</span><span class="p">,</span><span class="n">cal_mat</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">exp_mat_gene</span><span class="p">)</span><span class="w">
 </span></code></pre></div></div>
+
+<p>Thirdly, do statistical testing for the activity value of the gene sets by <code class="highlighter-rouge">getDE.BID.2G()</code> or <code class="highlighter-rouge">getDE.limma.2G()</code>.</p>
 
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">## get DA</span><span class="w">
 </span><span class="n">phe_info</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">pData</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">cal.eset</span><span class="p">)</span><span class="w">
@@ -646,6 +700,10 @@ The size of the circle is the intersected gene number (legend on the top) and th
 </span><span class="n">G</span><span class="m">1</span><span class="w">  </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">rownames</span><span class="p">(</span><span class="n">phe_info</span><span class="p">)[</span><span class="n">which</span><span class="p">(</span><span class="n">phe_info</span><span class="o">$</span><span class="n">`subgroup`</span><span class="o">==</span><span class="s1">'G4'</span><span class="p">)]</span><span class="w"> </span><span class="c1"># get sample list for G1</span><span class="w">
 </span><span class="n">DA_gs_bid</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">getDE.BID.2G</span><span class="p">(</span><span class="n">eset</span><span class="o">=</span><span class="n">generate.eset</span><span class="p">(</span><span class="n">ac_gs</span><span class="p">),</span><span class="n">G</span><span class="m">1</span><span class="o">=</span><span class="n">G</span><span class="m">1</span><span class="p">,</span><span class="n">G</span><span class="m">0</span><span class="o">=</span><span class="n">G</span><span class="m">0</span><span class="p">,</span><span class="n">G</span><span class="m">1</span><span class="err">_</span><span class="n">name</span><span class="o">=</span><span class="s1">'G4'</span><span class="p">,</span><span class="n">G</span><span class="m">0</span><span class="err">_</span><span class="n">name</span><span class="o">=</span><span class="s1">'others'</span><span class="p">)</span><span class="w">
 </span></code></pre></div></div>
+
+<ul>
+  <li>Now, we could visualize the results, and the first plot will be the <code class="highlighter-rouge">draw.volcanoPlot()</code> and also <code class="highlighter-rouge">sig_gs</code> will be returned.</li>
+</ul>
 
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">## draw vocalno plot for top sig-GS</span><span class="w">
 </span><span class="n">sig_gs</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">draw.volcanoPlot</span><span class="p">(</span><span class="n">dat</span><span class="o">=</span><span class="w"> </span><span class="n">DA_gs_bid</span><span class="p">,</span><span class="n">label_col</span><span class="o">=</span><span class="s1">'ID'</span><span class="p">,</span><span class="n">logFC_col</span><span class="o">=</span><span class="s1">'logFC'</span><span class="p">,</span><span class="w">
@@ -656,14 +714,21 @@ The size of the circle is the intersected gene number (legend on the top) and th
 
 <p><img src="vocalno_GS_DA.png" alt="vocalno_GS_DA" /></p>
 
+<ul>
+  <li>Heatmap for the top significant gene sets.</li>
+</ul>
+
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">## draw heatmap for top sig-GS</span><span class="w">
 </span><span class="n">draw.heatmap</span><span class="p">(</span><span class="n">mat</span><span class="o">=</span><span class="n">ac_gs</span><span class="p">[</span><span class="n">sig_gs</span><span class="o">$</span><span class="n">ID</span><span class="p">,],</span><span class="n">pdf_file</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'%s/heatmap_GS.pdf'</span><span class="p">,</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.PLOT</span><span class="p">),</span><span class="n">scale</span><span class="o">=</span><span class="s1">'row'</span><span class="p">,</span><span class="w">
              </span><span class="n">phenotype_info</span><span class="o">=</span><span class="n">phe_info</span><span class="p">,</span><span class="n">use_phe</span><span class="o">=</span><span class="nf">c</span><span class="p">(</span><span class="s1">'gender'</span><span class="p">,</span><span class="s1">'subgroup'</span><span class="p">))</span><span class="w">
 </span></code></pre></div></div>
 
+<ul>
+  <li>NetBID style GSEA plot could be drawn by <code class="highlighter-rouge">draw.GSEA.NetBID.GS()</code>. Different from <code class="highlighter-rouge">draw.GSEA.NetBID()</code>, the genes in the gene sets could not be divided into positively-regulated/negatively-regulated. If with some special design (e.g combine two opposite function gene sets), try to use <code class="highlighter-rouge">draw.GSEA.NetBID()</code>.</li>
+</ul>
+
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">## draw GSEA plot for top sig-GS</span><span class="w">
-</span><span class="n">comp</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="s1">'G4.Vs.others'</span><span class="w">
-</span><span class="n">DE</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">analysis.par</span><span class="o">$</span><span class="n">DE</span><span class="p">[[</span><span class="n">comp</span><span class="p">]]</span><span class="w">
+</span><span class="n">DE</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">analysis.par</span><span class="o">$</span><span class="n">DE</span><span class="p">[[</span><span class="n">comp_name</span><span class="p">]]</span><span class="w">
 </span><span class="c1">#</span><span class="w">
 </span><span class="n">draw.GSEA.NetBID.GS</span><span class="p">(</span><span class="n">DE</span><span class="o">=</span><span class="n">DE</span><span class="p">,</span><span class="n">name_col</span><span class="o">=</span><span class="s1">'ID'</span><span class="p">,</span><span class="n">profile_col</span><span class="o">=</span><span class="s1">'t'</span><span class="p">,</span><span class="n">profile_trend</span><span class="o">=</span><span class="s1">'pos2neg'</span><span class="p">,</span><span class="w">
                  </span><span class="n">sig_gs_list</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sig_gs</span><span class="o">$</span><span class="n">ID</span><span class="p">,</span><span class="w">
@@ -677,6 +742,10 @@ The size of the circle is the intersected gene number (legend on the top) and th
 
 <p><img src="NetBID_GSEA_GS_demo1.png" alt="NetBID_GSEA_GS_demo1" /></p>
 
+<ul>
+  <li>The <code class="highlighter-rouge">target_col</code> could be chosen from <code class="highlighter-rouge">RdBu</code> and <code class="highlighter-rouge">black</code>.</li>
+</ul>
+
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">draw.GSEA.NetBID.GS</span><span class="p">(</span><span class="n">DE</span><span class="o">=</span><span class="n">DE</span><span class="p">,</span><span class="n">name_col</span><span class="o">=</span><span class="s1">'ID'</span><span class="p">,</span><span class="n">profile_col</span><span class="o">=</span><span class="s1">'t'</span><span class="p">,</span><span class="n">profile_trend</span><span class="o">=</span><span class="s1">'pos2neg'</span><span class="p">,</span><span class="w">
                     </span><span class="n">sig_gs_list</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sig_gs</span><span class="o">$</span><span class="n">ID</span><span class="p">,</span><span class="w">
                     </span><span class="n">gs_DA_Z</span><span class="o">=</span><span class="w"> </span><span class="n">DA_gs_bid</span><span class="p">[</span><span class="n">sig_gs</span><span class="o">$</span><span class="n">ID</span><span class="p">,</span><span class="s1">'Z-statistics'</span><span class="p">],</span><span class="w">
@@ -689,33 +758,49 @@ The size of the circle is the intersected gene number (legend on the top) and th
 
 <p><img src="NetBID_GSEA_GS_demo2.png" alt="NetBID_GSEA_GS_demo2" /></p>
 
+<ul>
+  <li>For a specific gene set, <code class="highlighter-rouge">draw.GSEA()</code> could be used for display the genes’ significance in the DE profile.</li>
+</ul>
+
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">## draw GSEA plot for each sig-GS</span><span class="w">
 </span><span class="n">DE_profile</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">DE</span><span class="o">$</span><span class="n">`Z-statistics`</span><span class="p">;</span><span class="w"> </span><span class="nf">names</span><span class="p">(</span><span class="n">DE_profile</span><span class="p">)</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">rownames</span><span class="p">(</span><span class="n">DE</span><span class="p">)</span><span class="w">
 </span><span class="n">use_target_genes</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">rownames</span><span class="p">(</span><span class="n">DE</span><span class="p">)[</span><span class="n">which</span><span class="p">(</span><span class="n">DE</span><span class="o">$</span><span class="n">ID</span><span class="w"> </span><span class="o">%in%</span><span class="w"> </span><span class="n">use_gs2gene</span><span class="p">[[</span><span class="n">sig_gs</span><span class="o">$</span><span class="n">ID</span><span class="p">[</span><span class="m">1</span><span class="p">]]])]</span><span class="w">
+</span><span class="n">use_gs</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">sig_gs</span><span class="o">$</span><span class="n">ID</span><span class="p">[</span><span class="m">1</span><span class="p">]</span><span class="w">
 </span><span class="n">draw.GSEA</span><span class="p">(</span><span class="n">rank_profile</span><span class="o">=</span><span class="n">DE_profile</span><span class="p">,</span><span class="n">use_genes</span><span class="o">=</span><span class="n">use_target_genes</span><span class="p">,</span><span class="w">
-          </span><span class="n">main</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'GSEA plot for %s'</span><span class="p">,</span><span class="n">sig_gs</span><span class="o">$</span><span class="n">ID</span><span class="p">[</span><span class="m">1</span><span class="p">]),</span><span class="w">
+          </span><span class="n">main</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'GSEA plot for %s'</span><span class="p">,</span><span class="n">use_gs</span><span class="p">),</span><span class="w">
           </span><span class="n">pdf_file</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'%s/GSEA_GS_each.pdf'</span><span class="p">,</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.PLOT</span><span class="p">),</span><span class="w">
-          </span><span class="n">left_annotation</span><span class="o">=</span><span class="s1">'high in G4'</span><span class="p">,</span><span class="n">right_annotation</span><span class="o">=</span><span class="s1">'high in others'</span><span class="p">)</span><span class="w">
+          </span><span class="n">left_annotation</span><span class="o">=</span><span class="s1">'high in G4'</span><span class="p">,</span><span class="n">right_annotation</span><span class="o">=</span><span class="s1">'high in others'</span><span class="p">,</span><span class="w">
+          </span><span class="n">annotation</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'P-value: %s'</span><span class="p">,</span><span class="nf">signif</span><span class="p">(</span><span class="n">sig_gs</span><span class="p">[</span><span class="n">use_gs</span><span class="p">,</span><span class="s1">'P.Value'</span><span class="p">],</span><span class="m">2</span><span class="p">)))</span><span class="w">
 </span></code></pre></div></div>
 
 <p><img src="GSEA_GS_each.png" alt="GSEA_GS_each" /></p>
 
+<ul>
+  <li>For a specific gene set, <code class="highlighter-rouge">draw.categoryValue()</code> could be used for display the activity pattern across all samples.</li>
+</ul>
+
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">## draw category plot for each sig-GS</span><span class="w">
 </span><span class="n">use_obs_class</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">get_obs_label</span><span class="p">(</span><span class="n">phe_info</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">phe_info</span><span class="p">,</span><span class="s1">'subgroup'</span><span class="p">)</span><span class="w">
-</span><span class="n">draw.categoryValue</span><span class="p">(</span><span class="n">ac_val</span><span class="o">=</span><span class="n">ac_gs</span><span class="p">[</span><span class="n">sig_gs</span><span class="o">$</span><span class="n">ID</span><span class="p">[</span><span class="m">1</span><span class="p">],],</span><span class="n">use_obs_class</span><span class="o">=</span><span class="n">use_obs_class</span><span class="p">,</span><span class="w">
+</span><span class="n">draw.categoryValue</span><span class="p">(</span><span class="n">ac_val</span><span class="o">=</span><span class="n">ac_gs</span><span class="p">[</span><span class="n">use_gs</span><span class="p">,],</span><span class="n">use_obs_class</span><span class="o">=</span><span class="n">use_obs_class</span><span class="p">,</span><span class="w">
                    </span><span class="n">class_order</span><span class="o">=</span><span class="nf">c</span><span class="p">(</span><span class="s1">'WNT'</span><span class="p">,</span><span class="s1">'SHH'</span><span class="p">,</span><span class="s1">'G4'</span><span class="p">),</span><span class="n">class_srt</span><span class="o">=</span><span class="m">30</span><span class="p">,</span><span class="n">pdf_file</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'%s/categoryValue_GS_demo1.pdf'</span><span class="p">,</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.PLOT</span><span class="p">),</span><span class="w">
-                   </span><span class="n">main_ac</span><span class="o">=</span><span class="n">sig_gs</span><span class="o">$</span><span class="n">ID</span><span class="p">[</span><span class="m">1</span><span class="p">],</span><span class="n">main_cex</span><span class="o">=</span><span class="m">0.8</span><span class="p">)</span><span class="w">
+                   </span><span class="n">main_ac</span><span class="o">=</span><span class="w"> </span><span class="n">use_gs</span><span class="p">,</span><span class="n">main_cex</span><span class="o">=</span><span class="m">0.8</span><span class="p">)</span><span class="w">
 </span></code></pre></div></div>
 
 <p><img src="categoryValue_GS_demo1.png" alt="categoryValue_GS_demo1" /></p>
 
 <h3 id="qiii2-how-to-find-drivers-with-significantly-overlapped-target-genes-">QIII.2: How to find drivers with significantly overlapped target genes ?</h3>
 
+<ul>
+  <li>Sometimes, user want to check the target genes’ intersection between different drivers. 
+Here, <code class="highlighter-rouge">draw.bubblePlot()</code> could be used for this purpose by some modification. 
+User need to prepare a geneset to gene list and a fake transfer table.</li>
+</ul>
+
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">gs2gene_target</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.network</span><span class="o">$</span><span class="n">target_list</span><span class="p">[</span><span class="n">driver_list</span><span class="p">]</span><span class="w">
 </span><span class="n">gs2gene_target</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">lapply</span><span class="p">(</span><span class="n">gs2gene_target</span><span class="p">,</span><span class="k">function</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="n">x</span><span class="o">$</span><span class="n">target</span><span class="p">)</span><span class="w">
 </span><span class="n">transfer_tab_fake</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">data.frame</span><span class="p">(</span><span class="n">from</span><span class="o">=</span><span class="n">transfer_tab</span><span class="p">[,</span><span class="m">1</span><span class="p">],</span><span class="n">to</span><span class="o">=</span><span class="n">transfer_tab</span><span class="p">[,</span><span class="m">1</span><span class="p">],</span><span class="n">type</span><span class="o">=</span><span class="n">transfer_tab</span><span class="p">[,</span><span class="m">3</span><span class="p">],</span><span class="n">stringsAsFactors</span><span class="o">=</span><span class="nb">F</span><span class="p">)</span><span class="w">
 </span><span class="n">draw.bubblePlot</span><span class="p">(</span><span class="n">driver_list</span><span class="o">=</span><span class="w"> </span><span class="n">driver_list</span><span class="p">,</span><span class="n">show_label</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'gene_label'</span><span class="p">],</span><span class="w">
-                </span><span class="n">Z_val</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'Z.G4.Vs.others_DA'</span><span class="p">],</span><span class="w">
+                </span><span class="n">Z_val</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'Z.%s_DA'</span><span class="p">,</span><span class="n">comp_name</span><span class="p">)],</span><span class="w">
                 </span><span class="n">driver_type</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'gene_biotype'</span><span class="p">],</span><span class="w">
                 </span><span class="n">target_list</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.network</span><span class="o">$</span><span class="n">target_list</span><span class="p">,</span><span class="n">transfer2symbol2type</span><span class="o">=</span><span class="n">transfer_tab_fake</span><span class="p">,</span><span class="w">
                 </span><span class="n">bg_list</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[,</span><span class="s1">'geneSymbol'</span><span class="p">],</span><span class="n">gs2gene</span><span class="o">=</span><span class="n">gs2gene_target</span><span class="p">,</span><span class="w">
@@ -731,32 +816,15 @@ The size of the circle is the intersected gene number (legend on the top) and th
 <hr />
 <h3 id="how-to-modify-the-figures-by-adjusting-the-paramters-in-the-draw-functions-"><em>How to modify the figures by adjusting the paramters in the draw.</em> functions ?*</h3>
 
+<p>NetBID2 has 14 functions start with <code class="highlighter-rouge">draw.*</code>, those functions all have one option <code class="highlighter-rouge">pdf_file=</code>.</p>
+<ul>
+  <li>If set this not NULL, the function will directly output the plotting results into a pdf file with adjusted figure size. User could choose to modify all <code class="highlighter-rouge">cex</code> related options to adjust the text size and the pdf size will be automatically adjusted by selection.</li>
+  <li>If set <code class="highlighter-rouge">pdf_file=NULL</code>, the figures will be displayed interactively and user could choose to add <code class="highlighter-rouge">pdf()</code> before calling the function and <code class="highlighter-rouge">dev.off()</code> after, or modify the figure size in the console and save into files.</li>
+</ul>
+
 <hr />
 
 
-          
-          <hr>
-          <h2 class="text-delta">Table of contents</h2>
-          
-          <ul>
-            
-              
-            
-              
-            
-              
-            
-              
-            
-              
-            
-              
-            
-              
-            
-              
-            
-          </ul>
           
         </div>
       </div>

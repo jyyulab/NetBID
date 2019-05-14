@@ -2,7 +2,7 @@
 layout: default
 title: Driver estimation
 nav_order: 3
-has_children: true
+has_children: false
 permalink: /docs/driver_estimation
 ---
 
@@ -13,6 +13,20 @@ The purpose for this part:
 **estimate potential drivers in a biological process and generate master tables**.
 
 The full demo script for this part could be found in [pipeline_analysis_demo1.R](https://github.com/jyyulab/NetBID-dev/blob/master/demo_scripts/pipeline_analysis_demo1.R).
+
+----------
+## Quick Navigation for this page
+
+- [Step0: preparations](#step0-preparations)
+- [Step1: load in gene expression dataset for analysis (exp-load,exp-cluster,exp-QC)](#step1-load-in-gene-expression-datasets-for-analysis-exp-load-exp-cluste-exp-qc)
+   - [Q&A: What to do if the ID type is different between the network construction dataset and analysis dataset ?](#what-to-do-if-the-id-type-is-different-between-the-network-construction-dataset-and-analysis-dataset-)
+- [Step2: read in network files and activity calculation (act-get)](#step2-read-in-network-files-and-activity-calculation-act-get)
+    - [Q&A: Why study driver’s activity ?](#why-study-drivers-activity-) 
+- [Step3: get differentiated expression/differentiated activity for all possible drivers (act-DA)](#step3-get-differentiated-expressiondifferentiated-activity-for-all-possible-drivers-act-da)
+- [Step4: generate master table (ms-tab)](#step4-generate-master-table-ms-tab)
+    - [Q&A: How to read and use the master table ?](#how-to-read-and-use-the-master-table-)
+   
+---------
 
 ## Step0: preparations
 
@@ -195,6 +209,7 @@ NetBID.loadRData(analysis.par=analysis.par,step='act-get')
 ```
 
 The main purpose of this step is to get significantly differentiated expression (DE) and activity (DA) for all possible drivers between a specific process. 
+For the RNASeq dataset, user could choose to use the DE output from DESeq2 but need to be attention about the column names (e.g pvalue) and prepare one column of `Z-statistics` in the following functions. 
 Here, NetBID2 provides two functions `getDE.BID.2G()` and `getDE.limma.2G()` to assist the analysis between two groups (`G1` Vs. `G0`). 
 User only need to get the sample list for `G1` and `G0` and specificy the name of `G1_name` and `G0_name` to use these two functions. 
 `getDE.BID.2G()` will use the bayesian inference strategy to get the DE and DA, if user choose `method='Bayesian'`, the calculation will take more time compared with `method='MLE'`.

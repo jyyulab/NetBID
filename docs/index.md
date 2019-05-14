@@ -2,10 +2,11 @@
 layout: default
 title: NetBID2
 nav_order: 1
+description: "NetBID2"
 permalink: /
 ---
 
-
+      
 # NetBID2: Network-based Bayesian Inference of Drivers. Version 2
 {: .fs-9 }
 

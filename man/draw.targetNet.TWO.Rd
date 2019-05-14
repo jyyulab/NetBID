@@ -75,6 +75,12 @@ draw.targetNet.TWO(source1_label=source1_label,
                edge_score1=edge_score1,edge_score2=edge_score2,
                total_possible_target=paste0('G',1:1000),
                show_test=TRUE,label_cex=0.6)
+draw.targetNet.TWO(source1_label=source1_label,
+               source2_label=source2_label,
+               source1_z=source1_z,source2_z=source2_z,
+               edge_score1=edge_score1,edge_score2=edge_score2,
+               total_possible_target=paste0('G',1:1000),
+               show_test=TRUE,label_cex=0.6,n_layer=2)
 
 \dontrun{
 source1_label <- 'test1'

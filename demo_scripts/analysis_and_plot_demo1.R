@@ -39,8 +39,8 @@ driver_list <- rownames(sig_driver) ## the rownames is the originalID_label
 draw.GSEA.NetBID(DE=DE,profile_col='logFC',profile_trend='neg2pos',name_col='ID',
                  driver_list = driver_list,
                  show_label=ms_tab[driver_list,'gene_label'],
-                 driver_DA_Z=ms_tab[driver_list,'Z.G4.Vs.others_DA'],
-                 driver_DE_Z=ms_tab[driver_list,'Z.G4.Vs.others_DE'],
+                 driver_DA_Z=ms_tab[driver_list,sprintf('Z.%s_DA',comp_name)],
+                 driver_DE_Z=ms_tab[driver_list,sprintf('Z.%s_DE',comp_name)],
                  target_list=analysis.par$merge.network$target_list,
                  top_driver_number=30,target_nrow=2,target_col='RdBu',
                  left_annotation = 'high in others',right_annotation = 'high in G4',
@@ -50,8 +50,8 @@ draw.GSEA.NetBID(DE=DE,profile_col='logFC',profile_trend='neg2pos',name_col='ID'
 draw.GSEA.NetBID(DE=DE,profile_col='t',profile_trend='pos2neg',
                  driver_list = driver_list,
                  show_label=ms_tab[driver_list,'gene_label'],
-                 driver_DA_Z=ms_tab[driver_list,'Z.G4.Vs.others_DA'],
-                 driver_DE_Z=ms_tab[driver_list,'Z.G4.Vs.others_DE'],
+                 driver_DA_Z=ms_tab[driver_list,sprintf('Z.%s_DA',comp_name)],
+                 driver_DE_Z=ms_tab[driver_list,sprintf('Z.%s_DE',comp_name)],
                  target_list=analysis.par$merge.network$target_list,
                  top_driver_number=30,target_nrow=2,target_col='RdBu',
                  left_annotation = 'high in G4',right_annotation = 'high in others',
@@ -61,8 +61,8 @@ draw.GSEA.NetBID(DE=DE,profile_col='t',profile_trend='pos2neg',
 draw.GSEA.NetBID(DE=DE,profile_col='t',profile_trend='pos2neg',
                  driver_list = driver_list,
                  show_label=ms_tab[driver_list,'gene_label'],
-                 driver_DA_Z=ms_tab[driver_list,'Z.G4.Vs.others_DA'],
-                 driver_DE_Z=ms_tab[driver_list,'Z.G4.Vs.others_DE'],
+                 driver_DA_Z=ms_tab[driver_list,sprintf('Z.%s_DA',comp_name)],
+                 driver_DE_Z=ms_tab[driver_list,sprintf('Z.%s_DE',comp_name)],
                  target_list=analysis.par$merge.network$target_list,
                  top_driver_number=30,target_nrow=2,target_col='black',
                  left_annotation = 'high in G4',right_annotation = 'high in others',
@@ -72,8 +72,8 @@ draw.GSEA.NetBID(DE=DE,profile_col='t',profile_trend='pos2neg',
 draw.GSEA.NetBID(DE=DE,profile_col='t',profile_trend='pos2neg',
                  driver_list = driver_list,
                  show_label=ms_tab[driver_list,'gene_label'],
-                 driver_DA_Z=ms_tab[driver_list,'Z.G4.Vs.others_DA'],
-                 driver_DE_Z=ms_tab[driver_list,'Z.G4.Vs.others_DE'],
+                 driver_DA_Z=ms_tab[driver_list,sprintf('Z.%s_DA',comp_name)],
+                 driver_DE_Z=ms_tab[driver_list,sprintf('Z.%s_DE',comp_name)],
                  target_list=analysis.par$merge.network$target_list,
                  top_driver_number=30,target_nrow=1,target_col='RdBu',
                  left_annotation = 'high in G4',right_annotation = 'high in others',
@@ -83,8 +83,8 @@ draw.GSEA.NetBID(DE=DE,profile_col='t',profile_trend='pos2neg',
 draw.GSEA.NetBID(DE=DE,profile_col='t',profile_trend='pos2neg',
                  driver_list = driver_list,
                  show_label=ms_tab[driver_list,'gene_label'],
-                 driver_DA_Z=ms_tab[driver_list,'Z.G4.Vs.others_DA'],
-                 driver_DE_Z=ms_tab[driver_list,'Z.G4.Vs.others_DE'],
+                 driver_DA_Z=ms_tab[driver_list,sprintf('Z.%s_DA',comp_name)],
+                 driver_DE_Z=ms_tab[driver_list,sprintf('Z.%s_DE',comp_name)],
                  target_list=analysis.par$merge.network$target_list,
                  top_driver_number=30,target_nrow=1,target_col='black',
                  left_annotation = 'high in G4',right_annotation = 'high in others',
@@ -159,7 +159,7 @@ draw.funcEnrich.cluster(funcEnrich_res= res_up,top_number=30,gs_cex = 1.5,gene_c
 transfer_tab <- analysis.par$transfer_tab
 ## draw
 draw.bubblePlot(driver_list= driver_list,show_label=ms_tab[driver_list,'gene_label'],
-                Z_val=ms_tab[driver_list,'Z.G4.Vs.others_DA'],
+                Z_val=ms_tab[driver_list,sprintf('Z.%s_DA',comp_name)],
                 driver_type=ms_tab[driver_list,'gene_biotype'],
                 target_list=analysis.par$merge.network$target_list,transfer2symbol2type=transfer_tab,
                 bg_list=ms_tab[,'geneSymbol'],min_gs_size=5,max_gs_size=500,use_gs=c('CP:KEGG','H'),
@@ -168,7 +168,7 @@ draw.bubblePlot(driver_list= driver_list,show_label=ms_tab[driver_list,'gene_lab
                 main='Bubbleplot for top driver targets')
 
 draw.bubblePlot(driver_list= driver_list,show_label=ms_tab[driver_list,'gene_label'],
-                Z_val=ms_tab[driver_list,'Z.G4.Vs.others_DA'],
+                Z_val=ms_tab[driver_list,sprintf('Z.%s_DA',comp_name)],
                 driver_type=ms_tab[driver_list,'gene_biotype'],
                 target_list=analysis.par$merge.network$target_list,transfer2symbol2type=transfer_tab,
                 bg_list=ms_tab[,'geneSymbol'],min_gs_size=10,max_gs_size=300,use_gs=c('CP:KEGG'),
@@ -216,25 +216,23 @@ draw.GSEA(rank_profile=DE_profile,use_genes=use_target_genes,use_direction=NULL,
 
 ### QII.2: How to visualize the network structure of the selected driver ?
 use_driver <- driver_list[1]
-use_driver2 <- driver_list[2]
-
 edge_score <- analysis.par$merge.network$target_list[[use_driver]]$MI*sign(analysis.par$merge.network$target_list[[use_driver]]$spearman)
 names(edge_score) <- analysis.par$merge.network$target_list[[use_driver]]$target
-#
-edge_score2 <- analysis.par$merge.network$target_list[[use_driver2]]$MI*sign(analysis.par$merge.network$target_list[[use_driver2]]$spearman)
-names(edge_score2) <- analysis.par$merge.network$target_list[[use_driver2]]$target
-#
-draw.targetNet(source_label=ms_tab[use_driver,'gene_label'],source_z=ms_tab[use_driver,'Z.G4.Vs.others_DA'],
-               edge_score = edge_score,pdf_file=sprintf('%s/targetNet_out.pdf',analysis.par$out.dir.PLOT),label_cex = 0.35,n_layer=4,alphabetical_order=TRUE)
 
-draw.targetNet(source_label=ms_tab[use_driver,'gene_label'],source_z=ms_tab[use_driver,'Z.G4.Vs.others_DA'],
-               edge_score = edge_score,pdf_file=sprintf('%s/targetNet_in.pdf',analysis.par$out.dir.PLOT),label_cex = 0.35,arrow_direction = 'in',,n_layer=4)
+draw.targetNet(source_label=ms_tab[use_driver,'gene_label'],source_z=ms_tab[use_driver,sprintf('Z.%s_DA',comp_name)],
+               edge_score = edge_score,pdf_file=sprintf('%s/targetNet_out.pdf',analysis.par$out.dir.PLOT),label_cex = 0.4,n_layer=4, alphabetical_order=TRUE)
+               
+draw.targetNet(source_label=ms_tab[use_driver,'gene_label'],source_z=ms_tab[use_driver,sprintf('Z.%s_DA',comp_name)],
+               edge_score = edge_score,pdf_file=sprintf('%s/targetNet_in.pdf',analysis.par$out.dir.PLOT),label_cex = 0.35,arrow_direction = 'in',n_layer=6)
 
 # for two target
+use_driver2 <- driver_list[2]
+edge_score2 <- analysis.par$merge.network$target_list[[use_driver2]]$MI*sign(analysis.par$merge.network$target_list[[use_driver2]]$spearman)
+names(edge_score2) <- analysis.par$merge.network$target_list[[use_driver2]]$target
 use_genes <- unique(analysis.par$merge.network$network_dat$target.symbol)
 draw.targetNet.TWO(source1_label=ms_tab[use_driver,'gene_label'],edge_score1 = edge_score,
                    source2_label=ms_tab[use_driver2,'gene_label'],edge_score2 = edge_score2,
-                   source1_z=ms_tab[use_driver,'Z.G4.Vs.others_DA'],source2_z=ms_tab[use_driver2,'Z.G4.Vs.others_DA'],
+                   source1_z=ms_tab[use_driver,sprintf('Z.%s_DA',comp_name)],source2_z=ms_tab[use_driver2,sprintf('Z.%s_DA',comp_name)],
                    pdf_file=sprintf('%s/targetNetTWO.pdf',analysis.par$out.dir.PLOT),total_possible_target=use_genes,show_test=TRUE,
                    label_cex = 0.4,n_layer=1,source_cex=0.6,alphabetical_order=FALSE)
 
@@ -300,8 +298,7 @@ draw.heatmap(mat=ac_gs[sig_gs$ID,],pdf_file=sprintf('%s/heatmap_GS.pdf',analysis
              phenotype_info=phe_info,use_phe=c('gender','subgroup'))
 
 ## draw GSEA plot for top sig-GS
-comp <- 'G4.Vs.others'
-DE <- analysis.par$DE[[comp]]
+DE <- analysis.par$DE[[comp_name]]
 #
 draw.GSEA.NetBID.GS(DE=DE,name_col='ID',profile_col='t',profile_trend='pos2neg',
                  sig_gs_list = sig_gs$ID,
@@ -323,17 +320,18 @@ draw.GSEA.NetBID.GS(DE=DE,name_col='ID',profile_col='t',profile_trend='pos2neg',
 
 ## draw GSEA plot for each sig-GS
 DE_profile <- DE$`Z-statistics`; names(DE_profile) <- rownames(DE)
-use_target_genes <- rownames(DE)[which(DE$ID %in% use_gs2gene[[sig_gs$ID[1]]])]
+use_gs <- sig_gs$ID[1]
+use_target_genes <- rownames(DE)[which(DE$ID %in% use_gs2gene[[use_gs]])]
 draw.GSEA(rank_profile=DE_profile,use_genes=use_target_genes,
-          main=sprintf('GSEA plot for %s',sig_gs$ID[1]),
+          main=sprintf('GSEA plot for %s',use_gs),
           pdf_file = sprintf('%s/GSEA_GS_each.pdf',analysis.par$out.dir.PLOT),
-          left_annotation='high in G4',right_annotation='high in others')
-          
+          left_annotation='high in G4',right_annotation='high in others',
+          annotation=sprintf('P-value: %s',signif(sig_gs[use_gs,'P.Value'],2)))          
 ## draw category plot for each sig-GS
 use_obs_class <- get_obs_label(phe_info = phe_info,'subgroup')
-draw.categoryValue(ac_val=ac_gs[sig_gs$ID[1],],use_obs_class=use_obs_class,
+draw.categoryValue(ac_val=ac_gs[use_gs,],use_obs_class=use_obs_class,
                    class_order=c('WNT','SHH','G4'),class_srt=30,pdf_file=sprintf('%s/categoryValue_GS_demo1.pdf',analysis.par$out.dir.PLOT),
-                   main_ac=sig_gs$ID[1],main_cex=0.8)
+                   main_ac= use_gs,main_cex=0.8)
 
 
 
@@ -342,7 +340,7 @@ gs2gene_target <- analysis.par$merge.network$target_list[driver_list]
 gs2gene_target <- lapply(gs2gene_target,function(x)x$target)
 transfer_tab_fake <- data.frame(from=transfer_tab[,1],to=transfer_tab[,1],type=transfer_tab[,3],stringsAsFactors=F)
 draw.bubblePlot(driver_list= driver_list,show_label=ms_tab[driver_list,'gene_label'],
-                Z_val=ms_tab[driver_list,'Z.G4.Vs.others_DA'],
+                Z_val=ms_tab[driver_list,sprintf('Z.%s_DA',comp_name)],
                 driver_type=ms_tab[driver_list,'gene_biotype'],
                 target_list=analysis.par$merge.network$target_list,transfer2symbol2type=transfer_tab_fake,
                 bg_list=ms_tab[,'geneSymbol'],gs2gene=gs2gene_target,

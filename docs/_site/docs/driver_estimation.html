@@ -9,6 +9,8 @@
   <title>Driver estimation - </title>
   <link rel="stylesheet" href="http://localhost:4000/assets/css/just-the-docs.css">
   
+  <script type="text/javascript" src="http://localhost:4000/assets/js/vendor/lunr.min.js"></script>
+  
   <script type="text/javascript" src="http://localhost:4000/assets/js/just-the-docs.js"></script>
 
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -39,32 +41,7 @@
         
           <li class="navigation-list-item">
             
-            <a href="http://localhost:4000/docs/pre_request" class="navigation-list-link">Pre-requested</a>
-            
-          </li>
-        
-      
-    
-      
-        
-          <li class="navigation-list-item">
-            
             <a href="http://localhost:4000/docs/network_construction" class="navigation-list-link">Network construction</a>
-            
-              
-              <ul class="navigation-list-child-list ">
-                
-                  
-                
-                  
-                
-                  
-                
-                  
-                
-                  
-                
-              </ul>
             
           </li>
         
@@ -76,21 +53,6 @@
             
             <a href="http://localhost:4000/docs/driver_estimation" class="navigation-list-link active">Driver estimation</a>
             
-              
-              <ul class="navigation-list-child-list ">
-                
-                  
-                
-                  
-                
-                  
-                
-                  
-                
-                  
-                
-              </ul>
-            
           </li>
         
       
@@ -101,20 +63,25 @@
             
             <a href="http://localhost:4000/docs/advanced_analysis" class="navigation-list-link">Advanced analysis</a>
             
-              
-              <ul class="navigation-list-child-list ">
-                
-                  
-                
-                  
-                
-                  
-                
-                  
-                
-                  
-                
-              </ul>
+          </li>
+        
+      
+    
+      
+        
+          <li class="navigation-list-item">
+            
+            <a href="http://localhost:4000/docs/QA" class="navigation-list-link">Navigation&FAQ</a>
+            
+          </li>
+        
+      
+    
+      
+        
+          <li class="navigation-list-item">
+            
+            <a href="http://localhost:4000/docs/pre_request" class="navigation-list-link">Pre-requested</a>
             
           </li>
         
@@ -132,6 +99,14 @@
       <div class="page-header">
         <div class="main-content">
           
+          <div class="search js-search">
+            <div class="search-input-wrap">
+              <input type="text" class="js-search-input search-input" tabindex="0" placeholder="Search " aria-label="Search " autocomplete="off">
+              <svg width="14" height="14" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg" class="search-icon"><title>Search</title><g fill-rule="nonzero"><path d="M17.332 20.735c-5.537 0-10-4.6-10-10.247 0-5.646 4.463-10.247 10-10.247 5.536 0 10 4.601 10 10.247s-4.464 10.247-10 10.247zm0-4c3.3 0 6-2.783 6-6.247 0-3.463-2.7-6.247-6-6.247s-6 2.784-6 6.247c0 3.464 2.7 6.247 6 6.247z"/><path d="M11.672 13.791L.192 25.271 3.02 28.1 14.5 16.62z"/></g></svg>
+            </div>
+            <div class="js-search-results search-results-wrap"></div>
+          </div>
+          
           
         </div>
       </div>
@@ -147,6 +122,31 @@
 <p><strong>estimate potential drivers in a biological process and generate master tables</strong>.</p>
 
 <p>The full demo script for this part could be found in <a href="https://github.com/jyyulab/NetBID-dev/blob/master/demo_scripts/pipeline_analysis_demo1.R">pipeline_analysis_demo1.R</a>.</p>
+
+<hr />
+<h2 id="quick-navigation-for-this-page">Quick Navigation for this page</h2>
+
+<ul>
+  <li><a href="#step0-preparations">Step0: preparations</a></li>
+  <li><a href="#step1-load-in-gene-expression-datasets-for-analysis-exp-load-exp-cluste-exp-qc">Step1: load in gene expression dataset for analysis (exp-load,exp-cluster,exp-QC)</a>
+    <ul>
+      <li><a href="#what-to-do-if-the-id-type-is-different-between-the-network-construction-dataset-and-analysis-dataset-">Q&amp;A: What to do if the ID type is different between the network construction dataset and analysis dataset ?</a></li>
+    </ul>
+  </li>
+  <li><a href="#step2-read-in-network-files-and-activity-calculation-act-get">Step2: read in network files and activity calculation (act-get)</a>
+    <ul>
+      <li><a href="#why-study-drivers-activity-">Q&amp;A: Why study driver’s activity ?</a></li>
+    </ul>
+  </li>
+  <li><a href="#step3-get-differentiated-expressiondifferentiated-activity-for-all-possible-drivers-act-da">Step3: get differentiated expression/differentiated activity for all possible drivers (act-DA)</a></li>
+  <li><a href="#step4-generate-master-table-ms-tab">Step4: generate master table (ms-tab)</a>
+    <ul>
+      <li><a href="#how-to-read-and-use-the-master-table-">Q&amp;A: How to read and use the master table ?</a></li>
+    </ul>
+  </li>
+</ul>
+
+<hr />
 
 <h2 id="step0-preparations">Step0: preparations</h2>
 
@@ -323,6 +323,7 @@ No need to run this if continue working from the previous step.</p>
 </span></code></pre></div></div>
 
 <p>The main purpose of this step is to get significantly differentiated expression (DE) and activity (DA) for all possible drivers between a specific process. 
+For the RNASeq dataset, user could choose to use the DE output from DESeq2 but need to be attention about the column names (e.g pvalue) and prepare one column of <code class="highlighter-rouge">Z-statistics</code> in the following functions. 
 Here, NetBID2 provides two functions <code class="highlighter-rouge">getDE.BID.2G()</code> and <code class="highlighter-rouge">getDE.limma.2G()</code> to assist the analysis between two groups (<code class="highlighter-rouge">G1</code> Vs. <code class="highlighter-rouge">G0</code>). 
 User only need to get the sample list for <code class="highlighter-rouge">G1</code> and <code class="highlighter-rouge">G0</code> and specificy the name of <code class="highlighter-rouge">G1_name</code> and <code class="highlighter-rouge">G0_name</code> to use these two functions. 
 <code class="highlighter-rouge">getDE.BID.2G()</code> will use the bayesian inference strategy to get the DE and DA, if user choose <code class="highlighter-rouge">method='Bayesian'</code>, the calculation will take more time compared with <code class="highlighter-rouge">method='MLE'</code>.</p>
@@ -511,29 +512,6 @@ The <code class="highlighter-rouge">analysis.par</code> list need to include 13 
 
 
 
-          
-          <hr>
-          <h2 class="text-delta">Table of contents</h2>
-          
-          <ul>
-            
-              
-            
-              
-            
-              
-            
-              
-            
-              
-            
-              
-            
-              
-            
-              
-            
-          </ul>
           
         </div>
       </div>

@@ -6441,16 +6441,16 @@ draw.targetNet <- function(source_label="",source_z=NULL,edge_score=NULL,
   })
   names(tmp1) <- unique(names(edge_score))
   edge_score <- tmp1
-  edge_score<- edge_score[order(abs(edge_score),decreasing = TRUE)]
+  edge_score<- edge_score[order(edge_score,decreasing = TRUE)]
   g1 <- names(edge_score)
-  if(alphabetical_order==TRUE)  g1 <- sort(g1)
   ec <- z2col(edge_score*100,sig_thre=0,n_len=length(edge_score),red_col=pos_col,blue_col=neg_col);names(ec) <- names(edge_score)
-  ec <- get_transparent(ec,alpha=0.8); names(ec) <- g1
+  ec <- get_transparent(ec,alpha=0.8); names(ec) <- names(edge_score)
   ew <- 2*label_cex*(abs(edge_score)-min(abs(edge_score)))/(max(abs(edge_score))-min(abs(edge_score)))+label_cex/2; names(ew) <- names(edge_score)
   t2xy <- function(tt,radius=1) {
     t2p <- pi*2 * tt
     list(x = radius * cos(t2p), y = radius * sin(t2p))
   }
+  if(alphabetical_order==TRUE)  g1 <- sort(g1)
   plot_part <- function(ori=FALSE,before_off=FALSE){
     geneWidth <- max(strwidthMod(g1,'inches',cex=label_cex))
     if(before_off==TRUE) dev.off()
@@ -6565,6 +6565,12 @@ draw.targetNet <- function(source_label="",source_z=NULL,edge_score=NULL,
 #'                edge_score1=edge_score1,edge_score2=edge_score2,
 #'                total_possible_target=paste0('G',1:1000),
 #'                show_test=TRUE,label_cex=0.6)
+#' draw.targetNet.TWO(source1_label=source1_label,
+#'                source2_label=source2_label,
+#'                source1_z=source1_z,source2_z=source2_z,
+#'                edge_score1=edge_score1,edge_score2=edge_score2,
+#'                total_possible_target=paste0('G',1:1000),
+#'                show_test=TRUE,label_cex=0.6,n_layer=2)
 #'
 #' \dontrun{
 #' source1_label <- 'test1'
@@ -6650,7 +6656,7 @@ draw.targetNet.TWO <- function(source1_label="",source2_label="",
       #all_g1 <- lapply(all_g1,function(x)x[order(edge_score[x])])
       all_tt <- lapply(1:n_layer,function(i){
         if(i==1) return(seq(-ag,ag,length.out=uu)[1:length(all_g1[[i]])])
-        if(i>1) return(seq(-ag-(i-1)/(n_layer*uu),ag-(i-1)/(n_layer*uu),length.out=uu)[1:length(all_g1[[i]])])
+        if(i>1) return(seq(-ag-2*ag*(i-1)/(n_layer*uu),ag-2*ag*(i-1)/(n_layer*uu),length.out=uu)[1:length(all_g1[[i]])])
       })
       all_p <- lapply(1:n_layer,function(i)t2xy(all_tt[[i]],radius=rad_v[i],init.angle= -180))
 
@@ -6693,7 +6699,7 @@ draw.targetNet.TWO <- function(source1_label="",source2_label="",
       #all_g1 <- lapply(all_g1,function(x)x[order(edge_score[x])])
       all_tt <- lapply(1:n_layer,function(i){
         if(i==1) return(seq(-ag,ag,length.out=uu)[1:length(all_g1[[i]])])
-        if(i>1) return(seq(-ag-(i-1)/(n_layer*uu),ag-(i-1)/(n_layer*uu),length.out=uu)[1:length(all_g1[[i]])])
+        if(i>1) return(seq(-ag-2*ag*(i-1)/(n_layer*uu),ag-2*ag*(i-1)/(n_layer*uu),length.out=uu)[1:length(all_g1[[i]])])
       })
       all_p <- lapply(1:n_layer,function(i)t2xy(all_tt[[i]],radius=rad_v[i],init.angle=0))
 
@@ -6728,6 +6734,7 @@ draw.targetNet.TWO <- function(source1_label="",source2_label="",
       dd <- par.char2pos()[2]/2; nr <-ceiling(length(g12)/(rm*2/dd));each_col_n<-ceiling(length(g12)/nr)
       tt <- seq(rm,-rm,length.out=each_col_n);
       xx <- seq(-lp+geneWidth,lp-geneWidth,length.out=nr)
+      if(nr==1) xx<-0
       tt <- unlist(lapply(tt,function(x)rep(x,length.out=nr)))[1:length(g12)]
       xx <- rep(xx,length.out=length(xx)*each_col_n)[1:length(g12)]
 

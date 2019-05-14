@@ -2,7 +2,7 @@
 layout: default
 title: Network construction
 nav_order: 2
-has_children: true
+has_children: false
 permalink: /docs/network_construction
 ---
 
@@ -13,6 +13,24 @@ The purpose for this part:
 **generate a gene regulatory network based on a transcriptomic datasets**.
 
 The full demo script for this part could be found in [pipeline_network_demo1.R](https://github.com/jyyulab/NetBID-dev/blob/master/demo_scripts/pipeline_network_demo1.R).
+
+----------
+## Quick Navigation for this page
+
+- [Step0: preparations](#step0-preparations)
+- [Step1: load in gene expression datasets for network construction (exp-load)](#step1-load-in-gene-expression-datasets-for-network-construction-exp-load)
+   - [Q&A: The choice of expression dataset for network construction](#the-choice-of-expression-dataset-for-network-construction)
+   - [Q&A: Input RNASeq dataset](#input-rnaseq-dataset)
+   - [Q&A: Input expression matrix](#input-expression-matrix)
+- [Step2: normalization for the expression dataset (exp-QC)](#step2-normalization-for-the-expression-dataset-exp-qc)
+   - [Q&A: QC for RNASeq dataset](#qc-for-rnaseq-dataset)
+   - [Q&A: Combine two datasets](#combine-two-datasets)
+- [Step3: check sample cluster information, optional (exp-cluster)](#step3-check-sample-cluster-information-optional-exp-cluster)
+- [Step4: prepare SJARACNE (sjaracne-prep)](#step4-prepare-sjaracne-sjaracne-prep)
+   - [Q&A: ID conversion](#id-conversion)
+   
+----------
+
 
 ## Step0: preparations
 
