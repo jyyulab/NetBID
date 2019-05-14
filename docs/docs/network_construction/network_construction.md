@@ -142,7 +142,7 @@ The network construction expression dataset could be the same as the analysis ex
    It uses an information theoretic approach to eliminate the majority of indirect interactions inferred by co-expression methods. More samples, higher sensitivity and precision will be obtained by experiment. 
    Typically, more than 100 samples is a better choice. 
    - Large size public datasets from the same tissue, cell line or biological background as the analysis dataset are recommended. User could search the databases such as GEO, TCGA. 
-   - Computational inferred networks will surely have false positive edges, especially for those with relative small mutual information (MI) score. Functions related with network processing will be described in the [Driver estimation](../driver_estimation) part. 
+   - Computational inferred networks will surely have false positive edges, especially for those with relative small mutual information (MI) score. Functions related with network processing will be described in the [Driver estimation](../docs/driver_estimation) part. 
    - Once a high quality network is generated, user could put them into a common shared place that multiple projects with similar biological background could rely on that. 
 
 - The demo used in the tutorial actually is not a good network construction expression dataset in real practice. Just used to assist user get familar with the procedure of NetBID2. 

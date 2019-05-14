@@ -39,7 +39,7 @@ library(NetBID2)
 
 This tutorial is based on the suggested pipeline design in NetBID2, and before start, some parameters need to be set.
 
-First, user need to know which network to use. If followed the tutorial in the [Network construction](../network_construction) part, user could specify the `network.dir` and `network.project.name`.
+First, user need to know which network to use. If followed the tutorial in the [Network construction](../docs/network_construction) part, user could specify the `network.dir` and `network.project.name`.
 
 ```R
 network.dir <- sprintf('%s/demo1/network/',system.file(package = "NetBID2")) # use demo network in the package
@@ -64,7 +64,7 @@ current_date <- format(Sys.time(), "%Y-%m-%d") ## current date for project runni
 project_name <- sprintf('driver_%s',current_date) ## project name for the project
 ```
 
-Once decided the `network.dir`, `network.project.name`, `project_main_dir` and `project_name`, user could run `NetBID.analysis.dir.create()` to generate the sub-directories for the working directory, including QC/ to save QC related files, DATA/ to save RData and PLOT/ to save the visulization plots in the [Advanced analysis](../advanced_analysis) part. 
+Once decided the `network.dir`, `network.project.name`, `project_main_dir` and `project_name`, user could run `NetBID.analysis.dir.create()` to generate the sub-directories for the working directory, including QC/ to save QC related files, DATA/ to save RData and PLOT/ to save the visulization plots in the [Advanced analysis](../docs/advanced_analysis) part. 
 Besides, a global list variable `analysis.par` will be returned by the function. 
 Attention, if the current environment already has this variable, the function will do nothing, report a warning message and return the original `analysis.par`.  
 
@@ -85,7 +85,7 @@ load(sprintf('%s/DATA/network.par.Step.exp-QC.RData',network.dir)) ## RData from
 analysis.par$cal.eset <- network.par$net.eset
 ```
 
-However, in most of the cases, the datasets are not the same. User need to follow the similar steps in [Network construction](../network_construction) for expression dataset loading, QC and sample cluster checking.
+However, in most of the cases, the datasets are not the same. User need to follow the similar steps in [Network construction](../docs/network_construction) for expression dataset loading, QC and sample cluster checking.
 
 Save `analysis.par` into the RData file and give the step name to it, e.g `exp-QC`. 
 The RData could be found in `analysis.par$out.dir.DATA/analysis.par.Step.{exp-QC}.RData`.
@@ -366,7 +366,7 @@ out2excel(analysis.par$final_ms_tab,out.xlsx = out_file,mark_gene,mark_col)
 
 Download the master table excel file [ms_tab.xlsx](driver_ms_tab.xlsx) to study the organization of the master table.
 
-Save the `analysis.par` to the RData file. This file contains all information for this project, which could be used for the [Advanced analysis](../advanced_analysis) part and NetBID2 shiny server. 
+Save the `analysis.par` to the RData file. This file contains all information for this project, which could be used for the [Advanced analysis](../docs/advanced_analysis) part and NetBID2 shiny server. 
 The `analysis.par` list need to include 13 components (`main.dir`, `project.name`, `out.dir`, `out.dir.QC`, `out.dir.DATA`, `out.dir.PLOT`, `merge.network`, `cal.eset`, `merge.ac.eset`, `DE`, `DA`, `final_ms_tab`, `transfer_tab`) in order to run in the shiny server. 
 
 **Strongly suggest to save the RData file in this step !**
@@ -392,7 +392,7 @@ NetBID.saveRData(analysis.par=analysis.par,step='ms-tab')
   - The main columns are named by $prefix.$comp_name_{DA or DE}, in which the prefix could be `Z`, `P.Value`, `logFC`, `AveExpr` to indicate the column's data type. `comp_name` is the comparison name in DA/DE. Columns of Z statistics will be automatically marked by the background color to indicate their significance.
   - The next 13 columns (start from `ensembl_gene_id` to `refseq_mrna`) are the information for the genes.
   - The last columns (optional) will be the marker information if set `mark_strategy='add_column'`.
-- User could filter by the target size, sort the columns with Z-statistics to get top significant drivers. OR, follow the tutorial in [Advanced analysis](../advanced_analysis) part for analyze and visualization.
+- User could filter by the target size, sort the columns with Z-statistics to get top significant drivers. OR, follow the tutorial in [Advanced analysis](../docs/advanced_analysis) part for analyze and visualization.
 
 -------
 
