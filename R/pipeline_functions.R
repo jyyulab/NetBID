@@ -33,7 +33,6 @@ library(tximport) ## for data import from Salmon/sailfish/kallisto/rsem/stringti
 library(RColorBrewer) ## for color scale
 library(colorspace) ## for color scale
 library(plot3D) ## for 3D plot
-library(hexbin) ## for QC plot, require hexbin
 library(igraph) ## for network related functions
 library(plotrix) ## for draw.ellipse
 
@@ -47,7 +46,6 @@ library(umap) ## for umap visualization
 library(rhdf5) ## for read in MICA results
 library(GSVA)
 
-library(vsn)
 library(MCMCglmm)
 library(arm)
 library(reshape)
