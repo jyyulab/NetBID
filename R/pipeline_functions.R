@@ -370,8 +370,10 @@ get_IDtransfer <- function(from_type=NULL,to_type=NULL,add_type=NULL,use_genes=N
       message(sprintf('Attention: %s in %s will be updated with new version number, please check the output.
                       If lots of missing, try to set ignore_version=TRUE and try again !',from_type,dataset));
     }else{
+      ori_use_genes <- use_genes
+      ori_from_type <- from_type
       from_type <- gsub('(.*)_version','\\1',from_type)
-      use_genes <- gsub('(.*)\\..*','\\1',use_genes)
+      if(is.null(use_genes)==FALSE) use_genes <- gsub('(.*)\\..*','\\1',use_genes)
     }
   }
   if(is.null(use_genes)==TRUE | length(use_genes)>100){
@@ -383,6 +385,11 @@ get_IDtransfer <- function(from_type=NULL,to_type=NULL,add_type=NULL,use_genes=N
     }
   }else{
     tmp1 <- getBM(attributes=c(from_type,to_type,add_type),values=use_genes,mart=mart,filters=from_type)
+  }
+  if(ori_from_type %in% c('ensembl_gene_id_version','ensembl_transcript_id_version') & is.null(use_genes)==FALSE){
+    tmp2 <- data.frame(ori_from_type=ori_use_genes,from_type=use_genes,stringsAsFactors=FALSE)
+    names(tmp2) <- c(ori_from_type,from_type)
+    tmp1 <- merge(tmp2,tmp1,by.y=from_type,by.x=from_type)[c(from_type,to_type,ori_from_type)]
   }
   w1 <- apply(tmp1,1,function(x)length(which(is.na(x)==TRUE | x=="")))
   transfer_tab <- tmp1[which(w1==0),]
@@ -4147,7 +4154,10 @@ draw.heatmap.local <- function(mat,inner_line=FALSE,out_line=TRUE,inner_col='bla
       text(xxx,pp[4]+max(strheightMod(colnames(mat1))/2)+max(strheightMod(colnames(mat1))/10),colnames(mat1),adj=0.5-col_srt/90,xpd=TRUE,srt=col_srt,cex=column_cex) ## do not use pos, for srt?
     }
   }
-  if(text_col=='down') text(xxx,pp[3]-0.1*(pp[4]-pp[3])/nrow(mat1),colnames(mat1),adj=1,xpd=TRUE,srt=col_srt,cex=column_cex)
+  if(text_col=='down'){
+    if(col_srt!=0) text(xxx,pp[3]-0.1*(pp[4]-pp[3])/nrow(mat1),colnames(mat1),adj=1,xpd=TRUE,srt=col_srt,cex=column_cex)
+    if(col_srt==0) text(xxx,pp[3]-0.1*(pp[4]-pp[3])/nrow(mat1),colnames(mat1),adj=0.5,xpd=TRUE,srt=col_srt,cex=column_cex)
+  }
   if(is.null(display_text_mat)==FALSE){
     for(i in 1:nrow(display_text_mat)){
       for(j in 1:ncol(display_text_mat)){

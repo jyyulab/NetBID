@@ -45,7 +45,7 @@ ac_mat <- cal.Activity(target_list=analysis.par$merge.network$target_list,cal_ma
 
 analysis.par$merge.ac.eset <- generate.eset(exp_mat=ac_mat,phenotype_info=pData(analysis.par$cal.eset)[colnames(ac_mat),],
                                             feature_info=NULL,annotation_info='activity in net-dataset')
-                                            
+
 # QC plots
 draw.eset.QC(analysis.par$merge.ac.eset,outdir=analysis.par$out.dir.QC,intgroup=NULL,do.logtransform=FALSE,prefix='AC_')
 
@@ -94,10 +94,6 @@ draw.combineDE(DE_gene_comb,pdf_file=sprintf('%s/combineDE.pdf',analysis.par$out
 draw.combineDE(DA_driver_comb)
 draw.combineDE(DA_driver_comb,pdf_file=sprintf('%s/combineDA.pdf',analysis.par$out.dir.PLOT))
 
-draw.NetBID(DA_list=analysis.par$DA,DE_list=analysis.par$DE,main_id='G4.Vs.others')
-draw.NetBID(DA_list=analysis.par$DA,DE_list=analysis.par$DE,main_id='G4.Vs.others',pdf_file=sprintf('%s/NetBID_TOP.pdf',analysis.par$out.dir.PLOT),text_cex=0.8)
-
-
 # combine the sample list
 comp_name <- 'G4.Vs.others'
 G0  <- rownames(phe_info)[which(phe_info$`subgroup`!='G4')] # get sample list for G0
@@ -108,7 +104,8 @@ analysis.par$DE[[comp_name]] <- DE_gene_bid
 analysis.par$DA[[comp_name]] <- DA_driver_bid
 
 # draw results for NetBID
-draw.NetBID(DA_list=analysis.par$DA,DE_list=analysis.par$DE)
+draw.NetBID(DA_list=analysis.par$DA,DE_list=analysis.par$DE,main_id='G4.Vs.others')
+draw.NetBID(DA_list=analysis.par$DA,DE_list=analysis.par$DE,main_id='G4.Vs.others',pdf_file=sprintf('%s/NetBID_TOP.pdf',analysis.par$out.dir.PLOT),text_cex=0.8)
 
 # save to RData
 NetBID.saveRData(analysis.par=analysis.par,step='act-DA')
@@ -129,7 +126,7 @@ analysis.par$final_ms_tab <- generate.masterTable(use_comp=all_comp,DE=analysis.
                                                network=analysis.par$merge.network$target_list,
                                                tf_sigs=tf_sigs,z_col='Z-statistics',display_col=c('logFC','P.Value'),
                                                main_id_type='external_gene_name')
-                                               
+
 # output into excel files
 out_file <- sprintf('%s/%s_ms_tab.xlsx',analysis.par$out.dir.DATA,analysis.par$project.name)
 # can add marker gene
