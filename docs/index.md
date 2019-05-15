@@ -7,7 +7,7 @@ permalink: /
 ---
 
       
-# NetBID2: Network-based Bayesian Inference of Drivers. Version 2
+# NetBID2: data-driven Network-based Bayesian Inference of Drivers. Version 2
 {: .fs-9 }
 
 This is the documentation for the usage of NetBID2.
