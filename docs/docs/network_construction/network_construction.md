@@ -65,7 +65,7 @@ network.par  <- NetBID.network.dir.create(project_main_dir=project_main_dir,prje
 
 ## Step1: load in gene expression datasets for network construction (exp-load)
 
-Here, we use same demo dataset for network construction and following analysis (Check the ***The choice of expression dataset for network construction*** section below). 
+Here, we use same demo dataset for network construction and following analysis (Check the [***The choice of expression dataset for network construction***](#the-choice-of-expression-dataset-for-network-construction) section below). 
 This dataset could be directly downloaded from GEO database by input the GSE ID and GPL ID.
 If set `getGPL=TRUE`, will download the gene annotation file. 
 The output of this function will be the [eSet](https://www.rdocumentation.org/packages/Biobase/versions/2.32.0/topics/ExpressionSet) class object and will save the RData into `out.dir`.
@@ -141,7 +141,7 @@ The network construction expression dataset could be the same as the analysis ex
    - The theory of using expression dataset to infer gene regulatory networks is based on [SJARACNe](https://academic.oup.com/bioinformatics/advance-article/doi/10.1093/bioinformatics/bty907/5156064). 
    It uses an information theoretic approach to eliminate the majority of indirect interactions inferred by co-expression methods. More samples, higher sensitivity and precision will be obtained by experiment. 
    Typically, more than 100 samples is a better choice. 
-   - Large size public datasets from the same tissue, cell line or biological background as the analysis dataset are recommended. User could search the databases such as GEO, TCGA. 
+   - Large size public datasets from the same tissue, cell line or biological background as the analysis dataset are recommended. User could search the public databases such as [GEO](#the-choice-of-expression-dataset-for-network-construction), [TCGA](#https://portal.gdc.cancer.gov). 
    - Computational inferred networks will surely have false positive edges, especially for those with relative small mutual information (MI) score. Functions related with network processing will be described in the [Driver estimation](../docs/driver_estimation) part. 
    - Once a high quality network is generated, user could put them into a common shared place that multiple projects with similar biological background could rely on that. 
 
@@ -259,7 +259,7 @@ The meansd plots show the relationship between the mean and standard deviation o
 ----------
 ### *QC for RNASeq dataset*  
 - No matter what strategy is used to input the RNASeq dataset, only the fourth step 'remove low expressed genes' is suggested. 
-For example, if use `load.exp.RNASeq.demo()` or `load.exp.RNASeq.demoSalmon()` and output `dds`, no previous normlization is required.
+For example, if use `load.exp.RNASeq.demo()` or `load.exp.RNASeq.demoSalmon()` and output `dds` or `eset`, no previous normlization is required.
 - If user use the raw count as the expression matrix, the `RNASeqCount.normalize.scale()` could be used to normalize the count data, followed by 'log2 transformation'.
 - For the fpkm(Fragments per kilobase of exon per million reads mapped ), tpm(Transcripts Per Million), cpm(Counts Per Million), 
 the second step 'log2 transformation' is suggested. 
@@ -380,7 +380,7 @@ draw.clustComp(pred_label,obs_label=get_obs_label(phe,use_int),outlier_cex=1,low
 
 This is the table to display the detailed difference between predicted label and observed label. We can see from the table here, 4 WNTs are further separated into two groups.
 
-In this demo dataset, no clear outlier samples are observed. If user find some somes need to remove, please remove the samples and re-run the exp-QC steps. 
+In this demo dataset, no clear outlier samples are observed. If user find some samples need to remove, please remove the samples and re-run the exp-QC steps. 
 
 ## Step4: prepare SJARACNE (sjaracne-prep)
 
@@ -410,7 +410,7 @@ User could also input their own list and input by setting `TF_list` or `SIG_list
 db.preload(use_level='gene',use_spe='human',update=FALSE)
 ```
 
-After loading the database, user need to set the ID attribute type `use_gene_type` for the input expression matrix. Check ***ID conversion*** section below for detailed description of ID conversion issue. 
+After loading the database, user need to set the ID attribute type `use_gene_type` for the input expression matrix. Check [***ID conversion***](#id-conversion) section below for detailed description of ID conversion issue. 
 
 ```R
 # ID convertion, get TF/SIG list !!!!
@@ -452,8 +452,8 @@ If the original input is 'ensembl_gene_id_version' or 'ensembl_transcript_id_ver
 
 **ATTENTION!** 
 - biomaRt will use the newest version number of [GENCODE](https://www.gencodegenes.org) and all the ID conversion related functions `db.preload(), get.TF_SIG.list(), get_IDtransfer(), get_IDtransfer2symbol2type(), get_IDtransfer_betweenSpecies()` will remotely call the database from biomaRt through the web link.
-So, the version number may be different when running the same code at different time. 
-- `get_IDtransfer(), get_IDtransfer2symbol2type(), get_IDtransfer_betweenSpecies()` will output a transfer table used for `get_name_transfertab()`. User could use their curated one. 
+So, the version number of ensembl ID may be different when running the same code at different time. 
+- `get_IDtransfer(), get_IDtransfer2symbol2type(), get_IDtransfer_betweenSpecies()` will output a transfer table used for `get_name_transfertab()`. User could use their own curated one. 
 
 ----------
 

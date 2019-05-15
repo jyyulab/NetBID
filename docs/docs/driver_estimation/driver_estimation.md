@@ -10,7 +10,7 @@ permalink: /docs/driver_estimation
 
 The purpose for this part: 
 
-**estimate potential drivers in a biological process and generate master tables**.
+**estimate potential drivers in a biological process and generate a master table**.
 
 The full demo script for this part could be found in [pipeline_analysis_demo1.R](https://github.com/jyyulab/NetBID-dev/blob/master/demo_scripts/pipeline_analysis_demo1.R).
 
@@ -366,7 +366,7 @@ out2excel(analysis.par$final_ms_tab,out.xlsx = out_file,mark_gene,mark_col)
 
 Download the master table excel file [ms_tab.xlsx](driver_ms_tab.xlsx) to study the organization of the master table.
 
-Save the `analysis.par` to the RData file. This file contains all information for this project, which could be used for the [Advanced analysis](../docs/advanced_analysis) part and NetBID2 shiny server. 
+Save the `analysis.par` to the RData file. This file contains all information for this project, which could be used for the [Advanced analysis](../docs/advanced_analysis) part and [NetBID2 shiny server](https://github.com/jyyulab/NetBID_shiny). 
 The `analysis.par` list need to include 13 components (`main.dir`, `project.name`, `out.dir`, `out.dir.QC`, `out.dir.DATA`, `out.dir.PLOT`, `merge.network`, `cal.eset`, `merge.ac.eset`, `DE`, `DA`, `final_ms_tab`, `transfer_tab`) in order to run in the shiny server. 
 
 **Strongly suggest to save the RData file in this step !**

@@ -119,7 +119,7 @@
 
 <p>The purpose for this part:</p>
 
-<p><strong>estimate potential drivers in a biological process and generate master tables</strong>.</p>
+<p><strong>estimate potential drivers in a biological process and generate a master table</strong>.</p>
 
 <p>The full demo script for this part could be found in <a href="https://github.com/jyyulab/NetBID-dev/blob/master/demo_scripts/pipeline_analysis_demo1.R">pipeline_analysis_demo1.R</a>.</p>
 
@@ -158,7 +158,7 @@
 
 <p>This tutorial is based on the suggested pipeline design in NetBID2, and before start, some parameters need to be set.</p>
 
-<p>First, user need to know which network to use. If followed the tutorial in the <a href="../network_construction">Network construction</a> part, user could specify the <code class="highlighter-rouge">network.dir</code> and <code class="highlighter-rouge">network.project.name</code>.</p>
+<p>First, user need to know which network to use. If followed the tutorial in the <a href="../docs/network_construction">Network construction</a> part, user could specify the <code class="highlighter-rouge">network.dir</code> and <code class="highlighter-rouge">network.project.name</code>.</p>
 
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">network.dir</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'%s/demo1/network/'</span><span class="p">,</span><span class="n">system.file</span><span class="p">(</span><span class="n">package</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"NetBID2"</span><span class="p">))</span><span class="w"> </span><span class="c1"># use demo network in the package</span><span class="w">
 </span><span class="n">network.project.name</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="s1">'project_2019-02-14'</span><span class="w"> </span><span class="c1">#</span><span class="w">
@@ -181,7 +181,7 @@ So, in the script below, user could add a time tag in the <code class="highlight
 </span><span class="n">project_name</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'driver_%s'</span><span class="p">,</span><span class="n">current_date</span><span class="p">)</span><span class="w"> </span><span class="c1">## project name for the project</span><span class="w">
 </span></code></pre></div></div>
 
-<p>Once decided the <code class="highlighter-rouge">network.dir</code>, <code class="highlighter-rouge">network.project.name</code>, <code class="highlighter-rouge">project_main_dir</code> and <code class="highlighter-rouge">project_name</code>, user could run <code class="highlighter-rouge">NetBID.analysis.dir.create()</code> to generate the sub-directories for the working directory, including QC/ to save QC related files, DATA/ to save RData and PLOT/ to save the visulization plots in the <a href="../advanced_analysis">Advanced analysis</a> part. 
+<p>Once decided the <code class="highlighter-rouge">network.dir</code>, <code class="highlighter-rouge">network.project.name</code>, <code class="highlighter-rouge">project_main_dir</code> and <code class="highlighter-rouge">project_name</code>, user could run <code class="highlighter-rouge">NetBID.analysis.dir.create()</code> to generate the sub-directories for the working directory, including QC/ to save QC related files, DATA/ to save RData and PLOT/ to save the visulization plots in the <a href="../docs/advanced_analysis">Advanced analysis</a> part. 
 Besides, a global list variable <code class="highlighter-rouge">analysis.par</code> will be returned by the function. 
 Attention, if the current environment already has this variable, the function will do nothing, report a warning message and return the original <code class="highlighter-rouge">analysis.par</code>.</p>
 
@@ -200,7 +200,7 @@ If so, the expression dataset has already been processed by QC steps, just load 
 </span><span class="n">analysis.par</span><span class="o">$</span><span class="n">cal.eset</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">network.par</span><span class="o">$</span><span class="n">net.eset</span><span class="w">
 </span></code></pre></div></div>
 
-<p>However, in most of the cases, the datasets are not the same. User need to follow the similar steps in <a href="../network_construction">Network construction</a> for expression dataset loading, QC and sample cluster checking.</p>
+<p>However, in most of the cases, the datasets are not the same. User need to follow the similar steps in <a href="../docs/network_construction">Network construction</a> for expression dataset loading, QC and sample cluster checking.</p>
 
 <p>Save <code class="highlighter-rouge">analysis.par</code> into the RData file and give the step name to it, e.g <code class="highlighter-rouge">exp-QC</code>. 
 The RData could be found in <code class="highlighter-rouge">analysis.par$out.dir.DATA/analysis.par.Step.{exp-QC}.RData</code>.</p>
@@ -471,7 +471,7 @@ User need to prepare:</p>
 
 <p>Download the master table excel file <a href="driver_ms_tab.xlsx">ms_tab.xlsx</a> to study the organization of the master table.</p>
 
-<p>Save the <code class="highlighter-rouge">analysis.par</code> to the RData file. This file contains all information for this project, which could be used for the <a href="../advanced_analysis">Advanced analysis</a> part and NetBID2 shiny server. 
+<p>Save the <code class="highlighter-rouge">analysis.par</code> to the RData file. This file contains all information for this project, which could be used for the <a href="../docs/advanced_analysis">Advanced analysis</a> part and <a href="https://github.com/jyyulab/NetBID_shiny">NetBID2 shiny server</a>. 
 The <code class="highlighter-rouge">analysis.par</code> list need to include 13 components (<code class="highlighter-rouge">main.dir</code>, <code class="highlighter-rouge">project.name</code>, <code class="highlighter-rouge">out.dir</code>, <code class="highlighter-rouge">out.dir.QC</code>, <code class="highlighter-rouge">out.dir.DATA</code>, <code class="highlighter-rouge">out.dir.PLOT</code>, <code class="highlighter-rouge">merge.network</code>, <code class="highlighter-rouge">cal.eset</code>, <code class="highlighter-rouge">merge.ac.eset</code>, <code class="highlighter-rouge">DE</code>, <code class="highlighter-rouge">DA</code>, <code class="highlighter-rouge">final_ms_tab</code>, <code class="highlighter-rouge">transfer_tab</code>) in order to run in the shiny server.</p>
 
 <p><strong>Strongly suggest to save the RData file in this step !</strong></p>
@@ -503,7 +503,7 @@ The <code class="highlighter-rouge">analysis.par</code> list need to include 13 
       <li>The last columns (optional) will be the marker information if set <code class="highlighter-rouge">mark_strategy='add_column'</code>.</li>
     </ul>
   </li>
-  <li>User could filter by the target size, sort the columns with Z-statistics to get top significant drivers. OR, follow the tutorial in <a href="../advanced_analysis">Advanced analysis</a> part for analyze and visualization.</li>
+  <li>User could filter by the target size, sort the columns with Z-statistics to get top significant drivers. OR, follow the tutorial in <a href="../docs/advanced_analysis">Advanced analysis</a> part for analyze and visualization.</li>
 </ul>
 
 <hr />

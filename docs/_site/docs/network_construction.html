@@ -181,7 +181,7 @@ Attention, if the current environment already has this variable, the function wi
 
 <h2 id="step1-load-in-gene-expression-datasets-for-network-construction-exp-load">Step1: load in gene expression datasets for network construction (exp-load)</h2>
 
-<p>Here, we use same demo dataset for network construction and following analysis (Check the <strong><em>The choice of expression dataset for network construction</em></strong> section below). 
+<p>Here, we use same demo dataset for network construction and following analysis (Check the <a href="#the-choice-of-expression-dataset-for-network-construction"><strong><em>The choice of expression dataset for network construction</em></strong></a> section below). 
 This dataset could be directly downloaded from GEO database by input the GSE ID and GPL ID.
 If set <code class="highlighter-rouge">getGPL=TRUE</code>, will download the gene annotation file. 
 The output of this function will be the <a href="https://www.rdocumentation.org/packages/Biobase/versions/2.32.0/topics/ExpressionSet">eSet</a> class object and will save the RData into <code class="highlighter-rouge">out.dir</code>.
@@ -256,8 +256,8 @@ The network construction expression dataset could be the same as the analysis ex
       <li>The theory of using expression dataset to infer gene regulatory networks is based on <a href="https://academic.oup.com/bioinformatics/advance-article/doi/10.1093/bioinformatics/bty907/5156064">SJARACNe</a>. 
  It uses an information theoretic approach to eliminate the majority of indirect interactions inferred by co-expression methods. More samples, higher sensitivity and precision will be obtained by experiment. 
  Typically, more than 100 samples is a better choice.</li>
-      <li>Large size public datasets from the same tissue, cell line or biological background as the analysis dataset are recommended. User could search the databases such as GEO, TCGA.</li>
-      <li>Computational inferred networks will surely have false positive edges, especially for those with relative small mutual information (MI) score. Functions related with network processing will be described in the <a href="../driver_estimation">Driver estimation</a> part.</li>
+      <li>Large size public datasets from the same tissue, cell line or biological background as the analysis dataset are recommended. User could search the public databases such as <a href="#the-choice-of-expression-dataset-for-network-construction">GEO</a>, <a href="#https://portal.gdc.cancer.gov">TCGA</a>.</li>
+      <li>Computational inferred networks will surely have false positive edges, especially for those with relative small mutual information (MI) score. Functions related with network processing will be described in the <a href="../docs/driver_estimation">Driver estimation</a> part.</li>
       <li>Once a high quality network is generated, user could put them into a common shared place that multiple projects with similar biological background could rely on that.</li>
     </ul>
   </li>
@@ -383,7 +383,7 @@ The meansd plots show the relationship between the mean and standard deviation o
 <h3 id="qc-for-rnaseq-dataset"><em>QC for RNASeq dataset</em></h3>
 <ul>
   <li>No matter what strategy is used to input the RNASeq dataset, only the fourth step ‘remove low expressed genes’ is suggested. 
-For example, if use <code class="highlighter-rouge">load.exp.RNASeq.demo()</code> or <code class="highlighter-rouge">load.exp.RNASeq.demoSalmon()</code> and output <code class="highlighter-rouge">dds</code>, no previous normlization is required.</li>
+For example, if use <code class="highlighter-rouge">load.exp.RNASeq.demo()</code> or <code class="highlighter-rouge">load.exp.RNASeq.demoSalmon()</code> and output <code class="highlighter-rouge">dds</code> or <code class="highlighter-rouge">eset</code>, no previous normlization is required.</li>
   <li>If user use the raw count as the expression matrix, the <code class="highlighter-rouge">RNASeqCount.normalize.scale()</code> could be used to normalize the count data, followed by ‘log2 transformation’.</li>
   <li>For the fpkm(Fragments per kilobase of exon per million reads mapped ), tpm(Transcripts Per Million), cpm(Counts Per Million), 
 the second step ‘log2 transformation’ is suggested.</li>
@@ -496,7 +496,7 @@ ARI stands for ‘adjusted rand index’, which ranges from 0 to 1 with higher v
 
 <p>This is the table to display the detailed difference between predicted label and observed label. We can see from the table here, 4 WNTs are further separated into two groups.</p>
 
-<p>In this demo dataset, no clear outlier samples are observed. If user find some somes need to remove, please remove the samples and re-run the exp-QC steps.</p>
+<p>In this demo dataset, no clear outlier samples are observed. If user find some samples need to remove, please remove the samples and re-run the exp-QC steps.</p>
 
 <h2 id="step4-prepare-sjaracne-sjaracne-prep">Step4: prepare SJARACNE (sjaracne-prep)</h2>
 
@@ -524,7 +524,7 @@ User could also input their own list and input by setting <code class="highlight
 </span><span class="n">db.preload</span><span class="p">(</span><span class="n">use_level</span><span class="o">=</span><span class="s1">'gene'</span><span class="p">,</span><span class="n">use_spe</span><span class="o">=</span><span class="s1">'human'</span><span class="p">,</span><span class="n">update</span><span class="o">=</span><span class="kc">FALSE</span><span class="p">)</span><span class="w">
 </span></code></pre></div></div>
 
-<p>After loading the database, user need to set the ID attribute type <code class="highlighter-rouge">use_gene_type</code> for the input expression matrix. Check <strong><em>ID conversion</em></strong> section below for detailed description of ID conversion issue.</p>
+<p>After loading the database, user need to set the ID attribute type <code class="highlighter-rouge">use_gene_type</code> for the input expression matrix. Check <a href="#id-conversion"><strong><em>ID conversion</em></strong></a> section below for detailed description of ID conversion issue.</p>
 
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># ID convertion, get TF/SIG list !!!!</span><span class="w">
 </span><span class="n">use_gene_type</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="s1">'external_gene_name'</span><span class="w"> </span><span class="c1">## this should user-defined !!!</span><span class="w">
@@ -565,8 +565,8 @@ If the original input is ‘ensembl_gene_id_version’ or ‘ensembl_transcript_
 <p><strong>ATTENTION!</strong></p>
 <ul>
   <li>biomaRt will use the newest version number of <a href="https://www.gencodegenes.org">GENCODE</a> and all the ID conversion related functions <code class="highlighter-rouge">db.preload(), get.TF_SIG.list(), get_IDtransfer(), get_IDtransfer2symbol2type(), get_IDtransfer_betweenSpecies()</code> will remotely call the database from biomaRt through the web link.
-So, the version number may be different when running the same code at different time.</li>
-  <li><code class="highlighter-rouge">get_IDtransfer(), get_IDtransfer2symbol2type(), get_IDtransfer_betweenSpecies()</code> will output a transfer table used for <code class="highlighter-rouge">get_name_transfertab()</code>. User could use their curated one.</li>
+So, the version number of ensembl ID may be different when running the same code at different time.</li>
+  <li><code class="highlighter-rouge">get_IDtransfer(), get_IDtransfer2symbol2type(), get_IDtransfer_betweenSpecies()</code> will output a transfer table used for <code class="highlighter-rouge">get_name_transfertab()</code>. User could use their own curated one.</li>
 </ul>
 
 <hr />

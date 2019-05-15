@@ -36,6 +36,7 @@ The main purpose is that we want to **find potential hidden drivers in Group4 co
 - [Part III: further analysis](#part-iii-further-analysis)
     - [QIII.1: What are the activities of the curated gene sets in all samples and what are the top significantly differed gene sets ?](#qiii1-what-are-the-activities-of-the-curated-gene-sets-in-all-samples-and-what-are-the-top-significantly-differed-gene-sets-)
     - [QIII.2: How to find drivers with significantly overlapped target genes ?](#qiii2-how-to-find-drivers-with-significantly-overlapped-target-genes-)
+      - [Q&A: How to modify the figures by adjusting the paramters in the draw. functions ?](#how-to-modify-the-figures-by-adjusting-the-paramters-in-the-draw-functions-)
     
 ---------
 
@@ -695,7 +696,7 @@ draw.bubblePlot(driver_list= driver_list,show_label=ms_tab[driver_list,'gene_lab
 ![bubblePlot_overlap](bubblePlot_overlap.png)
 
 -------
-### *How to modify the figures by adjusting the paramters in the draw.* functions ?*
+### *How to modify the figures by adjusting the paramters in the draw. functions ?*
 
 NetBID2 has 14 functions start with `draw.*`, those functions all have one option `pdf_file=`.
 - If set this not NULL, the function will directly output the plotting results into a pdf file with adjusted figure size. User could choose to modify all `cex` related options to adjust the text size and the pdf size will be automatically adjusted by selection. 

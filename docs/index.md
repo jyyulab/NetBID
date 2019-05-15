@@ -36,8 +36,8 @@ NetBID2 is the second version of NetBID, which not only covers the main function
 **Provide visualization functions to assist**
 
 - Unsupervised clustering for samples and comparison with known labels
-- Display of a list of interested drivers, the profile of the significance and the feature of the target genes
-- Display of a specific driver, the profile of the significance, the feature of the target genes and the detailed network structure
+- Display for a list of interested drivers, the profile of the significance and the feature of the target genes
+- Display for a specific driver, the profile of the significance, the feature of the target genes and the detailed network structure
 
 **Provide supporting functions to assist**
 

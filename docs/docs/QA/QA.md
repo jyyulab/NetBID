@@ -6,8 +6,6 @@ has_children: false
 permalink: ../docs/QA
 ---
 
-#### Each page has a search bar at the top, user could search by the key words. 
-
 ## Network Construction
 
 - [Step0: preparations](../docs/network_construction#step0-preparations)
@@ -51,4 +49,5 @@ permalink: ../docs/QA
 - [Part III: further analysis](../docs/advanced_analysis#part-iii-further-analysis)
     - [QIII.1: What are the activities of the curated gene sets in all samples and what are the top significantly differed gene sets ?](../docs/advanced_analysis#qiii1-what-are-the-activities-of-the-curated-gene-sets-in-all-samples-and-what-are-the-top-significantly-differed-gene-sets-)
     - [QIII.2: How to find drivers with significantly overlapped target genes ?](../docs/advanced_analysis#qiii2-how-to-find-drivers-with-significantly-overlapped-target-genes-)
+       - [Q&A: How to modify the figures by adjusting the paramters in the draw. functions ?](../docs/advanced_analysis#how-to-modify-the-figures-by-adjusting-the-paramters-in-the-draw-functions-)
 
