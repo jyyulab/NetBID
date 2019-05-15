@@ -365,13 +365,13 @@ get_IDtransfer <- function(from_type=NULL,to_type=NULL,add_type=NULL,use_genes=N
   if(!to_type %in% attributes$name){
     message(sprintf('%s not in the attributes for %s, please check and re-try !',to_type,dataset));return(FALSE)
   }
+  ori_from_type <- from_type
   if(from_type %in% c('ensembl_gene_id_version','ensembl_transcript_id_version')){
     if(ignore_version==FALSE){
       message(sprintf('Attention: %s in %s will be updated with new version number, please check the output.
                       If lots of missing, try to set ignore_version=TRUE and try again !',from_type,dataset));
     }else{
       ori_use_genes <- use_genes
-      ori_from_type <- from_type
       from_type <- gsub('(.*)_version','\\1',from_type)
       if(is.null(use_genes)==FALSE) use_genes <- gsub('(.*)\\..*','\\1',use_genes)
     }
@@ -4051,6 +4051,7 @@ draw.NetBID <- function(DA_list=NULL,DE_list=NULL,main_id=NULL,top_number=30,
                         row_cex=1,column_cex=1,text_cex=1,col_srt=60,pdf_file=NULL){
   if(is.list(DA_list)==FALSE){message('Please input DA list!');return(FALSE)}
   if(is.list(DE_list)==FALSE){message('Please input DE list!');return(FALSE)}
+  if(!main_id %in% names(DA_list)){message('main id not in DA list!');return(FALSE)}
   if(top_number<1){message('top_number must be larger than 1!');return(FALSE)}
   DA_name <- names(DA_list)
   DE_name <- names(DE_list)
