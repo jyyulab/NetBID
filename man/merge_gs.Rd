@@ -2,22 +2,23 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{merge_gs}
 \alias{merge_gs}
-\title{Merge GeneSets by choosing several categories.}
+\title{Merge Selected Major GeneSets from MsigDB}
 \usage{
 merge_gs(all_gs2gene = all_gs2gene, use_gs = c("H", "CP:BIOCARTA",
   "CP:REACTOME", "CP:KEGG", "C5"))
 }
 \arguments{
-\item{all_gs2gene}{list, which could be obtained by running \code{gs.preload()}.}
+\item{all_gs2gene}{list, the list returned by \code{gs.preload()}.}
 
-\item{use_gs}{a vector of characters, could check \code{all_gs2gene_info} for the cateogory description.
-Default is 'H', 'CP:BIOCARTA', 'CP:REACTOME', 'CP:KEGG'.}
+\item{use_gs}{a vector of characters, names of major gene set collections. Users can call \code{all_gs2gene_info} to see all the available collections.
+Default is c("H", "CP:BIOCARTA", "CP:REACTOME", "CP:KEGG").}
 }
 \value{
-a one-level list for geneset to genes.
+Return a list object with sub-collection gene sets as elements. Each element contains a vector of genes.
 }
 \description{
-\code{merge_gs} is a simple function to merge the gene set list.
+\code{merge_gs} combines selected major gene set collections (e.g. "H", "C1" ) together, and return a list object with sub-collections as elements.
+Each element contains a vector of genes belong to that sub-collection gene set.
 }
 \examples{
 gs.preload(use_spe='Homo sapiens',update=FALSE)

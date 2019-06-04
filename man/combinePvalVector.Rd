@@ -2,29 +2,28 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{combinePvalVector}
 \alias{combinePvalVector}
-\title{Combine Pvalues by Fisher or Stouffer's method}
+\title{Combine P Values Using Fisher's Method or Stouffer's Method}
 \usage{
 combinePvalVector(pvals, method = c("Stouffer", "Fisher"),
   signed = TRUE, twosided = TRUE)
 }
 \arguments{
-\item{pvals, }{a vector of numeric values, the P-value values need to combine.
-The sign of the P-value will be added to indicate the direction of testing if signed is set to TRUE.}
+\item{pvals, }{a vector of numerics, the P values from multiple comparison need to be combined.}
 
-\item{method}{character, choose from Stouffer or Fisher, default is "Stouffer".}
+\item{method}{character, users can choose between "Stouffer" and "Fisher". Default is "Stouffer".}
 
-\item{signed}{logical, whether the sign of the pvals will be considered in calculation.
+\item{signed}{logical, if TRUE, will give a sign to the P value to indicate the direction of testing.
 Default is TRUE.}
 
-\item{twosided}{logical, whether the pvalues are from two-sided test or not.
-If not, pvalues must between 0 and 0.5.
+\item{twosided}{logical, if TRUE, P value is calculated in a one-tailed test.
+If FALSE, P value is calculated in a two-tailed test, and it falls within the range 0 to 0.5.
 Default is TRUE.}
 }
 \value{
-a vector contains the 'Z-statistics' and 'P.Value'
+Return a vector contains the "Z-statistics" and "P.Value".
 }
 \description{
-\code{combinePvalVector} is a function to combine P-values by Stouffer of Fisher method.
+\code{combinePvalVector} is a function to combine multiple comparison's P values using Fisher's method or Stouffer's method.
 }
 \examples{
 combinePvalVector(c(0.1,1e-3,1e-5))

@@ -2,40 +2,39 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{draw.2D.text}
 \alias{draw.2D.text}
-\title{Draw 2D dimension plot for sample cluster visualization with user-defined text on each point.}
+\title{Visualize Sample Clustering Result in 2D Plot with Sample Names}
 \usage{
 draw.2D.text(X, Y, class_label, class_text = NULL, xlab = "PC1",
   ylab = "PC2", legend_cex = 0.8, main = "", point_cex = 1,
   text_cex = NULL)
 }
 \arguments{
-\item{X}{a vector of numeric values, the first dimension values.}
+\item{X}{a vector of numerics, the x coordinates of points in the plot. If user would like to create a PCA biplot, this parameter should be the first component.}
 
-\item{Y}{a vector of numeric values, the second dimension values.}
+\item{Y}{a vector of numerics, the y coordinates of points in the plot. If user would like to create a PCA biplot, this parameter should be the second component.}
 
-\item{class_label}{a vector of characters, with the names are the samples (optional) and the values are the sample cluster label.
-The function will treat that the order are the same for X,Y and class_label.}
+\item{class_label}{a vector of characters, labels or categories of samples. The vector name should be sample names.}
 
-\item{class_text}{a vector of characters, the user-defined text on each point.
-If NULL, will use the names of class_label. Default is NULL.}
+\item{class_text}{a vector of characters, the user-defined sample names to label each data points in the plot.
+If NULL, will use the names of \code{class_label}. Default is NULL.}
 
-\item{xlab}{character, the label for x-axis.}
+\item{xlab}{character, the label for x-axis. Default is "PC1".}
 
-\item{ylab}{character, the label for y-axis.}
+\item{ylab}{character, the label for y-axis. Default is "PC2".}
 
-\item{legend_cex}{numeric, the cex for the legend.}
+\item{legend_cex}{numeric, giving the amount by which the text of legend should be magnified relative to the default. Default is 0.8.}
 
-\item{main}{character, the title for the plot.}
+\item{main}{character, an overall title for the plot. Default is "".}
 
-\item{point_cex}{numeric, the cex for the points.}
+\item{point_cex}{numeric, giving the amount by which the size of the data points should be magnified relative to the default. Default is 1.}
 
-\item{text_cex}{numeric, the cex for the points.}
+\item{text_cex}{numeric, giving the amount by which the text of \code{class_text} should be magnified relative to the default. Default is NULL.}
 }
 \value{
-logical value indicating whether the plot has been successfully generated
+Return a logical value. If TRUE, the plot has been created successfully.
 }
 \description{
-\code{draw.2D.text} is a function to draw 2D dimension plot for sample cluster visualization.
+\code{draw.2D.text} creates a 2D plot with sample names labeled, to visualize the sample clustering result.
 }
 \examples{
 mat1 <- matrix(rnorm(2000,mean=0,sd=1),nrow=100,ncol=20)

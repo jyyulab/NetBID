@@ -2,40 +2,48 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{combineDE}
 \alias{combineDE}
-\title{Combine the differential expression (DE)/differential activity (DA) results.}
+\title{Combine Multiple Comparison Results from Differential Expression (DE) or Differential Activity (DA) Analysis}
 \usage{
 combineDE(DE_list, DE_name = NULL, transfer_tab = NULL,
   main_id = NULL, method = "Stouffer", twosided = TRUE,
   signed = TRUE)
 }
 \arguments{
-\item{DE_list}{list of DE results.}
+\item{DE_list}{list, each element in the list is one DE/DA comparison need to be combined.}
 
-\item{DE_name}{a vector of DE names, if NULL, will use the names of the DE_list.
-If not NULL, must match the order of DE_list.
+\item{DE_name}{a vector of characters, the DE/DA comparison names.
+If not NULL, it must match the names of DE_list in correct order.
+If NULL, names of the DE_list will be used.
 Default is NULL.}
 
-\item{transfer_tab}{data.frame, the transfer table for ID conversion, could be obtained by get_IDtransfer.
-This transfer table is used for ID mapping for the results of DE_list.
-The column names must match the DE_name.
-If NULL, will treat the ID column for each DE results in DE_list as the same type of ID.
+\item{transfer_tab}{data.frame, the ID conversion table. Users can call \code{get_IDtransfer} to get this table.
+The purpose is to correctly mapping ID for \code{DE_list}. The column names must match \code{DE_name}.
+If NULL, ID column of each DE comparison will be considered as the same type.
 Default is NULL.}
 
-\item{main_id}{character, the main id for specifying the ID column, must be one of the name in DE_list. If NULL, will use the first name. Default is NULL.}
+\item{main_id}{character, a name of the element in \code{DE_list}. The ID column of that comparison will be used as the ID of the final combination.
+If NULL, the first element name from \code{DE_list} will be used. Default is NULL.}
 
-\item{method}{character, choose from Stouffer or Fisher, default is "Stouffer".}
+\item{method}{character, users can choose between "Stouffer" and "Fisher". Default is "Stouffer".}
 
-\item{twosided}{logical, whether the pvalues are from two-sided test or not.
-If not, pvalues must between 0 and 0.5. Default is TRUE.}
+\item{twosided}{logical, if TRUE, a two-tailed test will be performed.
+If FALSE, a one-tailed test will be performed, and P value falls within the range of 0 to 0.5. Default is TRUE.}
 
-\item{signed}{logical, whether the sign of the pvals will be considered in calculation. Default is TRUE.}
+\item{signed}{logical, if TRUE, give a sign to the P value, which indicating the direction of testing.
+Default is TRUE.}
 }
 \value{
-a list of DE/DA results, with one more component named "combine" that include the combined results.
-The original DE/DA results are filtered by the used ID in combination.
+Return a list contains the combined DE/DA analysis. Each single comparison result before combination is wrapped inside
+(may have with some IDs filtered out, due to the combination). A data frame named "combine" inside the list is the combined analysis.
+Rows are genes/drivers, columns are combined statistics (e.g. "logFC", "AveExpr", "t", "P.Value" etc.).
 }
 \description{
-\code{combineDE} is a function aims to combine DE/DA genes/drivers.
+\code{combineDE} combines multiple comparisons of DE or DA analysis. Can only combine DE with DE, DA with DA.
+}
+\details{
+For example, there are 4 subgroups in the phenotype, G1, G2, G3 and G4. One DE analysis was performed on G1 vs. G2, and another DE was performed on G1 vs. G3.
+If user is interested in the DE analysis between G1 vs. (G2 and G3), he can call this function to combine the two comparison results above toghether.
+The combined P values will be taken care by \code{combinePvalVector}.
 }
 \examples{
 analysis.par <- list()

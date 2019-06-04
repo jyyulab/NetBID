@@ -2,56 +2,53 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{funcEnrich.Fisher}
 \alias{funcEnrich.Fisher}
-\title{Gene set enrichment analysis by Fisher's Exact Test.}
+\title{Gene Set Enrichment Analysis by Fisher's Exact Test}
 \usage{
 funcEnrich.Fisher(input_list = NULL, bg_list = NULL, use_gs = NULL,
   gs2gene = NULL, min_gs_size = 5, max_gs_size = 500,
   Pv_adj = "fdr", Pv_thre = 0.1)
 }
 \arguments{
-\item{input_list}{a vector of characters, the list of genes for analysis. Only accept gene symbols, and gene ID conversion could be done by preparing a transfer table
-by using \code{get_IDtransfer} and using \code{get_name_transfertab} to transfer the gene IDs.}
+\item{input_list}{a vector of characters, a vector of gene symbols. If gene symbols not available, users can call \code{get_IDtransfer}
+and \code{get_name_transfertab} for ID conversion.}
 
-\item{bg_list}{a vector of characters, the background list of genes for analysis. Only accept gene symbols.
-Default is NULL, will use all genes in the gs2gene as the background list.}
+\item{bg_list}{a vector of characters, a vector of background gene symbols. If NULL, genes in \code{gs2gene} will be used as background.
+Default is NULL.}
 
-\item{use_gs}{a vector of characters, the name for gene set category used for anlaysis.
-If gs2gene is set to NULL, use_gs must be the subset of \code{names(all_gs2gene)}.
-Could check \code{all_gs2gene_info} for the cateogory description.
-If set to 'all', all gene sets in gs2gene will be used.
-Default is 'H', 'CP:BIOCARTA', 'CP:REACTOME', 'CP:KEGG'
-if gs2gene is set to NULL (use all_gs2gene).
-If user input own gs2gene list, use_gs will be set to 'all' as default.}
+\item{use_gs}{a vector of characters, the names of gene sets.
+If \code{gs2gene} is NULL, \code{all_gs2gene} will be used. The \code{use_gs} must be the subset of \code{names(all_gs2gene)}.
+If "all", all the gene sets in \code{gs2gene} will be used.
+If user input his own \code{gs2gene} list, \code{use_gs} will be set to "all" as default.
+Default is c("H", "CP:BIOCARTA", "CP:REACTOME", "CP:KEGG").}
 
-\item{gs2gene}{a list for geneset to genes, the name for the list is the gene set name and the content in each list is the vector for genes belong to that gene set.
-If NULL, will use all_gs2gene loaded by using \code{gs.preload}. Default is NULL.}
+\item{gs2gene}{list, a list contains elements of gene sets.
+The name of the element is gene set, each element contains a vector of genes in that gene set.
+If NULL, will use \code{all_gs2gene}, which is created by function \code{gs.preload}. Default is NULL.}
 
-\item{min_gs_size}{numeric, minimum gene set size for analysis, default is 5.}
+\item{min_gs_size}{numeric, the minimum size of gene set to analysis. Default is 5.}
 
-\item{max_gs_size}{numeric, maximum gene set size for analysis, default is 500.}
+\item{max_gs_size}{numeric, the maximum size of gene set to analysis. Default is 500.}
 
-\item{Pv_adj}{character, p-value adjustment method, could check \code{p.adjust.methods} for the available options. Default is 'fdr'.}
+\item{Pv_adj}{character, method to adjust P-value. Default is "fdr".
+For details, please check \code{p.adjust.methods}.}
 
-\item{Pv_thre}{numeric, cutoff value for the adjusted p-values for significance. Default is 0.1.}
+\item{Pv_thre}{numeric, threshold for the adjusted P-values. Default is 0.1.}
 }
 \value{
-The function will return a list of gene sets with significant statistics, detailed as follows,
+Return a data.frame, contains gene sets with significant enrichment statistics. Column details are as follows,
 
-\item{#Name}{Name for the enriched gene set}
-\item{Total_item}{Number of background size}
+\item{#Name}{Name of the enriched gene set}
+\item{Total_item}{Background size}
 \item{Num_item}{Number of genes in the gene set (filtered by the background list)}
 \item{Num_list}{Number of input genes for testing (filtered by the background list)}
-\item{Num_list_item}{Number input genes annotated by the gene set (filtered by the background list)}
+\item{Num_list_item}{Number of input genes annotated by the gene set (filtered by the background list)}
 \item{Ori_P}{Original P-value from Fisher's Exact Test}
 \item{Adj_p}{Adjusted P-value}
-\item{Odds_Ratio}{Odds ratio by the 2*2 matrix used for Fisher's Exact Test}
-\item{Intersected_items}{List of the intersected genes, collapsed by ';', the number is equal to Num_list_item}
+\item{Odds_Ratio}{Odds ratio from the 2*2 matrix used for Fisher's Exact Test}
+\item{Intersected_items}{A vector of the intersected genes, collapsed by ';'. Number is equal to Num_list_item}
 }
 \description{
-\code{funcEnrich.Fisher} will perform gene set enrichment analysis by Fisher's Exact Test.
-}
-\details{
-This is a function to find significant enriched gene sets for input gene list. Users could prepare gs2gene or use all_gs2gene preloaded by using \code{gs.preload}.
+\code{funcEnrich.Fisher} performs gene set enrichment analysis to the input gene list, by using the Fisher's Exact Test.
 Background gene list is accepeted.
 }
 \examples{

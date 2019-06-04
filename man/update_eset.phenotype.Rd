@@ -2,36 +2,33 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{update_eset.phenotype}
 \alias{update_eset.phenotype}
-\title{Update ExpressionSet phenotype information, mainly for changing sample name and extract useful phenotype information for sample clustering.}
+\title{Reassign the phenoData slot of ExpressionSet and Update phenotype information}
 \usage{
 update_eset.phenotype(use_eset = NULL, use_phenotype_info = NULL,
   use_sample_col = NULL, use_col = "auto")
 }
 \arguments{
-\item{use_eset}{ExpressionSet class object, the original ExpressionSet to update.}
+\item{use_eset}{ExpressionSet class object.}
 
-\item{use_phenotype_info}{data.frame, the phenotype information dataframe.}
+\item{use_phenotype_info}{data.frame, a dataframe contains phenotype information, can be obtained by calling \code{pData} function.}
 
-\item{use_sample_col}{character,the column name in \code{use_phenotype_info}, which contains the sample name.}
+\item{use_sample_col}{character, must be one of the column names in \code{use_phenotype_info}.}
 
-\item{use_col}{character, the columns in \code{use_phenotype_info} to be kept.
-If set to 'auto', wil extract columns with unique sample feature ranges from 2 to sample size-1.
-If set to 'GEO-auto', will extract columns: 'geo_accession','title','source_name_ch1',and columns end with ':ch1'.
-Default is "auto".}
+\item{use_col}{character, the columns will be kept from \code{use_phenotype_info}.
+'auto', only extracting 'cluster-meaningful' sample features (e.g. it is meaningless to use 'gender' as clustering feature, if all samples are female).
+'GEO-auto' means it will extract the following selected columns,
+"geo_accession", "title", "source_name_ch1", and columns ended with ":ch1". Default is "auto".}
 }
 \value{
-an ExressionSet object.
+Return an ExressionSet object with updated phenotype information.
 }
 \description{
-\code{update_eset.phenotype} is a function to update the phenotype information in the ExpressionSet object.
-}
-\details{
-This function is designed mainly for extracting useful phenotype information for samples.
-Especially for phenotype information directly get from GEO database.
+\code{update_eset.phenotype} reassigns the phenoData slot of ExpressionSet based on user's demand.
+It is mainly used to modify sample names and extract interested phenotype information for further sample clustering.
 }
 \examples{
 \dontrun{
-net_eset <- load.exp.GEO(out.dir='test/',
+net_eset <- load.exp.GEO(out.dir='./test',
                          GSE='GSE116028',
                          GPL='GPL6480',
                          getGPL=TRUE,

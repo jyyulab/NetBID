@@ -2,41 +2,41 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{update_eset.feature}
 \alias{update_eset.feature}
-\title{Update ExpressionSet feature information, mainly for gene ID conversion}
+\title{Reassign featureData slot of ExpressionSet and Update feature information}
 \usage{
 update_eset.feature(use_eset = NULL, use_feature_info = NULL,
   from_feature = NULL, to_feature = NULL, merge_method = "median",
   distribute_method = "equal")
 }
 \arguments{
-\item{use_eset}{ExpressionSet class object, the original ExpressionSet to update.}
+\item{use_eset}{ExpressionSet class object.}
 
-\item{use_feature_info}{data.frame, the transfer table for ID conversion.}
+\item{use_feature_info}{data.frame, a data frame contains feature information, it can be obtained by calling \code{fData} function.}
 
-\item{from_feature}{character,the column name in \code{use_feature_info},must be the same type of the rownames for the expression matrix in \code{use_eset}.}
+\item{from_feature}{character, orginal ID. Must be one of the column names in \code{use_feature_info} and correctly characterize the \code{use_eset}'s row names.}
 
-\item{to_feature}{character, the column in \code{use_feature_info}, the target ID will be convereted to.}
+\item{to_feature}{character, target ID. Must be one of the column names in \code{use_feature_info}.}
 
-\item{merge_method}{character, startegy to merge the expression value, choose from 'median','mean','max','min'. Default is "median".}
+\item{merge_method}{character, the agglomeration method to be used for merging gene expression value.
+This should be one of, "median", "mean", "max" or "min". Default is "median".}
 
-\item{distribute_method}{character, strategy to distribute the expression value, choose from 'mean', 'equal'. Default is "equal".}
+\item{distribute_method}{character, the agglomeration method to be used for distributing the gene expression value.
+This should be one of, "mean" or "equal". Default is "equal".}
 }
 \value{
-an ExressionSet object.
+Return an ExressionSet object with updated feature information.
 }
 \description{
-\code{update_eset.feature} is a function to update the feature information in the ExpressionSet object.
+\code{update_eset.feature} reassigns the featureData slot of ExpressionSet object based on user's demand. It is mainly used for gene ID conversion.
 }
 \details{
-This function is designed mainly for gene ID conversion.
-User could input the transfer table for ID conversion, which could be obtained from the original feature table
-(if use \code{load.exp.GEO} and set getGPL==TRUE) or by running the function \code{get_IDtransfer}.
-The relationship betweeen the original ID and the target ID could be as follows:
-1) one->one, just change the ID label.
-2) multiple->one, the expression value for the target ID will be the merge of the original ID, with user-defined choice of merge_method.
-3) one->mulitple, the expression value for the original ID will be distributed to the matched target IDs, with user-defined choice of distribute_method.
-warning message will be presented in this condition.
-4) multiple-->multiple, the function will do distribute step 3) first and merge 2).
+User can pass a conversion table to \code{use_eset} for the ID conversion. A conversion table can be obtained from the original featureDta slot
+(if one called the \code{load.exp.GEO} function and set getGPL==TRUE) or by running the \code{get_IDtransfer} function.
+The mapping between original ID and target ID can be summerised into 4 categories.
+1) One-to-one, simply replaces the original ID with target ID;
+2) Many-to-one, the expression value for the target ID will be merged from its original ID;
+3) One-to-many, the expression value for the original ID will be distributed to the matched target IDs;
+4) Many-to-many, apply part 3) first, then part 2).
 }
 \examples{
 mat1 <- matrix(rnorm(10000),nrow=1000,ncol=10)

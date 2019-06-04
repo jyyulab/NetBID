@@ -2,7 +2,7 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{draw.targetNet.TWO}
 \alias{draw.targetNet.TWO}
-\title{Target network structure plot for two drivers.}
+\title{Target Ntwork Structure Plot for Two Drivers}
 \usage{
 draw.targetNet.TWO(source1_label = "", source2_label = "",
   source1_z = NULL, source2_z = NULL, edge_score1 = NULL,
@@ -12,53 +12,50 @@ draw.targetNet.TWO(source1_label = "", source2_label = "",
   n_layer = 1, alphabetical_order = FALSE)
 }
 \arguments{
-\item{source1_label}{the label for the first(left) driver displayed on the plot.}
+\item{source1_label}{character, the label of the first selected driver (to be displayed on the left).}
 
-\item{source2_label}{the label for the second(right) driver displayed on the plot.}
+\item{source2_label}{character, the label of the second selected driver (to be displayed on the right).}
 
-\item{source1_z}{numeric, the Z statistic for the first driver, used to color the driver point.
-If NULL, the driver will be colored in grey. Default is NULL.}
+\item{source1_z}{numeric, the Z-statistic of the first driver. The color shade of driver’s node in the network is decided by this Z-statistic.
+If NULL, the driver will be colored grey. Default is NULL.}
 
-\item{source2_z}{numeric, the Z statistic for the second driver, used to color the driver point.
-If NULL, the driver will be colored in grey. Default is NULL.}
+\item{source2_z}{numeric, the Z-statistic of the second driver.The color shade of driver’s node in the network is decided by this Z-statistic.
+If NULL, the driver will be colored grey. Default is NULL.}
 
-\item{edge_score1}{a vector of numeric values, indicating the correlation between the first driver and the target genes.
-The value ranges from -1 to 1, with positive value indicating postivie regulation and negative value indicating negative correlation.
-The names for the vector is the gene labels displayed on the plot.}
+\item{edge_score1}{a named vector of numerics, indicating the correlation between the first driver and its target genes.
+The range of the numeric value is from -1 to 1. Positive value means it is positively-regulated by driver and vice versa. The names of the vector are gene names.}
 
-\item{edge_score2}{a vector of numeric values, indicating the correlation between the second driver and the target genes.
-Similar with \code{edge_score1}}
+\item{edge_score2}{a named vector of numerics, indicating the correlation between the seconde driver and its target genes.
+The range of the numeric value is from -1 to 1. Positive value means it is positively-regulated by driver and vice versa. The names of the vector are gene names.}
 
-\item{arrow1_direction}{character, the arrow direction for source1, choose from 'in' or 'out'. Default is 'out'.}
+\item{arrow1_direction}{character, the arrow direction for first driver. Users can choose between "in" and "out". Default is "out".}
 
-\item{arrow2_direction}{character, the arrow direction for source2, choose from 'in' or 'out'. Default is 'out'.}
+\item{arrow2_direction}{character, the arrow direction for second driver. Users can choose between "in" and "out". Default is "out".}
 
-\item{label_cex}{numeric, \code{cex} for the target genes displayed on the plot. Default is 0.7.}
+\item{label_cex}{numeric, giving the amount by which the text of target gene names should be magnified relative to the default. Default is 0.7.}
 
-\item{source_cex}{numeric, \code{cex} for the source genes displayed on the plot. Default is 1.}
+\item{source_cex}{numeric, giving the amount by which the text of driver name should be magnified relative to the default. Default is 1.}
 
-\item{pdf_file}{character, file path for the pdf file to save the figure into pdf format.If NULL, will not generate pdf file. Default is NULL.}
+\item{pdf_file}{character, the file path to save as PDF file. If NULL, no PDF file will be saved. Default is NULL.}
 
-\item{total_possible_target}{numeric or a vector of characters. If input numeric, will be the total number of possible targets.
-If input a vector of characters, will be the background list of all possible target genes.
+\item{total_possible_target}{numeric or a vector of characters. If input is numeric, it is the total number of possible target genes.
+If input is a vector of characters, it is the background list of all possible target genes.
 This parameter will be passed to function \code{test.targetNet.overlap} to test whether the target genes of the two drivers are significantly intersected.
 If NULL, will do not perform this test. Default is NULL.}
 
-\item{show_test}{logical, indicating whether the testing results will be printed and returned. Default is FALSE.}
+\item{show_test}{logical, if TRUE, the test result will be printed and returned. Default is FALSE.}
 
-\item{n_layer}{integer, number of circle layers to display, default is 1.}
+\item{n_layer}{integer, number of circle layers to display. Default is 1.}
 
-\item{alphabetical_order}{logical, whether the target gene labels are sorted by the alphabetical order, if FALSE will be ordered by statistics. Default is FALSE.}
+\item{alphabetical_order}{logical, if TRUE, the targe gene names will be sorted alphabetically. If FALSE, will be sorted by statistics. Default is FALSE.}
 }
 \value{
-if \code{show_test}==FALSE, will return logical value indicating whether the plot has been successfully generated, otherwise will return the statistics of testing.
+If \code{show_test}==FALSE, will return a logical value indicating whether the plot has been successfully generated, otherwise will return the statistics of testing.
 }
 \description{
-\code{draw.targetNet.TWO} will draw the network structure for the selected two drivers and their target genes.
-}
-\details{
-This is a function to draw target network structure for the selected two drivers.
-The color bar represents the positive (red) or negative (blue) regulation with line width showing the strength.
+\code{draw.targetNet.TWO} draws a network structure to display the target genes of two selected drivers. Edges of positively-regulated target genes are orange,
+edges of negatively-regulated target genes are green. The width of the edges shows the strength of regulation.
+It will also print out the number of shared and unique targe genes for each driver, with P-value and odds ratio.
 }
 \examples{
 source1_label <- 'test1'

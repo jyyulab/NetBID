@@ -2,38 +2,50 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{draw.clustComp}
 \alias{draw.clustComp}
-\title{Draw the cluster comparison between predicted label and observed label.}
+\title{Visualize Each Sample's Observed Label vs. Predicted Label in Table}
 \usage{
 draw.clustComp(pred_label, obs_label, strategy = "ARI", use_col = TRUE,
   low_K = 5, highlight_clust = NULL, main = NULL, clust_cex = 1,
   outlier_cex = 0.3)
 }
 \arguments{
-\item{pred_label}{a vector of characters, the predicted label.}
+\item{pred_label}{a vector of characters, the predicted labels created by classification (K-means).}
 
-\item{obs_label}{a vector of characters, the observed label}
+\item{obs_label}{a vector of characters, the observed labels annotated by phenotype data.}
 
-\item{strategy}{character, the strategy to compare with labels,
-choose from 'ARI (adjusted rand index)', 'NMI (normalized mutual information)', 'Jaccard'. Default is 'ARI'.}
+\item{strategy}{character, method to quantify the similarity between predicted labels vs. observed labels.
+Users can choose from "ARI (adjusted rand index)", "NMI (normalized mutual information)" and "Jaccard".
+Default is "ARI".}
 
-\item{use_col}{logical, whether or not to use color in the plot. Default is TRUE.}
+\item{use_col}{logical, If TRUE, the table will be colored. The more sample gathered in one table cell, the darker shade it has.
+Default is TRUE.}
 
-\item{low_K}{integer, the lowest number to display on the figures. Number smaller than this will directly display the sample name.
-Default is 5}
+\item{low_K}{integer, a threshold of sample number to be shown in a single cell.
+If too many samples gathered in a single table cell, it will be challenging for the eyes.
+By setting the value of this threshold, if the number of samples gathered in one table cell exceeded the threshold,
+only the number will be shown. Otherwise, all samples' names will be listed.
+Default is 5.}
 
-\item{highlight_clust}{a vector of characters, the cluster need to be highlighted on the plot.}
+\item{highlight_clust}{a vector of characters, the predicted label need to be highlighted in the figure.}
 
-\item{main}{character, the title for the plot.}
+\item{main}{character, an overall title for the plot.}
 
-\item{clust_cex}{numeric, cex for the cluster label. Default is 1}
+\item{clust_cex}{numeric, text size for the predicted label (column names). Default is 1.}
 
-\item{outlier_cex}{numeric, cex for the sample names. Default is 0.3}
+\item{outlier_cex}{numeric, text size for the observed label (row names). Default is 0.3.}
 }
 \value{
-a matrix for the number in the plot
+Return a matrix of integers and a table for visualization. Rows are predicted label, columns are observed label.
+Integer is the number of samples gathered in the corresponding label.
 }
 \description{
-\code{draw.clustComp} is a function to draw the comparison between the predicted label and observed label.
+\code{draw.clustComp} draws a table to show each sample's observed label vs. its predicted label.
+Each row represents an observed label (e.g. one subgroup of disease), each column represents the predicted label created by classification (K-means).
+}
+\details{
+The table provides more details about the side-by-side PCA biplot created by \code{draw.pca.kmeans}.
+The purpose is to find if any abnormal sample (outlier) exists. The darker the table cell is,
+the more samples are gathered in the corresponding label.
 }
 \examples{
 network.par <- list()

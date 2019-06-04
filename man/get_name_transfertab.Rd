@@ -2,38 +2,30 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{get_name_transfertab}
 \alias{get_name_transfertab}
-\title{Gene ID conversion related functions.}
+\title{Convert Original Gene ID into Target Gene ID}
 \usage{
 get_name_transfertab(use_genes = NULL, transfer_tab = NULL,
   from_type = NULL, to_type = NULL, ignore_version = FALSE)
 }
 \arguments{
-\item{use_genes}{a vector of characters, gene list used for ID conversion.}
+\item{use_genes}{a vector of characters, the genes for ID conversion.}
 
-\item{transfer_tab}{data.frame, the transfer table for ID conversion, could be obtained by \code{get_IDtransfer}.}
+\item{transfer_tab}{data.frame, the conversion table. Users can create it by calling \code{get_IDtransfer}.}
 
-\item{from_type}{character, attribute name from the biomaRt package,
-such as 'ensembl_gene_id',
-'ensembl_gene_id_version'
-'ensembl_transcript_id',
-'ensembl_transcript_id_version',
-'refseq_mrna'.
-Full list could be obtained by
-\code{listAttributes(mart)$name}, where \code{mart} is the output of \code{useMart} function.
-The type must be the gene type for the input \code{use_genes}.
- If NULL, will use the first column in the transfer table.}
+\item{from_type}{character, the attribute name match the current ID type (the type of use_genes).
+Such as "ensembl_gene_id", "ensembl_gene_id_version", "ensembl_transcript_id", "ensembl_transcript_id_version" or "refseq_mrna".
+The "attribute" is inherited from the biomaRt package. For details, user can call \code{listAttributes()} to see all available attributes in the selected dataset.
+If NULL, will use the first column of \code{transfer_tab}.}
 
-\item{to_type}{character, character, attribute name from the biomaRt package,
-the gene type will be convereted to.
-If NULL, will use the second column in the transfer table.}
+\item{to_type}{character, the attribute name to convert into. If NULL, will use the second column of \code{transfer_tab}.}
 
-\item{ignore_version}{logical, whether to ignore version when from_type is 'ensembl_gene_id_version' or 'ensembl_transcript_id_version'. Default is FALSE.}
+\item{ignore_version}{logical, if TRUE and \code{from_type} is "ensembl_gene_id_version" or "ensembl_transcript_id_version", the version will be ignored. Default is FALSE.}
 }
 \value{
-\code{get_name_transfertab} will return the list for the converted IDs.
+Return a vector of converted gene IDs.
 }
 \description{
-\code{get_name_transfertab} will get the transfered ID by input the original ID and transfer table.
+\code{get_name_transfertab} converts the original gene IDs into target gene IDs, with conversion table provided.
 }
 \examples{
 use_genes <- c("ENST00000210187","ENST00000216083","ENST00000216127",

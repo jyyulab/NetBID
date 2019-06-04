@@ -2,36 +2,30 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{get_IDtransfer_betweenSpecies}
 \alias{get_IDtransfer_betweenSpecies}
-\title{Gene ID conversion related functions.}
+\title{Create Data Frame for ID Conversion Between Species}
 \usage{
 get_IDtransfer_betweenSpecies(from_spe = "human", to_spe = "mouse",
   from_type = NULL, to_type = NULL, use_genes = NULL)
 }
 \arguments{
-\item{from_spe}{character, input the species name (e.g 'human', 'mouse', 'rat') that the \code{use_genes} belong to, default is 'human'}
+\item{from_spe}{character, name of the original species (e.g. "human", "mouse", "rat") that \code{use_genes} belongs to. Default is "human".}
 
-\item{to_spe}{character, input the species name (e.g 'human', 'mouse', 'rat') that need to transfered to, default is 'mouse'}
+\item{to_spe}{character, name of the target species (e.g. "human", "mouse", "rat"). Default is "mouse".}
 
-\item{from_type}{character, attribute name from the biomaRt package,
-such as 'ensembl_gene_id',
-'ensembl_gene_id_version'
-'ensembl_transcript_id',
-'ensembl_transcript_id_version',
-'refseq_mrna'.
-Full list could be obtained by
-\code{listAttributes(mart)$name}, where \code{mart} is the output of \code{useMart} function.
-The type must be the gene type for the input \code{use_genes}.}
+\item{from_type}{character, the attribute name match the current ID type (the type of \code{use_genes}).
+Such as "ensembl_gene_id", "ensembl_gene_id_version", "ensembl_transcript_id", "ensembl_transcript_id_version" or "refseq_mrna".
+The "attribute" is inherited from the \code{biomaRt} package. For details, user can call \code{listAttributes()} function to display all available attributes in the selected dataset.}
 
-\item{to_type}{character, character, attribute name from the biomaRt package, the gene type will be convereted to.}
+\item{to_type}{character, the attribute name match the target ID type.}
 
-\item{use_genes}{a vector of characters, gene list used for ID conversion. Must be the genes with \code{from_type} in \code{from_spe}.
-If NULL, will output all possible genes in transfer table. Default is NULL.}
+\item{use_genes}{a vector of characters, the genes for ID conversion. Must be the genes with ID type of \code{from_type}, and from species \code{from_spe}.
+If NULL, all the possible genes will be shown in the conversion table. Default is NULL.}
 }
 \value{
-\code{get_IDtransfer_betweenSpecies} will return a data.frame for the transfer table.
+Return a data frame for ID conversion, from one species to another.
 }
 \description{
-\code{get_IDtransfer_betweenSpecies} will generate a transfer table for ID conversion between species.
+\code{get_IDtransfer_betweenSpecies} creates a data frame to convert ID between species.
 }
 \examples{
 use_genes <- c("ENST00000210187","ENST00000216083","ENST00000216127",

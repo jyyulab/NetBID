@@ -2,29 +2,28 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{cal.Activity.GS}
 \alias{cal.Activity.GS}
-\title{Calculate activity value for gene sets.}
+\title{Calculate Activity Value for Gene Sets}
 \usage{
 cal.Activity.GS(use_gs2gene = all_gs2gene[c("H", "CP:BIOCARTA",
   "CP:REACTOME", "CP:KEGG")], cal_mat = NULL, es.method = "mean",
   std = TRUE)
 }
 \arguments{
-\item{use_gs2gene}{a list for geneset to genes, the name for the list is the gene set name and the content in each list is the vector for genes belong to that gene set.
-Default is all_gs2gene[c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG')] with all_gs2gene loaded by using \code{gs.preload}.}
+\item{use_gs2gene}{list, contains elements of gene sets. Element name is gene set name, each element contains a vector of genes belong to that gene set.
+Default is using \code{all_gs2gene[c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG')]}, which is loaded from \code{gs.preload}.}
 
-\item{cal_mat}{numeric matrix,the expression matrix for all genes/transcripts for calculation.}
+\item{cal_mat}{numeric matrix, gene/transcript expression matrix.}
 
-\item{es.method}{character, strategy to calculate the activity for the driver,
-choose from mean, absmean, maxmean, gsva, ssgsea, zscore, plage, the last four options will use \code{gsva} function.
-Default is 'mean'.}
+\item{es.method}{character, method to calculate the activity value. Users can choose from "mean", "absmean", "maxmean", "gsva", "ssgsea", "zscore" and "plage".
+The details for using the last four options, users can check \code{gsva}. Default is "mean".}
 
-\item{std}{logical, whether to perform std to the original expression matrix. Default is TRUE.}
+\item{std}{logical, if TRUE, the expression matrix will be normalized by column. Default is TRUE.}
 }
 \value{
-the activity matrix with each row a gene set and each column a sample (same sample order with cal_mat)
+Return an activity matrix with rows of gene sets and columns of samples.
 }
 \description{
-\code{cal.Activity.GS} is a function to calculate activity for all gene sets.
+\code{cal.Activity.GS} calculates activity value for each gene set, and return a numeric matrix with rows of gene sets and columns of samples.
 }
 \examples{
 analysis.par <- list()

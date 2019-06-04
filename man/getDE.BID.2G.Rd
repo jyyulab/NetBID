@@ -2,7 +2,7 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{getDE.BID.2G}
 \alias{getDE.BID.2G}
-\title{Get differential expression (DE)/differential activity (DA) between case and control sample groups by Bayesian Inference.}
+\title{Differential Expression Analysis and Differential Activity Analysis Between 2 Sample Groups Using Bayesian Inference}
 \usage{
 getDE.BID.2G(eset, output_id_column = NULL, G1 = NULL, G0 = NULL,
   G1_name = NULL, G0_name = NULL, method = "Bayesian",
@@ -10,58 +10,51 @@ getDE.BID.2G(eset, output_id_column = NULL, G1 = NULL, G0 = NULL,
   verbose = TRUE)
 }
 \arguments{
-\item{eset}{ExpressionSet class object, the input gene expression or driver activity.}
+\item{eset}{ExpressionSet class object, contains gene expression data or driver activity data.}
 
-\item{output_id_column}{character, the column in the fData(eset) used for output the results.
-This option is used in the condition that the original expression matrix is at transcript-level,
-but the statistics can be gene-level if the relation is provided in the feature of the eset.
-If NULL, will use the rownames of the fData(eset).
+\item{output_id_column}{character, the column names of fData(eset).
+This option is useful when the \code{eset} expression matrix is at transcript-level, and user is expecting to see the gene-level comparison statistics.
+If NULL, rownames of the fData(eset) will be used.
 Default is NULL.}
 
-\item{G1}{a vector of characters, the sample list used as the case.}
+\item{G1}{a vector of characters, the sample names of experimental group.}
 
-\item{G0}{a vecotr of characters, the sample list used as the control.}
+\item{G0}{a vecotr of characters, the sample names of control group.}
 
-\item{G1_name}{character, the group name for the samples in G1, default is "G1".}
+\item{G1_name}{character, the name of experimental group (e.g. "Male"). Default is "G1".}
 
-\item{G0_name}{character, the group name for the samples in G0, default is "G0".}
+\item{G0_name}{character, the name of control group (e.g. "Female"). Default is "G0".}
 
-\item{method}{character, choose from 'MLE' or 'Bayesian'.
-'MLE' stands for maximum likelihood estimation, that the function will use generalized linear model(glm/glmer) to fit the data
-for the expression value and sample phenotype, and use MLE to estimate the regression coefficients.
-'Bayesian' means that the function will use Bayesian generalized linear model (bayesglm)
-or multivariate generalized linear mixed model (MCMCglmm) to fit the data.
-Default is 'Bayesian'.}
+\item{method}{character, users can choose between "MLE" and "Bayesian".
+"MLE", the maximum likelihood estimation, will call generalized linear model(glm/glmer) to perform data regression.
+"Bayesian", will call Bayesian generalized linear model (bayesglm) or multivariate generalized linear mixed model (MCMCglmm) to perform data regression.
+Default is "Bayesian".}
 
-\item{family}{a description of the error distribution and link function to be used in the model.
-This can be a character string naming a family function, a family function or the result of a call to a family function.
-(See family for details of family functions).
-Currently only support gaussian,poisson,binomial(two group sample class)/category(multi-group sample class)/ordinal(multi-group sample class with class_ordered=TRUE)
-If set at gaussian or poission, the response variable will be the expression level and the regressors will be the sample phenotype.
-If set at binomial,the response variable will be the sample phenotype and the regressors will be the expression level.
-For the input of binomial, category and ordinal, the family will be automatically reset by the input sample class level and the setting of class_ordered.
+\item{family}{character or family function or the result of a call to a family function.
+This parameter is used to define the model's error distribution. See \code{?family} for details.
+Currently, options are gaussian, poisson, binomial(for two-group sample classes)/category(for multi-group sample classes)/ordinal(for multi-group sample classes with class_ordered=TRUE).
+If set with gaussian or poission, the response variable in the regression model will be the expression level, and the independent variable will be the sample's phenotype.
+If set with binomial, the response variable in the regression model will be the sample phenotype, and the independent variable will be the expression level.
+For binomial, category and ordinal input, the family will be automatically reset, based on the sample's class level and the setting of \code{class_ordered}.
 Default is gaussian.}
 
-\item{pooling}{character, choose from 'full','no','partial'. The strategy for the calculation of DE/DA.
-Supposing geneA has multiple probes A1,A2, in Samples (Case-rep1, Case-rep2, Case-rep3, Control-rep1, Control-rep2, Control-rep3).
-The \code{mat} contains the expression for probes A1,A2 in all samples.
-The purpose is to testify the DE of geneA between Case and Control.
-'full' means to pull the probe together and treat them as indepedent observations.
-'no' means to treat the probe information as an independent variable in the regression model.
-'partial' means to treat the probe information as a random effect in the regression model.
-Default is 'full'.}
+\item{pooling}{character, users can choose from "full","no" and "partial".
+"full", use probes as independent observations.
+"no", use probes as independent variables in the regression model.
+"partial", use probes as random effect in the regression model.
+Default is "full".}
 
-\item{logTransformed}{logical, whether the original expression value has been log transformed.
-Default is TRUE.}
+\item{logTransformed}{logical, if TRUE, log tranformation of the expression value will be performed.}
 
-\item{verbose}{logical, whether or not to print verbose information during calculation.
-Default is TRUE.}
+\item{verbose}{logical, if TRUE, sample names of both groups will be printed. Default is TRUE.}
 }
 \value{
-A dataframe for all genes with the columns as the output of \code{topTable} in limma.
+Return a data frame. Rows are genes/drivers, columns are "ID", "logFC", "AveExpr", "t", "P.Value", "adj.P.Val", "Z-statistics", "Ave.G1" and "Ave.G0".
+Names of the columns may vary from different group names. Sorted by P.Value.
 }
 \description{
-\code{getDE.BID.2G} is a function aims to get DE/DA genes/drivers with detailed statistical information between case (G1) and control (G0) groups.
+\code{getDE.BID.2G} is a function performs differential gene expression analysis and differential driver activity analysis between
+control group (parameter G0) and experimental group (parameter G1).
 }
 \examples{
 mat <- matrix(c(0.50099,-1.2108,-1.0524,

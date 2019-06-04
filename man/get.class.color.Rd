@@ -2,29 +2,25 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{get.class.color}
 \alias{get.class.color}
-\title{Generate a color vector for input character.}
+\title{Create Color Codes for a Vector of Characters}
 \usage{
 get.class.color(x, use_color = NULL, pre_define = NULL,
   use_inner = TRUE)
 }
 \arguments{
-\item{x}{a vector of characters.}
+\item{x}{a vector of characters, names or labels.}
 
-\item{use_color}{a vector of characters, color bar used to generate the color vector for the input.Default is brewer.pal(12, 'Set3').}
+\item{use_color}{a vector of color codes, colors to be assigned to each member of \code{x}. Default is brewer.pal(12, 'Set3').}
 
-\item{pre_define}{a vector of characters, pre-defined color code for some of the input characters. Default is NULL.}
+\item{pre_define}{a vector of characters, pre-defined color codes for a certain input (e.g. c("blue", "blue", "red") with names c("A", "A", "B")). Default is NULL.}
 
-\item{use_inner}{logical, indicating whether to use inner pre-defined color code for some characters. Default is TRUE.}
+\item{use_inner}{logical, if TRUE, the \code{pre_define} color codes will be used. Default is TRUE.}
 }
 \value{
-Will return a vector of colors with names the input vector characters.
+Return a vector of color codes, with input character vector as names.
 }
 \description{
-\code{get.class.color} will generate a vector of colors for input character.
-}
-\details{
-This is a simple function to generate a vector of colors for input characters.
-Users could define some of the colors for part of the inputs.
+\code{get.class.color} creates a vector of color codes for the input character vector. This is a helper function to assign nice looking colors for better visualization.
 }
 \examples{
 get.class.color(c('ClassA','ClassB','ClassC','ClassA','ClassC','ClassC'))

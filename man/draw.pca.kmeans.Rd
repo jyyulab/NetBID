@@ -2,7 +2,7 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{draw.pca.kmeans}
 \alias{draw.pca.kmeans}
-\title{Draw the cluster plot by PCA (visulization algorithm) and Kmeans (cluster algorithm).}
+\title{Visualize the K-means Clustering Result by PCA Biplot}
 \usage{
 draw.pca.kmeans(mat = NULL, all_k = NULL, obs_label = NULL,
   legend_pos = "topleft", legend_cex = 0.8, plot_type = "2D.ellipse",
@@ -10,43 +10,51 @@ draw.pca.kmeans(mat = NULL, all_k = NULL, obs_label = NULL,
   choose_k_strategy = "ARI", return_type = "optimal")
 }
 \arguments{
-\item{mat}{a numeric data matrix, the column (e.g sample) will be clustered by the features (e.g genes) in rows.}
+\item{mat}{a numeric data matrix, the columns (e.g. sample) will be clustered using the feature (e.g. genes) rows.}
 
-\item{all_k}{a vector of integers, the pre-defined K to evaluate.
-If NULL, will use all possible K. Default is NULL.}
+\item{all_k}{a vector of integers, a pre-defined K value. K is the number of final clusters.
+If NULL, the function will try all possible K values. Default is NULL.}
 
-\item{obs_label}{a vector of characters, a vector for sample categories with names representing the sample name.}
+\item{obs_label}{a vector of characters, a vector describes each sample's selected phenotype information,
+using sample name as vector name. Can be obtained by calling \code{get_obs_label}.}
 
-\item{legend_pos}{character, position for the legend displayed on the plot. Default is 'topleft'.}
+\item{legend_pos}{character, position of the plot legend. Default is 'topleft'.}
 
-\item{legend_cex}{numeric, cex for the legend displayed on the plot. Default is 0.8.}
+\item{legend_cex}{numeric, text size of the plot legend. Default is 0.8.}
 
-\item{plot_type}{character, the type for the plot, choose from '2D', '2D.ellipse', '2D.text' and '3D'. Default is '2D.ellipse'.}
+\item{plot_type}{character, plot type. Users can choose from "2D", "2D.ellipse", "2D.text" and "3D". Default is "2D.ellipse".}
 
-\item{point_cex}{numeric, cex for the point in the plot. Default is 1.}
+\item{point_cex}{numeric, size of the point in the plot. Default is 1.}
 
-\item{kmeans_strategy}{character, the strategy to run the kmeans algorith, choose from 'basic' and 'consensus',
-here the consensus kmeans is performed by functions in \code{ConsensusClusterPlus}. Default is 'basic'.}
+\item{kmeans_strategy}{character, K-means clustering algorithm.
+Users can choose "basic" or "consensus". "consensus" is performed by \code{ConsensusClusterPlus}.
+Default is "basic".}
 
-\item{choose_k_strategy}{character, the strategy to choose the best K,
-choose from 'ARI (adjusted rand index)', 'NMI (normalized mutual information)', 'Jaccard'. Default is 'ARI'.}
+\item{choose_k_strategy}{character, method to choose the K-value.
+Users can choose from "ARI (adjusted rand index)", "NMI (normalized mutual information)" and "Jaccard".
+Default is "ARI".}
 
-\item{return_type}{character, the strategy to return the results, choose from 'optimal' and 'all'.
-If choose 'all', cluster results from all k in \code{all_k} will be returned.
-Default is 'optimal'.}
+\item{return_type}{character, the type of result returned.
+Users can choose "optimal" or "all". "all", all the K-values in \code{all_k} will be returned.
+"optimal", only the K-value yielding the optimal classification result will be returned.
+Default is "optimal".}
 }
 \value{
-a vector of predicted label (if \code{return_type} is 'optimal') and a list of all possible K (if \code{return_type} is 'all')
+Return a vector of predicted labels, if \code{return_type} is set to "optimal".
+Or a list of all possible K-values, if \code{return_type} is set to be "all".
 }
 \description{
-\code{draw.pca.kmeans} is a visualization function to draw the cluster for the input data matrix.
+\code{draw.pca.kmeans} is a data visualization function to show the K-means clustering result of a data matrix.
+A PCA biplot is generated to visualize the clustering. Two biplots side-by-side will show the comparison
+between real observation labels (left) and the K-means predicted labels (right).
 }
 \details{
-This function mainly aims for the visulization of sample clusters.
-The input is the expression matrix for each row a gene/transcript/probe and each column a sample.
-User need to input the real observation label for samples and this function will choose the best K by compared with predicted label and the observed label.
-The output figure contains two sub-figures, left is labelled by the real observartion label and right is labelled by the predicted label
-with comparison score (choose from ARI, NMI, Jaccard) shown above.
+This function is mainly used to check the sample clustering result, in aim to detect if any abnormal (outlier) sample(s) exsist.
+The input is a high-throughput expression matrix.
+Each row is a gene/transcript/probe and each column is a sample.
+Users need to provide the real observation label for each sample.
+A K-value yielding the optimal classification result will be used to generate the predicted labels.
+A comparision score (choose from ARI, NMI, Jaccard) will be calculated and shown in the figure.
 }
 \examples{
 network.par <- list()

@@ -2,34 +2,36 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{get_IDtransfer2symbol2type}
 \alias{get_IDtransfer2symbol2type}
-\title{Gene ID conversion related functions.}
+\title{Create Data Frame for ID Conversion With Biotype Information}
 \usage{
 get_IDtransfer2symbol2type(from_type = NULL, use_genes = NULL,
   dataset = NULL, use_level = "gene", ignore_version = FALSE)
 }
 \arguments{
-\item{from_type}{character, attribute name from the biomaRt package,
-such as 'ensembl_gene_id', 'ensembl_gene_id_version', 'ensembl_transcript_id', 'ensembl_transcript_id_version', 'refseq_mrna'.
-Full list could be obtained by
-\code{listAttributes(mart)$name}, where \code{mart} is the output of \code{useMart} function.
-The type must be the gene type for the input \code{use_genes}.}
+\item{from_type}{character, the attribute name matches the current ID type (the type of use_genes).
+Such as "ensembl_gene_id", "ensembl_gene_id_version", "ensembl_transcript_id", "ensembl_transcript_id_version" or "refseq_mrna".
+The "attribute" is inherited from the biomaRt package.
+For details, user can call \code{listAttributes()} function to display all available attributes in the selected dataset.}
 
-\item{use_genes}{a vector of characters, gene list used for ID conversion.
-If NULL, will output all possible genes in transfer table. Default is NULL.}
+\item{use_genes}{a vector of characters, the genes for ID conversion.
+If NULL, all genes will be selected.}
 
-\item{dataset}{character, name for the dataset used for ID conversion, such as 'hsapiens_gene_ensembl'.
-If NULL, will use \code{db_info[1]} if run \code{db.preload} brefore. Default is NULL.}
+\item{dataset}{character, name of the dataset used for ID conversion.
+For example, "hsapiens_gene_ensembl".
+If NULL, \code{db_info[1]} will be used. \code{db_info} requires the calling of \code{db.preload} in the previous steps.
+Default is NULL.}
 
-\item{use_level}{character, either 'transcript' or 'gene', default is 'gene'}
+\item{use_level}{character, users can chose between "transcript" and "gene". Default is "gene".}
 
-\item{ignore_version}{logical, whether to ignore version when from_type is 'ensembl_gene_id_version' or 'ensembl_transcript_id_version'. Default is FALSE.}
+\item{ignore_version}{logical, if TRUE and from_type is "ensembl_gene_id_version" or "ensembl_transcript_id_version",
+the version will be ignored. Default is FALSE.}
 }
 \value{
-\code{get_IDtransfer2symbol2type} will return a data.frame for the transfer table with gene/transcript biotype.
+Return a data frame for ID conversion, from ID to gene symbol and gene biotype.
 }
 \description{
-\code{get_IDtransfer2symbol2type} will generate the transfer table for the original ID to the gene symbol and gene biotype (at gene level)
-or transcript symbol and transcript biotype (at transcript level).
+\code{get_IDtransfer2symbol2type} creates a data frame to convert original ID into gene symbol and gene biotype (gene level),
+or into transcript symbol and transcript biotype (transcript level).
 }
 \examples{
 use_genes <- c("ENST00000210187","ENST00000216083","ENST00000216127",

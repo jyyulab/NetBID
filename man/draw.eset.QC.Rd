@@ -2,37 +2,35 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{draw.eset.QC}
 \alias{draw.eset.QC}
-\title{QC plot for ExpressionSet class object.}
+\title{QC plots for ExpressionSet class object.}
 \usage{
 draw.eset.QC(eset, outdir = ".", do.logtransform = FALSE,
   intgroup = NULL, prefix = "", choose_plot = c("heatmap", "pca",
   "density", "meansd"), generate_html = TRUE)
 }
 \arguments{
-\item{eset}{ExpressionSet class, the input ExpressionSet class object to be plot.}
+\item{eset}{ExpressionSet class, quality control analysis target.}
 
-\item{outdir}{character, output directory to save the figures.
-Suggest to set \code{network.par$out.dir.QC} or \code{analysis.par$out.dir.QC}}
+\item{outdir}{character, the directory path for saving output files.}
 
-\item{do.logtransform}{logical, whether to do log transformation before drawing the QC plots. Default is FALSE.}
+\item{do.logtransform}{logical, if TRUE, the log transformation will be performed on the gene expression value. Default is FALSE.}
 
-\item{intgroup}{a vector of characters, the interested groups from the phenotype information of the eset to be used in plot.
-If NULL, will automatcially extract all possible groups by \code{get_int_group}.
+\item{intgroup}{a vector of characters, the interested phenotype groups from the ExpressionSet.
+If NULL, it will automatcially extract all possible groups by \code{get_int_group}.
 Default is NULL.}
 
-\item{prefix}{character, the prefix for the QC figure name.Default is "".}
+\item{prefix}{character, the prefix for the QC figures' name. Default is "".}
 
 \item{choose_plot}{a vector of characters,
-choose one or multiple from 'heatmap', 'pca', 'density', 'meansd.'
-Default is 'heatmap','pca','density','meansd'.}
+choose one or many from 'heatmap', 'pca', 'density' and 'meansd' plots.
+Default is all.}
 
-\item{generate_html}{logical, whether to generate html file for the report.
-If TRUE, will generate a html file by rmarkdown, otherwise will generate separate pdf files.
+\item{generate_html}{logical, if TRUE, it will generate a html file by R Markdown. Otherwise, it will generate separate PDF files.
 Default is TRUE.}
 }
 \description{
-\code{draw.eset.QC} is a function to draw the basic QC plots for an ExpressionSet class object.
-The QC plots include heatmap, pca, density and meansd.
+\code{draw.eset.QC} is a function to draw a set of plots for quality control analysis.
+4 types of plots will be created, including heatmap, pca, density and meansd.
 }
 \examples{
 \dontrun{

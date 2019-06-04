@@ -2,22 +2,22 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{merge_TF_SIG.network}
 \alias{merge_TF_SIG.network}
-\title{Merge target network for TF (transcription factors) and Sig (signaling factors).}
+\title{Merge TF (transcription factor) Network and Sig (signaling factor) Network}
 \usage{
 merge_TF_SIG.network(TF_network = NULL, SIG_network = NULL)
 }
 \arguments{
-\item{TF_network}{TF network obtained by \code{get.SJAracne.network}.}
+\item{TF_network}{list, the TF network created by \code{get.SJAracne.network} function.}
 
-\item{SIG_network}{SIG network obtained by \code{get.SJAracne.network}.}
+\item{SIG_network}{list, the SIG network created by \code{get.SJAracne.network} function.}
 }
 \value{
-This function will return the same structure object as TF_network/SIG_network,
-which is a list containing three items, \code{network_dat},
-\code{target_list} and \code{igraph_obj}.
+Return the a list containing three elements, \code{network_dat}, \code{target_list} and \code{igraph_obj}.
 }
 \description{
-\code{merge_TF_SIG.network} is a function to merge the target network from TF and Sig.
+\code{merge_TF_SIG.network} takes TF network and Sig network and combine them together.
+The merged list object contains three elements, a data.frame contains all the combined network information \code{network_dat},
+a driver-to-target list object \code{target_list}, and an igraph object of the network \code{igraph_obj}.
 }
 \examples{
 if(exists('analysis.par')==TRUE) rm(analysis.par)
@@ -26,7 +26,7 @@ network.project.name <- 'project_2019-02-14' # demo project name
 project_main_dir <- 'test/'
 project_name <- 'test_driver'
 analysis.par  <- NetBID.analysis.dir.create(project_main_dir=project_main_dir,
-                                            prject_name=project_name,
+                                            project_name=project_name,
                                             network_dir=network.dir,
                                             network_project_name=network.project.name)
 analysis.par$tf.network  <- get.SJAracne.network(network_file=analysis.par$tf.network.file)

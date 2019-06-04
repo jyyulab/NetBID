@@ -2,7 +2,7 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{db.preload}
 \alias{db.preload}
-\title{Load database files used for NetBID2 into R workspace.}
+\title{Preload database files into R workspace for NetBID2}
 \usage{
 db.preload(use_level = "transcript", use_spe = "human",
   update = FALSE, TF_list = NULL, SIG_list = NULL,
@@ -10,40 +10,40 @@ db.preload(use_level = "transcript", use_spe = "human",
   db.dir = sprintf("\%s/db/", main.dir))
 }
 \arguments{
-\item{use_level}{character, either 'transcript' or 'gene', default is 'gene'}
+\item{use_level}{character, users can choose "transcript" or "gene". Default is "gene".}
 
-\item{use_spe}{character, input the species name (e.g 'human', 'mouse', 'rat'), default is 'human'}
+\item{use_spe}{character, the name of an interested species (e.g. "human", "mouse", "rat"). Default is "human".}
 
-\item{update}{logical,whether to update if previous RData has been generated, default FALSE}
+\item{update}{logical, if TRUE, previous loaded RData will be updated. Default is FALSE.}
 
-\item{TF_list}{a character vector,input the list of TF names, if NULL, will use pre-defined list in the package, default NULL}
+\item{TF_list}{a character vector, the list of TF (Transcription Factor) names. If NULL, the pre-defined list in the package will be used.
+Default is NULL.}
 
-\item{SIG_list}{a character vector,input the list of SIG names, if NULL, will use pre-defined list in the package, default NULL}
+\item{SIG_list}{a character vector, the list of SIG (Signaling Factor) names. If NULL, the pre-defined list in the package will be use.
+Default is NULL.}
 
-\item{input_attr_type}{character, input the type for the list of TF_list, SIG_list.
-See biomaRt \url{https://bioconductor.org/packages/release/bioc/vignettes/biomaRt/inst/doc/biomaRt.html} for more details.
-If no input for TF_list, SIG_list, will use the list in db/${use_spe}_TF_${input_attr_type}.txt and db/${use_spe}_SIG_${input_attr_type}.txt,
-and only support external_gene_name and ensembl_gene_id.
+\item{input_attr_type}{character, the type of the TF_list and SIG_list.
+Details please check biomaRt, \url{https://bioconductor.org/packages/release/bioc/vignettes/biomaRt/inst/doc/biomaRt.html}.
+If TF_list and SIG_list are not specified, the list in db/${use_spe}_TF_${input_attr_type}.txt and db/${use_spe}_SIG_${input_attr_type}.txt will be used.
+This only support external_gene_name and ensembl_gene_id.
 Default is external_gene_name.}
 
-\item{main.dir}{character, main file path for NetBID2,
-if NULL, will set to \code{system.file(package = "NetBID2")}. Default is NULL.}
+\item{main.dir}{character, the main directory for NetBID2.
+If NULL, will be set to \code{system.file(package = "NetBID2")}. Default is NULL.}
 
-\item{db.dir}{character, file path for saving the RData, default is \code{db} directory under \code{main.dir} when setting for \code{main.dir}.}
+\item{db.dir}{character, a path for saving the RData.
+Default is \code{db} directory within the \code{main.dir}, if\code{main.dir} is provided.}
 }
 \value{
-Reture TRUE if success and FALSE if not. Will load two variables into R workspace, tf_sigs and db_info.
+Return TRUE if loading is successful, otherwise return FALSE. Two variables will be loaded into R workspace, \code{tf_sigs} and \code{db_info}.
 }
 \description{
-\code{db.preload} returns the TF (transcription factors) and Sig (signaling factors) list (tf_sigs)
-and biomart database information (db_info) by input interested species name and make choice from
-gene or transcript level.
+\code{db.preload} is a pre-processing function for NetBID2. It preloads needed data into R workspace,
+and saves it locally under db/ directory with specified species name and analysis level.
 }
 \details{
-This is a pre-processing function for NetBID2, user could input the species name (e.g human, mouse),
-analysis level (transcript or gene level) and optionally input TF list or SIG list
-(otherwise will use list from package data). The function could automatically download information
-from biomart and save into RData under the db/ directory with specified species name and analysis level.
+Users need to set the species name (e.g. human, mouse) and
+analysis level (transcript or gene level). TF list and SIG list are optional, if not specified, list from package data will be used as default.
 }
 \examples{
 db.preload(use_level='gene',use_spe='human',update=FALSE)

@@ -2,32 +2,34 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{getDE.limma.2G}
 \alias{getDE.limma.2G}
-\title{Get differential expression (DE)/differential activity (DA) between case and control sample groups by limma related functions.}
+\title{Differential Expression Analysis and Differential Activity Analysis Between 2 Sample Groups Using Limma}
 \usage{
 getDE.limma.2G(eset = NULL, G1 = NULL, G0 = NULL, G1_name = NULL,
   G0_name = NULL, verbose = TRUE, random_effect = NULL)
 }
 \arguments{
-\item{eset}{ExpressionSet class object, the input gene expression or driver activity.}
+\item{eset}{ExpressionSet class object, contains gene expression data or driver activity data.}
 
-\item{G1}{a vector of characters, the sample list used as the case.}
+\item{G1}{a vector of characters, the sample names of experimental group.}
 
-\item{G0}{a vecotr of characters, the sample list used as the control.}
+\item{G0}{a vecotr of characters, the sample names of control group.}
 
-\item{G1_name}{character, the group name for the samples in G1, default is "G1".}
+\item{G1_name}{character, the name of experimental group (e.g. "Male"). Default is "G1".}
 
-\item{G0_name}{character, the group name for the samples in G0, default is "G0".}
+\item{G0_name}{character, the name of control group (e.g. "Female"). Default is "G0".}
 
-\item{verbose}{logical, whether or not to print verbose information during calculation.Default is TRUE.}
+\item{verbose}{logical, if TRUE, sample names of both groups will be printed. Default is TRUE.}
 
 \item{random_effect}{a vector of characters, vector or factor specifying a blocking variable.
-Default is NULL indicating no random effect will be considered.}
+Default is NULL, no random effect will be considered.}
 }
 \value{
-A dataframe for all genes with the columns as the output of \code{topTable} in limma.
+Return a data frame. Rows are genes/drivers, columns are "ID", "logFC", "AveExpr", "t", "P.Value", "adj.P.Val", "B", "Z-statistics", "Ave.G1" and "Ave.G0".
+Names of the columns may vary from different group names. Sorted by P-values.
 }
 \description{
-\code{getDE.limma.2G} is a function aims to get DE/DA genes/drivers with detailed statistical information between case (G1) and control (G0) groups.
+\code{getDE.limma.2G} is a function performs differential gene expression analysis and differential driver activity analysis
+between control group (parameter G0) and experimental group (parameter G1), using limma related functions.
 }
 \examples{
 analysis.par <- list()

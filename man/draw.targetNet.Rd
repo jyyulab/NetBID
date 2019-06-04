@@ -2,43 +2,39 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{draw.targetNet}
 \alias{draw.targetNet}
-\title{Target network structure plot for the driver.}
+\title{Target Network Structure Plot for One Driver}
 \usage{
 draw.targetNet(source_label = "", source_z = NULL, edge_score = NULL,
   label_cex = 0.7, source_cex = 1, pdf_file = NULL,
   arrow_direction = "out", n_layer = 1, alphabetical_order = FALSE)
 }
 \arguments{
-\item{source_label}{the label for the driver displayed on the plot.}
+\item{source_label}{character, the label of selected one driver.}
 
-\item{source_z}{numeric, the Z statistic for the driver, used to color the driver point.
-If NULL, the driver will be colored in grey. Default is NULL.}
+\item{source_z}{numeric, the Z-statistic of the selected driver. The color shade of driver's node in the network is decided by this Z-statistic.
+If NULL, the driver node will be colored grey. Default is NULL.}
 
-\item{edge_score}{a vector of numeric values, indicating the correlation between the driver and the target genes.
-The value ranges from -1 to 1, with positive value indicating postivie regulation and negative value indicating negative correlation.
-The names for the vector is the gene labels displayed on the plot.}
+\item{edge_score}{a named vector of numerics, indicating the correlation between the driver and its target genes. The range of the numeric value is from -1 to 1.
+Positive value means it is positively-regulated by driver and vice versa. The names of the vector are gene names.}
 
-\item{label_cex}{numeric, \code{cex} for the target genes displayed on the plot. Default is 0.7.}
+\item{label_cex}{numeric, giving the amount by which the text of target gene names should be magnified relative to the default. Default is 0.7.}
 
-\item{source_cex}{numeric, \code{cex} for the source genes displayed on the plot. Default is 1.}
+\item{source_cex}{numeric, giving the amount by which the text of driver name should be magnified relative to the default. Default is 1.}
 
-\item{pdf_file}{character, file path for the pdf file to save the figure into pdf format.If NULL, will not generate pdf file. Default is NULL.}
+\item{pdf_file}{character, the file path to save as PDF file. If NULL, no PDF file will be saved. Default is NULL.}
 
-\item{arrow_direction}{character, choose from 'in' or 'out'. Default is 'out'.}
+\item{arrow_direction}{character, users can choose between "in" and "out". Default is "out".}
 
-\item{n_layer}{integer, number of circle layers to display, default is 1.}
+\item{n_layer}{integer, number of circle layers to display. Default is 1.}
 
-\item{alphabetical_order}{logical, whether the target gene labels are sorted by the alphabetical order, if FALSE will be ordered by statistics. Default is FALSE.}
+\item{alphabetical_order}{logical, if TRUE, the targe gene names will be sorted alphabetically. If FALSE, will be sorted by statistics. Default is FALSE.}
 }
 \value{
-Will return logical value indicating whether the plot has been successfully generated
+Return a logical value. If TRUE, the plot has been created successfully.
 }
 \description{
-\code{draw.targetNet} will draw the network structure for the selected driver and its target genes.
-}
-\details{
-This is a function to draw target network structure for the selected driver.
-The color bar represents the positive (red) or negative (blue) regulation with line width showing the strength.
+\code{draw.targetNet} draws a network structure to display the target genes of one selected driver. Edges of positively-regulated target genes are orange,
+edges of negatively-regulated target genes are green. The width of the edges shows the strength of regulation.
 }
 \examples{
 source_label <- 'test1'

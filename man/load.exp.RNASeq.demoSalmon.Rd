@@ -2,42 +2,40 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{load.exp.RNASeq.demoSalmon}
 \alias{load.exp.RNASeq.demoSalmon}
-\title{Load gene expression set from Salmon output (demo version).}
+\title{Load Gene Expression Set from Salmon Output (demo version)}
 \usage{
 load.exp.RNASeq.demoSalmon(salmon_dir = "", tx2gene = NULL,
   use_phenotype_info = NULL, use_sample_col = NULL,
   use_design_col = NULL, return_type = "tpm", merge_level = "gene")
 }
 \arguments{
-\item{salmon_dir}{character, the main file directory to save the salmon results.}
+\item{salmon_dir}{character, the directory to save the results created by Salmon.}
 
-\item{tx2gene}{data.frame or NULL, this parameter will be passed to \code{tximport}, check for detail.
-If NULL, will read the transcript name in one of the salmon output
-(this only works when using e.g gencode.v29.transcripts.fa from GENCODE as reference).}
+\item{tx2gene}{data.frame or NULL, this parameter will be passed to \code{tximport}. For details, please check \code{tximport}.
+If NULL, will read in one of the transcript names from Salmon's results. Note, it works when using e.g. "gencode.v29.transcripts.fa" from GENCODE as reference.}
 
-\item{use_phenotype_info}{data.frame, phenotype information dataframe, must contain the columns \code{use_sample_col} and \code{use_design_col}.}
+\item{use_phenotype_info}{data.frame, the data frame contains phenotype information. It must have the columns \code{use_sample_col} and \code{use_design_col}.}
 
-\item{use_sample_col}{character, the column name to indicate which column in \code{use_phenotype_info} should be used as the sample name.}
+\item{use_sample_col}{character, the column name, indicating which column in \code{use_phenotype_info} should be used as the sample name.}
 
-\item{use_design_col}{character, the column name to indicate which column in \code{use_phenotype_info} should be used as the design feature of the samples.}
+\item{use_design_col}{character, the column name, indicating which column in \code{use_phenotype_info} should be used as the design feature for samples.}
 
-\item{return_type}{character, the class of the return object, choose from 'txi','counts','tpm','eset' and 'dds'.
-'txi' is the output of \code{tximport}, a simple list containing matrices: abundance, counts, length.
-'counts' is the output of raw count matrix.
-'tpm' is the output of raw tpm.
-'dds' is the DESeqDataSet class object, the data has been processed by \code{DESeq}.
-'eset' is the ExpressionSet class object,the expression data matrix has been processed by \code{DESeq} and \code{vst}.
-Default is 'tpm'}
+\item{return_type}{character, the class of the return object. Users can choose from "txi","counts","tpm",’"eset" and "dds".
+"txi" is the output of tximport. It is a list containing three matrices, abundance, counts and length.
+"counts" is the matrix of raw count.
+"tpm" is the raw tpm.
+"dds" is the DESeqDataSet class object, which is processed by DESeq.
+"eset" is the ExpressionSet class object, which is processed by DESeq and vst.
+Default is "tpm".}
 
-\item{merge_level}{character, choose from 'gene' and 'transcript',
-if choose 'gene' and original salmon results is mapped to the transcriptome,
-expression matrix will be merged to gene level.
-(this only works when using e.g gencode.v29.transcripts.fa from GENCODE as reference).}
+\item{merge_level}{character, users can choose between "gene" and "transcript".
+"gene", the original salmon results will be mapped to the transcriptome and the expression matrix will be merged to the gene level.
+This only works when using e.g. "gencode.v29.transcripts.fa" from GENCODE as the reference.}
 }
 \description{
-\code{load.exp.RNASeq.demoSalmon} is a function to read in salmon results and convert to eSet/DESeqDataSet class object.
+\code{load.exp.RNASeq.demoSalmon} is a function to read in Salmon results and convert it to eSet/DESeqDataSet class object.
 }
 \details{
-This function assist to read in RNASeq results from salmon.
-Due to the complicated condition (e.g reference sequence) in running salmon, this function is just a demo version that may not suit for all conditions.
+This function helps users to read in results created by Salmon.
+Due to the complicated manipulations (e.g. reference sequence) in processing Salmon, this demo function may not be suitable for all scenarios.
 }

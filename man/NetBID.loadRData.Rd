@@ -2,26 +2,21 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{NetBID.loadRData}
 \alias{NetBID.loadRData}
-\title{Automatically load RData for NetBID2. Suggested in the NetBID2 pipeline analysis but not required.}
+\title{Reload Saved RData Created by \code{NetBID.saveRData}.}
 \usage{
 NetBID.loadRData(network.par = NULL, analysis.par = NULL,
   step = "exp-load")
 }
 \arguments{
-\item{network.par}{list, store all related datasets during network generation part.}
+\item{network.par}{list, stores all related datasets from network construction step.}
 
-\item{analysis.par}{list, store all related datasets during driver analysis part.}
+\item{analysis.par}{list, stores all related datasets from driver analysis step.}
 
-\item{step}{character, name for the step.}
+\item{step}{character, name of the pipeline step. It should be previously assigned by user when calling \code{NetBID.saveRData} function.}
 }
 \description{
-\code{NetBID.loadRData} is a function strongly suggested to control the pipeline analysis in NetBID2.
-}
-\details{
-Users could save two complicate list object, network.par in the network generation part and analysis.par in the driver analysis part,
-into the data directory (network.par$out.dir.DATA or analysis.par$out.dir.DATA), with the name of the RData marked by \code{step} name.
-The two lists could make user to save the whole related dataset in each step \code{NetBID.saveRData} and easy to get them back by using \code{NetBID.loadRData}.
-The RData saved from each step could be used to run the following analysis without repeating the former steps.
+\code{NetBID.loadRData} is a function loads RData saved by \code{NetBID.saveRData} function.
+It prevents user from repeating former pipeline steps.
 }
 \examples{
 analysis.par <- list()

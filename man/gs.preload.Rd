@@ -2,32 +2,35 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{gs.preload}
 \alias{gs.preload}
-\title{Load MSigDB for NetBID2 into R workspace.}
+\title{Load MSigDB Database into R Workspace}
 \usage{
 gs.preload(use_spe = "Homo sapiens", update = FALSE, main.dir = NULL,
   db.dir = sprintf("\%s/db/", main.dir))
 }
 \arguments{
-\item{use_spe}{character, input the species name (e.g 'Homo sapiens', 'Mus musculus'). Full list of available species name could be found by \code{msigdbr_show_species()}.
-Default is 'Homo sapiens'}
+\item{use_spe}{character, name of interested species (e.g. "Homo sapiens", "Mus musculus").
+Users can call \code{msigdbr_show_species()} to access the full list of available species names.
+Default is "Homo sapiens".}
 
-\item{update}{logical,whether to update if previous RData has been generated, default FALSE}
+\item{update}{logical, if TRUE, the previous loaded RData will be updated. Default is FALSE.}
 
-\item{main.dir}{character, main file path for NetBID2, if NULL, will set to system.file(package = "NetBID2"). Default is NULL.}
+\item{main.dir}{character, the main file path of user's NetBID2 project.
+If NULL, will be set to \code{system.file(package = "NetBID2")}. Default is NULL.}
 
-\item{db.dir}{character, file path for saving the RData, default is \code{db} directory under \code{main.dir} when setting for \code{main.dir}.}
+\item{db.dir}{character, the file path to save the RData. Default is \code{db} directory under the \code{main.dir}, if one has a \code{main.dir}.}
 }
 \value{
-Reture TRUE if success and FALSE if not. Will load two variables into R workspace, all_gs2gene and all_gs2gene_info
+Reture a logical value. If TRUE, MsigDB database is loaded successfully, with \code{all_gs2gene} and \code{all_gs2gene_info} created
+in the workspace.
 }
 \description{
-\code{gs.preload} will load two variables into R workspace, the list for gene set to genes (all_gs2gene)
- and a dataframe (all_gs2gene_info) for detailed description for gene sets.
+\code{gs.preload} downloads data from MSigDB and stores it into two variables in R workspace, \code{all_gs2gene} and \code{all_gs2gene_info}.
+\code{all_gs2gene} is a list object with elements of gene sets collections.
+\code{all_gs2gene_info} is a data.frame contains the description of each gene sets.
 }
 \details{
-This is a pre-processing function for NetBID2 advanced analysis, user only need to input the species name (e.g Homo sapiens, Mus musculus).
-The function could automatically download information from MSigDB by the functions in \code{msigdbr} and save into RData under the db/ directory
-with specified species name.
+This is a pre-processing function for NetBID2 advanced analysis. User only need to input the species name (e.g. "Homo sapiens", "Mus musculus").
+It will call \code{msigdbr} to download data from MSigDB and save it as RData under the \code{db/} directory with species name.
 }
 \examples{
 gs.preload(use_spe='Homo sapiens',update=FALSE)

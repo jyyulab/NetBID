@@ -2,38 +2,35 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{get_IDtransfer}
 \alias{get_IDtransfer}
-\title{Gene ID conversion related functions.}
+\title{Creates Data Frame for ID Conversion}
 \usage{
 get_IDtransfer(from_type = NULL, to_type = NULL, add_type = NULL,
   use_genes = NULL, dataset = NULL, ignore_version = FALSE)
 }
 \arguments{
-\item{from_type}{character, attribute name from the biomaRt package,
-such as 'ensembl_gene_id', 'ensembl_gene_id_version', 'ensembl_transcript_id', 'ensembl_transcript_id_version', 'refseq_mrna'.
-Full list could be obtained by
-\code{listAttributes(mart)$name}, where \code{mart} is the output of \code{useMart} function.
-The type must be the gene type for the input \code{use_genes}.}
+\item{from_type}{character, the attribute name match the current ID type (the type of \code{use_genes}).
+Such as "ensembl_gene_id", "ensembl_gene_id_version", "ensembl_transcript_id", "ensembl_transcript_id_version" or "refseq_mrna".
+The "attribute" is inherited from the biomaRt package. For details, user can call \code{listAttributes()} to display all available attributes in the selected dataset.}
 
-\item{to_type}{character, character, attribute name from the biomaRt package,
-the gene type will be convereted to.}
+\item{to_type}{character, the attribute name to convert into.}
 
-\item{add_type}{character, character, attribute name from the biomaRt package,
-additional type in the final table}
+\item{add_type}{character, the additional attribute name to add into the conversion data frame.}
 
-\item{use_genes}{a vector of characters, gene list used for ID conversion.
-If NULL, will extract all possible genes.}
+\item{use_genes}{a vector of characters, the genes for ID conversion.
+If NULL, all genes will be selected.}
 
-\item{dataset}{character, name for the dataset used for ID conversion, such as 'hsapiens_gene_ensembl'.
-If NULL, will use \code{db_info[1]} if run \code{db.preload} brefore. Default is NULL.}
+\item{dataset}{character, name of the dataset used for ID conversion. For example, "hsapiens_gene_ensembl".
+If NULL, \code{db_info[1]} will be used. \code{db_info} requires the calling of \code{db.preload} in the previous steps.
+Default is NULL.}
 
-\item{ignore_version}{logical, whether to ignore version when from_type is 'ensembl_gene_id_version' or 'ensembl_transcript_id_version'.
+\item{ignore_version}{logical, if TRUE and \code{from_type} is "ensembl_gene_id_version" or "ensembl_transcript_id_version", the version will be ignored.
 Default is FALSE.}
 }
 \value{
-\code{get_IDtransfer} will return a data.frame for the transfer table.
+Return a data frame for ID conversion.
 }
 \description{
-\code{get_IDtransfer} will generate a transfer table for ID conversion by input the from-gene type and to-gene type.
+\code{get_IDtransfer} creates a data frame for ID conversion using biomaRt. For example, to convert Ensembl ID into gene symbol.
 }
 \examples{
 use_genes <- c("ENST00000210187","ENST00000216083","ENST00000216127",

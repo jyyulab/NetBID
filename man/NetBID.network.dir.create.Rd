@@ -2,33 +2,43 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{NetBID.network.dir.create}
 \alias{NetBID.network.dir.create}
-\title{Create directory for the network generation part. Suggested but not required.}
+\title{Manipulation of Working Directories for NetBID2 Network Construction Step}
 \usage{
-NetBID.network.dir.create(project_main_dir = NULL, prject_name = NULL)
+NetBID.network.dir.create(project_main_dir = NULL, project_name = NULL)
 }
 \arguments{
-\item{project_main_dir}{character, main directory for the project.}
+\item{project_main_dir}{character, name or absolute path of the main working directory.}
 
-\item{prject_name}{character, project name.}
+\item{project_name}{character, name of the project folder.}
 }
 \value{
-a list called network.par, including main.dir,project.name, out.dir, out.dir.QC, out.dir.DATA, out.dir.SJAR
+\code{NetBID.network.dir.create} returns a list object, containing main.dir (path of the main working directory),
+project.name (project name), out.dir (path of the project folder, which contains three subfolders), out.dir.QC,
+out.dir.DATA and out.dir.SJAR.
 }
 \description{
-\code{NetBID.network.dir.create} will generate a working directory structure for the network generation part in NetBID2.
-This function aims to assist researchers to organize the working directory. It is suggested but not required.
+\code{NetBID.network.dir.create} is used to help users create an organized working directory for the network construction step in NetBID2 analysis.
+However, it is not essential for the analysis.
+It creates a hierarchcial working directory and returns a list contains this directory information.
 }
 \details{
-This function need to input the main directory for the project with the project name.
-It will generate three sub-directories, QC/ for the QC-related plots, DATA/ for saving the RData, and SJAR/ for running SJAracne.
-Such organization is suggested but not required to use all functions in NetBID2.
-This function will return a variable called \code{network.par}.
-This variable is strongly suggested to use in the network generation part of NetBID2.
-It will be used to store all related datasets during calculation.
+This function needs users to define the main working directory and the project's name.
+It creates a main working directory with a subdirectory of the project.
+It also automatically creates three subfolders (QC, DATA and SJAR) within the project folder. QC/,
+storing Quality Control related plots; DATA/, saving data in RData format;
+SJAR/, storing files needed for running SJAracne command.
+This function also returns a list object (example, \code{network.par} in the demo) with directory information wrapped inside.
+This list is an essential for
+network construction step, all the important intermediate data generated later will be wrapped inside.
 }
 \examples{
 
 \dontrun{
-NetBID.network.dir.create(project_main_dir='demo1/',project_name='network_test')
+# Creating a main working directory under the current working directory by folder name
+network.par <- NetBID.network.dir.create("MyMainDir","MyProject")
+# Or creating a main working directory under the current working directory by relative path
+network.par <- NetBID.network.dir.create("./MyMainDir","MyProject")
+# Or creating a main working directory to a specific path by absolute path
+network.par <- NetBID.network.dir.create("~/Desktop/MyMainDir","MyProject")
 }
 }

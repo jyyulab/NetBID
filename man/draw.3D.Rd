@@ -2,45 +2,44 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{draw.3D}
 \alias{draw.3D}
-\title{Draw 3D dimension plot for sample cluster visualization.}
+\title{Visualize Sample Clustering Result in 3D Plot}
 \usage{
 draw.3D(X, Y, Z, class_label, xlab = "PC1", ylab = "PC2",
   zlab = "PC3", legend_cex = 0.8, main = "", point_cex = 1,
   legend_pos = "topright", legend_ncol = 1, ...)
 }
 \arguments{
-\item{X}{a vector of numeric values, the first dimension values.}
+\item{X}{a vector of numerics, the x coordinates of points in the plot. If user would like to create a PCA biplot, this parameter should be the first component.}
 
-\item{Y}{a vector of numeric values, the second dimension values.}
+\item{Y}{a vector of numerics, the y coordinates of points in the plot. If user would like to create a PCA biplot, this parameter should be the second component.}
 
-\item{Z}{a vector of numeric values, the third dimension values.}
+\item{Z}{a vector of numerics, the z coordinates of points in the plot. If user would like to create a PCA biplot, this parameter should be the third component.}
 
-\item{class_label}{a vector of characters, with the names are the samples (optional) and the values are the sample cluster label.
-The function will treat that the order are the same for X,Y and class_label.}
+\item{class_label}{a vector of characters, labels or categories of samples. The vector name should be sample names.}
 
-\item{xlab}{character, the label for x-axis.}
+\item{xlab}{character, the label for x-axis. Default is "PC1".}
 
-\item{ylab}{character, the label for y-axis.}
+\item{ylab}{character, the label for y-axis. Default is "PC2".}
 
-\item{zlab}{character, the label for z-axis.}
+\item{zlab}{character, the label for z-axis. Default is "PC3".}
 
-\item{legend_cex}{numeric, the cex for the legend.}
+\item{legend_cex}{numeric, giving the amount by which the text of legend should be magnified relative to the default. Default is 0.8.}
 
-\item{main}{character, the title for the plot.}
+\item{main}{character, an overall title for the plot. Default is "".}
 
-\item{point_cex}{numeric, the cex for the points.}
+\item{point_cex}{numeric, giving the amount by which the size of the data points should be magnified relative to the default. Default is 1.}
 
-\item{legend_pos}{character, the position to put the legend. Default is 'topright'.}
+\item{legend_pos}{character, the position of legend. Default is "topright".}
 
-\item{legend_ncol}{integer, number of columns used to display the legend. Default is 1.}
+\item{legend_ncol}{integer, number of columns of legend. Default is 1.}
 
 \item{...}{other paramters used in \code{scatter3D}.}
 }
 \value{
-logical value indicating whether the plot has been successfully generated
+Return a logical value. If TRUE, the plot has been created successfully.
 }
 \description{
-\code{draw.3D} is a function to draw 3D dimension plot for sample cluster visualization.
+\code{draw.3D} creates a 3D plot to visualize the sample clustering result.
 }
 \examples{
 mat1 <- matrix(rnorm(2000,mean=0,sd=1),nrow=100,ncol=20)

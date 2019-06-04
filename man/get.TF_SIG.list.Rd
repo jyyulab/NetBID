@@ -2,36 +2,33 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{get.TF_SIG.list}
 \alias{get.TF_SIG.list}
-\title{Get transcription factor (TF) and signaling factor (SIG) list for the input gene/transcript type}
+\title{Get Transcription Factor (TF) and Signaling Factor (SIG) List}
 \usage{
-get.TF_SIG.list(use_genes = NULL, use_gene_type = "ensembl_gene_id",
+get.TF_SIG.list(use_genes = NULL, use_gene_type = "external_gene_name",
   ignore_version = FALSE, dataset = NULL)
 }
 \arguments{
-\item{use_genes}{a vector of characters, all possible genes used in network generation.
-If NULL, will not filter the TF/SIG list by this gene list. Default is NULL.}
+\item{use_genes}{a vector of characters, genes will be used in the network construction.
+If NULL, no filter will be performed to the TF/SIG list. Default is NULL.}
 
-\item{use_gene_type}{character, attribute name from the biomaRt package,
-such as 'ensembl_gene_id', 'ensembl_gene_id_version', 'ensembl_transcript_id', 'ensembl_transcript_id_version', 'refseq_mrna'.
-Full list could be obtained by
-\code{listAttributes(mart)$name}, where \code{mart} is the output of \code{useMart} function.
-(e.g mart <- useMart('ensembl',db_info[1]))
-The type must be the gene type for the input \code{use_genes}. Default is 'ensembl_gene_id'.}
+\item{use_gene_type}{character, the attribute name inherited from the biomaRt package.
+Some options are, "ensembl_gene_id", "ensembl_gene_id_version", "ensembl_transcript_id", "ensembl_transcript_id_version" and "refseq_mrna".
+All options can be accessed by calling \code{useMart} (e.g. mart <- useMart('ensembl',db_info[1]); listAttributes(mart)$name).
 
-\item{ignore_version}{logical, whether to ignore version when from_type is 'ensembl_gene_id_version' or 'ensembl_transcript_id_version'.
+The type must match the gene type from the input \code{use_genes}. Default is "external_gene_name".}
+
+\item{ignore_version}{logical, if TRUE, the version "ensembl_gene_id_version" or "ensembl_transcript_id_version" will be ignored.
 Default is FALSE.}
 
-\item{dataset}{character, name for the dataset used for ID conversion,
-such as 'hsapiens_gene_ensembl'.
-If NULL, will use \code{db_info[1]} if run \code{db.preload} brefore. Default is NULL.}
+\item{dataset}{character, the dataset used for ID conversion (e.g. "hsapiens_gene_ensembl").
+If NULL, use \code{db_info[1]} from \code{db.preload}. Default is NULL.}
 }
 \value{
-This function will return a list containing two parts,
-for $tf saving the TF list for the input gene type and $sig saving the SIG list.
+Return a list containing two elements. \code{tf} is the TF list, \code{sig} is the SIG list.
 }
 \description{
-\code{get.TF_SIG.list} is a gene ID conversion function to get the TF/SIG list
-for the input gene list with selected gene/transcript type.
+\code{get.TF_SIG.list} is a function converts gene ID into the corresponding TF/SIG list,
+with selected gene/transcript type.
 }
 \examples{
 db.preload(use_level='transcript',use_spe='human',update=FALSE)

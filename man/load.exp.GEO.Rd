@@ -2,37 +2,36 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{load.exp.GEO}
 \alias{load.exp.GEO}
-\title{Load gene expression set from GEO database}
+\title{Download Gene Expression Series From GEO Database with Platform Specified}
 \usage{
-load.exp.GEO(out.dir = network.par$out.dir.DATA, GSE = NULL,
-  GPL = NULL, getGPL = TRUE, update = FALSE)
+load.exp.GEO(out.dir = NULL, GSE = NULL, GPL = NULL, getGPL = TRUE,
+  update = FALSE)
 }
 \arguments{
-\item{out.dir}{character, the file path to save the RData or if the RData has already generated, load from it.
-Default is network.par$out.dir.DATA if follow the NetBID2 suggested pipeline.}
+\item{out.dir}{character, the file path used to save the GSE RData. If the data already exsits, it will be loaded from this path.}
 
-\item{GSE}{character, the GSE ID to download.}
+\item{GSE}{character, the GEO Series Accession ID.}
 
-\item{GPL}{character, the GPL ID to download.}
+\item{GPL}{character, the GEO Platform Accession ID.}
 
-\item{getGPL}{logical, whether to download the GPL file or not. Default is TRUE.}
+\item{getGPL}{logical, if TRUE, the corresponding GPL file will be downloaded. Default is TRUE.}
 
-\item{update}{logical, whether to update the RData if the data is already in the out.dir.Default is FALSE}
+\item{update}{logical, if TRUE, the previous stored Gene ExpressionSet RData will be updated. Default is FALSE}
 }
 \value{
-ExpressionSet class object if success.
+Return an ExpressionSet class object.
 }
 \description{
-\code{load.exp.GEO} is a function to get GEO dataset, save into ExpressionSet class object and save to RData.
-If the RData exists, user could choose to directly load from it.
-}
-\details{
-This function aims to provide simple way to get expression set from GEO database and manage the related RData.
+\code{load.exp.GEO} downloads user assigned Gene Expression Series (GSE file) along with its Platform from GEO dataset.
+It returns an ExpressionSet class object and saves it as RData. If the GSE RData already exists, it will be loaded directly.
+It also allows users to update the Gene Expression Series RData saved before.
 }
 \examples{
 
 \dontrun{
-net_eset <- load.exp.GEO(out.dir='test/',
+# Download the GSE116028 which performed on GPL6480 platform from GEO and save it to the current directory
+# Assign this ExpressionSet object to net_eset
+net_eset <- load.exp.GEO(out.dir='./',
                          GSE='GSE116028',
                          GPL='GPL6480',
                          getGPL=TRUE,

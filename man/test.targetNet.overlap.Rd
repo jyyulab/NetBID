@@ -2,31 +2,28 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{test.targetNet.overlap}
 \alias{test.targetNet.overlap}
-\title{Test for the target genes' intersection between two drivers.}
+\title{Test for Intersection of Target Genes between Two Drivers}
 \usage{
 test.targetNet.overlap(source1_label = NULL, source2_label = NULL,
   target1 = NULL, target2 = NULL, total_possible_target = NULL)
 }
 \arguments{
-\item{source1_label}{character, the label for the first driver.}
+\item{source1_label}{character, the label of the first selected driver.}
 
-\item{source2_label}{character, the label for the second driver.}
+\item{source2_label}{character, the label of the second selected driver.}
 
-\item{target1}{a vector of characters, the list of target genes for the first driver.}
+\item{target1}{a vector of characters, the list of target genes from the first driver.}
 
-\item{target2}{a vector of characters, the list of target genes for the second driver.}
+\item{target2}{a vector of characters, the list of target genes from the second driver.}
 
-\item{total_possible_target}{numeric or a vector of characters. If input numeric, will be the total number of possible targets.
-If input a vector of characters, will be the background list of all possible target genes.}
+\item{total_possible_target}{numeric or a vector of characters. If input is numeric, it is the total number of possible target genes.
+If input is a vector of characters, it is the background list of all possible target genes.}
 }
 \value{
-Return the statistics of testing, including the \code{P.Value}, \code{Odds_Ratio} and \code{Intersected_Nuumber}.
+Return statistics of the testing, including the \code{P.Value}, \code{Odds_Ratio} and \code{Intersected_Nuumber}.
 }
 \description{
-\code{test.targetNet.overlap} will test whether the target genes of two drivers are significantly intersected.
-}
-\details{
-This is a function to perform Fisher's Exact Test for the intersection of the target genes from two drivers.
+\code{test.targetNet.overlap} performs Fisher's exact test to see whether the target genes from two drivers are significantly intersected.
 }
 \examples{
 source1_label <- 'test1'

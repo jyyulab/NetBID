@@ -2,34 +2,34 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{generate.eset}
 \alias{generate.eset}
-\title{Generate expression Set object}
+\title{Generate ExpressionSet Object}
 \usage{
 generate.eset(exp_mat = NULL, phenotype_info = NULL,
   feature_info = NULL, annotation_info = "")
 }
 \arguments{
-\item{exp_mat}{data matrix, the expression data matrix with each row a gene/transcript and each column a sample.}
+\item{exp_mat}{matrix, the expression data matrix. Each row represents a gene/transcript/probe, each column represents a sample.}
 
-\item{phenotype_info}{data.frame, the phenotype information for the samples in \code{exp_mat},
-the rownames must match the colnames of \code{exp_mat}. If NULL, will generate a single column dataframe.
+\item{phenotype_info}{data.frame, the phenotype information for all the samples in \code{exp_mat}.
+In the phenotype data frame, each row represents a sample, each column represents a phenotype feature.
+The row names must match the column names of \code{exp_mat}. If NULL, it will generate a single-column data frame.
 Default is NULL.}
 
-\item{feature_info}{data.frame,the feature information for the genes/transcripts/probes in \code{exp_mat},
-the rownames must match the rownames of \code{exp_mat}. If NULL, will generate a single column dataframe.
+\item{feature_info}{data.frame, the feature information for all the genes/transcripts/probes in \code{exp_mat}.
+In the feature data frame, each row represents a gene/transcript/probe and each column represents an annotation of the feature.
+The row names must match the row names of \code{exp_mat}. If NULL, it will generate a single-column data frame.
 Default is NULL.}
 
-\item{annotation_info}{character, the annotation for the eSet. Default is "".}
+\item{annotation_info}{character, the annotation set by users for easier reference. Default is "".}
 }
 \value{
-an ExressionSet object.
+Return an ExressionSet object.
 }
 \description{
-\code{generate.eset} is a function to generate eSet object by input expression matrix (required),
-phenotype and feature information (optional).
-}
-\details{
-This function aims to assist the generation of eSet object,
-especially for sometimes only expression matrix is available.
+\code{generate.eset} generates ExpressionSet class object to contain and describe the high-throughput assays.
+Users need to define its slots, which are expression matrix (required),
+phenotype information and feature information (optional).
+It is very useful when only expression matrix is available.
 }
 \examples{
 mat1 <- matrix(rnorm(10000),nrow=1000,ncol=10)

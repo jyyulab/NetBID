@@ -2,33 +2,30 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{cal.Activity}
 \alias{cal.Activity}
-\title{Calculate activity value for all possible drivers}
+\title{Calculate Activity Value for Each Driver}
 \usage{
 cal.Activity(target_list = NULL, cal_mat = NULL,
   es.method = "weightedmean", std = TRUE)
 }
 \arguments{
-\item{target_list}{a list for the target gene information for the drivers.
-Each object in the list must be a data.frame and should contain one column ("target") to save the target genes.
-Strongly suggest to follow the NetBID2 pipeline, and the \code{target_list} could be automatically generated
-by \code{get_net2target_list} by running
-\code{get.SJAracne.network}.}
+\item{target_list}{list, the driver-to-target list object. The names of the list elements are drivers.
+Each element is a data frame, usually contains three columns. "target", target gene names;
+"MI", mutual information; "spearman", spearman correlation coefficient. Users can call \code{get_net2target_list} to create this list.}
 
-\item{cal_mat}{numeric matrix,the expression matrix for all genes/transcripts for calculation.}
+\item{cal_mat}{numeric matrix, the expression matrix of genes/transcripts.}
 
-\item{es.method}{character, strategy to calculate the activity for the driver,
-choose from mean, weightedmean, maxmean, absmean;
-in which the weighted in the weighted mean is the MI (mutual information) value * sign of correlation (use the spearman correlation sign).
+\item{es.method}{character, method applied to calculate the activity value. User can choose from "mean", "weightedmean", "maxmean" and "absmean".
+The "weightedmean" requires "MI" and "spearman" columns included in the \code{target_list} data.
 Default is 'weightedmean'.}
 
-\item{std}{logical, whether to perform std to the original expression matrix. Default is TRUE.}
+\item{std}{logical, if TRUE, the expression matrix will be normalized by column. Default is TRUE.}
 }
 \value{
-the activity matrix with each row a driver and each column a sample (same sample order with cal_mat)
+Return a matrix of activity values. Rows are drivers, columns are samples.
 }
 \description{
-\code{cal.Activity} is a function to calculate activity for all possible drivers by
-input the target list for drivers and the expression matrix for target genes.
+\code{cal.Activity} calculates the activity value for each driver.
+This function requires two inputs, the driver-to-target list object \code{target_list} and the expression matrix.
 }
 \examples{
 analysis.par <- list()

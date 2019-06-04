@@ -2,7 +2,7 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{draw.umap.kmeans}
 \alias{draw.umap.kmeans}
-\title{Draw the cluster plot by UMAP (visulization algorithm) and Kmeans (cluster algorithm).}
+\title{Draw Cluster Plot Using UMAP (visulization algorithm) and Kmeans (cluster algorithm).}
 \usage{
 draw.umap.kmeans(mat = NULL, all_k = NULL, obs_label = NULL,
   legend_pos = "topleft", legend_cex = 0.8,
@@ -10,44 +10,37 @@ draw.umap.kmeans(mat = NULL, all_k = NULL, obs_label = NULL,
   plot_type = "2D.ellipse", point_cex = 1, return_type = "optimal")
 }
 \arguments{
-\item{mat}{a numeric data matrix, the column (e.g sample) will be clustered by the features (e.g genes) in rows.}
+\item{mat}{numeric matrix, the expression matrix. Rows are genes/features, columns are samples. Columns will be clustered based on row features.}
 
-\item{all_k}{a vector of integers, the pre-defined K to evaluate.
-If NULL, will use all possible K. Default is NULL.}
+\item{all_k}{a vector of integers, the pre-defined K-values. If NULL, will use all possible K. Default is NULL.}
 
-\item{obs_label}{a vector of characters, a vector for sample categories with names representing the sample name.}
+\item{obs_label}{a vector of characters, the observed sample labels or categories, name of the vector is sample names.}
 
-\item{legend_pos}{character, position for the legend displayed on the plot. Default is 'topleft'.}
+\item{legend_pos}{character, the legend position. Default is "topleft".}
 
-\item{legend_cex}{numeric, cex for the legend displayed on the plot. Default is 0.8.}
+\item{legend_cex}{numeric, giving the amount by which the text of legend should be magnified relative to the default. Default is 0.8.}
 
-\item{kmeans_strategy}{character, the strategy to run the kmeans algorith, choose from 'basic' and 'consensus',
-here the consensus kmeans is performed by functions in \code{ConsensusClusterPlus}. Default is 'basic'.}
+\item{kmeans_strategy}{character, K-means clustering algorithm. Users can choose "basic" or "consensus".
+"consensus" is performed by \code{ConsensusClusterPlus}. Default is "basic".}
 
-\item{choose_k_strategy}{character, the strategy to choose the best K,
-choose from 'ARI (adjusted rand index)', 'NMI (normalized mutual information)', 'Jaccard'. Default is 'ARI'.}
+\item{choose_k_strategy}{character, method to choose the K-value. Users can choose from "ARI (adjusted rand index)", "NMI (normalized mutual information)" and "Jaccard".
+Default is "ARI".}
 
-\item{plot_type}{character, the type for the plot, choose from '2D', '2D.ellipse', '2D.text' and '3D'. Default is '2D.ellipse'.}
+\item{plot_type}{character, type of the plot. Users can choose from "2D", "2D.ellipse", "2D.text" and "3D". Default is "2D.ellipse".}
 
-\item{point_cex}{numeric, cex for the point in the plot. Default is 1.}
+\item{point_cex}{numeric, giving the amount by which the size of the data points should be magnified relative to the default. Default is 1.}
 
-\item{return_type}{character, the strategy to return the results, choose from 'optimal' and 'all'.
-If choose 'all', cluster results from all k in \code{all_k} will be returned.
-Default is 'optimal'.}
+\item{return_type}{character, the type of result returned. Users can choose "optimal" or "all".
+"all", all the K-values in all_k will be returned.
+"optimal", only the K-value yielding the optimal classification result will be returned.
+Default is "optimal".}
 }
 \value{
-a vector of predicted label (if \code{return_type} is 'optimal') and a list of all possible K (if \code{return_type} is 'all')
+Return a vector of the predicted label (if \code{return_type} is "optimal") and a list of all possible K-values (if \code{return_type} is "all").
 }
 \description{
-\code{draw.umap.kmeans} is a visualization function to draw the cluster for the input data matrix.
-}
-\details{
-This function mainly aims for the visulization of sample clusters.
-The input is the expression matrix for each row a gene/transcript/probe and each column a sample.
-User need to input the real observation label for samples and this function will choose the best K by compared with predicted label and the observed label.
-The output figure contains two sub-figures, left is labelled by the real observartion label and right is labelled by the predicted label
-with comparison score (choose from ARI, NMI, Jaccard) shown above.
-Not suggested when sample size is small.
+\code{draw.umap.kmeans} is a function to visualize the cluster result for the input data matrix. It is mainly used for check sample clustering result.
+Warning, it is not suggested to use when sample size is small.
 }
 \examples{
 network.par <- list()

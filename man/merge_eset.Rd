@@ -2,37 +2,38 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{merge_eset}
 \alias{merge_eset}
-\title{Merge two ExpressionSet class object.}
+\title{Merge Two ExpressionSet Class Objects into One}
 \usage{
 merge_eset(eset1, eset2, group1 = NULL, group2 = NULL,
   group_col_name = "original_group", use_col = NULL,
-  remove_batch = FALSE)
+  remove_batch = FALSE, std = FALSE)
 }
 \arguments{
-\item{eset1}{ExpressionSet class, the first dataset to merge.}
+\item{eset1}{ExpressionSet class, the first ExpressionSet.}
 
-\item{eset2}{ExpressionSet class, the second dataset to merge.}
+\item{eset2}{ExpressionSet class, the second ExpressionSet.}
 
-\item{group1}{character, name for the first group.}
+\item{group1}{character, name of the first ExpressionSet.}
 
-\item{group2}{character, name for the second group.}
+\item{group2}{character, name of the second ExpressionSet.}
 
-\item{group_col_name, }{character, name for the column indicate the originate of the samples in the phenotype information dataframe in the merged ExpressionSet.
-Default is 'original_group'.}
+\item{group_col_name, }{character, name of the column which contains the names defined in \code{group1} and \code{group2}.
+This column is designed to show which original ExpressionSet each sample comes from before combination.
+Default name of this column is "original_group".}
 
-\item{use_col}{a vector of characters, the column names in the phenotype information to be kept in the merged ExpressionSet.
-If NULL, will use the intersected column names between the two datasets. Default is NULL.}
+\item{use_col}{a vector of characters, the column names in the phenotype information to be kept.
+If NULL, shared column names of \code{eset1} and \code{eset2} will be used. Default is NULL.}
 
-\item{remove_batch}{logical, indicate whether or not to remove batch effect between two sample set.
-Default is FALSE.}
+\item{remove_batch}{logical, if TRUE, remove the batch effects from these two expression datasets. Default is FALSE.}
+
+\item{std}{logical, whether to perform std to the original expression matrix. Default is FALSE.}
 }
 \value{
-an ExressionSet object.
+Return an ExressionSet class object.
 }
 \description{
-\code{merge_eset} is a function to merge two ExpressionSet class objects.
-If the genes in two objects are same, the expression matrix will be directly merged, otherwise,
-Z-transformation is performed before merging.
+\code{merge_eset} merges two ExpressionSet class objects and returns one ExpresssionSet object.
+If genes in the two ExpressionSet objects are identical, the expression matrix will be combined directly. Otherwise, Z-transformation will be performed before combination.
 }
 \examples{
 mat1 <- matrix(rnorm(10000),nrow=1000,ncol=10)

@@ -2,18 +2,19 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{get_int_group}
 \alias{get_int_group}
-\title{Get interested groups from the pData of an ExpressionSet object.}
+\title{Get interested phenotype groups from pData slot of the ExpressionSet object.}
 \usage{
 get_int_group(eset)
 }
 \arguments{
-\item{eset, }{an ExpressionSet object, the input object for analysis.}
+\item{eset, }{an ExpressionSet object.}
 }
 \value{
-a vector of characters, the column names which could be used for sample cluster analysis
+Return a vector of phenotype groups which could be used for sample cluster analysis.
 }
 \description{
-\code{get_int_group} is a simple function to extract columns with unique sample feature ranges from 2 to sample size-1.
+\code{get_int_group} is a function to extract interested phenotype groups from the ExpressionSet object
+with 'cluster-meaningful' sample features.
 }
 \examples{
 network.par <- list()

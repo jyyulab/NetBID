@@ -2,26 +2,28 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{get_obs_label}
 \alias{get_obs_label}
-\title{Generate a vector for sample category.}
+\title{Create a vector of each sample's selected phenotye descriptive information.}
 \usage{
 get_obs_label(phe_info, use_col, collapse = "|")
 }
 \arguments{
-\item{phe_info}{data.frame, phenotype dataframe for the samples with sample names in rownames, e.g from \code{pData(eset)}.}
+\item{phe_info}{data.frame, the phenotype data of the samples.
+It is a data frame that can store any number of descriptive columns (covariates) for each sample row.
+To get the phenotype data, using the accessor function \code{pData}.}
 
-\item{use_col}{a vector of numeric or character, the column index or column name for extraction to get the sample category vector.}
+\item{use_col}{a vector of numerics or characters.
+Users can select the interested descriptive column(s) by calling index or name of the column(s).}
 
-\item{collapse}{character, character string to separate the results when the length use_col is more than 1. default is "|".}
+\item{collapse}{character, an optional character string to separate the results when the length
+of \code{use_col} is more than 1. Not NA_character. Default is "|".}
 }
 \value{
-Will return a vector for sample categories with names to the vector representing the sample name.
+Return a vector of selected phenotype descriptive information (covariates) for each sample.
+Vector name is the sample name.
 }
 \description{
-\code{get_obs_label} will generate a vector for sample categories with names to the vector representing the sample name.
-}
-\details{
-This is a simple function to generate sample category vector from a data.frame.
-Mainly used for input preparation in the visualization plots.
+\code{get_obs_label} creates a vector of each sample's selected phenotype descriptive information.
+This is a helper function for data visualization.
 }
 \examples{
 analysis.par <- list()

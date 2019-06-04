@@ -2,23 +2,21 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{merge_TF_SIG.AC}
 \alias{merge_TF_SIG.AC}
-\title{Merge activity value ExpressionSet for TF (transcription factors) and Sig (signaling factors)}
+\title{Merge Activity Values from TF (transcription factors) ExpressionSet Object and Sig (signaling factors) ExpressionSet Object}
 \usage{
 merge_TF_SIG.AC(TF_AC = NULL, SIG_AC = NULL)
 }
 \arguments{
-\item{TF_AC}{ExpressionSet object containing the activity value for all TFs.}
+\item{TF_AC}{ExpressionSet object, containing the activity values for all TFs.}
 
-\item{SIG_AC}{ExpressionSet object containing the activity value for all SIGs.}
+\item{SIG_AC}{ExpressionSet object, containing the activity values for all SIGs.}
 }
 \value{
-an ExpressionSet object
+Return an ExpressionSet object.
 }
 \description{
-\code{merge_TF_SIG.AC} is a function to merge the activity value ExpressionSet for TF (transcription factors) and Sig (signaling factors).
-}
-\details{
-This function aims to merge the driver activity ExpressionSet, by automatically add "_TF"/"_SIG" suffix for drivers.
+\code{merge_TF_SIG.AC} combines the activity value from TF (transcription factors) and Sig (signaling factors) ExpressionSet objects together,
+and adds "_TF" or "_SIG" suffix to drivers for easier distinction.
 }
 \examples{
 analysis.par <- list()

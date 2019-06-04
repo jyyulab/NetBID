@@ -2,22 +2,23 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{get_net2target_list}
 \alias{get_net2target_list}
-\title{Get target list by input network information from data.frame.}
+\title{Convert Pairwise Network Data Frame to Driver-to-Target List}
 \usage{
 get_net2target_list(net_dat = NULL)
 }
 \arguments{
-\item{net_dat}{data.frame, must contain columns named with "source" and "target",
-"MI" and "spearman" are strongly suggested but not required.
-If these two columns missed, some options may be error in some of the functions in the following steps
-(such as es.method='weightedmean' in \code{cal.Activity}).}
+\item{net_dat}{data.frame, must contain two columns with column names "source" (driver) and "target" (target genes).
+"MI" (mutual information) and "spearman" (spearman correlation coefficient) columns are optional, but strongly suggested to use.
+If "MI" and "spearman" columns are missing, errors may occur in some following steps (e.g. es.method='weightedmean' in \code{cal.Activity}).}
 }
 \value{
-a list for the target gene information for the drivers. Each object in the list is a data.frame to save the target genes.
+Return a list. The names of the list elements are drivers.
+Each element is a data frame, contains three columns. "target", target gene names;
+"MI", mutual information; "spearman", spearman correlation coefficient.
 }
 \description{
-\code{get_net2target_list} is included in the \code{get.SJAracne.network},
-the reason to make it invokable just for user to read in network files prepared by themselves.
+\code{get_net2target_list} is a helper function in the \code{get.SJAracne.network}.
+But if users have their own pairwise gene network files, they can convert it to driver-to-target list object.
 }
 \examples{
 tf.network.file <- sprintf('\%s/demo1/network/SJAR/project_2019-02-14/\%s/\%s',

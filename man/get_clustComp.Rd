@@ -2,23 +2,24 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{get_clustComp}
 \alias{get_clustComp}
-\title{Get Score between predicted label and observed label.}
+\title{Get Score to Measure Similarity Between Observed Classification and Predicted Classification.}
 \usage{
 get_clustComp(pred_label, obs_label, strategy = "ARI")
 }
 \arguments{
-\item{pred_label}{a vector of characters, the predicted label.}
+\item{pred_label}{a vector of characters, the predicted classification labels.}
 
-\item{obs_label}{a vector of characters, the observed label}
+\item{obs_label}{a vector of characters, the observed classification labels.}
 
-\item{strategy}{character, the strategy to compare with labels,
-choose from 'ARI (adjusted rand index)', 'NMI (normalized mutual information)', 'Jaccard'. Default is 'ARI'.}
+\item{strategy}{character, the method applied to calculate the score.
+Users can choose "ARI (adjusted rand index)", "NMI (normalized mutual information)" or "Jaccard".
+Default is "ARI".}
 }
 \value{
-score for the comparison
+Return a score for the measurement of similarity.
 }
 \description{
-\code{get_clustComp} is a function to compare the predicted label and observed label and return the score.
+\code{get_clustComp} calculates a score to measure the similarity between two classifications.
 }
 \examples{
 obs_label <- c('A','A','A','B','B','C','D')

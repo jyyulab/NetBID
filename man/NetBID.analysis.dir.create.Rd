@@ -2,42 +2,47 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{NetBID.analysis.dir.create}
 \alias{NetBID.analysis.dir.create}
-\title{Create directory for the driver analysis part. Suggested but not required.}
+\title{Manipulation of Working Directories for NetBID2 Driver Estimation Step}
 \usage{
-NetBID.analysis.dir.create(project_main_dir = NULL, prject_name = NULL,
-  network_dir = NULL, network_project_name = NULL,
-  tf.network.file = NULL, sig.network.file = NULL)
+NetBID.analysis.dir.create(project_main_dir = NULL,
+  project_name = NULL, network_dir = NULL,
+  network_project_name = NULL, tf.network.file = NULL,
+  sig.network.file = NULL)
 }
 \arguments{
-\item{project_main_dir}{character, main directory for the project in the driver analysis part.}
+\item{project_main_dir}{character, name or absolute path of the main working directory for driver analysis.}
 
-\item{prject_name}{character, project name.}
+\item{project_name}{character, name of the project folder.}
 
-\item{network_dir}{character, main directory for the project in the network generation part.}
+\item{network_dir}{character, name or absolute path of the main working directory for network construction.}
 
-\item{network_project_name}{character, the project name of the network for use (SJAR.project_name in SJAracne.prepare);
-This parameter is optional. If previously has not follow the NetBID2 suggested pipeline, could leave this to NULL
-but set the real path to tf.network.file and sig.network.file if want to follow the driver analysis part of NetBID2 suggested pipeline.}
+\item{network_project_name}{character, the project name of network construction. Or use the project name of SJARACNe.
+This parameter is optional. If one didn't run NetBID2 network construction part in the pipeline, he could set it to NULL.
+If one like to follow the NetBID2 pipeline, he should set it to the path of the TF network file and the SIG network file.}
 
-\item{tf.network.file}{character, file path of the TF network (XXX/consensus_network_ncol_.txt). Optional, if do not set network_project_name.}
+\item{tf.network.file}{character, the path of the TF network file (e.g. "XXX/consensus_network_ncol_.txt").
+Default is the path of network_project_name.}
 
-\item{sig.network.file}{character, file path of the SIG network (XXX/consensus_network_ncol_.txt). Optional, if do not set network_project_name.}
+\item{sig.network.file}{character, the path of the SIG network file (e.g. "XXX/consensus_network_ncol_.txt").
+Default is the path of network_project_name.}
 }
 \value{
-a list called analysis.par, including main.dir,project.name, out.dir, out.dir.QC, out.dir.DATA, out.dir.PLOT
+Returns a list object, containing main.dir (path of the main working directory), project.name (project name),
+out.dir (path of the project folder, which contains three subfolders), out.dir.QC, out.dir.DATA and out.dir.PLOT.
 }
 \description{
-\code{NetBID.analysis.dir.create} will generate a working directory structure for the driver analysis part in NetBID2.
-This function aims to assist researchers to organize the working directory. It is suggested but not required.
+\code{NetBID.analysis.dir.create} is used to help users create an organized working directory
+for the driver estimation step in NetBID2 analysis.
+However, it is not essential for the analysis.
+It creates a hierarchcial working directory and returns a list contains this directory information.
 }
 \details{
-This function need to input the main directory for the analysis project with the project name,
-and need to input the project directory for the network generation with the network_project_name represents the name of the network for use (SJAR.project_name in SJAracne.prepare)
-It will generate three sub-directories, QC/ for the QC-related plots, DATA/ for saving the RData, and PLOT/ for saving visulization plots.
-Such organization is suggested but not required to use all functions in NetBID2.
-This function will return a variable called \code{analysis.par}.
-This variable is strongly suggested to use in the driver analysis part of NetBID2.
-It will be used to store all related datasets during calculation.
+This function requires user to define the main working directory and the project’s name.
+It creates a main working directory with a subdirectory of the project.
+It also automatically creates three subfolders (QC, DATA and PLOT) within the project folder.
+QC/, storing Quality Control related plots; DATA/, saving data in RData format; PLOT/, storing output plots.
+This function also returns a list object (e.g. \code{analysis.par} in the demo) with directory information wrapped inside.
+This list is an essential for driver construction step, all the important intermediate data generated later will be wrapped inside.
 }
 \examples{
 
@@ -47,7 +52,7 @@ network.project.name <- 'project_2019-02-14' #
 project_main_dir <- 'demo1/'
 project_name <- 'driver_test'
 analysis.par  <- NetBID.analysis.dir.create(project_main_dir=project_main_dir,
-                                            prject_name=project_name,
+                                            project_name=project_name,
                                             network_dir=network.dir,
                                             network_project_name=network.project.name)
 }

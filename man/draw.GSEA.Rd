@@ -2,7 +2,7 @@
 % Please edit documentation in R/pipeline_functions.R
 \name{draw.GSEA}
 \alias{draw.GSEA}
-\title{GSEA (gene set enrichment analysis) plot for a gene set or a driver.}
+\title{GSEA (Gene Set Enrichment Analysis) Plot for one Gene Set or one Driver}
 \usage{
 draw.GSEA(rank_profile = NULL, use_genes = NULL,
   use_direction = NULL, main = "", pdf_file = NULL,
@@ -10,40 +10,34 @@ draw.GSEA(rank_profile = NULL, use_genes = NULL,
   right_annotation = NULL)
 }
 \arguments{
-\item{rank_profile}{a vector of numerics. The ranking profile for the differentiated values in a specific sample condition comparison.
-The names of the vector must be the gene names. The value in the vector could be the logFC or t-statistics.}
+\item{rank_profile}{a named vector of numerics, the differential values (DE or DA) calculated from a sample comparison (e.g. "G4 vs. Others").
+Names of the vector must be gene names. The differential values can be "logFC" or "t-statistics".}
 
-\item{use_genes}{a vector of characters, the list of genes for analysis. The ID must be the subset of the names of \code{rank_profile}.
-This could either be the annotated gene list for the gene set or the target gene list for the driver.}
+\item{use_genes}{a vector of characters, a vector of genes to display. The genes can either be annotated genes in gene set or the targe genes from a specific driver.
+The gene names must be a subset of \code{names(rank_profile)}.}
 
-\item{use_direction}{a vector of numerics, indicate the direction for the driver and the target gene list.
-1 indicates positive regulation and -1 indicates negative regulation.
-If NULL, will not consider direction information. Default is NULL.}
+\item{use_direction}{a vector of numeric 1s and -1s, 1 is positive regulation from driver, -1 is negative regulation from driver.
+Users can get this vector by converting the signs of "spearman". If NULL, no regulation direction will be displayed. Default is NULL.}
 
-\item{main}{character, title for the draw. Default is "".}
+\item{main}{character, an overall title for the plot. Default is "".}
 
-\item{pdf_file}{character, file path for the pdf file to save the figure into pdf format.If NULL, will not generate pdf file. Default is NULL.}
+\item{pdf_file}{character, the file path to save as PDF file. If NULL, no PDF file will be saved. Default is NULL.}
 
-\item{annotation}{character, annotation for the significance to be displayed on the plot.
-If NULL, will perform Kolmogorov-Smirnov tests to get significance. Default is NULL.}
+\item{annotation}{character, the annotation set by users for easier reference.
+Normally the annotation is the P-value or other statistics to show the significance of the interested gene set or driver.
+If NULL, will perform a Kolmogorov-Smirnov test to get the significance value. Default is NULL.}
 
-\item{annotation_cex}{numeric, \code{cex} for the annotation displayed on the plot. Default is 1.2}
+\item{annotation_cex}{numeric, giving the amount by which the text of annotation should be magnified relative to the default. Default is 1.2.}
 
-\item{left_annotation}{character, annotation displayed on the left of the figure representing left condition of the rank_profile. Default is "".}
+\item{left_annotation}{character, annotation displayed on the left of the figure, representing left condition of the \code{rank_profile}. Default is "".}
 
-\item{right_annotation}{character, annotation displayed on the right of the figure representing right condition of the rank_profile. Default is "".}
+\item{right_annotation}{character, annotation displayed on the right of the figure, representing right condition of the \code{rank_profile}. Default is "".}
 }
 \value{
-logical value indicating whether the plot has been successfully generated
+Return a logical value. If TRUE, the plot has been created successfully.
 }
 \description{
-\code{draw.GSEA} will generate a GSEA plot for a gene set (with annotated gene list) or a driver (with target gene list).
-}
-\details{
-This is a plot function to draw GSEA for a gene set or a driver by input differentiated expression profile.
-User could input the annotation text for the significance or the function could display the significance calculated by Kolmogorov-Smirnov tests.
-ATTENTION: when user input the \code{use_direction}, the rank profile will be duplicated (here Zero cross at the middle) and
-genes with negative direction (-1 in the use_direction list) will be put in the mirror position of the original place.
+\code{draw.GSEA} draws a GSEA plot to analyze one gene set (with gene list annotated) or one driver (with list of target genes).
 }
 \examples{
 analysis.par <- list()
