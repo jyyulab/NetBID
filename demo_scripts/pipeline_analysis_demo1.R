@@ -12,7 +12,7 @@ current_date <- format(Sys.time(), "%Y-%m-%d") ## current date for project runni
 project_name <- sprintf('driver_%s',current_date) ## project name for the project
 
 ## analysis.par is very essential in the analysis!!
-analysis.par  <- NetBID.analysis.dir.create(project_main_dir=project_main_dir, prject_name=project_name,
+analysis.par  <- NetBID.analysis.dir.create(project_main_dir=project_main_dir, project_name=project_name,
                                             network_dir=network.dir, network_project_name=network.project.name)
 
 ########### !!!!!!!!!! pipelines !!!!!!!!!! ############

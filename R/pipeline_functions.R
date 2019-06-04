@@ -52,33 +52,32 @@ library(reshape)
 library(ordinal)
 library(rmarkdown)
 
-#' Load database files used for NetBID2 into R workspace.
+#' Preload database files into R workspace for NetBID2
 #'
-#' \code{db.preload} returns the TF (transcription factors) and Sig (signaling factors) list (tf_sigs)
-#' and biomart database information (db_info) by input interested species name and make choice from
-#' gene or transcript level.
+#' \code{db.preload} is a pre-processing function for NetBID2. It preloads needed data into R workspace,
+#' and saves it locally under db/ directory with specified species name and analysis level.
 #'
-#' This is a pre-processing function for NetBID2, user could input the species name (e.g human, mouse),
-#' analysis level (transcript or gene level) and optionally input TF list or SIG list
-#' (otherwise will use list from package data). The function could automatically download information
-#' from biomart and save into RData under the db/ directory with specified species name and analysis level.
+#' Users need to set the species name (e.g. human, mouse) and
+#' analysis level (transcript or gene level). TF list and SIG list are optional, if not specified, list from package data will be used as default.
 #'
-#' @param use_level character, either 'transcript' or 'gene', default is 'gene'
-#' @param use_spe character, input the species name (e.g 'human', 'mouse', 'rat'), default is 'human'
-#' @param update logical,whether to update if previous RData has been generated, default FALSE
-#' @param TF_list a character vector,input the list of TF names, if NULL, will use pre-defined list in the package, default NULL
-#' @param SIG_list a character vector,input the list of SIG names, if NULL, will use pre-defined list in the package, default NULL
-#' @param input_attr_type character, input the type for the list of TF_list, SIG_list.
-#' See biomaRt \url{https://bioconductor.org/packages/release/bioc/vignettes/biomaRt/inst/doc/biomaRt.html} for more details.
-#' If no input for TF_list, SIG_list, will use the list in db/${use_spe}_TF_${input_attr_type}.txt and db/${use_spe}_SIG_${input_attr_type}.txt,
-#' and only support external_gene_name and ensembl_gene_id.
+#' @param use_level character, users can choose "transcript" or "gene". Default is "gene".
+#' @param use_spe character, the name of an interested species (e.g. "human", "mouse", "rat"). Default is "human".
+#' @param update logical, if TRUE, previous loaded RData will be updated. Default is FALSE.
+#' @param TF_list a character vector, the list of TF (Transcription Factor) names. If NULL, the pre-defined list in the package will be used.
+#' Default is NULL.
+#' @param SIG_list a character vector, the list of SIG (Signaling Factor) names. If NULL, the pre-defined list in the package will be use.
+#' Default is NULL.
+#' @param input_attr_type character, the type of the TF_list and SIG_list.
+#' Details please check biomaRt, \url{https://bioconductor.org/packages/release/bioc/vignettes/biomaRt/inst/doc/biomaRt.html}.
+#' If TF_list and SIG_list are not specified, the list in db/${use_spe}_TF_${input_attr_type}.txt and db/${use_spe}_SIG_${input_attr_type}.txt will be used.
+#' This only support external_gene_name and ensembl_gene_id.
 #' Default is external_gene_name.
-#' @param main.dir character, main file path for NetBID2,
-#' if NULL, will set to \code{system.file(package = "NetBID2")}. Default is NULL.
-#' @param db.dir character, file path for saving the RData, default is \code{db} directory under \code{main.dir} when setting for \code{main.dir}.
+#' @param main.dir character, the main directory for NetBID2.
+#' If NULL, will be set to \code{system.file(package = "NetBID2")}. Default is NULL.
+#' @param db.dir character, a path for saving the RData.
+#' Default is \code{db} directory within the \code{main.dir}, if\code{main.dir} is provided.
 #'
-#' @return Reture TRUE if success and FALSE if not. Will load two variables into R workspace, tf_sigs and db_info.
-#'
+#' @return Return TRUE if loading is successful, otherwise return FALSE. Two variables will be loaded into R workspace, \code{tf_sigs} and \code{db_info}.
 #' @examples
 #' db.preload(use_level='gene',use_spe='human',update=FALSE)
 #'
@@ -225,28 +224,25 @@ db.preload <- function(use_level='transcript',use_spe='human',update = FALSE,
   return(TRUE)
   }
 
-#' Get transcription factor (TF) and signaling factor (SIG) list for the input gene/transcript type
+#' Get Transcription Factor (TF) and Signaling Factor (SIG) List
 #'
-#' \code{get.TF_SIG.list} is a gene ID conversion function to get the TF/SIG list
-#' for the input gene list with selected gene/transcript type.
+#' \code{get.TF_SIG.list} is a function converts gene ID into the corresponding TF/SIG list,
+#' with selected gene/transcript type.
 #'
-#' @param use_genes a vector of characters, all possible genes used in network generation.
-#' If NULL, will not filter the TF/SIG list by this gene list. Default is NULL.
-#' @param use_gene_type character, attribute name from the biomaRt package,
-#' such as 'ensembl_gene_id', 'ensembl_gene_id_version', 'ensembl_transcript_id', 'ensembl_transcript_id_version', 'refseq_mrna'.
-#' Full list could be obtained by
-#' \code{listAttributes(mart)$name}, where \code{mart} is the output of \code{useMart} function.
-#' (e.g mart <- useMart('ensembl',db_info[1]))
-#' The type must be the gene type for the input \code{use_genes}. Default is 'ensembl_gene_id'.
-#' @param ignore_version logical, whether to ignore version when from_type is 'ensembl_gene_id_version' or 'ensembl_transcript_id_version'.
+#' @param use_genes a vector of characters, genes will be used in the network construction.
+#' If NULL, no filter will be performed to the TF/SIG list. Default is NULL.
+#' @param use_gene_type character, the attribute name inherited from the biomaRt package.
+#' Some options are, "ensembl_gene_id", "ensembl_gene_id_version", "ensembl_transcript_id", "ensembl_transcript_id_version" and "refseq_mrna".
+#' All options can be accessed by calling \code{useMart} (e.g. mart <- useMart('ensembl',db_info[1]); listAttributes(mart)$name).
+#'
+#' The type must match the gene type from the input \code{use_genes}. Default is "external_gene_name".
+#' @param ignore_version logical, if TRUE, the version "ensembl_gene_id_version" or "ensembl_transcript_id_version" will be ignored.
 #' Default is FALSE.
-#' @param dataset character, name for the dataset used for ID conversion,
-#' such as 'hsapiens_gene_ensembl'.
-#' If NULL, will use \code{db_info[1]} if run \code{db.preload} brefore. Default is NULL.
+#' @param dataset character, the dataset used for ID conversion (e.g. "hsapiens_gene_ensembl").
+#' If NULL, use \code{db_info[1]} from \code{db.preload}. Default is NULL.
 #'
 #'
-#' @return This function will return a list containing two parts,
-#' for $tf saving the TF list for the input gene type and $sig saving the SIG list.
+#' @return Return a list containing two elements. \code{tf} is the TF list, \code{sig} is the SIG list.
 #'
 #' @examples
 #' db.preload(use_level='transcript',use_spe='human',update=FALSE)
@@ -263,7 +259,7 @@ db.preload <- function(use_level='transcript',use_spe='human',update = FALSE,
 #'
 #' @export
 get.TF_SIG.list <- function(use_genes=NULL,
-                            use_gene_type='ensembl_gene_id',ignore_version=FALSE,
+                            use_gene_type='external_gene_name',ignore_version=FALSE,
                             dataset=NULL){
   if(is.null(dataset)==TRUE){
     dataset <- db_info[1]
@@ -310,28 +306,25 @@ get.TF_SIG.list <- function(use_genes=NULL,
   return(list(tf=TF_list,sig=SIG_list))
 }
 
-#' Gene ID conversion related functions.
+#' Creates Data Frame for ID Conversion
 #'
-#' \code{get_IDtransfer} will generate a transfer table for ID conversion by input the from-gene type and to-gene type.
+#' \code{get_IDtransfer} creates a data frame for ID conversion using biomaRt. For example, to convert Ensembl ID into gene symbol.
 #'
-#' @param from_type character, attribute name from the biomaRt package,
-#' such as 'ensembl_gene_id', 'ensembl_gene_id_version', 'ensembl_transcript_id', 'ensembl_transcript_id_version', 'refseq_mrna'.
-#' Full list could be obtained by
-#' \code{listAttributes(mart)$name}, where \code{mart} is the output of \code{useMart} function.
-#' The type must be the gene type for the input \code{use_genes}.
-#' @param to_type character, character, attribute name from the biomaRt package,
-#' the gene type will be convereted to.
-#' @param add_type character, character, attribute name from the biomaRt package,
-#' additional type in the final table
-#' @param use_genes a vector of characters, gene list used for ID conversion.
-#' If NULL, will extract all possible genes.
-#' @param dataset character, name for the dataset used for ID conversion, such as 'hsapiens_gene_ensembl'.
-#' If NULL, will use \code{db_info[1]} if run \code{db.preload} brefore. Default is NULL.
-#' @param ignore_version logical, whether to ignore version when from_type is 'ensembl_gene_id_version' or 'ensembl_transcript_id_version'.
+#' @param from_type character, the attribute name match the current ID type (the type of \code{use_genes}).
+#' Such as "ensembl_gene_id", "ensembl_gene_id_version", "ensembl_transcript_id", "ensembl_transcript_id_version" or "refseq_mrna".
+#' The "attribute" is inherited from the biomaRt package. For details, user can call \code{listAttributes()} to display all available attributes in the selected dataset.
+#' @param to_type character, the attribute name to convert into.
+#' @param add_type character, the additional attribute name to add into the conversion data frame.
+#' @param use_genes a vector of characters, the genes for ID conversion.
+#' If NULL, all genes will be selected.
+#' @param dataset character, name of the dataset used for ID conversion. For example, "hsapiens_gene_ensembl".
+#' If NULL, \code{db_info[1]} will be used. \code{db_info} requires the calling of \code{db.preload} in the previous steps.
+#' Default is NULL.
+#' @param ignore_version logical, if TRUE and \code{from_type} is "ensembl_gene_id_version" or "ensembl_transcript_id_version", the version will be ignored.
 #' Default is FALSE.
 #'
 #' @return
-#' \code{get_IDtransfer} will return a data.frame for the transfer table.
+#' Return a data frame for ID conversion.
 #'
 #' @examples
 #' use_genes <- c("ENST00000210187","ENST00000216083","ENST00000216127",
@@ -396,27 +389,20 @@ get_IDtransfer <- function(from_type=NULL,to_type=NULL,add_type=NULL,use_genes=N
   return(transfer_tab)
 }
 
-#' Gene ID conversion related functions.
+#' Create Data Frame for ID Conversion Between Species
 #'
-#' \code{get_IDtransfer_betweenSpecies} will generate a transfer table for ID conversion between species.
+#' \code{get_IDtransfer_betweenSpecies} creates a data frame to convert ID between species.
 #'
-#' @param from_spe character, input the species name (e.g 'human', 'mouse', 'rat') that the \code{use_genes} belong to, default is 'human'
-#' @param to_spe character, input the species name (e.g 'human', 'mouse', 'rat') that need to transfered to, default is 'mouse'
-#' @param from_type character, attribute name from the biomaRt package,
-#' such as 'ensembl_gene_id',
-#' 'ensembl_gene_id_version'
-#' 'ensembl_transcript_id',
-#' 'ensembl_transcript_id_version',
-#' 'refseq_mrna'.
-#' Full list could be obtained by
-#' \code{listAttributes(mart)$name}, where \code{mart} is the output of \code{useMart} function.
-#' The type must be the gene type for the input \code{use_genes}.
-#' @param to_type character, character, attribute name from the biomaRt package, the gene type will be convereted to.
-#' @param use_genes a vector of characters, gene list used for ID conversion. Must be the genes with \code{from_type} in \code{from_spe}.
-#' If NULL, will output all possible genes in transfer table. Default is NULL.
+#' @param from_spe character, name of the original species (e.g. "human", "mouse", "rat") that \code{use_genes} belongs to. Default is "human".
+#' @param to_spe character, name of the target species (e.g. "human", "mouse", "rat"). Default is "mouse".
+#' @param from_type character, the attribute name match the current ID type (the type of \code{use_genes}).
+#' Such as "ensembl_gene_id", "ensembl_gene_id_version", "ensembl_transcript_id", "ensembl_transcript_id_version" or "refseq_mrna".
+#' The "attribute" is inherited from the \code{biomaRt} package. For details, user can call \code{listAttributes()} function to display all available attributes in the selected dataset.
+#' @param to_type character, the attribute name match the target ID type.
+#' @param use_genes a vector of characters, the genes for ID conversion. Must be the genes with ID type of \code{from_type}, and from species \code{from_spe}.
+#' If NULL, all the possible genes will be shown in the conversion table. Default is NULL.
 #'
-#' @return
-#' \code{get_IDtransfer_betweenSpecies} will return a data.frame for the transfer table.
+#' @return Return a data frame for ID conversion, from one species to another.
 #'
 #' @examples
 #' use_genes <- c("ENST00000210187","ENST00000216083","ENST00000216127",
@@ -510,25 +496,27 @@ get_IDtransfer_betweenSpecies <- function(from_spe='human',to_spe='mouse',
 }
 
 
-#' Gene ID conversion related functions.
+#' Create Data Frame for ID Conversion With Biotype Information
 #'
-#' \code{get_IDtransfer2symbol2type} will generate the transfer table for the original ID to the gene symbol and gene biotype (at gene level)
-#' or transcript symbol and transcript biotype (at transcript level).
+#' \code{get_IDtransfer2symbol2type} creates a data frame to convert original ID into gene symbol and gene biotype (gene level),
+#' or into transcript symbol and transcript biotype (transcript level).
 #'
-#' @param from_type character, attribute name from the biomaRt package,
-#' such as 'ensembl_gene_id', 'ensembl_gene_id_version', 'ensembl_transcript_id', 'ensembl_transcript_id_version', 'refseq_mrna'.
-#' Full list could be obtained by
-#' \code{listAttributes(mart)$name}, where \code{mart} is the output of \code{useMart} function.
-#' The type must be the gene type for the input \code{use_genes}.
-#' @param use_genes a vector of characters, gene list used for ID conversion.
-#' If NULL, will output all possible genes in transfer table. Default is NULL.
-#' @param dataset character, name for the dataset used for ID conversion, such as 'hsapiens_gene_ensembl'.
-#' If NULL, will use \code{db_info[1]} if run \code{db.preload} brefore. Default is NULL.
-#' @param use_level character, either 'transcript' or 'gene', default is 'gene'
-#' @param ignore_version logical, whether to ignore version when from_type is 'ensembl_gene_id_version' or 'ensembl_transcript_id_version'. Default is FALSE.
+#' @param from_type character, the attribute name matches the current ID type (the type of use_genes).
+#' Such as "ensembl_gene_id", "ensembl_gene_id_version", "ensembl_transcript_id", "ensembl_transcript_id_version" or "refseq_mrna".
+#' The "attribute" is inherited from the biomaRt package.
+#' For details, user can call \code{listAttributes()} function to display all available attributes in the selected dataset.
+#' @param use_genes a vector of characters, the genes for ID conversion.
+#' If NULL, all genes will be selected.
+#' @param dataset character, name of the dataset used for ID conversion.
+#' For example, "hsapiens_gene_ensembl".
+#' If NULL, \code{db_info[1]} will be used. \code{db_info} requires the calling of \code{db.preload} in the previous steps.
+#' Default is NULL.
+#' @param use_level character, users can chose between "transcript" and "gene". Default is "gene".
+#' @param ignore_version logical, if TRUE and from_type is "ensembl_gene_id_version" or "ensembl_transcript_id_version",
+#' the version will be ignored. Default is FALSE.
 #'
 #' @return
-#' \code{get_IDtransfer2symbol2type} will return a data.frame for the transfer table with gene/transcript biotype.
+#' Return a data frame for ID conversion, from ID to gene symbol and gene biotype.
 #'
 #' @examples
 #' use_genes <- c("ENST00000210187","ENST00000216083","ENST00000216127",
@@ -562,29 +550,20 @@ get_IDtransfer2symbol2type <- function(from_type=NULL,use_genes=NULL,dataset=NUL
   return(transfer_tab)
 }
 
-#' Gene ID conversion related functions.
+#' Convert Original Gene ID into Target Gene ID
 #'
-#' \code{get_name_transfertab} will get the transfered ID by input the original ID and transfer table.
+#' \code{get_name_transfertab} converts the original gene IDs into target gene IDs, with conversion table provided.
 #'
-#' @param use_genes a vector of characters, gene list used for ID conversion.
-#' @param transfer_tab data.frame, the transfer table for ID conversion, could be obtained by \code{get_IDtransfer}.
-#' @param from_type character, attribute name from the biomaRt package,
-#' such as 'ensembl_gene_id',
-#' 'ensembl_gene_id_version'
-#' 'ensembl_transcript_id',
-#' 'ensembl_transcript_id_version',
-#' 'refseq_mrna'.
-#' Full list could be obtained by
-#' \code{listAttributes(mart)$name}, where \code{mart} is the output of \code{useMart} function.
-#' The type must be the gene type for the input \code{use_genes}.
-#'  If NULL, will use the first column in the transfer table.
-#' @param to_type character, character, attribute name from the biomaRt package,
-#'  the gene type will be convereted to.
-#'  If NULL, will use the second column in the transfer table.
-#' @param ignore_version logical, whether to ignore version when from_type is 'ensembl_gene_id_version' or 'ensembl_transcript_id_version'. Default is FALSE.
+#' @param use_genes a vector of characters, the genes for ID conversion.
+#' @param transfer_tab data.frame, the conversion table. Users can create it by calling \code{get_IDtransfer}.
+#' @param from_type character, the attribute name match the current ID type (the type of use_genes).
+#' Such as "ensembl_gene_id", "ensembl_gene_id_version", "ensembl_transcript_id", "ensembl_transcript_id_version" or "refseq_mrna".
+#' The "attribute" is inherited from the biomaRt package. For details, user can call \code{listAttributes()} to see all available attributes in the selected dataset.
+#' If NULL, will use the first column of \code{transfer_tab}.
+#' @param to_type character, the attribute name to convert into. If NULL, will use the second column of \code{transfer_tab}.
+#' @param ignore_version logical, if TRUE and \code{from_type} is "ensembl_gene_id_version" or "ensembl_transcript_id_version", the version will be ignored. Default is FALSE.
 #'
-#' @return
-#' \code{get_name_transfertab} will return the list for the converted IDs.
+#' @return Return a vector of converted gene IDs.
 #'
 #' @examples
 #' use_genes <- c("ENST00000210187","ENST00000216083","ENST00000216127",
@@ -622,38 +601,48 @@ get_name_transfertab <- function(use_genes=NULL,transfer_tab=NULL,from_type=NULL
   x1
 }
 
-#' Create directory for the network generation part. Suggested but not required.
+#' Manipulation of Working Directories for NetBID2 Network Construction Step
 #'
-#' \code{NetBID.network.dir.create} will generate a working directory structure for the network generation part in NetBID2.
-#' This function aims to assist researchers to organize the working directory. It is suggested but not required.
+#' \code{NetBID.network.dir.create} is used to help users create an organized working directory for the network construction step in NetBID2 analysis.
+#' However, it is not essential for the analysis.
+#' It creates a hierarchcial working directory and returns a list contains this directory information.
 #'
-#' This function need to input the main directory for the project with the project name.
-#' It will generate three sub-directories, QC/ for the QC-related plots, DATA/ for saving the RData, and SJAR/ for running SJAracne.
-#' Such organization is suggested but not required to use all functions in NetBID2.
-#' This function will return a variable called \code{network.par}.
-#' This variable is strongly suggested to use in the network generation part of NetBID2.
-#' It will be used to store all related datasets during calculation.
+#' This function needs users to define the main working directory and the project's name.
+#' It creates a main working directory with a subdirectory of the project.
+#' It also automatically creates three subfolders (QC, DATA and SJAR) within the project folder. QC/,
+#' storing Quality Control related plots; DATA/, saving data in RData format;
+#' SJAR/, storing files needed for running SJAracne command.
+#' This function also returns a list object (example, \code{network.par} in the demo) with directory information wrapped inside.
+#' This list is an essential for
+#' network construction step, all the important intermediate data generated later will be wrapped inside.
+
+#' @param project_main_dir character, name or absolute path of the main working directory.
+#' @param project_name character, name of the project folder.
 #'
-#' @param project_main_dir character, main directory for the project.
-#' @param prject_name character, project name.
-#'
-#' @return a list called network.par, including main.dir,project.name, out.dir, out.dir.QC, out.dir.DATA, out.dir.SJAR
+#' @return \code{NetBID.network.dir.create} returns a list object, containing main.dir (path of the main working directory),
+#' project.name (project name), out.dir (path of the project folder, which contains three subfolders), out.dir.QC,
+#' out.dir.DATA and out.dir.SJAR.
 
 #' @examples
 #'
 #' \dontrun{
-#' NetBID.network.dir.create(project_main_dir='demo1/',project_name='network_test')
+#' # Creating a main working directory under the current working directory by folder name
+#' network.par <- NetBID.network.dir.create("MyMainDir","MyProject")
+#' # Or creating a main working directory under the current working directory by relative path
+#' network.par <- NetBID.network.dir.create("./MyMainDir","MyProject")
+#' # Or creating a main working directory to a specific path by absolute path
+#' network.par <- NetBID.network.dir.create("~/Desktop/MyMainDir","MyProject")
 #' }
 #' @export
-NetBID.network.dir.create <- function(project_main_dir=NULL,prject_name=NULL){
+NetBID.network.dir.create <- function(project_main_dir=NULL,project_name=NULL){
   if(exists('network.par')==TRUE){message('network.par is occupied in the current session,please manually run: rm(network.par) and re-try, otherwise will not change !');
     return(network.par)}
   if(is.null(project_main_dir)==TRUE){message('project_main_dir required, please input and re-try!');return(FALSE)}
-  if(is.null(prject_name)==TRUE){message('prject_name required, please input and re-try!');return(FALSE)}
+  if(is.null(project_name)==TRUE){message('project_name required, please input and re-try!');return(FALSE)}
   network.par <- list()
   network.par$main.dir <- project_main_dir
-  network.par$project.name <- prject_name
-  network.par$out.dir <- sprintf('%s/%s/',network.par$main.dir,network.par$project.name)
+  network.par$project.name <- project_name
+  network.par$out.dir <- sprintf('%s/%s',network.par$main.dir,network.par$project.name)
   # create output directory
   if (!dir.exists(project_main_dir)) {
     dir.create(project_main_dir, recursive = TRUE)
@@ -677,29 +666,33 @@ NetBID.network.dir.create <- function(project_main_dir=NULL,prject_name=NULL){
   return(network.par)
 }
 
-#' Create directory for the driver analysis part. Suggested but not required.
+#' Manipulation of Working Directories for NetBID2 Driver Estimation Step
 #'
-#' \code{NetBID.analysis.dir.create} will generate a working directory structure for the driver analysis part in NetBID2.
-#' This function aims to assist researchers to organize the working directory. It is suggested but not required.
+#' \code{NetBID.analysis.dir.create} is used to help users create an organized working directory
+#' for the driver estimation step in NetBID2 analysis.
+#' However, it is not essential for the analysis.
+#' It creates a hierarchcial working directory and returns a list contains this directory information.
 #'
-#' This function need to input the main directory for the analysis project with the project name,
-#' and need to input the project directory for the network generation with the network_project_name represents the name of the network for use (SJAR.project_name in SJAracne.prepare)
-#' It will generate three sub-directories, QC/ for the QC-related plots, DATA/ for saving the RData, and PLOT/ for saving visulization plots.
-#' Such organization is suggested but not required to use all functions in NetBID2.
-#' This function will return a variable called \code{analysis.par}.
-#' This variable is strongly suggested to use in the driver analysis part of NetBID2.
-#' It will be used to store all related datasets during calculation.
+#' This function requires user to define the main working directory and the project’s name.
+#' It creates a main working directory with a subdirectory of the project.
+#' It also automatically creates three subfolders (QC, DATA and PLOT) within the project folder.
+#' QC/, storing Quality Control related plots; DATA/, saving data in RData format; PLOT/, storing output plots.
+#' This function also returns a list object (e.g. \code{analysis.par} in the demo) with directory information wrapped inside.
+#' This list is an essential for driver construction step, all the important intermediate data generated later will be wrapped inside.
 #'
-#' @param project_main_dir character, main directory for the project in the driver analysis part.
-#' @param prject_name character, project name.
-#' @param network_dir character, main directory for the project in the network generation part.
-#' @param network_project_name character, the project name of the network for use (SJAR.project_name in SJAracne.prepare);
-#' This parameter is optional. If previously has not follow the NetBID2 suggested pipeline, could leave this to NULL
-#' but set the real path to tf.network.file and sig.network.file if want to follow the driver analysis part of NetBID2 suggested pipeline.
-#' @param tf.network.file character, file path of the TF network (XXX/consensus_network_ncol_.txt). Optional, if do not set network_project_name.
-#' @param sig.network.file character, file path of the SIG network (XXX/consensus_network_ncol_.txt). Optional, if do not set network_project_name.
+#' @param project_main_dir character, name or absolute path of the main working directory for driver analysis.
+#' @param project_name character, name of the project folder.
+#' @param network_dir character, name or absolute path of the main working directory for network construction.
+#' @param network_project_name character, the project name of network construction. Or use the project name of SJARACNe.
+#' This parameter is optional. If one didn't run NetBID2 network construction part in the pipeline, he could set it to NULL.
+#' If one like to follow the NetBID2 pipeline, he should set it to the path of the TF network file and the SIG network file.
+#' @param tf.network.file character, the path of the TF network file (e.g. "XXX/consensus_network_ncol_.txt").
+#' Default is the path of network_project_name.
+#' @param sig.network.file character, the path of the SIG network file (e.g. "XXX/consensus_network_ncol_.txt").
+#' Default is the path of network_project_name.
 #'
-#' @return a list called analysis.par, including main.dir,project.name, out.dir, out.dir.QC, out.dir.DATA, out.dir.PLOT
+#' @return Returns a list object, containing main.dir (path of the main working directory), project.name (project name),
+#' out.dir (path of the project folder, which contains three subfolders), out.dir.QC, out.dir.DATA and out.dir.PLOT.
 #'
 #' @examples
 #'
@@ -709,12 +702,12 @@ NetBID.network.dir.create <- function(project_main_dir=NULL,prject_name=NULL){
 #' project_main_dir <- 'demo1/'
 #' project_name <- 'driver_test'
 #' analysis.par  <- NetBID.analysis.dir.create(project_main_dir=project_main_dir,
-#'                                             prject_name=project_name,
+#'                                             project_name=project_name,
 #'                                             network_dir=network.dir,
 #'                                             network_project_name=network.project.name)
 #' }
 #' @export
-NetBID.analysis.dir.create <- function(project_main_dir=NULL,prject_name=NULL,
+NetBID.analysis.dir.create <- function(project_main_dir=NULL,project_name=NULL,
                                        network_dir=NULL,
                                        network_project_name=NULL,
                                        tf.network.file=NULL,
@@ -722,12 +715,12 @@ NetBID.analysis.dir.create <- function(project_main_dir=NULL,prject_name=NULL,
   if(exists('analysis.par')==TRUE){message('analysis.par is occupied in the current session,please manually run: rm(analysis.par) and re-try, otherwise will not change !');
     return(analysis.par)}
   if(is.null(project_main_dir)==TRUE){message('project_main_dir required, please input and re-try!');return(FALSE)}
-  if(is.null(prject_name)==TRUE){message('prject_name required, please input and re-try!');return(FALSE)}
+  if(is.null(project_name)==TRUE){message('project_name required, please input and re-try!');return(FALSE)}
   if(is.null(network_dir)==TRUE){message('network_dir required, please input and re-try!');return(FALSE)}
   #if(is.null(network_project_name)==TRUE){message('network_project_name required, please input and re-try!');return(FALSE)}
   analysis.par <- list()
   analysis.par$main.dir <- project_main_dir
-  analysis.par$project.name <- prject_name
+  analysis.par$project.name <- project_name
   analysis.par$out.dir <- sprintf('%s/%s/',analysis.par$main.dir,analysis.par$project.name)
   # create output directory
   if (!dir.exists(analysis.par$out.dir)) {
@@ -825,18 +818,20 @@ check_analysis.par <- function(analysis.par,step='pre-load'){
   return(TRUE)
 }
 
-#' Automatically save RData for NetBID2. Suggested in the NetBID2 pipeline analysis but not required.
+#' Save Data Produced by Corresponding NetBID2 Pipeline Step.
 #'
-#' \code{NetBID.saveRData} is a function strongly suggested to control the pipeline analysis in NetBID2.
+#' \code{NetBID.saveRData} is a function to save complicated list object generated by certain steps of NetBID2's pipeline
+#' (e.g. load gene expression file from GEO, 'exp-load').
+#' This function is not essential, but it is highly suggested for easier pipeline step checkout and reference.
 #'
-#' Users could save two complicate list object, network.par in the network generation part and analysis.par in the driver analysis part,
-#' into the data directory (network.par$out.dir.DATA or analysis.par$out.dir.DATA), with the name of the RData marked by \code{step} name.
-#' The two lists could make user to save the whole related dataset in each step \code{NetBID.saveRData} and easy to get them back by using \code{NetBID.loadRData}.
-#' The RData saved from each step could be used to run the following analysis without repeating the former steps.
+#' There are two important steps in the NetBID2 pipeline, network construction and driver analysis.
+#' User can save these two complicated list objects, network.par and analysis.par.
+#' Assigning the \code{step} name to save the RData for easier reference.
+#' Calling \code{NetBID.loadRData} to load the corresponding step RData, users can avoid repeating the former steps.
 #'
-#' @param network.par list, store all related datasets during network generation part.
-#' @param analysis.par list, store all related datasets during driver analysis part.
-#' @param step character, name for the step.
+#' @param network.par list, stores all related datasets from network construction pipeline step.
+#' @param analysis.par list, stores all related datasets from driver analysis pipeline step.
+#' @param step character, name of the pipeline step decided by user for easier reference.
 #'
 #' @examples
 #' \dontrun{
@@ -862,18 +857,14 @@ NetBID.saveRData <- function(network.par=NULL,analysis.par=NULL,step='exp-load')
   }
 }
 
-#' Automatically load RData for NetBID2. Suggested in the NetBID2 pipeline analysis but not required.
+#' Reload Saved RData Created by \code{NetBID.saveRData}.
 #'
-#' \code{NetBID.loadRData} is a function strongly suggested to control the pipeline analysis in NetBID2.
+#' \code{NetBID.loadRData} is a function loads RData saved by \code{NetBID.saveRData} function.
+#' It prevents user from repeating former pipeline steps.
 #'
-#' Users could save two complicate list object, network.par in the network generation part and analysis.par in the driver analysis part,
-#' into the data directory (network.par$out.dir.DATA or analysis.par$out.dir.DATA), with the name of the RData marked by \code{step} name.
-#' The two lists could make user to save the whole related dataset in each step \code{NetBID.saveRData} and easy to get them back by using \code{NetBID.loadRData}.
-#' The RData saved from each step could be used to run the following analysis without repeating the former steps.
-#'
-#' @param network.par list, store all related datasets during network generation part.
-#' @param analysis.par list, store all related datasets during driver analysis part.
-#' @param step character, name for the step.
+#' @param network.par list, stores all related datasets from network construction step.
+#' @param analysis.par list, stores all related datasets from driver analysis step.
+#' @param step character, name of the pipeline step. It should be previously assigned by user when calling \code{NetBID.saveRData} function.
 #'
 #' @examples
 #' analysis.par <- list()
@@ -897,32 +888,32 @@ NetBID.loadRData <- function(network.par=NULL,analysis.par=NULL,step='exp-load')
   }
 }
 
-#' Load gene expression set from GEO database
+#' Download Gene Expression Series From GEO Database with Platform Specified
 #'
-#' \code{load.exp.GEO} is a function to get GEO dataset, save into ExpressionSet class object and save to RData.
-#' If the RData exists, user could choose to directly load from it.
+#' \code{load.exp.GEO} downloads user assigned Gene Expression Series (GSE file) along with its Platform from GEO dataset.
+#' It returns an ExpressionSet class object and saves it as RData. If the GSE RData already exists, it will be loaded directly.
+#' It also allows users to update the Gene Expression Series RData saved before.
 #'
-#' This function aims to provide simple way to get expression set from GEO database and manage the related RData.
+#' @param out.dir character, the file path used to save the GSE RData. If the data already exsits, it will be loaded from this path.
+#' @param GSE character, the GEO Series Accession ID.
+#' @param GPL character, the GEO Platform Accession ID.
+#' @param getGPL logical, if TRUE, the corresponding GPL file will be downloaded. Default is TRUE.
+#' @param update logical, if TRUE, the previous stored Gene ExpressionSet RData will be updated. Default is FALSE
 #'
-#' @param out.dir character, the file path to save the RData or if the RData has already generated, load from it.
-#' Default is network.par$out.dir.DATA if follow the NetBID2 suggested pipeline.
-#' @param GSE character, the GSE ID to download.
-#' @param GPL character, the GPL ID to download.
-#' @param getGPL logical, whether to download the GPL file or not. Default is TRUE.
-#' @param update logical, whether to update the RData if the data is already in the out.dir.Default is FALSE
-#'
-#' @return ExpressionSet class object if success.
+#' @return Return an ExpressionSet class object.
 #' @examples
 #'
 #' \dontrun{
-#' net_eset <- load.exp.GEO(out.dir='test/',
+#' # Download the GSE116028 which performed on GPL6480 platform from GEO and save it to the current directory
+#' # Assign this ExpressionSet object to net_eset
+#' net_eset <- load.exp.GEO(out.dir='./',
 #'                          GSE='GSE116028',
 #'                          GPL='GPL6480',
 #'                          getGPL=TRUE,
 #'                          update=FALSE)
 #' }
 #' @export
-load.exp.GEO <- function(out.dir=network.par$out.dir.DATA,GSE = NULL,GPL = NULL,getGPL=TRUE,update = FALSE){
+load.exp.GEO <- function(out.dir = NULL,GSE = NULL,GPL = NULL,getGPL=TRUE,update = FALSE){
   if(is.null(out.dir)==TRUE){
     message('out.dir required, please re-try')
     return(FALSE)
@@ -948,31 +939,29 @@ load.exp.GEO <- function(out.dir=network.par$out.dir.DATA,GSE = NULL,GPL = NULL,
   return(eset)
 }
 
-#' Load gene expression set from Salmon output (demo version).
+#' Load Gene Expression Set from Salmon Output (demo version)
 #'
-#' \code{load.exp.RNASeq.demoSalmon} is a function to read in salmon results and convert to eSet/DESeqDataSet class object.
+#' \code{load.exp.RNASeq.demoSalmon} is a function to read in Salmon results and convert it to eSet/DESeqDataSet class object.
 #'
-#' This function assist to read in RNASeq results from salmon.
-#' Due to the complicated condition (e.g reference sequence) in running salmon, this function is just a demo version that may not suit for all conditions.
+#' This function helps users to read in results created by Salmon.
+#' Due to the complicated manipulations (e.g. reference sequence) in processing Salmon, this demo function may not be suitable for all scenarios.
 #'
-#' @param salmon_dir character, the main file directory to save the salmon results.
-#' @param tx2gene data.frame or NULL, this parameter will be passed to \code{tximport}, check for detail.
-#' If NULL, will read the transcript name in one of the salmon output
-#' (this only works when using e.g gencode.v29.transcripts.fa from GENCODE as reference).
-#' @param use_phenotype_info data.frame, phenotype information dataframe, must contain the columns \code{use_sample_col} and \code{use_design_col}.
-#' @param use_sample_col character, the column name to indicate which column in \code{use_phenotype_info} should be used as the sample name.
-#' @param use_design_col character, the column name to indicate which column in \code{use_phenotype_info} should be used as the design feature of the samples.
-#' @param return_type character, the class of the return object, choose from 'txi','counts','tpm','eset' and 'dds'.
-#' 'txi' is the output of \code{tximport}, a simple list containing matrices: abundance, counts, length.
-#' 'counts' is the output of raw count matrix.
-#' 'tpm' is the output of raw tpm.
-#' 'dds' is the DESeqDataSet class object, the data has been processed by \code{DESeq}.
-#' 'eset' is the ExpressionSet class object,the expression data matrix has been processed by \code{DESeq} and \code{vst}.
-#' Default is 'tpm'
-#' @param merge_level character, choose from 'gene' and 'transcript',
-#' if choose 'gene' and original salmon results is mapped to the transcriptome,
-#' expression matrix will be merged to gene level.
-#' (this only works when using e.g gencode.v29.transcripts.fa from GENCODE as reference).
+#' @param salmon_dir character, the directory to save the results created by Salmon.
+#' @param tx2gene data.frame or NULL, this parameter will be passed to \code{tximport}. For details, please check \code{tximport}.
+#' If NULL, will read in one of the transcript names from Salmon's results. Note, it works when using e.g. "gencode.v29.transcripts.fa" from GENCODE as reference.
+#' @param use_phenotype_info data.frame, the data frame contains phenotype information. It must have the columns \code{use_sample_col} and \code{use_design_col}.
+#' @param use_sample_col character, the column name, indicating which column in \code{use_phenotype_info} should be used as the sample name.
+#' @param use_design_col character, the column name, indicating which column in \code{use_phenotype_info} should be used as the design feature for samples.
+#' @param return_type character, the class of the return object. Users can choose from "txi","counts","tpm",’"eset" and "dds".
+#' "txi" is the output of tximport. It is a list containing three matrices, abundance, counts and length.
+#' "counts" is the matrix of raw count.
+#' "tpm" is the raw tpm.
+#' "dds" is the DESeqDataSet class object, which is processed by DESeq.
+#' "eset" is the ExpressionSet class object, which is processed by DESeq and vst.
+#' Default is "tpm".
+#' @param merge_level character, users can choose between "gene" and "transcript".
+#' "gene", the original salmon results will be mapped to the transcriptome and the expression matrix will be merged to the gene level.
+#' This only works when using e.g. "gencode.v29.transcripts.fa" from GENCODE as the reference.
 #' @export
 load.exp.RNASeq.demoSalmon <- function(salmon_dir = "",tx2gene=NULL,
                                        use_phenotype_info = NULL,
@@ -1005,33 +994,31 @@ load.exp.RNASeq.demoSalmon <- function(salmon_dir = "",tx2gene=NULL,
   return(eset)
 }
 
-#' Load gene expression set from RNASeq results (demo version).
+#' Load Gene Expression Set from RNA-Seq Results (demo version)
 #'
-#' \code{load.exp.RNASeq.demo} is a function to read in RNASeq results and convert to eSet/DESeqDataSet class object.
+#' \code{load.exp.RNASeq.demo} is a function to read in RNA-Seq results and convert it to \code{eSet/DESeqDataSet} class object.
 #'
-#' This function assist to read in RNASeq results from different resources.
-#' Due to the complicated condition (e.g reference sequence) in running RNASeq,
-#' this function is just a demo version that may not suit for all conditions.
+#' This function helps users to read in RNA-Seq results from various sources.
+#' Due to the complicated manipulations (e.g. reference sequence) in processing RNA-Seq, this demo function may not be suitable for all scenarios.
 #'
-#' @param files a vector of characters,filenames for the transcript-level abundances, will be passed to \code{tximport}.
-#' Check for detail.
-#' @param type character, he type of software used to generate the abundances, will be passed to \code{tximport}.
-#' Check for detail.
-#' @param tx2gene data.frame or NULL, this parameter will be passed to \code{tximport}, check for detail.
-#' @param use_phenotype_info data.frame, phenotype information dataframe, must contain the columns \code{use_sample_col} and \code{use_design_col}.
-#' @param use_sample_col character, the column name to indicate which column in \code{use_phenotype_info} should be used as the sample name.
-#' @param use_design_col character, the column name to indicate which column in \code{use_phenotype_info} should be used as the design feature of the samples.
-#' @param return_type character, the class of the return object, choose from 'txi','counts','tpm','eset' and 'dds'.
-#' 'txi' is the output of \code{tximport}, a simple list containing matrices: abundance, counts, length.
-#' 'counts' is the output of raw count matrix.
-#' 'tpm' is the output of raw tpm.
-#' 'dds' is the DESeqDataSet class object, the data has been processed by \code{DESeq}.
-#' 'eset' is the ExpressionSet class object,the expression data matrix has been processed by \code{DESeq} and \code{vst}.
-#' Default is 'tpm'
-#' @param merge_level character, choose from 'gene' and 'transcript',
-#' if choose 'gene' and original salmon results is mapped to the transcriptome,
-#' expression matrix will be merged to gene level.
-#' (this only works when using e.g gencode.v29.transcripts.fa from GENCODE as reference).
+#' @param files a vector of characters, the filenames for the transcript-level abundances. It will be passed to \code{tximport}.
+#' For details, please check \code{tximport}.
+#' @param type character, the type of software used to generate the abundances. It will be passed to \code{tximport}.
+#' For details, please check \code{tximport}.
+#' @param tx2gene data.frame or NULL, this parameter will be passed to \code{tximport}. For details, please check \code{tximport}.
+#' @param use_phenotype_info data.frame, the data frame contains phenotype information. It must have the columns \code{use_sample_col} and \code{use_design_col}.
+#' @param use_sample_col character, the column name, indicating which column in \code{use_phenotype_info} should be used as the sample name.
+#' @param use_design_col character, the column name, indicating which column in \code{use_phenotype_info} should be used as the design feature for samples.
+#' @param return_type character, the class of the return object. Users can choose from "txi","counts","tpm",'"eset" and "dds".
+#' "txi" is the output of \code{tximport}. It is a list containing three matrices, abundance, counts and length.
+#' "counts" is the matrix of raw count.
+#' "tpm" is the raw tpm.
+#' "dds" is the DESeqDataSet class object, which is processed by \code{DESeq}.
+#' "eset" is the ExpressionSet class object, which is processed by \code{DESeq} and \code{vst}.
+#' Default is "tpm".
+#' @param merge_level character, users can choose between "gene" and "transcript".
+#' "gene", the original salmon results will be mapped to the transcriptome and the expression matrix will be merged to the gene level.
+#' This only works when using e.g. "gencode.v29.transcripts.fa" from GENCODE as the reference.
 #' @export
 load.exp.RNASeq.demo <- function(files,type='salmon',
                                  tx2gene=NULL,
@@ -1088,24 +1075,25 @@ load.exp.RNASeq.demo <- function(files,type='salmon',
   }
   }
 
-#' Generate expression Set object
+#' Generate ExpressionSet Object
 #'
-#' \code{generate.eset} is a function to generate eSet object by input expression matrix (required),
-#' phenotype and feature information (optional).
+#' \code{generate.eset} generates ExpressionSet class object to contain and describe the high-throughput assays.
+#' Users need to define its slots, which are expression matrix (required),
+#' phenotype information and feature information (optional).
+#' It is very useful when only expression matrix is available.
 #'
-#' This function aims to assist the generation of eSet object,
-#' especially for sometimes only expression matrix is available.
-#'
-#' @param exp_mat data matrix, the expression data matrix with each row a gene/transcript and each column a sample.
-#' @param phenotype_info data.frame, the phenotype information for the samples in \code{exp_mat},
-#' the rownames must match the colnames of \code{exp_mat}. If NULL, will generate a single column dataframe.
+#' @param exp_mat matrix, the expression data matrix. Each row represents a gene/transcript/probe, each column represents a sample.
+#' @param phenotype_info data.frame, the phenotype information for all the samples in \code{exp_mat}.
+#' In the phenotype data frame, each row represents a sample, each column represents a phenotype feature.
+#' The row names must match the column names of \code{exp_mat}. If NULL, it will generate a single-column data frame.
 #' Default is NULL.
-#' @param feature_info data.frame,the feature information for the genes/transcripts/probes in \code{exp_mat},
-#' the rownames must match the rownames of \code{exp_mat}. If NULL, will generate a single column dataframe.
+#' @param feature_info data.frame, the feature information for all the genes/transcripts/probes in \code{exp_mat}.
+#' In the feature data frame, each row represents a gene/transcript/probe and each column represents an annotation of the feature.
+#' The row names must match the row names of \code{exp_mat}. If NULL, it will generate a single-column data frame.
 #' Default is NULL.
-#' @param annotation_info character, the annotation for the eSet. Default is "".
+#' @param annotation_info character, the annotation set by users for easier reference. Default is "".
 #'
-#' @return an ExressionSet object.
+#' @return Return an ExressionSet object.
 #'
 #' @examples
 #' mat1 <- matrix(rnorm(10000),nrow=1000,ncol=10)
@@ -1145,24 +1133,24 @@ generate.eset <- function(exp_mat=NULL, phenotype_info=NULL, feature_info=NULL, 
   return(eset)
 }
 
-#' Merge two ExpressionSet class object.
+#' Merge Two ExpressionSet Class Objects into One
 #'
-#' \code{merge_eset} is a function to merge two ExpressionSet class objects.
-#' If the genes in two objects are same, the expression matrix will be directly merged, otherwise,
-#' Z-transformation is performed before merging.
+#' \code{merge_eset} merges two ExpressionSet class objects and returns one ExpresssionSet object.
+#' If genes in the two ExpressionSet objects are identical, the expression matrix will be combined directly. Otherwise, Z-transformation will be performed before combination.
 #'
-#' @param eset1 ExpressionSet class, the first dataset to merge.
-#' @param eset2 ExpressionSet class, the second dataset to merge.
-#' @param group1 character, name for the first group.
-#' @param group2 character, name for the second group.
-#' @param use_col a vector of characters, the column names in the phenotype information to be kept in the merged ExpressionSet.
-#' If NULL, will use the intersected column names between the two datasets. Default is NULL.
-#' @param group_col_name, character, name for the column indicate the originate of the samples in the phenotype information dataframe in the merged ExpressionSet.
-#' Default is 'original_group'.
-#' @param remove_batch logical, indicate whether or not to remove batch effect between two sample set.
-#' Default is FALSE.
+#' @param eset1 ExpressionSet class, the first ExpressionSet.
+#' @param eset2 ExpressionSet class, the second ExpressionSet.
+#' @param group1 character, name of the first ExpressionSet.
+#' @param group2 character, name of the second ExpressionSet.
+#' @param use_col a vector of characters, the column names in the phenotype information to be kept.
+#' If NULL, shared column names of \code{eset1} and \code{eset2} will be used. Default is NULL.
+#' @param group_col_name, character, name of the column which contains the names defined in \code{group1} and \code{group2}.
+#' This column is designed to show which original ExpressionSet each sample comes from before combination.
+#' Default name of this column is "original_group".
+#' @param remove_batch logical, if TRUE, remove the batch effects from these two expression datasets. Default is FALSE.
+#' @param std logical, whether to perform std to the original expression matrix. Default is FALSE.
 #'
-#' @return an ExressionSet object.
+#' @return Return an ExressionSet class object.
 #' @examples
 #' mat1 <- matrix(rnorm(10000),nrow=1000,ncol=10)
 #' colnames(mat1) <- paste0('Sample1_',1:ncol(mat1))
@@ -1178,19 +1166,22 @@ merge_eset <- function(eset1,eset2,
                        group1=NULL,group2=NULL,
                        group_col_name='original_group',
                        use_col = NULL,
-                       remove_batch = FALSE) {
+                       remove_batch = FALSE,std=FALSE) {
   mat1 <- exprs(eset1)
   mat2 <- exprs(eset2)
   w1 <- intersect(rownames(mat1), rownames(mat2))
   if(length(w1)==0){
     message('No overlap genes between two eSet, please check and re-try!');return(FALSE);
   }
-  if(length(w1)<nrow(mat1) & length(w1)<nrow(mat2)){
-    ## z-transformation
-    mat1 <- std(mat1)
-    mat2 <- std(mat2)
+  if((length(w1)<nrow(mat1) | length(w1)<nrow(mat2)) & std==FALSE){
+    message('Original two esets contain different gene list, strongly suggest to do z transformation (set std=TRUE) across all samples before merge!');
   }
-  rmat <- cbind(mat1[w1, ], mat2[w1, ])
+  if(std==TRUE){
+    ## z-transformation
+    mat1 <- apply(mat1,2,std) # std to samples
+    mat2 <- apply(mat2,2,std)
+  }
+  rmat <- cbind(mat1[w1, ], mat2[w1,])
   #choose1 <- apply(rmat <= quantile(rmat, probs = 0.05), 1, sum) <= ncol(rmat) * 0.90 ## low expressed genes
   #rmat <- rmat[choose1, ]
   phe1 <- pData(eset1)
@@ -1198,6 +1189,7 @@ merge_eset <- function(eset1,eset2,
   if(length(use_col)==0){
     use_col <- intersect(colnames(phe1),colnames(phe2))
   }
+  rphe <- list();
   if(length(use_col)>1)
     rphe <- rbind(phe1[colnames(mat1), use_col], phe2[colnames(mat2), use_col])
   if(length(use_col)==1){
@@ -1205,6 +1197,7 @@ merge_eset <- function(eset1,eset2,
     rphe <- data.frame(rphe,stringsAsFactors=FALSE); colnames(rphe) <- use_col;
     rownames(rphe) <- colnames(rmat)
   }
+  if(length(use_col)==0){message('Warning: no intersected phenotype column!');}
   if(is.null(group1)==TRUE) group1 <- 'group1'
   if(is.null(group2)==TRUE) group2 <- 'group2'
   rphe[[group_col_name]]<- c(rep(group1, ncol(mat1)), rep(group2, ncol(mat2)))
@@ -1215,28 +1208,28 @@ merge_eset <- function(eset1,eset2,
   return(reset)
 }
 
-#' Update ExpressionSet feature information, mainly for gene ID conversion
+#' Reassign featureData slot of ExpressionSet and Update feature information
 #'
-#' \code{update_eset.feature} is a function to update the feature information in the ExpressionSet object.
+#' \code{update_eset.feature} reassigns the featureData slot of ExpressionSet object based on user's demand. It is mainly used for gene ID conversion.
 #'
-#' This function is designed mainly for gene ID conversion.
-#' User could input the transfer table for ID conversion, which could be obtained from the original feature table
-#' (if use \code{load.exp.GEO} and set getGPL==TRUE) or by running the function \code{get_IDtransfer}.
-#' The relationship betweeen the original ID and the target ID could be as follows:
-#' 1) one->one, just change the ID label.
-#' 2) multiple->one, the expression value for the target ID will be the merge of the original ID, with user-defined choice of merge_method.
-#' 3) one->mulitple, the expression value for the original ID will be distributed to the matched target IDs, with user-defined choice of distribute_method.
-#' warning message will be presented in this condition.
-#' 4) multiple-->multiple, the function will do distribute step 3) first and merge 2).
+#' User can pass a conversion table to \code{use_eset} for the ID conversion. A conversion table can be obtained from the original featureDta slot
+#' (if one called the \code{load.exp.GEO} function and set getGPL==TRUE) or by running the \code{get_IDtransfer} function.
+#' The mapping between original ID and target ID can be summerised into 4 categories.
+#' 1) One-to-one, simply replaces the original ID with target ID;
+#' 2) Many-to-one, the expression value for the target ID will be merged from its original ID;
+#' 3) One-to-many, the expression value for the original ID will be distributed to the matched target IDs;
+#' 4) Many-to-many, apply part 3) first, then part 2).
 #'
-#' @param use_eset ExpressionSet class object, the original ExpressionSet to update.
-#' @param use_feature_info data.frame, the transfer table for ID conversion.
-#' @param from_feature character,the column name in \code{use_feature_info},must be the same type of the rownames for the expression matrix in \code{use_eset}.
-#' @param to_feature character, the column in \code{use_feature_info}, the target ID will be convereted to.
-#' @param merge_method character, startegy to merge the expression value, choose from 'median','mean','max','min'. Default is "median".
-#' @param distribute_method character, strategy to distribute the expression value, choose from 'mean', 'equal'. Default is "equal".
+#' @param use_eset ExpressionSet class object.
+#' @param use_feature_info data.frame, a data frame contains feature information, it can be obtained by calling \code{fData} function.
+#' @param from_feature character, orginal ID. Must be one of the column names in \code{use_feature_info} and correctly characterize the \code{use_eset}'s row names.
+#' @param to_feature character, target ID. Must be one of the column names in \code{use_feature_info}.
+#' @param merge_method character, the agglomeration method to be used for merging gene expression value.
+#' This should be one of, "median", "mean", "max" or "min". Default is "median".
+#' @param distribute_method character, the agglomeration method to be used for distributing the gene expression value.
+#' This should be one of, "mean" or "equal". Default is "equal".
 #'
-#' @return an ExressionSet object.
+#' @return Return an ExressionSet object with updated feature information.
 #' @examples
 #' mat1 <- matrix(rnorm(10000),nrow=1000,ncol=10)
 #' colnames(mat1) <- paste0('Sample',1:ncol(mat1))
@@ -1325,24 +1318,22 @@ update_eset.feature <- function(use_eset=NULL,use_feature_info=NULL,from_feature
   return(new_eset)
 }
 
-#' Update ExpressionSet phenotype information, mainly for changing sample name and extract useful phenotype information for sample clustering.
+#' Reassign the phenoData slot of ExpressionSet and Update phenotype information
 #'
-#' \code{update_eset.phenotype} is a function to update the phenotype information in the ExpressionSet object.
+#' \code{update_eset.phenotype} reassigns the phenoData slot of ExpressionSet based on user's demand.
+#' It is mainly used to modify sample names and extract interested phenotype information for further sample clustering.
 #'
-#' This function is designed mainly for extracting useful phenotype information for samples.
-#' Especially for phenotype information directly get from GEO database.
-#'
-#' @param use_eset ExpressionSet class object, the original ExpressionSet to update.
-#' @param use_phenotype_info data.frame, the phenotype information dataframe.
-#' @param use_sample_col character,the column name in \code{use_phenotype_info}, which contains the sample name.
-#' @param use_col character, the columns in \code{use_phenotype_info} to be kept.
-#' If set to 'auto', wil extract columns with unique sample feature ranges from 2 to sample size-1.
-#' If set to 'GEO-auto', will extract columns: 'geo_accession','title','source_name_ch1',and columns end with ':ch1'.
-#' Default is "auto".
-#' @return an ExressionSet object.
+#' @param use_eset ExpressionSet class object.
+#' @param use_phenotype_info data.frame, a dataframe contains phenotype information, can be obtained by calling \code{pData} function.
+#' @param use_sample_col character, must be one of the column names in \code{use_phenotype_info}.
+#' @param use_col character, the columns will be kept from \code{use_phenotype_info}.
+#' 'auto', only extracting 'cluster-meaningful' sample features (e.g. it is meaningless to use 'gender' as clustering feature, if all samples are female).
+#' 'GEO-auto' means it will extract the following selected columns,
+#' "geo_accession", "title", "source_name_ch1", and columns ended with ":ch1". Default is "auto".
+#' @return Return an ExressionSet object with updated phenotype information.
 #' @examples
 #' \dontrun{
-#' net_eset <- load.exp.GEO(out.dir='test/',
+#' net_eset <- load.exp.GEO(out.dir='./test',
 #'                          GSE='GSE116028',
 #'                          GPL='GPL6480',
 #'                          getGPL=TRUE,
@@ -1406,7 +1397,7 @@ update_eset.phenotype <- function(use_eset=NULL,use_phenotype_info=NULL,use_samp
         message(sprintf('%s not in use_phenotype_info, please re-try!',paste(setdiff(use_col,n1),collapse=';')));return(FALSE)
       }
       p1 <- use_phenotype_info[,use_col]
-      p1 <- as.data.frame(apply(p1,2,function(x){if(class(x)=='factor'){as.character(x)}else{x}}),stringsAsFactors=FALSE)
+      if(length(use_col)>1) p1 <- as.data.frame(apply(p1,2,function(x){if(class(x)=='factor'){as.character(x)}else{x}}),stringsAsFactors=FALSE)
       new_phenotype_info <- p1
     }
   }
@@ -1415,20 +1406,20 @@ update_eset.phenotype <- function(use_eset=NULL,use_phenotype_info=NULL,use_samp
   return(new_eset)
 }
 
-#' IQR (interquartile range) filter for the genes in the expression matrix
+#' IQR (interquartile range) filter to extract genes from expression matrix
 #'
-#' \code{IQR.filter} is a function to extract genes by their IQR value.
+#' \code{IQR.filter} is a function to extract genes from the expression matrix by setting threshold to their IQR value.
+#' IQR (interquartile range) is a measure of statistical dispersion. It is calculated for each gene across all the samples.
+#' By setting threshold value, genes with certain statistical dispersion across samples will be filtered out.
+#' This step is mainly used to perform sample cluster and to prepare the input for SJAracne.
 #'
-#' This function aims to extract out most variable genes (defined by the IQR value).
-#' This step will be used to perform sample cluster and to prepare the input for SJAracne.
-#'
-#' @param exp_mat matrix, the gene expression matrix, with each row a gene/transcript/probe and each column a sample.
-#' @param use_genes a vector of characters, the gene list to report. Default is the rownames of \code{exp_mat}.
-#' @param thre numeric, the quantile threshold of IQR. Default is 0.5.
+#' @param exp_mat matrix, the gene expression matrix. Each row represents a gene/transcript/probe, each column represents a sample.
+#' @param use_genes a vector of characters, the gene list needed to be filtered. Default is the row names of \code{exp_mat}.
+#' @param thre numeric, the threshold for IQR of the genes in \code{use_genes}. Default is 0.5.
 #' @param loose_gene a vector of characters, the gene list that only need to pass the \code{loose_thre}.
-#' This parameter is designed for inputing possible drivers used in SJAracne. Default is NULL.
-#' @param loose_thre numeric,the quantile threshold of IQR for the genes in \code{loose_gene}. Default is 0.1.
-#' @return a vector with logical values indicate which genes should be kept.
+#' This parameter is designed for the input of possible drivers used in SJAracne. Default is NULL.
+#' @param loose_thre numeric, the threshold for IQR of the genes in \code{loose_gene}. Default is 0.1.
+#' @return Return a vector with logical values indicate which genes should be kept.
 #' @examples
 #' mat1 <- matrix(rnorm(15000),nrow=1500,ncol=10)
 #' colnames(mat1) <- paste0('Sample',1:ncol(mat1))
@@ -1450,19 +1441,18 @@ IQR.filter <- function(exp_mat,use_genes=rownames(exp_mat),thre = 0.5,loose_gene
   return(use_vec)
 }
 
-#' Simple function to normalize RNASeq Read Count data.
+#' Normalization of RNA-Seq Reads Count
 #'
-#' \code{RNASeqCount.normalize.scale} is a simple version function to normalize the RNASeq read count data.
+#' \code{RNASeqCount.normalize.scale} is a simple version to normalize the RNASeq reads count data.
 #'
-#' Another choice, \code{load.exp.RNASeq.demo} will follow the DESeq2 pipeline to process the RNASeq datasets.
-#' \code{load.exp.RNASeq.demo} and \code{load.exp.RNASeq.demoSalmon} is included in NetBID2 but may not suit for all conditions.
+#' Users can also load \code{load.exp.RNASeq.demo}, and follow the \code{DESeq2} pipeline for RNASeq data processing.
+#' Warning, \code{load.exp.RNASeq.demo} and \code{load.exp.RNASeq.demoSalmon} in NetBID2 may not cover all the possible scenarios.
 #'
-#' @param mat matrix, the original input matrix for the read data, each row is a gene/transcript with each column a sample.
-#' @param total integer, total read counts, if NULL will use the mean of the column sum. Default is NULL.
-#' @param pseudoCount integer, pseudo count to add for all read counts to avoid -Inf in following log transformation.
-#' Default is 1.
+#' @param mat matrix, matrix of RNA-Seq reads data. Each row is a gene/transcript, each column is a sample.
+#' @param total integer, total RNA-Seq reads count. If NULL, will use the mean of each column's summation. Default is NULL.
+#' @param pseudoCount integer, the integer added to avoid "-Inf" showing up during log transformation. Default is 1.
 #'
-#' @return a matrix containing the normalized RNASeq count.
+#' @return Return a numeric matrix, containing the normalized RNA-Seq reads count.
 #'
 #' @examples
 #' mat1 <- matrix(rnbinom(10000, mu = 10, size = 1),nrow=1000,ncol=10)
@@ -1491,8 +1481,8 @@ RNASeqCount.normalize.scale <- function(mat,
   d
 }
 
-dist2 <- function (x, fun = function(a, b) mean(abs(a - b), na.rm = TRUE),
-                   diagonal = 0)
+dist2.mod <- function (x, fun = function(a, b) mean(abs(a - b), na.rm = TRUE),
+                       diagonal = 0)
 {
   if (!(is.numeric(diagonal) && (length(diagonal) == 1)))
     stop("'diagonal' must be a numeric scalar.")
@@ -1543,23 +1533,20 @@ std <- function(x) {
   (x - mean(x,na.rm=TRUE)) / sd(x,na.rm=TRUE)
 }
 
-#' Calculate activity value for all possible drivers
+#' Calculate Activity Value for Each Driver
 #'
-#' \code{cal.Activity} is a function to calculate activity for all possible drivers by
-#' input the target list for drivers and the expression matrix for target genes.
+#' \code{cal.Activity} calculates the activity value for each driver.
+#' This function requires two inputs, the driver-to-target list object \code{target_list} and the expression matrix.
 #'
-#' @param target_list a list for the target gene information for the drivers.
-#' Each object in the list must be a data.frame and should contain one column ("target") to save the target genes.
-#' Strongly suggest to follow the NetBID2 pipeline, and the \code{target_list} could be automatically generated
-#' by \code{get_net2target_list} by running
-#' \code{get.SJAracne.network}.
-#' @param cal_mat numeric matrix,the expression matrix for all genes/transcripts for calculation.
-#' @param es.method character, strategy to calculate the activity for the driver,
-#' choose from mean, weightedmean, maxmean, absmean;
-#' in which the weighted in the weighted mean is the MI (mutual information) value * sign of correlation (use the spearman correlation sign).
+#' @param target_list list, the driver-to-target list object. The names of the list elements are drivers.
+#' Each element is a data frame, usually contains three columns. "target", target gene names;
+#' "MI", mutual information; "spearman", spearman correlation coefficient. Users can call \code{get_net2target_list} to create this list.
+#' @param cal_mat numeric matrix, the expression matrix of genes/transcripts.
+#' @param es.method character, method applied to calculate the activity value. User can choose from "mean", "weightedmean", "maxmean" and "absmean".
+#' The "weightedmean" requires "MI" and "spearman" columns included in the \code{target_list} data.
 #' Default is 'weightedmean'.
-#' @param std logical, whether to perform std to the original expression matrix. Default is TRUE.
-#' @return the activity matrix with each row a driver and each column a sample (same sample order with cal_mat)
+#' @param std logical, if TRUE, the expression matrix will be normalized by column. Default is TRUE.
+#' @return Return a matrix of activity values. Rows are drivers, columns are samples.
 #' @examples
 #' analysis.par <- list()
 #' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
@@ -1604,17 +1591,18 @@ cal.Activity <- function(target_list=NULL, cal_mat=NULL, es.method = 'weightedme
   return(ac.mat)
 }
 
-#' Calculate activity value for gene sets.
+#' Calculate Activity Value for Gene Sets
 #'
-#' \code{cal.Activity.GS} is a function to calculate activity for all gene sets.
-#' @param use_gs2gene a list for geneset to genes, the name for the list is the gene set name and the content in each list is the vector for genes belong to that gene set.
-#' Default is all_gs2gene[c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG')] with all_gs2gene loaded by using \code{gs.preload}.
-#' @param cal_mat numeric matrix,the expression matrix for all genes/transcripts for calculation.
-#' @param es.method character, strategy to calculate the activity for the driver,
-#' choose from mean, absmean, maxmean, gsva, ssgsea, zscore, plage, the last four options will use \code{gsva} function.
-#' Default is 'mean'.
-#' @param std logical, whether to perform std to the original expression matrix. Default is TRUE.
-#' @return the activity matrix with each row a gene set and each column a sample (same sample order with cal_mat)
+#' \code{cal.Activity.GS} calculates activity value for each gene set, and return a numeric matrix with rows of gene sets and columns of samples.
+#'
+#' @param use_gs2gene list, contains elements of gene sets. Element name is gene set name, each element contains a vector of genes belong to that gene set.
+#' Default is using \code{all_gs2gene[c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG')]}, which is loaded from \code{gs.preload}.
+#' @param cal_mat numeric matrix, gene/transcript expression matrix.
+#' @param es.method character, method to calculate the activity value. Users can choose from "mean", "absmean", "maxmean", "gsva", "ssgsea", "zscore" and "plage".
+#' The details for using the last four options, users can check \code{gsva}. Default is "mean".
+#' @param std logical, if TRUE, the expression matrix will be normalized by column. Default is TRUE.
+#' @return Return an activity matrix with rows of gene sets and columns of samples.
+#'
 #' @examples
 #' analysis.par <- list()
 #' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
@@ -1663,49 +1651,42 @@ cal.Activity.GS <- function(use_gs2gene=all_gs2gene[c('H','CP:BIOCARTA','CP:REAC
   return(ac.mat)
 }
 
-#' Get differential expression (DE)/differential activity (DA) between case and control sample groups by Bayesian Inference.
+#' Differential Expression Analysis and Differential Activity Analysis Between 2 Sample Groups Using Bayesian Inference
 #'
-#' \code{getDE.BID.2G} is a function aims to get DE/DA genes/drivers with detailed statistical information between case (G1) and control (G0) groups.
+#' \code{getDE.BID.2G} is a function performs differential gene expression analysis and differential driver activity analysis between
+#' control group (parameter G0) and experimental group (parameter G1).
 #'
-#' @param eset ExpressionSet class object, the input gene expression or driver activity.
-#' @param output_id_column character, the column in the fData(eset) used for output the results.
-#' This option is used in the condition that the original expression matrix is at transcript-level,
-#' but the statistics can be gene-level if the relation is provided in the feature of the eset.
-#' If NULL, will use the rownames of the fData(eset).
+#' @param eset ExpressionSet class object, contains gene expression data or driver activity data.
+#' @param output_id_column character, the column names of fData(eset).
+#' This option is useful when the \code{eset} expression matrix is at transcript-level, and user is expecting to see the gene-level comparison statistics.
+#' If NULL, rownames of the fData(eset) will be used.
 #' Default is NULL.
-#' @param G1 a vector of characters, the sample list used as the case.
-#' @param G0 a vecotr of characters, the sample list used as the control.
-#' @param G1_name character, the group name for the samples in G1, default is "G1".
-#' @param G0_name character, the group name for the samples in G0, default is "G0".
-#' @param logTransformed logical, whether the original expression value has been log transformed.
-#' Default is TRUE.
-#' @param method character, choose from 'MLE' or 'Bayesian'.
-#' 'MLE' stands for maximum likelihood estimation, that the function will use generalized linear model(glm/glmer) to fit the data
-#' for the expression value and sample phenotype, and use MLE to estimate the regression coefficients.
-#' 'Bayesian' means that the function will use Bayesian generalized linear model (bayesglm)
-#' or multivariate generalized linear mixed model (MCMCglmm) to fit the data.
-#' Default is 'Bayesian'.
-#' @param family a description of the error distribution and link function to be used in the model.
-#' This can be a character string naming a family function, a family function or the result of a call to a family function.
-#' (See family for details of family functions).
-#' Currently only support gaussian,poisson,binomial(two group sample class)/category(multi-group sample class)/ordinal(multi-group sample class with class_ordered=TRUE)
-#' If set at gaussian or poission, the response variable will be the expression level and the regressors will be the sample phenotype.
-#' If set at binomial,the response variable will be the sample phenotype and the regressors will be the expression level.
-#' For the input of binomial, category and ordinal, the family will be automatically reset by the input sample class level and the setting of class_ordered.
+#' @param G1 a vector of characters, the sample names of experimental group.
+#' @param G0 a vecotr of characters, the sample names of control group.
+#' @param G1_name character, the name of experimental group (e.g. "Male"). Default is "G1".
+#' @param G0_name character, the name of control group (e.g. "Female"). Default is "G0".
+#' @param logTransformed logical, if TRUE, log tranformation of the expression value will be performed.
+#' @param method character, users can choose between "MLE" and "Bayesian".
+#' "MLE", the maximum likelihood estimation, will call generalized linear model(glm/glmer) to perform data regression.
+#' "Bayesian", will call Bayesian generalized linear model (bayesglm) or multivariate generalized linear mixed model (MCMCglmm) to perform data regression.
+#' Default is "Bayesian".
+#' @param family character or family function or the result of a call to a family function.
+#' This parameter is used to define the model's error distribution. See \code{?family} for details.
+#' Currently, options are gaussian, poisson, binomial(for two-group sample classes)/category(for multi-group sample classes)/ordinal(for multi-group sample classes with class_ordered=TRUE).
+#' If set with gaussian or poission, the response variable in the regression model will be the expression level, and the independent variable will be the sample's phenotype.
+#' If set with binomial, the response variable in the regression model will be the sample phenotype, and the independent variable will be the expression level.
+#' For binomial, category and ordinal input, the family will be automatically reset, based on the sample's class level and the setting of \code{class_ordered}.
 #' Default is gaussian.
-#' @param pooling character, choose from 'full','no','partial'. The strategy for the calculation of DE/DA.
-#' Supposing geneA has multiple probes A1,A2, in Samples (Case-rep1, Case-rep2, Case-rep3, Control-rep1, Control-rep2, Control-rep3).
-#' The \code{mat} contains the expression for probes A1,A2 in all samples.
-#' The purpose is to testify the DE of geneA between Case and Control.
-#' 'full' means to pull the probe together and treat them as indepedent observations.
-#' 'no' means to treat the probe information as an independent variable in the regression model.
-#' 'partial' means to treat the probe information as a random effect in the regression model.
-#' Default is 'full'.
-#' @param verbose logical, whether or not to print verbose information during calculation.
-#' Default is TRUE.
+#' @param pooling character, users can choose from "full","no" and "partial".
+#' "full", use probes as independent observations.
+#' "no", use probes as independent variables in the regression model.
+#' "partial", use probes as random effect in the regression model.
+#' Default is "full".
+#' @param verbose logical, if TRUE, sample names of both groups will be printed. Default is TRUE.
 #'
 #' @return
-#' A dataframe for all genes with the columns as the output of \code{topTable} in limma.
+#' Return a data frame. Rows are genes/drivers, columns are "ID", "logFC", "AveExpr", "t", "P.Value", "adj.P.Val", "Z-statistics", "Ave.G1" and "Ave.G0".
+#' Names of the columns may vary from different group names. Sorted by P.Value.
 #'
 #' @examples
 #' mat <- matrix(c(0.50099,-1.2108,-1.0524,
@@ -1785,26 +1766,33 @@ getDE.BID.2G <-function(eset,output_id_column=NULL,G1=NULL, G0=NULL,G1_name=NULL
   return(tT)
 }
 
-#' Combine the differential expression (DE)/differential activity (DA) results.
+#' Combine Multiple Comparison Results from Differential Expression (DE) or Differential Activity (DA) Analysis
 #'
-#' \code{combineDE} is a function aims to combine DE/DA genes/drivers.
+#' \code{combineDE} combines multiple comparisons of DE or DA analysis. Can only combine DE with DE, DA with DA.
 #'
-#' @param DE_list list of DE results.
-#' @param DE_name a vector of DE names, if NULL, will use the names of the DE_list.
-#' If not NULL, must match the order of DE_list.
+#' For example, there are 4 subgroups in the phenotype, G1, G2, G3 and G4. One DE analysis was performed on G1 vs. G2, and another DE was performed on G1 vs. G3.
+#' If user is interested in the DE analysis between G1 vs. (G2 and G3), he can call this function to combine the two comparison results above toghether.
+#' The combined P values will be taken care by \code{combinePvalVector}.
+#'
+#' @param DE_list list, each element in the list is one DE/DA comparison need to be combined.
+#' @param DE_name a vector of characters, the DE/DA comparison names.
+#' If not NULL, it must match the names of DE_list in correct order.
+#' If NULL, names of the DE_list will be used.
 #' Default is NULL.
-#' @param transfer_tab data.frame, the transfer table for ID conversion, could be obtained by get_IDtransfer.
-#' This transfer table is used for ID mapping for the results of DE_list.
-#' The column names must match the DE_name.
-#' If NULL, will treat the ID column for each DE results in DE_list as the same type of ID.
+#' @param transfer_tab data.frame, the ID conversion table. Users can call \code{get_IDtransfer} to get this table.
+#' The purpose is to correctly mapping ID for \code{DE_list}. The column names must match \code{DE_name}.
+#' If NULL, ID column of each DE comparison will be considered as the same type.
 #' Default is NULL.
-#' @param main_id	character, the main id for specifying the ID column, must be one of the name in DE_list. If NULL, will use the first name. Default is NULL.
-#' @param method character, choose from Stouffer or Fisher, default is "Stouffer".
-#' @param twosided logical, whether the pvalues are from two-sided test or not.
-#' If not, pvalues must between 0 and 0.5. Default is TRUE.
-#' @param signed logical, whether the sign of the pvals will be considered in calculation. Default is TRUE.
-#' @return a list of DE/DA results, with one more component named "combine" that include the combined results.
-#' The original DE/DA results are filtered by the used ID in combination.
+#' @param main_id character, a name of the element in \code{DE_list}. The ID column of that comparison will be used as the ID of the final combination.
+#' If NULL, the first element name from \code{DE_list} will be used. Default is NULL.
+#' @param method character, users can choose between "Stouffer" and "Fisher". Default is "Stouffer".
+#' @param twosided logical, if TRUE, a two-tailed test will be performed.
+#' If FALSE, a one-tailed test will be performed, and P value falls within the range of 0 to 0.5. Default is TRUE.
+#' @param signed logical, if TRUE, give a sign to the P value, which indicating the direction of testing.
+#' Default is TRUE.
+#' @return Return a list contains the combined DE/DA analysis. Each single comparison result before combination is wrapped inside
+#' (may have with some IDs filtered out, due to the combination). A data frame named "combine" inside the list is the combined analysis.
+#' Rows are genes/drivers, columns are combined statistics (e.g. "logFC", "AveExpr", "t", "P.Value" etc.).
 #'
 #' @examples
 #' analysis.par <- list()
@@ -1899,21 +1887,24 @@ get_class2design <- function(class_label){
   #return(design.mat)
 }
 
-#' Get differential expression (DE)/differential activity (DA) between case and control sample groups by limma related functions.
+#' Differential Expression Analysis and Differential Activity Analysis Between 2 Sample Groups Using Limma
 #'
-#' \code{getDE.limma.2G} is a function aims to get DE/DA genes/drivers with detailed statistical information between case (G1) and control (G0) groups.
+#' \code{getDE.limma.2G} is a function performs differential gene expression analysis and differential driver activity analysis
+#' between control group (parameter G0) and experimental group (parameter G1), using limma related functions.
 #'
-#' @param eset ExpressionSet class object, the input gene expression or driver activity.
-#' @param G1 a vector of characters, the sample list used as the case.
-#' @param G0 a vecotr of characters, the sample list used as the control.
-#' @param G1_name character, the group name for the samples in G1, default is "G1".
-#' @param G0_name character, the group name for the samples in G0, default is "G0".
-#' @param verbose logical, whether or not to print verbose information during calculation.Default is TRUE.
+#' @param eset ExpressionSet class object, contains gene expression data or driver activity data.
+#' @param G1 a vector of characters, the sample names of experimental group.
+#' @param G0 a vecotr of characters, the sample names of control group.
+#' @param G1_name character, the name of experimental group (e.g. "Male"). Default is "G1".
+#' @param G0_name character, the name of control group (e.g. "Female"). Default is "G0".
+#' @param verbose logical, if TRUE, sample names of both groups will be printed. Default is TRUE.
 #' @param random_effect a vector of characters, vector or factor specifying a blocking variable.
-#' Default is NULL indicating no random effect will be considered.
+#' Default is NULL, no random effect will be considered.
 #'
 #' @return
-#' A dataframe for all genes with the columns as the output of \code{topTable} in limma.
+#' Return a data frame. Rows are genes/drivers, columns are "ID", "logFC", "AveExpr", "t", "P.Value", "adj.P.Val", "B", "Z-statistics", "Ave.G1" and "Ave.G0".
+#' Names of the columns may vary from different group names. Sorted by P-values.
+#'
 #'
 #' @examples
 #' analysis.par <- list()
@@ -1987,19 +1978,18 @@ getDE.limma.2G <- function(eset=NULL, G1=NULL, G0=NULL,G1_name=NULL,G0_name=NULL
   return(tT)
 }
 
-#' Combine Pvalues by Fisher or Stouffer's method
+#' Combine P Values Using Fisher's Method or Stouffer's Method
 #'
-#' \code{combinePvalVector} is a function to combine P-values by Stouffer of Fisher method.
+#' \code{combinePvalVector} is a function to combine multiple comparison's P values using Fisher's method or Stouffer's method.
 #'
-#' @param pvals, a vector of numeric values, the P-value values need to combine.
-#' The sign of the P-value will be added to indicate the direction of testing if signed is set to TRUE.
-#' @param method character, choose from Stouffer or Fisher, default is "Stouffer".
-#' @param signed logical, whether the sign of the pvals will be considered in calculation.
+#' @param pvals, a vector of numerics, the P values from multiple comparison need to be combined.
+#' @param method character, users can choose between "Stouffer" and "Fisher". Default is "Stouffer".
+#' @param signed logical, if TRUE, will give a sign to the P value to indicate the direction of testing.
 #' Default is TRUE.
-#' @param twosided logical, whether the pvalues are from two-sided test or not.
-#' If not, pvalues must between 0 and 0.5.
+#' @param twosided logical, if TRUE, P value is calculated in a one-tailed test.
+#' If FALSE, P value is calculated in a two-tailed test, and it falls within the range 0 to 0.5.
 #' Default is TRUE.
-#' @return a vector contains the 'Z-statistics' and 'P.Value'
+#' @return Return a vector contains the "Z-statistics" and "P.Value".
 #' @examples
 #' combinePvalVector(c(0.1,1e-3,1e-5))
 #' combinePvalVector(c(0.1,1e-3,-1e-5))
@@ -2078,16 +2068,16 @@ combinePvalVector <-
   }
 
 
-#' Merge activity value ExpressionSet for TF (transcription factors) and Sig (signaling factors)
+#' Merge Activity Values from TF (transcription factors) ExpressionSet Object and Sig (signaling factors) ExpressionSet Object
 #'
-#' \code{merge_TF_SIG.AC} is a function to merge the activity value ExpressionSet for TF (transcription factors) and Sig (signaling factors).
+#' \code{merge_TF_SIG.AC} combines the activity value from TF (transcription factors) and Sig (signaling factors) ExpressionSet objects together,
+#' and adds "_TF" or "_SIG" suffix to drivers for easier distinction.
 #'
-#' This function aims to merge the driver activity ExpressionSet, by automatically add "_TF"/"_SIG" suffix for drivers.
 #'
-#' @param TF_AC ExpressionSet object containing the activity value for all TFs.
-#' @param SIG_AC ExpressionSet object containing the activity value for all SIGs.
+#' @param TF_AC ExpressionSet object, containing the activity values for all TFs.
+#' @param SIG_AC ExpressionSet object, containing the activity values for all SIGs.
 #'
-#' @return an ExpressionSet object
+#' @return Return an ExpressionSet object.
 #' @examples
 #' analysis.par <- list()
 #' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
@@ -2118,16 +2108,16 @@ merge_TF_SIG.AC <- function(TF_AC=NULL,SIG_AC=NULL){
   return(eset_combine)
 }
 
-#' Merge target network for TF (transcription factors) and Sig (signaling factors).
+#' Merge TF (transcription factor) Network and Sig (signaling factor) Network
 #'
-#' \code{merge_TF_SIG.network} is a function to merge the target network from TF and Sig.
+#' \code{merge_TF_SIG.network} takes TF network and Sig network and combine them together.
+#' The merged list object contains three elements, a data.frame contains all the combined network information \code{network_dat},
+#' a driver-to-target list object \code{target_list}, and an igraph object of the network \code{igraph_obj}.
 #'
-#' @param TF_network TF network obtained by \code{get.SJAracne.network}.
-#' @param SIG_network SIG network obtained by \code{get.SJAracne.network}.
+#' @param TF_network list, the TF network created by \code{get.SJAracne.network} function.
+#' @param SIG_network list, the SIG network created by \code{get.SJAracne.network} function.
 #' @return
-#' This function will return the same structure object as TF_network/SIG_network,
-#' which is a list containing three items, \code{network_dat},
-#' \code{target_list} and \code{igraph_obj}.
+#' Return the a list containing three elements, \code{network_dat}, \code{target_list} and \code{igraph_obj}.
 #' @examples
 #' if(exists('analysis.par')==TRUE) rm(analysis.par)
 #' network.dir <- sprintf('%s/demo1/network/',system.file(package = "NetBID2")) # use demo
@@ -2135,7 +2125,7 @@ merge_TF_SIG.AC <- function(TF_AC=NULL,SIG_AC=NULL){
 #' project_main_dir <- 'test/'
 #' project_name <- 'test_driver'
 #' analysis.par  <- NetBID.analysis.dir.create(project_main_dir=project_main_dir,
-#'                                             prject_name=project_name,
+#'                                             project_name=project_name,
 #'                                             network_dir=network.dir,
 #'                                             network_project_name=network.project.name)
 #' analysis.par$tf.network  <- get.SJAracne.network(network_file=analysis.par$tf.network.file)
@@ -2160,34 +2150,32 @@ merge_TF_SIG.network <- function(TF_network=NULL,SIG_network=NULL){
   return(list(network_dat=net_dat,target_list=target_list_combine,igraph_obj=igraph_obj))
 }
 
-#' Generate final master table for drivers.
+#' Generate the Master Table for Drivers
 #'
-#' \code{generate.masterTable} is a function to automatically generate master tables
-#' by input the merged TF/SIG results.
+#' \code{generate.masterTable} generates a master table to show the mega information of all tested drivers.
 #'
-#' This function is designed for automatically generate master table, with :
-#' DE (differentiated expression), DA(differentiated activity for drivers),network (a list for the target gene information for the drivers),
-#' and necessary additional information (main_id_type, tf_sigs, z_col and display_col).
-#' If results from TF/SIG do not have merged before, please use \code{generate.masterTable.TF_SIG}.
+#' The master table gathers TF (transcription factor) information, Sig (signaling factor) information, all the DE (differential expression analysis)
+#' and DA (differential activity analysis) from multiple comparisons. It also shows each driver's target gene size and other additional information
+#' (e.g. gene biotype, chromosome name, position etc.).
 #'
-#' @param use_comp a vector of characters, the comparison name used to display in the master table.
-#' @param DE a list of DE results, the list name must contain the items in \code{use_comp}.
-#' @param DA a list of DA results, the list name must contain the items in \code{use_comp}.
-#' @param network a list for the target gene information for the drivers.
-#' Each object in the list must be a data.frame and should contain one column ("target") to save the target genes.
-#' Strongly suggest to follow the NetBID2 pipeline, and the \code{TF_network} could be automatically generated by \code{get_net2target_list} by
-#' running \code{get.SJAracne.network}.
-#' @param main_id_type character, the main gene id type. The attribute name from the biomaRt package,
-#' such as 'ensembl_gene_id', 'ensembl_gene_id_version', 'ensembl_transcript_id', 'ensembl_transcript_id_version', 'refseq_mrna'. Full list could be obtained by
-#' \code{listAttributes(mart)$name}, where \code{mart} is the output of \code{useMart} function.
-#' @param transfer_tab data.frame, the transfer table for ID conversion, could be obtained by \code{get_IDtransfer}.
-#' If NULL, will automatically get the transfer table within the function if the \code{main_id_type} is not in the column names of `tf_sigs`. Default is NULL.
-#' @param tf_sigs list, which contain the detailed information for the TF and SIGs, this can be obtained by running \code{db.preload}.
-#' @param z_col character, column name in \code{DE}, \code{DA} that contains the Z statistics. Default is 'Z-statistics'.
-#' @param display_col character,column name in \code{DE}, \code{DA} to be kept in the master table. Default is c('logFC','P.Value').
-#' @param column_order_stratey character, choose from 'type' and 'comp'. Default is 'type'.
-#' @return a data.frame that contains the information for all tested drivers.
-#' The column "originalID" and "originalID_label" contain the ID same with the original dataset.
+#' @param use_comp a vector of characters, the name of multiple comparisons. It will be used to name the columns of master table.
+#' @param DE list, a list of DE comparisons, each comparison is a data.frame. The element name in the list must contain the name in \code{use_comp}.
+#' @param DA list, a list of DA comparisons, each comparison is a data.frame. The element name in the list must contain the name in \code{use_comp}.
+#' @param network list, a driver-to-target list. The names of the list elements are drivers. Each element is a data frame, usually contains three columns.
+#' "target", target gene names; "MI", mutual information; "spearman", spearman correlation coefficient.
+#' It is highly suggested to follow the NetBID2 pipeline, and the \code{TF_network} could be generated by \code{get_net2target_list} and \code{get.SJAracne.network}.
+#' @param main_id_type character, the type of driver's ID. It comes from th attribute name in biomaRt package.
+#' Such as "ensembl_gene_id", "ensembl_gene_id_version", "ensembl_transcript_id", "ensembl_transcript_id_version" or "refseq_mrna".
+#' For details, user can call \code{listAttributes()} to display all available attributes in the selected dataset.
+#' @param transfer_tab data.frame, the data frame for ID conversion. This can be obtained by calling \code{get_IDtransfer}.
+#' If NULL and \code{main_id_type} is not in the column names of \code{tf_sigs}, it will use the conversion table within the function.
+#' Default is NULL.
+#' @param tf_sigs list, contains all the detailed information of TF and Sig. Users can call \code{db.preload} for access.
+#' @param z_col character, name of the column in \code{DE} and \code{DA} contains the Z statistics. Default is "Z-statistics".
+#' @param display_col character, name of the column in \code{DE} and \code{DA} need to be kept in the master table. Default is c("logFC","P.Value").
+#' @param column_order_stratey character, users can choose between "type" and "comp". Default is "type".
+#' @return Return a data frame contains the mega information of all tested drivers.
+#' The column "originalID" and "originalID_label" is the same ID as from the original dataset.
 #' @examples
 #' analysis.par <- list()
 #' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
@@ -2317,25 +2305,28 @@ generate.masterTable <- function(use_comp=NULL,DE=NULL,DA=NULL,
   return(ms_tab)
 }
 
-#' Output master table to excel files.
+#' Save the Master Table into Excel File
 #'
-#' \code{out2excel} is a function to output dataframe into an excel file, mainly for output the master table generated by \code{generate.masterTable}.
+#' \code{out2excel} is a function can save data frame as Excel File. This is mainly for the output of master table generated by \code{generate.masterTable}.
 #'
-#' @param all_ms_tab list or dataframe, if dataframe, it is the master table generated by \code{generate.masterTable}.
-#' If it is a list, each item in list could be a dataframe containing the master table.
-#' The name of the list will be the sheet name in the excel file.
-#' @param out.xlsx character, file name for the output excel.
-#' @param mark_gene list, list of marker genes, additional info to add in the master table.The name of the list is the name for the mark group.
-#' @param mark_col character, the color used to label the marker genes. If NULL, will use \code{get.class.color} to get the colors.
-#' @param mark_strategy character, choose from 'color','add_column'. 'Color' means the mark_gene will be displayed by its background color;
-#' 'add_column' means the mark_gene will be displayed in separate columns with content TRUE/FALSE indicating whether the genes belong to each mark group.
-#' @param workbook_name character, workbook name for the output excel. Default is 'ms_tab'.
-#' @param only_z_sheet logical, if TRUE will generate a separate sheet only contain Z related columns in DA/DE. Default is FALSE.
-#' @param z_column character, the column name that contain the Z-statistics. If NULL, will find columns start with "Z.".
+#' @param all_ms_tab list or data.frame, if data.frame, it is generated by \code{generate.masterTable}.
+#' If list, each list element is data.frame/master table.
+#' The name of the list element will be the sheet name in the excel file.
+#' @param out.xlsx character, path and file name of the output Excel file.
+#' @param mark_gene list, list of marker genes. The name of the list element is the marked group name. Each element is a vector of marker genes.
+#' This is optional, just to add additional information to the file.
+#' @param mark_col character, the color to mark the marker genes. If NULL, will use \code{get.class.color} to get the colors.
+#' @param mark_strategy character, users can choose between "color" and "add_column".
+#' "Color" means the mark_gene will be marked by filling its background color;
+#' "add_column" means the mark_gene will be displayed in a separate column with TRUE/FALSE, indicating whether the gene belongs to a mark group or not.
+#' @param workbook_name character, name of the workbook for the output Excel. Default is "ms_tab".
+#' @param only_z_sheet logical, if TRUE, will create a separate sheet only contains Z-statistics related columns from DA/DE analysis.
+#' Default is FALSE.
+#' @param z_column character, name of the columns contain Z-statistics. If NULL, find column names start with "Z.".
 #' Default is NULL.
-#' @param sig_thre numeric, threshold for the Z-statistics, values passed the threshold will be marked by the color automatically generated by \code{z2col}.
+#' @param sig_thre numeric, threshold for the Z-statistics. Z values passed the threshold will be colored. The color scale is defined by \code{z2col}.
 #' Default is 1.64.
-#' @return logical value indicating whether the file has been sucessfully generated or not.
+#' @return Return a logical value. If TRUE, the Excel file has been generated successfully.
 #' @examples
 #' \dontrun{
 #' analysis.par <- list()
@@ -2454,22 +2445,25 @@ out2excel <- function(all_ms_tab,out.xlsx,
   ##
 }
 
-#' Load MSigDB for NetBID2 into R workspace.
+#' Load MSigDB Database into R Workspace
 #'
-#' \code{gs.preload} will load two variables into R workspace, the list for gene set to genes (all_gs2gene)
-#'  and a dataframe (all_gs2gene_info) for detailed description for gene sets.
+#' \code{gs.preload} downloads data from MSigDB and stores it into two variables in R workspace, \code{all_gs2gene} and \code{all_gs2gene_info}.
+#' \code{all_gs2gene} is a list object with elements of gene sets collections.
+#' \code{all_gs2gene_info} is a data.frame contains the description of each gene sets.
 #'
-#' This is a pre-processing function for NetBID2 advanced analysis, user only need to input the species name (e.g Homo sapiens, Mus musculus).
-#' The function could automatically download information from MSigDB by the functions in \code{msigdbr} and save into RData under the db/ directory
-#' with specified species name.
+#' This is a pre-processing function for NetBID2 advanced analysis. User only need to input the species name (e.g. "Homo sapiens", "Mus musculus").
+#' It will call \code{msigdbr} to download data from MSigDB and save it as RData under the \code{db/} directory with species name.
 #'
-#' @param use_spe character, input the species name (e.g 'Homo sapiens', 'Mus musculus'). Full list of available species name could be found by \code{msigdbr_show_species()}.
-#' Default is 'Homo sapiens'
-#' @param update logical,whether to update if previous RData has been generated, default FALSE
-#' @param main.dir character, main file path for NetBID2, if NULL, will set to system.file(package = "NetBID2"). Default is NULL.
-#' @param db.dir character, file path for saving the RData, default is \code{db} directory under \code{main.dir} when setting for \code{main.dir}.
+#' @param use_spe character, name of interested species (e.g. "Homo sapiens", "Mus musculus").
+#' Users can call \code{msigdbr_show_species()} to access the full list of available species names.
+#' Default is "Homo sapiens".
+#' @param update logical, if TRUE, the previous loaded RData will be updated. Default is FALSE.
+#' @param main.dir character, the main file path of user's NetBID2 project.
+#' If NULL, will be set to \code{system.file(package = "NetBID2")}. Default is NULL.
+#' @param db.dir character, the file path to save the RData. Default is \code{db} directory under the \code{main.dir}, if one has a \code{main.dir}.
 #'
-#' @return Reture TRUE if success and FALSE if not. Will load two variables into R workspace, all_gs2gene and all_gs2gene_info
+#' @return Reture a logical value. If TRUE, MsigDB database is loaded successfully, with \code{all_gs2gene} and \code{all_gs2gene_info} created
+#' in the workspace.
 #'
 #' @examples
 #' gs.preload(use_spe='Homo sapiens',update=FALSE)
@@ -2550,19 +2544,22 @@ gs.preload <- function(use_spe='Homo sapiens',update=FALSE,
 
 ######################################################### visualization functions
 ## simple functions to get info
-#' Generate a vector for sample category.
+#' Create a vector of each sample's selected phenotye descriptive information.
 #'
-#' \code{get_obs_label} will generate a vector for sample categories with names to the vector representing the sample name.
+#' \code{get_obs_label} creates a vector of each sample's selected phenotype descriptive information.
+#' This is a helper function for data visualization.
 #'
-#' This is a simple function to generate sample category vector from a data.frame.
-#' Mainly used for input preparation in the visualization plots.
-#'
-#' @param phe_info data.frame, phenotype dataframe for the samples with sample names in rownames, e.g from \code{pData(eset)}.
-#' @param use_col a vector of numeric or character, the column index or column name for extraction to get the sample category vector.
-#' @param collapse character, character string to separate the results when the length use_col is more than 1. default is "|".
+#' @param phe_info data.frame, the phenotype data of the samples.
+#' It is a data frame that can store any number of descriptive columns (covariates) for each sample row.
+#' To get the phenotype data, using the accessor function \code{pData}.
+#' @param use_col a vector of numerics or characters.
+#' Users can select the interested descriptive column(s) by calling index or name of the column(s).
+#' @param collapse character, an optional character string to separate the results when the length
+#' of \code{use_col} is more than 1. Not NA_character. Default is "|".
 #'
 #' @return
-#' Will return a vector for sample categories with names to the vector representing the sample name.
+#' Return a vector of selected phenotype descriptive information (covariates) for each sample.
+#' Vector name is the sample name.
 
 #' @examples
 #' analysis.par <- list()
@@ -2583,12 +2580,14 @@ get_obs_label <- function(phe_info,use_col,collapse='|'){
   obs_label
 }
 
-#' Get interested groups from the pData of an ExpressionSet object.
+#' Get interested phenotype groups from pData slot of the ExpressionSet object.
 #'
-#' \code{get_int_group} is a simple function to extract columns with unique sample feature ranges from 2 to sample size-1.
+#' \code{get_int_group} is a function to extract interested phenotype groups from the ExpressionSet object
+#' with 'cluster-meaningful' sample features.
 #'
-#' @param eset, an ExpressionSet object, the input object for analysis.
-#' @return a vector of characters, the column names which could be used for sample cluster analysis
+#' @param eset, an ExpressionSet object.
+#' @return Return a vector of phenotype groups which could be used for sample cluster analysis.
+#'
 #' @examples
 #' network.par <- list()
 #' network.par$out.dir.DATA <- system.file('demo1','network/DATA/',package = "NetBID2")
@@ -2602,15 +2601,16 @@ get_int_group <- function(eset){
   return(intgroup)
 }
 
-#' Get Score between predicted label and observed label.
+#' Get Score to Measure Similarity Between Observed Classification and Predicted Classification.
 #'
-#' \code{get_clustComp} is a function to compare the predicted label and observed label and return the score.
+#' \code{get_clustComp} calculates a score to measure the similarity between two classifications.
 #'
-#' @param pred_label a vector of characters, the predicted label.
-#' @param obs_label a vector of characters, the observed label
-#' @param strategy character, the strategy to compare with labels,
-#' choose from 'ARI (adjusted rand index)', 'NMI (normalized mutual information)', 'Jaccard'. Default is 'ARI'.
-#' @return score for the comparison
+#' @param pred_label a vector of characters, the predicted classification labels.
+#' @param obs_label a vector of characters, the observed classification labels.
+#' @param strategy character, the method applied to calculate the score.
+#' Users can choose "ARI (adjusted rand index)", "NMI (normalized mutual information)" or "Jaccard".
+#' Default is "ARI".
+#' @return Return a score for the measurement of similarity.
 #' @examples
 #' obs_label <- c('A','A','A','B','B','C','D')
 #' pred_label  <- c(1,1,1,1,2,2,2)
@@ -2654,22 +2654,33 @@ get_jac <- function(pred_label, obs_label) {
   return(jac1)
 }
 
-#' Draw the cluster comparison between predicted label and observed label.
+#' Visualize Each Sample's Observed Label vs. Predicted Label in Table
 #'
-#' \code{draw.clustComp} is a function to draw the comparison between the predicted label and observed label.
+#' \code{draw.clustComp} draws a table to show each sample's observed label vs. its predicted label.
+#' Each row represents an observed label (e.g. one subgroup of disease), each column represents the predicted label created by classification (K-means).
 #'
-#' @param pred_label a vector of characters, the predicted label.
-#' @param obs_label a vector of characters, the observed label
-#' @param strategy character, the strategy to compare with labels,
-#' choose from 'ARI (adjusted rand index)', 'NMI (normalized mutual information)', 'Jaccard'. Default is 'ARI'.
-#' @param use_col logical, whether or not to use color in the plot. Default is TRUE.
-#' @param low_K integer, the lowest number to display on the figures. Number smaller than this will directly display the sample name.
-#' Default is 5
-#' @param highlight_clust a vector of characters, the cluster need to be highlighted on the plot.
-#' @param main character, the title for the plot.
-#' @param clust_cex numeric, cex for the cluster label. Default is 1
-#' @param outlier_cex numeric, cex for the sample names. Default is 0.3
-#' @return a matrix for the number in the plot
+#' The table provides more details about the side-by-side PCA biplot created by \code{draw.pca.kmeans}.
+#' The purpose is to find if any abnormal sample (outlier) exists. The darker the table cell is,
+#' the more samples are gathered in the corresponding label.
+#'
+#' @param pred_label a vector of characters, the predicted labels created by classification (K-means).
+#' @param obs_label a vector of characters, the observed labels annotated by phenotype data.
+#' @param strategy character, method to quantify the similarity between predicted labels vs. observed labels.
+#' Users can choose from "ARI (adjusted rand index)", "NMI (normalized mutual information)" and "Jaccard".
+#' Default is "ARI".
+#' @param use_col logical, If TRUE, the table will be colored. The more sample gathered in one table cell, the darker shade it has.
+#' Default is TRUE.
+#' @param low_K integer, a threshold of sample number to be shown in a single cell.
+#' If too many samples gathered in a single table cell, it will be challenging for the eyes.
+#' By setting the value of this threshold, if the number of samples gathered in one table cell exceeded the threshold,
+#' only the number will be shown. Otherwise, all samples' names will be listed.
+#' Default is 5.
+#' @param highlight_clust a vector of characters, the predicted label need to be highlighted in the figure.
+#' @param main character, an overall title for the plot.
+#' @param clust_cex numeric, text size for the predicted label (column names). Default is 1.
+#' @param outlier_cex numeric, text size for the observed label (row names). Default is 0.3.
+#' @return Return a matrix of integers and a table for visualization. Rows are predicted label, columns are observed label.
+#' Integer is the number of samples gathered in the corresponding label.
 #' @examples
 #' network.par <- list()
 #' network.par$out.dir.DATA <- system.file('demo1','network/DATA/',package = "NetBID2")
@@ -2749,18 +2760,18 @@ draw.clustComp <- function(pred_label, obs_label,strategy='ARI',
 }
 
 
-#' Get the color for the input Z statistics.
+#' Set Color Scale for Z Statistics Value
 #'
-#' \code{z2col} is a function to transfer the input Z statistics to a color bar.
+#' \code{z2col} is a helper function in \code{out2excel}. It defines the color scale of the Z statistics value.
 #'
-#' @param x a vector of numeric values. The input Z statistics.
+#' @param x a vector of numerics, a vector of Z statistics.
 #' @param n_len integer, number of unique colors. Default is 60.
-#' @param sig_thre numeric, the threshold for significance (absolute Z statistics), values do not pass the threshold will be colored in 'white'.
-#' @param col_min_thre numeric, the threshold for the lowest values used to generate the color bar. Default is 0.01.
-#' @param col_max_thre numeric, the threshold for the maximum values used to generate the color bar. Default is 3.
-#' @param blue_col a vector of characters, the blue colors used for the negative values in Z statistics. Default is brewer.pal(9,'Set1')[2].
-#' @param red_col a vector of characters, the red lors used for the negative values in Z statistics. Default is brewer.pal(9,'Set1')[1].
-#' @return a vector of color characters
+#' @param sig_thre numeric, the threshold for significance (absolute value of Z statistics). Z values failed to pass the threshold will be colored "white".
+#' @param col_min_thre numeric, the lower threshold for the color bar value. Default is 0.01.
+#' @param col_max_thre numeric, the upper threshold for the color bar value. Default is 3.
+#' @param blue_col a vector of characters, the blue colors used to show the negative Z values. Default is brewer.pal(9,'Set1')[2].
+#' @param red_col a vector of characters, the red colors used to show positive Z values. Default is brewer.pal(9,'Set1')[1].
+#' @return Return a vector of color codes.
 #' @examples
 #' t1 <- sort(rnorm(mean=0,sd=2,n=100))
 #' image(as.matrix(t1),col=z2col(t1))
@@ -2795,20 +2806,16 @@ z2col <- function(x,n_len=60,sig_thre=0.01,col_min_thre=0.01,col_max_thre=3,
   x2
 }
 
-#' Generate a color vector for input character.
+#' Create Color Codes for a Vector of Characters
 #'
-#' \code{get.class.color} will generate a vector of colors for input character.
+#' \code{get.class.color} creates a vector of color codes for the input character vector. This is a helper function to assign nice looking colors for better visualization.
 #'
-#' This is a simple function to generate a vector of colors for input characters.
-#' Users could define some of the colors for part of the inputs.
+#' @param x a vector of characters, names or labels.
+#' @param use_color a vector of color codes, colors to be assigned to each member of \code{x}. Default is brewer.pal(12, 'Set3').
+#' @param pre_define a vector of characters, pre-defined color codes for a certain input (e.g. c("blue", "blue", "red") with names c("A", "A", "B")). Default is NULL.
+#' @param use_inner logical, if TRUE, the \code{pre_define} color codes will be used. Default is TRUE.
 #'
-#' @param x a vector of characters.
-#' @param use_color a vector of characters, color bar used to generate the color vector for the input.Default is brewer.pal(12, 'Set3').
-#' @param pre_define a vector of characters, pre-defined color code for some of the input characters. Default is NULL.
-#' @param use_inner logical, indicating whether to use inner pre-defined color code for some characters. Default is TRUE.
-#'
-#' @return
-#' Will return a vector of colors with names the input vector characters.
+#' @return Return a vector of color codes, with input character vector as names.
 
 #' @examples
 #' get.class.color(c('ClassA','ClassB','ClassC','ClassA','ClassC','ClassC'))
@@ -2938,21 +2945,20 @@ boxtext <- function(x, y, labels = NA, col.text = NULL, col.bg = NA,
   }
 }
 
-#' Draw 2D dimension plot for sample cluster visualization.
+#' Visualize Sample Clustering Result in 2D Plot
 #'
-#' \code{draw.2D} is a function to draw 2D dimension plot for sample cluster visualization.
+#' \code{draw.2D} creats a 2D plot to visualize the sample clustering result.
 #'
-#' @param X a vector of numeric values, the first dimension values.
-#' @param Y a vector of numeric values, the second dimension values.
-#' @param class_label a vector of characters, with the names are the samples (optional) and the values are the sample cluster label.
-#' The function will treat that the order are the same for X,Y and class_label.
-#' @param xlab character, the label for x-axis.
-#' @param ylab character, the label for y-axis.
-#' @param legend_cex numeric, the cex for the legend.
-#' @param main character, the title for the plot.
-#' @param point_cex numeric, the cex for the points.
+#' @param X a vector of numerics, the x coordinates of points in the plot. If user would like to create a PCA biplot, this parameter should be the first component.
+#' @param Y a vector of numerics, the y coordinates of points in the plot. If user would like to create a PCA biplot, this parameter should be the second component.
+#' @param class_label a vector of characters, labels or categories of samples. The vector name should be sample names.
+#' @param xlab character, the label for x-axis. Default is "PC1".
+#' @param ylab character, the label for y-axis. Default is "PC2".
+#' @param legend_cex numeric, giving the amount by which the text of legend should be magnified relative to the default. Default is 0.8.
+#' @param main character, an overall title for the plot. Default is "".
+#' @param point_cex numeric, giving the amount by which the size of the data points should be magnified relative to the default. Default is 1.
 #'
-#' @return logical value indicating whether the plot has been successfully generated
+#' @return Return a logical value. If TRUE, the plot has been created successfully.
 #' @examples
 #' mat1 <- matrix(rnorm(2000,mean=0,sd=1),nrow=100,ncol=20)
 #' rownames(mat1) <- paste0('Gene',1:nrow(mat1))
@@ -2981,24 +2987,23 @@ draw.2D <- function(X,Y,class_label,xlab='PC1',ylab='PC2',legend_cex=0.8,main=""
   return(TRUE)
 }
 
-#' Draw 2D dimension plot for sample cluster visualization with user-defined text on each point.
+#' Visualize Sample Clustering Result in 2D Plot with Sample Names
 #'
-#' \code{draw.2D.text} is a function to draw 2D dimension plot for sample cluster visualization.
+#' \code{draw.2D.text} creates a 2D plot with sample names labeled, to visualize the sample clustering result.
 #'
-#' @param X a vector of numeric values, the first dimension values.
-#' @param Y a vector of numeric values, the second dimension values.
-#' @param class_label a vector of characters, with the names are the samples (optional) and the values are the sample cluster label.
-#' The function will treat that the order are the same for X,Y and class_label.
-#' @param class_text a vector of characters, the user-defined text on each point.
-#' If NULL, will use the names of class_label. Default is NULL.
-#' @param xlab character, the label for x-axis.
-#' @param ylab character, the label for y-axis.
-#' @param legend_cex numeric, the cex for the legend.
-#' @param main character, the title for the plot.
-#' @param point_cex numeric, the cex for the points.
-#' @param text_cex numeric, the cex for the points.
+#' @param X a vector of numerics, the x coordinates of points in the plot. If user would like to create a PCA biplot, this parameter should be the first component.
+#' @param Y a vector of numerics, the y coordinates of points in the plot. If user would like to create a PCA biplot, this parameter should be the second component.
+#' @param class_label a vector of characters, labels or categories of samples. The vector name should be sample names.
+#' @param xlab character, the label for x-axis. Default is "PC1".
+#' @param ylab character, the label for y-axis. Default is "PC2".
+#' @param legend_cex numeric, giving the amount by which the text of legend should be magnified relative to the default. Default is 0.8.
+#' @param main character, an overall title for the plot. Default is "".
+#' @param point_cex numeric, giving the amount by which the size of the data points should be magnified relative to the default. Default is 1.
+#' @param class_text a vector of characters, the user-defined sample names to label each data points in the plot.
+#' If NULL, will use the names of \code{class_label}. Default is NULL.
+#' @param text_cex numeric, giving the amount by which the text of \code{class_text} should be magnified relative to the default. Default is NULL.
 #'
-#' @return logical value indicating whether the plot has been successfully generated
+#' @return Return a logical value. If TRUE, the plot has been created successfully.
 #' @examples
 #' mat1 <- matrix(rnorm(2000,mean=0,sd=1),nrow=100,ncol=20)
 #' rownames(mat1) <- paste0('Gene',1:nrow(mat1))
@@ -3037,26 +3042,25 @@ draw.2D.text <- function(X,Y,class_label,class_text=NULL,xlab='PC1',ylab='PC2',l
   return(TRUE)
 }
 
-#' Draw 3D dimension plot for sample cluster visualization.
+#' Visualize Sample Clustering Result in 3D Plot
 #'
-#' \code{draw.3D} is a function to draw 3D dimension plot for sample cluster visualization.
-#'
-#' @param X a vector of numeric values, the first dimension values.
-#' @param Y a vector of numeric values, the second dimension values.
-#' @param Z a vector of numeric values, the third dimension values.
-#' @param class_label a vector of characters, with the names are the samples (optional) and the values are the sample cluster label.
-#' The function will treat that the order are the same for X,Y and class_label.
-#' @param xlab character, the label for x-axis.
-#' @param ylab character, the label for y-axis.
-#' @param zlab character, the label for z-axis.
-#' @param legend_cex numeric, the cex for the legend.
-#' @param main character, the title for the plot.
-#' @param point_cex numeric, the cex for the points.
-#' @param legend_pos character, the position to put the legend. Default is 'topright'.
-#' @param legend_ncol integer, number of columns used to display the legend. Default is 1.
+#' \code{draw.3D} creates a 3D plot to visualize the sample clustering result.
+
+#' @param X a vector of numerics, the x coordinates of points in the plot. If user would like to create a PCA biplot, this parameter should be the first component.
+#' @param Y a vector of numerics, the y coordinates of points in the plot. If user would like to create a PCA biplot, this parameter should be the second component.
+#' @param Z a vector of numerics, the z coordinates of points in the plot. If user would like to create a PCA biplot, this parameter should be the third component.
+#' @param class_label a vector of characters, labels or categories of samples. The vector name should be sample names.
+#' @param xlab character, the label for x-axis. Default is "PC1".
+#' @param ylab character, the label for y-axis. Default is "PC2".
+#' @param zlab character, the label for z-axis. Default is "PC3".
+#' @param legend_cex numeric, giving the amount by which the text of legend should be magnified relative to the default. Default is 0.8.
+#' @param main character, an overall title for the plot. Default is "".
+#' @param point_cex numeric, giving the amount by which the size of the data points should be magnified relative to the default. Default is 1.
+#' @param legend_pos character, the position of legend. Default is "topright".
+#' @param legend_ncol integer, number of columns of legend. Default is 1.
 #' @param ... other paramters used in \code{scatter3D}.
 #'
-#' @return logical value indicating whether the plot has been successfully generated
+#' @return Return a logical value. If TRUE, the plot has been created successfully.
 #' @examples
 #' mat1 <- matrix(rnorm(2000,mean=0,sd=1),nrow=100,ncol=20)
 #' rownames(mat1) <- paste0('Gene',1:nrow(mat1))
@@ -3091,21 +3095,20 @@ draw.3D <- function(X,Y,Z,class_label,xlab='PC1',ylab='PC2',zlab='PC3',
   return(TRUE)
 }
 
-#' Draw 2D dimension plot with ellipse for sample cluster visualization.
+#' Visualize Sample Clustering Result in 2D Plot with Ellipse
 #'
-#' \code{draw.2D.ellipse} is a function to draw 2D dimension plot with ellipse to cover the samples in the sample cluster for visualization.
+#' \code{draw.2D.ellipse} creates a 2D plot with an ellipse drawn around each cluster to visualize the sample clustering result.
 #'
-#' @param X a vector of numeric values, the first dimension values.
-#' @param Y a vector of numeric values, the second dimension values.
-#' @param class_label a vector of characters, with the names are the samples (optional) and the values are the sample cluster label.
-#' The function will treat that the order are the same for X,Y and class_label.
-#' @param xlab character, the label for x-axis.
-#' @param ylab character, the label for y-axis.
-#' @param legend_cex numeric, the cex for the legend.
-#' @param main character, the title for the plot.
-#' @param point_cex numeric, the cex for the points.
+#' @param X a vector of numerics, the x coordinates of points in the plot. If user would like to creat a PCA biplot, this parameter should be the first component.
+#' @param Y a vector of numerics, the y coordinates of points in the plot. If user would like to creat a PCA biplot, this parameter should be the second component.
+#' @param class_label a vector of characters, labels or categories of samples. The vector name should be sample names.
+#' @param xlab character, the label for x-axis. Default is "PC1".
+#' @param ylab character, the label for y-axis. Default is "PC2".
+#' @param legend_cex numeric, giving the amount by which the text of legend should be magnified relative to the default. Default is 0.8.
+#' @param main character, an overall title for the plot. Default is "".
+#' @param point_cex numeric, giving the amount by which the size of the data points should be magnified relative to the default. Default is 1.
 #'
-#' @return logical value indicating whether the plot has been successfully generated
+#' @return Return a logical value. If TRUE, the plot has been created successfully.
 #' @examples
 #' mat1 <- matrix(rnorm(2000,mean=0,sd=1),nrow=100,ncol=20)
 #' rownames(mat1) <- paste0('Gene',1:nrow(mat1))
@@ -3181,24 +3184,22 @@ draw.2D.ellipse <- function(X,Y,class_label,xlab='PC1',ylab='PC2',legend_cex=0.8
   return(TRUE)
 }
 
-#' QC plot for ExpressionSet class object.
+#' QC plots for ExpressionSet class object.
 #'
-#' \code{draw.eset.QC} is a function to draw the basic QC plots for an ExpressionSet class object.
-#' The QC plots include heatmap, pca, density and meansd.
+#' \code{draw.eset.QC} is a function to draw a set of plots for quality control analysis.
+#' 4 types of plots will be created, including heatmap, pca, density and meansd.
 #'
-#' @param eset ExpressionSet class, the input ExpressionSet class object to be plot.
-#' @param outdir character, output directory to save the figures.
-#' Suggest to set \code{network.par$out.dir.QC} or \code{analysis.par$out.dir.QC}
-#' @param do.logtransform logical, whether to do log transformation before drawing the QC plots. Default is FALSE.
-#' @param intgroup a vector of characters, the interested groups from the phenotype information of the eset to be used in plot.
-#' If NULL, will automatcially extract all possible groups by \code{get_int_group}.
+#' @param eset ExpressionSet class, quality control analysis target.
+#' @param outdir character, the directory path for saving output files.
+#' @param do.logtransform logical, if TRUE, the log transformation will be performed on the gene expression value. Default is FALSE.
+#' @param intgroup a vector of characters, the interested phenotype groups from the ExpressionSet.
+#' If NULL, it will automatcially extract all possible groups by \code{get_int_group}.
 #' Default is NULL.
-#' @param prefix character, the prefix for the QC figure name.Default is "".
+#' @param prefix character, the prefix for the QC figures' name. Default is "".
 #' @param choose_plot a vector of characters,
-#' choose one or multiple from 'heatmap', 'pca', 'density', 'meansd.'
-#' Default is 'heatmap','pca','density','meansd'.
-#' @param generate_html logical, whether to generate html file for the report.
-#' If TRUE, will generate a html file by rmarkdown, otherwise will generate separate pdf files.
+#' choose one or many from 'heatmap', 'pca', 'density' and 'meansd' plots.
+#' Default is all.
+#' @param generate_html logical, if TRUE, it will generate a html file by R Markdown. Otherwise, it will generate separate PDF files.
 #' Default is TRUE.
 #' @examples
 #' \dontrun{
@@ -3264,7 +3265,7 @@ draw.eset.QC <- function(eset,outdir = '.',do.logtransform = FALSE,intgroup=NULL
     fp <- file.path(outdir, sprintf("%s%s.pdf", prefix, 'heatmap'))
     pdf(fp, width = 12, height = 9)
     par(mar = c(6, 6, 6, 6))
-    m <- dist2(use_mat)
+    m <- dist2.mod(use_mat)
     dend <- as.dendrogram(hclust(as.dist(m), method = "single"))
     ord <- order.dendrogram(dend)
     m <- m[ord, ord]
@@ -3303,7 +3304,7 @@ draw.eset.QC <- function(eset,outdir = '.',do.logtransform = FALSE,intgroup=NULL
     y1 <- c(ry*sin(ag*pi/180),-ry*sin(ag*pi/180),-ry,-ry*sin(ag*pi/180),+ry*sin(ag*pi/180),ry,ry*sin(ag*pi/180))
     #print(x1/par.pos2inch()[1]);print(y1/par.pos2inch()[2])
     simplehexbin <- function(x,y,r,col){
-       polygon(x=x+x1/par.pos2inch()[1],y=y+y1/par.pos2inch()[2],col=col,border = 'white',lwd=0.1)
+      polygon(x=x+x1/par.pos2inch()[1],y=y+y1/par.pos2inch()[2],col=col,border = 'white',lwd=0.1)
     }
     mm <- max(as.numeric(mat))
     cc <- colorRampPalette(brewer.pal(9,'Blues')[c(2:9)])(mm)
@@ -3360,32 +3361,40 @@ draw.eset.QC <- function(eset,outdir = '.',do.logtransform = FALSE,intgroup=NULL
   return(TRUE)
 }
 
-#' Draw the cluster plot by PCA (visulization algorithm) and Kmeans (cluster algorithm).
+#' Visualize the K-means Clustering Result by PCA Biplot
 #'
-#' \code{draw.pca.kmeans} is a visualization function to draw the cluster for the input data matrix.
+#' \code{draw.pca.kmeans} is a data visualization function to show the K-means clustering result of a data matrix.
+#' A PCA biplot is generated to visualize the clustering. Two biplots side-by-side will show the comparison
+#' between real observation labels (left) and the K-means predicted labels (right).
 #'
-#' This function mainly aims for the visulization of sample clusters.
-#' The input is the expression matrix for each row a gene/transcript/probe and each column a sample.
-#' User need to input the real observation label for samples and this function will choose the best K by compared with predicted label and the observed label.
-#' The output figure contains two sub-figures, left is labelled by the real observartion label and right is labelled by the predicted label
-#' with comparison score (choose from ARI, NMI, Jaccard) shown above.
+#' This function is mainly used to check the sample clustering result, in aim to detect if any abnormal (outlier) sample(s) exsist.
+#' The input is a high-throughput expression matrix.
+#' Each row is a gene/transcript/probe and each column is a sample.
+#' Users need to provide the real observation label for each sample.
+#' A K-value yielding the optimal classification result will be used to generate the predicted labels.
+#' A comparision score (choose from ARI, NMI, Jaccard) will be calculated and shown in the figure.
 #'
-#' @param mat a numeric data matrix, the column (e.g sample) will be clustered by the features (e.g genes) in rows.
-#' @param all_k a vector of integers, the pre-defined K to evaluate.
-#' If NULL, will use all possible K. Default is NULL.
-#' @param obs_label a vector of characters, a vector for sample categories with names representing the sample name.
-#' @param legend_pos character, position for the legend displayed on the plot. Default is 'topleft'.
-#' @param legend_cex numeric, cex for the legend displayed on the plot. Default is 0.8.
-#' @param plot_type character, the type for the plot, choose from '2D', '2D.ellipse', '2D.text' and '3D'. Default is '2D.ellipse'.
-#' @param point_cex numeric, cex for the point in the plot. Default is 1.
-#' @param kmeans_strategy character, the strategy to run the kmeans algorith, choose from 'basic' and 'consensus',
-#' here the consensus kmeans is performed by functions in \code{ConsensusClusterPlus}. Default is 'basic'.
-#' @param choose_k_strategy character, the strategy to choose the best K,
-#' choose from 'ARI (adjusted rand index)', 'NMI (normalized mutual information)', 'Jaccard'. Default is 'ARI'.
-#' @param return_type character, the strategy to return the results, choose from 'optimal' and 'all'.
-#' If choose 'all', cluster results from all k in \code{all_k} will be returned.
-#' Default is 'optimal'.
-#' @return a vector of predicted label (if \code{return_type} is 'optimal') and a list of all possible K (if \code{return_type} is 'all')
+#' @param mat a numeric data matrix, the columns (e.g. sample) will be clustered using the feature (e.g. genes) rows.
+#' @param all_k a vector of integers, a pre-defined K value. K is the number of final clusters.
+#' If NULL, the function will try all possible K values. Default is NULL.
+#' @param obs_label a vector of characters, a vector describes each sample's selected phenotype information,
+#' using sample name as vector name. Can be obtained by calling \code{get_obs_label}.
+#' @param legend_pos character, position of the plot legend. Default is 'topleft'.
+#' @param legend_cex numeric, text size of the plot legend. Default is 0.8.
+#' @param plot_type character, plot type. Users can choose from "2D", "2D.ellipse", "2D.text" and "3D". Default is "2D.ellipse".
+#' @param point_cex numeric, size of the point in the plot. Default is 1.
+#' @param kmeans_strategy character, K-means clustering algorithm.
+#' Users can choose "basic" or "consensus". "consensus" is performed by \code{ConsensusClusterPlus}.
+#' Default is "basic".
+#' @param choose_k_strategy character, method to choose the K-value.
+#' Users can choose from "ARI (adjusted rand index)", "NMI (normalized mutual information)" and "Jaccard".
+#' Default is "ARI".
+#' @param return_type character, the type of result returned.
+#' Users can choose "optimal" or "all". "all", all the K-values in \code{all_k} will be returned.
+#' "optimal", only the K-value yielding the optimal classification result will be returned.
+#' Default is "optimal".
+#' @return Return a vector of predicted labels, if \code{return_type} is set to "optimal".
+#' Or a list of all possible K-values, if \code{return_type} is set to be "all".
 #' @examples
 #' network.par <- list()
 #' network.par$out.dir.DATA <- system.file('demo1','network/DATA/',package = "NetBID2")
@@ -3500,33 +3509,27 @@ draw.pca.kmeans <- function(mat=NULL,all_k=NULL,obs_label=NULL,legend_pos = 'top
   if(return_type=='all') return(all_k_res)
 }
 
-#' Draw the cluster plot by UMAP (visulization algorithm) and Kmeans (cluster algorithm).
+#' Draw Cluster Plot Using UMAP (visulization algorithm) and Kmeans (cluster algorithm).
 #'
-#' \code{draw.umap.kmeans} is a visualization function to draw the cluster for the input data matrix.
+#' \code{draw.umap.kmeans} is a function to visualize the cluster result for the input data matrix. It is mainly used for check sample clustering result.
+#' Warning, it is not suggested to use when sample size is small.
 #'
-#' This function mainly aims for the visulization of sample clusters.
-#' The input is the expression matrix for each row a gene/transcript/probe and each column a sample.
-#' User need to input the real observation label for samples and this function will choose the best K by compared with predicted label and the observed label.
-#' The output figure contains two sub-figures, left is labelled by the real observartion label and right is labelled by the predicted label
-#' with comparison score (choose from ARI, NMI, Jaccard) shown above.
-#' Not suggested when sample size is small.
-#'
-#' @param mat a numeric data matrix, the column (e.g sample) will be clustered by the features (e.g genes) in rows.
-#' @param all_k a vector of integers, the pre-defined K to evaluate.
-#' If NULL, will use all possible K. Default is NULL.
-#' @param obs_label a vector of characters, a vector for sample categories with names representing the sample name.
-#' @param legend_pos character, position for the legend displayed on the plot. Default is 'topleft'.
-#' @param legend_cex numeric, cex for the legend displayed on the plot. Default is 0.8.
-#' @param plot_type character, the type for the plot, choose from '2D', '2D.ellipse', '2D.text' and '3D'. Default is '2D.ellipse'.
-#' @param point_cex numeric, cex for the point in the plot. Default is 1.
-#' @param kmeans_strategy character, the strategy to run the kmeans algorith, choose from 'basic' and 'consensus',
-#' here the consensus kmeans is performed by functions in \code{ConsensusClusterPlus}. Default is 'basic'.
-#' @param choose_k_strategy character, the strategy to choose the best K,
-#' choose from 'ARI (adjusted rand index)', 'NMI (normalized mutual information)', 'Jaccard'. Default is 'ARI'.
-#' @param return_type character, the strategy to return the results, choose from 'optimal' and 'all'.
-#' If choose 'all', cluster results from all k in \code{all_k} will be returned.
-#' Default is 'optimal'.
-#' @return a vector of predicted label (if \code{return_type} is 'optimal') and a list of all possible K (if \code{return_type} is 'all')
+#' @param mat numeric matrix, the expression matrix. Rows are genes/features, columns are samples. Columns will be clustered based on row features.
+#' @param all_k a vector of integers, the pre-defined K-values. If NULL, will use all possible K. Default is NULL.
+#' @param obs_label a vector of characters, the observed sample labels or categories, name of the vector is sample names.
+#' @param legend_pos character, the legend position. Default is "topleft".
+#' @param legend_cex numeric, giving the amount by which the text of legend should be magnified relative to the default. Default is 0.8.
+#' @param plot_type character, type of the plot. Users can choose from "2D", "2D.ellipse", "2D.text" and "3D". Default is "2D.ellipse".
+#' @param point_cex numeric, giving the amount by which the size of the data points should be magnified relative to the default. Default is 1.
+#' @param kmeans_strategy character, K-means clustering algorithm. Users can choose "basic" or "consensus".
+#' "consensus" is performed by \code{ConsensusClusterPlus}. Default is "basic".
+#' @param choose_k_strategy character, method to choose the K-value. Users can choose from "ARI (adjusted rand index)", "NMI (normalized mutual information)" and "Jaccard".
+#' Default is "ARI".
+#' @param return_type character, the type of result returned. Users can choose "optimal" or "all".
+#' "all", all the K-values in all_k will be returned.
+#' "optimal", only the K-value yielding the optimal classification result will be returned.
+#' Default is "optimal".
+#' @return Return a vector of the predicted label (if \code{return_type} is "optimal") and a list of all possible K-values (if \code{return_type} is "all").
 #' @examples
 #' network.par <- list()
 #' network.par$out.dir.DATA <- system.file('demo1','network/DATA/',package = "NetBID2")
@@ -3624,7 +3627,7 @@ draw.umap.kmeans <- function(mat=NULL,all_k=NULL,obs_label=NULL,
 # return cluster results, RCSI score, P-value
 # plot==TRUE, plot RSCI+BETA_P
 # get_consensus_cluster
-get_consensus_cluster <-function(mat,all_k=2:12,clusterAlg="km",plot=FALSE,...)
+get_consensus_cluster <-function(mat,all_k=2:12,clusterAlg="km",plot='png',...)
 {
   maxK <- max(all_k)
   res1 <- ConsensusClusterPlus(mat,maxK=maxK,clusterAlg=clusterAlg,plot=plot,...)
@@ -3638,33 +3641,29 @@ get_consensus_cluster <-function(mat,all_k=2:12,clusterAlg="km",plot=FALSE,...)
 }
 
 
-#' Draw the cluster plot by MICA (cluster algorithm).
+#' Draw Cluster Plot Using MICA (cluster algorithm)
 #'
-#' \code{draw.MICA} is a visualization function to draw the cluster results for the MICA output.
-#'
-#' This function mainly aims for the visulization of sample clusters.
-#' The input is the MICA project information.
-#' User need to input the real observation label for samples and this function will choose the best K by compared with predicted label and the observed label.
-#' The output figure contains two sub-figures, left is labelled by the real observartion label and right is labelled by the predicted label
-#' with comparison score (choose from ARI, NMI, Jaccard) shown above.
-#' Not suggested when sample size is small.
+#' \code{draw.MICA} is a function to visualize the cluster result for the samples using MICA (mutual information based clustering analysis) algorithm.
+#' Users need to give the MICA project information (directory and name), and the samples real labels.
+#' MICA returns the K-value that yields the best clustering performance. Users can pick one comparison score to show in the plot, "ARI", "NMI" or "Jaccard".
+#' It is not suggested, when sample size is small.
 #'
 #' @param outdir character, the output directory for running MICA.
-#' @param prjname charater, the project name set for running MICA.
-#' @param all_k a vector of integers, the pre-defined K to evaluate.
+#' @param prjname charater, the project name for running MICA.
+#' @param all_k a vector of integers, the pre-defined K-values.
 #' If NULL, will use all possible K. Default is NULL.
-#' @param obs_label a vector of characters, a vector for sample categories with names representing the sample name.
-#' @param legend_pos character, position for the legend displayed on the plot. Default is 'topleft'.
-#' @param legend_cex numeric, cex for the legend displayed on the plot. Default is 0.8.
-#' @param plot_type character, the type for the plot, choose from '2D' or '2D.ellipse' or '3D'. Default is '2D.ellipse'.
-#' @param point_cex numeric, cex for the point in the plot. Default is 1.
-#' @param choose_k_strategy character, the strategy to choose the best K,
-#' choose from 'ARI (adjusted rand index)', 'NMI (normalized mutual information)', 'Jaccard'. Default is 'ARI'.
-#' @param visualization_type character,choose from 'tsne', 'umap' or 'mds'. Default is 'tsne'.
-#' @param return_type character, the strategy to return the results, choose from 'optimal' and 'all'.
-#' If choose 'all', cluster results from all k in \code{all_k} will be returned.
-#' Default is 'optimal'.
-#' @return a vector of predicted label (if \code{return_type} is 'optimal') and a list of all possible K (if \code{return_type} is 'all')
+#' @param obs_label a vector of characters, the observed sample labels or categories.
+#' @param legend_pos character, position of the legend in the plot. Default is "topleft".
+#' @param legend_cex numeric, giving the amount by which the text of legend should be magnified relative to the default. Default is 0.8.
+#' @param plot_type character, type of the plot. Users can choose from "2D", "2D.ellipse", "2D.text" and "3D". Default is "2D.ellipse".
+#' @param point_cex numeric, giving the amount by which the size of the data points should be magnified relative to the default. Default is 1.
+#' @param choose_k_strategy character, method to choose the K-value.
+#' Users can choose from "ARI (adjusted rand index)", "NMI (normalized mutual information)" and "Jaccard". Default is "ARI".
+#' @param visualization_type character, users can choose from "tsne", "umap" and "mds". Default is "tsne".
+#' @param return_type character, the type of result returned. Users can choose "optimal" or "all".
+#' "all", all the K-values in all_k will be returned.
+#' "optimal", only the K-value yielding the optimal classification result will be returned. Default is "optimal".
+#' @return Return a vector of the predicted label (if return_type is "optimal") and a list of all possible K- values (if return_type is "all").
 #' @export
 draw.MICA <- function(outdir=NULL,prjname=NULL,all_k=NULL,obs_label=NULL,
                       legend_pos = 'topleft',legend_cex = 0.8,
@@ -3768,33 +3767,34 @@ get_clustComp_MICA <- function(outdir, all_k, obs_label, prjname = NULL,strategy
   return(list(all_k_res=all_k_res,all_jac=all_jac))
 }
 
-#' Volcano plot for top DE (differentiated expressed) genes or DA (differentiated activity) drivers
+#' Draw Volcano Plot for Top DE (differentiated expressed) Genes or DA (differentiated activity) Drivers
 #'
-#' \code{draw.volcanoPlot} draw the volcano plot for top DE genes or DA drivers, could display the name of the top items in figures and will retrun the list of top items.
+#' \code{draw.volcanoPlot} draws the volcano plot to quickly identify DE genes or DA drivers with large fold change and significant P-value in large data sets.
+#' And return a data.frame of these highlighted genes/drivers.
 #'
-#' This plot function input the master table and draw the volcano plot by setting significant threshold for logFC and P-value.
+#' Top genes or drivers will be colored (blue for down-regulated and red for up-regulated) and labeled with their names.
+#' This function requires the input of master table and two thresholds of logFC and P-value.
 #'
-#' @param dat data.frame, prefer the formatted master table generated by \code{generate.masterTable}, if not, must contain the columns for the following required parameters.
-#' @param label_col character, the name of the column in \code{dat}, which contains the gene/driver label for display
-#' @param logFC_col character, the name of the column in \code{dat}, which contains the logFC value
-#' @param Pv_col character, the name of the column in \code{dat}, which contains the P-value
-#' @param logFC_thre numeric, cutoff value for the logFC. Genes or drivers with absolute logFC value higher than the cutoff are remained.Default is 1.5.
-#' @param Pv_thre numeric, cutoff value for the p-values. Genes or drivers with lower p-values are remained.Default is 0.01.
-#' @param show_plot logical, whether or not to draw the figure. Default is TRUE.
-#' @param xlab character, title for the X axis
-#' @param ylab character, title for the Y axis
-#' @param show_label logical, whether or not to display the genes or drivers passed the cutoff on the plot. Default is FALSE
-#' @param label_cex numeric, \code{cex} for the label displayed on the plot. Default is 0.5
-#' @param legend_cex numeric, \code{cex} for the legend displayed on the plot. Default is 0.7
-#' @param label_type character, the strategy for label display on the plot, by choosing 'origin' or 'distribute'. Default is 'distribute'.
-#' @param main character, \code{main} for the title on the plot.
-#' @param pdf_file character, file path for the pdf file to save the figure into pdf format.If NULL, will not generate pdf file. Default is NULL.
+#' @param dat data.frame, the master table created by function \code{generate.masterTable}. Or a table with columns of the following parameters.
+#' @param label_col character, the name of the column in \code{dat} contains gene/driver names.
+#' @param logFC_col character, the name of the column in \code{dat} contains logFC values.
+#' @param Pv_col character, the name of the column in \code{dat} contains P-values.
+#' @param logFC_thre numeric, the threshold of logFC. Genes or drivers with absolute logFC value higher than the threshold will be kept.
+#' Default is 1.5.
+#' @param Pv_thre numeric, the threshold of P-values. Genes or drivers with P-values lower than the threshold will be kept.
+#' Default is 0.01.
+#' @param show_plot logical, if TRUE, the plot will be shown in the plot pane. Default is TRUE.
+#' @param xlab character, a title for the X axis.
+#' @param ylab character, a title for the Y axis.
+#' @param show_label logical, if TRUE, labels of selected genes or drivers will be displayed in the plot. Default is FALSE.
+#' @param label_cex numeric, giving the amount by which the text of genes/drivers label should be magnified relative to the default. Default is 0.5.
+#' @param legend_cex numeric, giving the amount by which the text of legend should be magnified relative to the default. Default is 0.7.
+#' @param label_type character, users can choose between "origin" and "distribute". If "origin", all the labels will be displayed without location modification.
+#' If "distribute", location of labels will be rearranged to avoid overlap. Default is "distribute".
+#' @param main character, an overall title for the plot.
+#' @param pdf_file character, the path to save the plot as PDF file. If NULL, no PDF file will be created. Default is NULL.
 #'
-#' @return data.frame containing the significant genes or drivers with the following components:
-#'
-#' \item{label_col}{}
-#' \item{logFC_col}{}
-#' \item{Pv_col}{}
+#' @return Return a data.frame of selected significant genes or drivers, with columns contain \code{label_col}, \code{logFC_col} and \code{Pv_col}.
 #'
 #' @examples
 #' analysis.par <- list()
@@ -4018,27 +4018,37 @@ draw.combineDE <- function(DE_list=NULL,main_id=NULL,top_number=30,display_col='
   return(TRUE)
 }
 
-#' Plot for basic statistical display for NetBID.
+#' Create Plot to show Differential Expression and Differential Activity Analysis of Top Drivers
 #'
-#' \code{draw.NetBID} draw the basic statistical plot for NetBID results.
+#' \code{draw.NetBID} creates two side-by-side heatmaps to show the result of NetBID analysis.
+#' Both the differential expression analysis (the right heatmap) and differential activity analysis (the left heatmap) of top drivers are shown in the plot.
 #'
-#' @param DA_list list, a list of DA results.
-#' @param DE_list list, a list of DE results.
-#' @param main_id character, the main id for display in the figure, must be one of the name in DA_list
-#' If NULL, will use the first name. Default is NULL.
-#' @param top_number number for the top significant genes/drivers in the DA_list (with main_id) results to be displayed on the plot.
+#' @param DA_list list, contains the differential activity (DA) analysis result.
+#' @param DE_list list, contains the differential expression (DE) analysis result.
+#' @param main_id character, the top genes/drivers from which DA comparison group. Must be one of the names in \code{DA_list}.
+#' If NULL, the first element name of \code{DA_list} will be used. Default is NULL.
+#' @param top_number integer, the number of the top significant genes/drivers to be displayed in the plot.
 #' Default is 30.
-#' @param DA_display_col character, column names used to display in the DA part. Default is 'P.Value'.
-#' @param DE_display_col character, column names used to display in the DE part. Default is 'logFC'.
-#' @param z_col character, column names for Z statistics used for background color bar. Default is 'Z-statistics'.
-#' @param digit_num integer, number of digits to display on the plot. Default is 2.
-#' @param row_cex numeric, \code{cex} for the row labels displayed on the plot. Default is 1
-#' @param column_cex numeric, \code{cex} for the col labels displayed on the plot. Default is 1
-#' @param text_cex numeric, \code{cex} for the text displayed on the plot. Default is 1
-#' @param col_srt numeric, srt for the column labels. Default is 60.
-#' @param pdf_file character, file path for the pdf file to save the figure into pdf format.If NULL, will not generate pdf file. Default is NULL.
+#' @param DA_display_col character, which statistic column from NetBID analysis is to be used as the column of the left heatmap.
+#' Default is "P.Value".
+#' @param DE_display_col character, which statistic column from NetBID analysis is to be used as the column of the right heatmap.
+#' Default is "logFC".
+#' @param z_col character, which statistic column from NetBID analysis is to be used as the color scale of the heatmap.
+#' Default is "Z-statistics".
+#' @param digit_num integer, indicating the number of decimal places (round) or significant digits (signif) to be used.
+#' Default is 2.
+#' @param row_cex numeric, giving the amount by which the text of row names should be magnified relative to the default.
+#' Default is 1.
+#' @param column_cex numeric, giving the amount by which the text of column names should be maginified relative to the default.
+#' Default is 1.
+#' @param text_cex numeric, giving the amount by which the text of in the table cell should be maginified relative to the default.
+#' Default is 1.
+#' @param col_srt numeric, rotation angle of the column labels at the bottom of heatmap.
+#' Default is 60.
+#' @param pdf_file character, the path to save the plot as PDF file.
+#' If NULL, PDF file will not be generated. Default is NULL.
 #'
-#' @return logical value indicating whether the plot has been successfully generated
+#' @return Return a logical value. If TRUE, the plot is created successfully.
 #'
 #' @examples
 #' analysis.par <- list()
@@ -4169,41 +4179,43 @@ draw.heatmap.local <- function(mat,inner_line=FALSE,out_line=TRUE,inner_col='bla
   return(TRUE)
 }
 draw.colorbar <- function(col=NULL,min_val=NULL,max_val=NULL,n=5,digit_num=2,direction='vertical',xleft=0,xright=1,ytop=1,ybottom=0,cex=1){
-   val_bar<-seq(max_val,min_val,length.out = n)
-   if(is.null(col)==TRUE) col <- z2col(val_bar)
-   if(direction=='vertical'){
-     y_pos <- seq(ytop,ybottom,length.out=n+1)
-     yy <- y_pos[2:length(y_pos)]/2+y_pos[1:(length(y_pos)-1)]/2
-     rect(xleft=xleft,xright=xright,ytop=y_pos[2:length(y_pos)],ybottom=y_pos[1:(length(y_pos)-1)],col=col,border='light grey',xpd=TRUE)
-     text(xright,yy,signif(val_bar,digits = digit_num),xpd=TRUE,cex=cex,pos=4)
-     text(xleft/2+xright/2,ytop,'Z value',cex=cex,xpd=TRUE,pos=3)
-   }
+  val_bar<-seq(max_val,min_val,length.out = n)
+  if(is.null(col)==TRUE) col <- z2col(val_bar)
+  if(direction=='vertical'){
+    y_pos <- seq(ytop,ybottom,length.out=n+1)
+    yy <- y_pos[2:length(y_pos)]/2+y_pos[1:(length(y_pos)-1)]/2
+    rect(xleft=xleft,xright=xright,ytop=y_pos[2:length(y_pos)],ybottom=y_pos[1:(length(y_pos)-1)],col=col,border='light grey',xpd=TRUE)
+    text(xright,yy,signif(val_bar,digits = digit_num),xpd=TRUE,cex=cex,pos=4)
+    text(xleft/2+xright/2,ytop,'Z value',cex=cex,xpd=TRUE,pos=3)
+  }
 }
 
-#' Heatmap plot for displaying expression level or activity level for genes and drivers
+#' Draw Heatmap Plot to Display the Expression Level or Activity Level of Genes and Drivers
 #'
-#' \code{draw.heatmap} draw the heatmap for expression level or activity level for genes and drivers across selected samples.
+#' \code{draw.heatmap} plots the heatmap to see the expression level or activity level of genes and drivers across selected samples.
 #'
-#' This plot function input the expression/activity matrix, with each row as one gene or driver, each column as one sample.
+#' @param mat numeric matrix, the expression/activity matrix. Rows are genes or drivers, columns are selected samples.
+#' @param use_genes a vector of characters, selected genes (e.g. "originID"). Default is row names of \code{mat}.
+#' @param use_gene_label a vector of characters, a vector of labels for \code{use_genes} (e.g. "geneSymbol" or "gene_label"). Default is \code{use_genes}.
+#' @param use_samples a vector of characters, selected samples. Default is column names of \code{mat}.
+#' @param use_sample_label a vector of characters, a vector of labels for \code{use_samples}. Default is \code{use_samples}.
+#' @param phenotype_info data.frame, phenotype of samples. Users can call \code{pData(eset)} to create.
+#' The row names should match the column names in \code{mat}. Default is NULL.
+#' @param use_phe a list of characters, selected phenotype of samples. A subset of columns from \code{phenotype_info}.
+#' Default is NULL.
+#' @param main character, an overall title for the plot. Default is "".
+#' @param scale character, users can choose from "row", "column" and "none". Indicating if the values should be
+#' centered and scaled in either the row direction or the column direction, or none. Default is "none".
+#' @param pdf_file character, the file path to save plot as PDF file. If NULL, no PDF file will be saved. Default is NULL.
+#' @param cluster_rows,cluster_columns logical, the same parameters in \code{Heatmap}.
+#' Please check \code{?Heatmap} for more details. Default is TRUE.
+#' @param clustering_distance_rows,clustering_distance_columns character, the same parameters used in \code{Heatmap}.
+#' Please check \code{?Heatmap} for more details. Default is "pearson".
+#' @param show_row_names,show_column_names logical, the same parameters used in \code{Heatmap}.
+#' Please check \code{?Heatmap} for more details. Default is TRUE.
+#' @param ..., for more options, please check \code{?Heatmap} for more details.
 #'
-#' @param mat numeric matrix, each row as one gene or driver, each column as one sample
-#' @param use_genes a vector of characters, the list of genes for display. Default is the rownames(mat).
-#' @param use_gene_label a vector of characters, label for the list of genes for display. Default is the use_genes.
-#' @param use_samples a vector of characters, the list of samples for display. Default is the colnames(mat).
-#' @param use_sample_label a vector of characters, label for the list of samples for display. Default is the use_samples.
-#' @param phenotype_info data.frame,contain the sample phenotype information, can be generated by \code{pData(eset)}.
-#' The rownames should match the colnames of mat. Default is NULL.
-#' @param use_phe a list of characters, selected phenotype for display,must be the subset of colnames of phenotype_info.Default is NULL.
-#' @param main character, title for the draw. Default is "".
-#' @param scale character, indicating if the values should be centered and scaled in either the row direction or the column direction, or none.
-#' The default is "none".
-#' @param pdf_file character, file path for the pdf file to save the figure into pdf format.If NULL, will not generate pdf file. Default is NULL.
-#' @param cluster_rows,cluster_columns parameters used in \code{Heatmap}, please check for details. Default is TRUE.
-#' @param clustering_distance_rows,clustering_distance_columns parameters used in \code{Heatmap}, please check for details. Default is 'pearson'.
-#' @param show_row_names,show_column_names parameters used in \code{Heatmap}, please check for details. Default is TRUE.
-#' @param ..., more parameters used in \code{Heatmap}
-#'
-#' @return logical value indicating whether the plot has been successfully generated
+#' @return Return a logical value. If TRUE, the plot has been created successfully.
 #'
 #' @examples
 #' analysis.par <- list()
@@ -4301,6 +4313,7 @@ draw.heatmap <- function(mat=NULL,use_genes=rownames(mat),use_gene_label=use_gen
   if(is.null(rownames(phenotype_info))==FALSE){
     phenotype_info <- phenotype_info[colnames(mat),]
   }
+  phenotype_info <- lapply(phenotype_info,function(x)as.character(x))
   if(exists('row_names_gp')==FALSE) row_names_gp <- gpar(fontsize = 12)
   if(exists('column_names_gp')==FALSE) column_names_gp <- gpar(fontsize = 12)
   use_genes <- intersect(use_genes,rownames(mat))
@@ -4372,14 +4385,15 @@ draw.heatmap <- function(mat=NULL,use_genes=rownames(mat),use_gene_label=use_gen
 ################################ Function enrichment related functions
 
 ##
-#' Merge GeneSets by choosing several categories.
+#' Merge Selected Major GeneSets from MsigDB
 #'
-#' \code{merge_gs} is a simple function to merge the gene set list.
+#' \code{merge_gs} combines selected major gene set collections (e.g. "H", "C1" ) together, and return a list object with sub-collections as elements.
+#' Each element contains a vector of genes belong to that sub-collection gene set.
 #'
-#' @param all_gs2gene list, which could be obtained by running \code{gs.preload()}.
-#' @param use_gs a vector of characters, could check \code{all_gs2gene_info} for the cateogory description.
-#' Default is 'H', 'CP:BIOCARTA', 'CP:REACTOME', 'CP:KEGG'.
-#' @return a one-level list for geneset to genes.
+#' @param all_gs2gene list, the list returned by \code{gs.preload()}.
+#' @param use_gs a vector of characters, names of major gene set collections. Users can call \code{all_gs2gene_info} to see all the available collections.
+#' Default is c("H", "CP:BIOCARTA", "CP:REACTOME", "CP:KEGG").
+#' @return Return a list object with sub-collection gene sets as elements. Each element contains a vector of genes.
 #' @examples
 #' gs.preload(use_spe='Homo sapiens',update=FALSE)
 #' use_gs2gene <- merge_gs(all_gs2gene=all_gs2gene,
@@ -4437,42 +4451,40 @@ vec2list <- function(input_v,sep=NULL){
   tmp2
 }
 
-#' Gene set enrichment analysis by Fisher's Exact Test.
+#' Gene Set Enrichment Analysis by Fisher's Exact Test
 #'
-#' \code{funcEnrich.Fisher} will perform gene set enrichment analysis by Fisher's Exact Test.
-#'
-#' This is a function to find significant enriched gene sets for input gene list. Users could prepare gs2gene or use all_gs2gene preloaded by using \code{gs.preload}.
+#' \code{funcEnrich.Fisher} performs gene set enrichment analysis to the input gene list, by using the Fisher's Exact Test.
 #' Background gene list is accepeted.
 #'
-#' @param input_list a vector of characters, the list of genes for analysis. Only accept gene symbols, and gene ID conversion could be done by preparing a transfer table
-#' by using \code{get_IDtransfer} and using \code{get_name_transfertab} to transfer the gene IDs.
-#' @param bg_list a vector of characters, the background list of genes for analysis. Only accept gene symbols.
-#' Default is NULL, will use all genes in the gs2gene as the background list.
-#' @param gs2gene a list for geneset to genes, the name for the list is the gene set name and the content in each list is the vector for genes belong to that gene set.
-#' If NULL, will use all_gs2gene loaded by using \code{gs.preload}. Default is NULL.
-#' @param use_gs a vector of characters, the name for gene set category used for anlaysis.
-#' If gs2gene is set to NULL, use_gs must be the subset of \code{names(all_gs2gene)}.
-#' Could check \code{all_gs2gene_info} for the cateogory description.
-#' If set to 'all', all gene sets in gs2gene will be used.
-#' Default is 'H', 'CP:BIOCARTA', 'CP:REACTOME', 'CP:KEGG'
-#' if gs2gene is set to NULL (use all_gs2gene).
-#' If user input own gs2gene list, use_gs will be set to 'all' as default.
-#' @param min_gs_size numeric, minimum gene set size for analysis, default is 5.
-#' @param max_gs_size numeric, maximum gene set size for analysis, default is 500.
-#' @param Pv_adj character, p-value adjustment method, could check \code{p.adjust.methods} for the available options. Default is 'fdr'.
-#' @param Pv_thre numeric, cutoff value for the adjusted p-values for significance. Default is 0.1.
+#' @param input_list a vector of characters, a vector of gene symbols. If gene symbols not available, users can call \code{get_IDtransfer}
+#' and \code{get_name_transfertab} for ID conversion.
+#' @param bg_list a vector of characters, a vector of background gene symbols. If NULL, genes in \code{gs2gene} will be used as background.
+#' Default is NULL.
+#' @param gs2gene list, a list contains elements of gene sets.
+#' The name of the element is gene set, each element contains a vector of genes in that gene set.
+#' If NULL, will use \code{all_gs2gene}, which is created by function \code{gs.preload}. Default is NULL.
+#' @param use_gs a vector of characters, the names of gene sets.
+#' If \code{gs2gene} is NULL, \code{all_gs2gene} will be used. The \code{use_gs} must be the subset of \code{names(all_gs2gene)}.
+#' If "all", all the gene sets in \code{gs2gene} will be used.
+#' If user input his own \code{gs2gene} list, \code{use_gs} will be set to "all" as default.
+#' Default is c("H", "CP:BIOCARTA", "CP:REACTOME", "CP:KEGG").
+#' @param min_gs_size numeric, the minimum size of gene set to analysis. Default is 5.
+#' @param max_gs_size numeric, the maximum size of gene set to analysis. Default is 500.
+#' @param Pv_adj character, method to adjust P-value. Default is "fdr".
+#' For details, please check \code{p.adjust.methods}.
+#' @param Pv_thre numeric, threshold for the adjusted P-values. Default is 0.1.
 #'
-#' @return The function will return a list of gene sets with significant statistics, detailed as follows,
+#' @return Return a data.frame, contains gene sets with significant enrichment statistics. Column details are as follows,
 #'
-#' \item{#Name}{Name for the enriched gene set}
-#' \item{Total_item}{Number of background size}
+#' \item{#Name}{Name of the enriched gene set}
+#' \item{Total_item}{Background size}
 #' \item{Num_item}{Number of genes in the gene set (filtered by the background list)}
 #' \item{Num_list}{Number of input genes for testing (filtered by the background list)}
-#' \item{Num_list_item}{Number input genes annotated by the gene set (filtered by the background list)}
+#' \item{Num_list_item}{Number of input genes annotated by the gene set (filtered by the background list)}
 #' \item{Ori_P}{Original P-value from Fisher's Exact Test}
 #' \item{Adj_p}{Adjusted P-value}
-#' \item{Odds_Ratio}{Odds ratio by the 2*2 matrix used for Fisher's Exact Test}
-#' \item{Intersected_items}{List of the intersected genes, collapsed by ';', the number is equal to Num_list_item}
+#' \item{Odds_Ratio}{Odds ratio from the 2*2 matrix used for Fisher's Exact Test}
+#' \item{Intersected_items}{A vector of the intersected genes, collapsed by ';'. Number is equal to Num_list_item}
 #'
 #' @examples
 #' analysis.par <- list()
@@ -4579,30 +4591,29 @@ funcEnrich.Fisher <- function(input_list=NULL,bg_list=NULL,
   return(use_pv)
 }
 
-#' Bar plot for the result of gene set enrichment analysis.
+#' Bar Plot for Gene Set Enrichment Analysis Result
 #'
-#' \code{draw.funcEnrich.bar} will draw the barplot for the result of gene set enrichment analysis.
+#' \code{draw.funcEnrich.bar} draws a horizontal bar plot to visualize the gene set enrichment analysis.
+#' Users can choose to display P-values and the top intersected genes from each gene set.
 #'
-#' This is a function to draw the barplot for the result of gene set enrichment analysis.
-#' Two modes, one just display the P-value, and the other could show the top intersected genes for each gene set.
+#' @param funcEnrich_res data.frame, containing the result of functional enrichment analysis.
+#' It is highly suggested to use \code{funcEnrich.Fisher} to create this data frame.
+#' If users decided to prepare the data.frame on their own, please make sure the column names match the following parameters.
+#' @param top_number numeric, the number of top enriched gene sets to be displayed. Default is 30.
+#' @param Pv_col character, the name of the column in \code{funcEnrich_res} which contains P-value. Default is "Ori_P".
+#' @param name_col character, the name of the column in \code{funcEnrich_res} which contains gene set name. Default is "#Name".
+#' @param item_col character, the name of the column in \code{funcEnrich_res} which contains intersected genes collapsed with ";".
+#' Default is "Intersected_items".
+#' @param Pv_thre numeric, threshold of P-values. Genes or drivers with P-values lower than the threshold will be kept. Default is 0.1.
+#' @param display_genes logical, if TRUE, the intersected genes will be displayed. Default is FALSE.
+#' @param gs_cex numeric, giving the amount by which the text of gene sets names should be magnified relative to the default. Default is 0.5.
+#' @param gene_cex numeric, giving the amount by which the text of gene symbols should be magnified relative to the default. Default is 0.5.
+#' @param main character, an overall title for the plot.
+#' @param bar_col character, the color code used to plot the bars. Default is brewer.pal(8,'RdBu')[7].
+#' @param eg_num numeric, the number of intersected gene symbols to display on the right side of the bar. Default is 5.
+#' @param pdf_file character, the file path to save as PDF file. If NULL, no PDF file will be saved. Default is NULL.
 #'
-#' @param funcEnrich_res data.frame, containing the result for the function enrichment analysis. Prefer the format generated by using \code{funcEnrich.Fisher}.
-#' If not, users could prepare the required columns and indicate the column names in the following parameters.
-#' @param top_number numeric, number for the top enriched gene sets to be displayed on the plot. Default is 30.
-#' @param Pv_col character, the name of the column in \code{funcEnrich_res}, which contains the P-value. Default is 'Ori_P'.
-#' @param name_col character, the name of the column in \code{funcEnrich_res}, which contains the gene set name. Default is '#Name'.
-#' @param item_col character, the name of the column in \code{funcEnrich_res}, which contains the detailed intersected gene list, collapsed by ';'.
-#' Default is 'Intersected_items'.
-#' @param Pv_thre numeric, cutoff value for the p-values. Genes or drivers with lower p-values are remained. Default is 0.1.
-#' @param display_genes logical, whether or not to display the intersected genes on the plot. Default is FALSE
-#' @param gs_cex numeric, \code{cex} for the gene sets displayed on the plot. Default is 0.5
-#' @param gene_cex numeric, \code{cex} for the genes displayed on the plot. Default is 0.5
-#' @param main character, \code{main} for the title on the plot.
-#' @param bar_col character, color code for the bar on the plot. Default is brewer.pal(8,'RdBu')[7].
-#' @param eg_num numeric, example number of intersected genes shown on the plot. Default is 5.
-#' @param pdf_file character, file path for the pdf file to save the figure into pdf format.If NULL, will not generate pdf file. Default is NULL.
-#'
-#' @return logical value indicating whether the plot has been successfully generated
+#' @return Return a logical value. If TRUE, the plot has been created successfully.
 #'
 #' @examples
 #' analysis.par <- list()
@@ -4707,36 +4718,34 @@ draw.funcEnrich.bar <- function(funcEnrich_res=NULL,top_number=30,
   return(TRUE)
 }
 
-#' Cluster plot for the result of gene set enrichment analysis.
+#' Cluster Plot for Gene Set Enrichment Analysis Result
 #'
-#' \code{draw.funcEnrich.cluster} will draw the cluster for the result of gene set enrichment analysis.
+#' \code{draw.funcEnrich.cluster} draws a cluster plot based on binary matrix, to visualize the existence of genes in the enriched gene sets.
+#' The P-value of enrichment is also displayed in the plot.
 #'
-#' This is a function to draw the cluster (genes and gene sets) for the result of gene set enrichment analysis.
-#' The cluster is based on the binary matrix representing the gene's existence in the enriched gene sets.
-#' Detailed matrix for the cluster, enriched P-value will be displayed on the plot.
+#' @param funcEnrich_res data.frame,  containing the result of functional enrichment analysis.
+#' It is highly suggested to use \code{funcEnrich.Fisher} to create this data frame.
+#' If users decided to prepare the data.frame on their own, please make sure the column names match the following parameters.
+#' @param top_number numeric, the number of top enriched gene sets to be displayed. Default is 30.
+#' @param Pv_col character, the name of the column in \code{funcEnrich_res} which contains P-value. Default is "Ori_P".
+#' @param name_col character, the name of the column in \code{funcEnrich_res} which contains gene set name. Default is "#Name".
+#' @param item_col character, the name of the column in \code{funcEnrich_res} which contains intersected genes collapsed with ";".
+#' Default is "Intersected_items".
+#' @param Pv_thre numeric, threshold of P-values. Genes or drivers with P-values lower than the threshold will be kept. Default is 0.1.
+#' @param gs_cex numeric, giving the amount by which the text of gene sets names should be magnified relative to the default. Default is 0.5.
+#' @param gene_cex numeric, giving the amount by which the text of gene symbols should be magnified relative to the default. Default is 0.8.
+#' @param pv_cex numeric, giving the amount by which the text of P-values should be magnified relative to the default. Default is 0.7.
+#' @param main character, an overall title for the plot.
+#' @param h numeric, the height where the cluster tree should be cut. The same parameter as \code{cutree}. Default is 0.95.
+#' @param cluster_gs logical, if TRUE, gene sets will be clustered. Default is TRUE.
+#' @param cluster_gene logical, if TRUE, genes will be clustered. Default is TRUE.
+#' @param use_genes a vector of characters, a vector of gene symbols to display.
+#' If NULL, all the genes in the top enriched gene sets will be displayed. Default is NULL.
+#' @param pdf_file character, the file path to save as PDF file. If NULL, no PDF file will be saved. Default is NULL.
+#' @param return_mat logical, if TRUE, return a binary matrix. Rows are gene sets, columns are genes. Default if FALSE.
 #'
-#' @param funcEnrich_res data.frame, containing the result for the function enrichment analysis. Prefer the format generated by using \code{funcEnrich.Fisher}.
-#' If not, users could prepare the required columns and indicate the column names in the following parameters.
-#' @param top_number numeric, number for the top enriched gene sets to be displayed on the plot. Default is 30.
-#' @param Pv_col character, the name of the column in \code{funcEnrich_res}, which contains the P-value. Default is 'Ori_P'.
-#' @param name_col character, the name of the column in \code{funcEnrich_res}, which contains the gene set name. Default is '#Name'.
-#' @param item_col character, the name of the column in \code{funcEnrich_res}, which contains the detailed intersected gene list, collapsed by ';'.
-#' Default is 'Intersected_items'.
-#' @param Pv_thre numeric, cutoff value for the p-values. Genes or drivers with lower p-values are remained. Default is 0.1.
-#' @param gs_cex numeric, \code{cex} for the gene sets displayed on the plot. Default is 0.7.
-#' @param gene_cex numeric, \code{cex} for the genes displayed on the plot. Default is 0.8.
-#' @param pv_cex numeric, \code{cex} for the P-value displayed on the plot. Default is 0.7.
-#' @param main character, \code{main} for the title on the plot.
-#' @param h numeric, cutoff for the cluster. This parameter will be used in the \code{cutree} function. Default is 0.95
-#' @param cluster_gs logical, whether or not to cluster gene sets. Default is TRUE.
-#' @param cluster_gene logical, whether or not to cluster genes. Default is TRUE.
-#' @param use_genes a vector of characters, gene list used for display in plot,
-#' if NULL will display all genes in the top enriched gene sets.Default is NULL.
-#' @param pdf_file character, file path for the pdf file to save the figure into pdf format.If NULL, will not generate pdf file. Default is NULL.
-#' @param return_mat logical, whether or not to return the matrix used for display. Default is FALSE.
-#'
-#' @return if return_mat==FALSE, will return logical value indicating whether the plot has been successfully generated,
-#' otherwise will return the matrix used for cluster.
+#' @return If \code{return_mat==FALSE}, return a logical value. If TRUE, plot has been created successfully.
+#' If \code{return_mat == TRUE}, return a binary matrix of the cluster. Rows are gene sets, columns are genes.
 #'
 #' @examples
 #' analysis.par <- list()
@@ -4930,56 +4939,48 @@ draw.funcEnrich.cluster <- function(funcEnrich_res=NULL,top_number=30,Pv_col='Or
     return(TRUE)
   }
 }
-#' Bubble plot for the top drivers in NetBID2 analysis.
+#' Heat Bubble Matrix Plot for Top Drivers in NetBID2 Analysis
 #'
-#' \code{draw.bubblePlot} will draw the buble plot for the top drivers and the enriched gene sets for the targets of each driver.
+#' \code{draw.bubblePlot} combines the matrix bubble chart and the heat map, using bubble color to compare P-values (performed by Fisher's Exact Test) and bubble size to compare the intersected size for target genes.
+#' Rows are enriched gene set, columns are top drivers. Users can also check number of protein-coding genes targetted by each driver.
 #'
-#' This is a function to draw the bubble plot for the top significant drivers. Each row is a gene set, and each column is a driver.
-#' Each bubble represents the enrichment for each driver's target gene in the corresponding gene set.
-#' The size for each bubble shows the intersected size for the target gene and the gene set.
-#' The color for each bubble shows the significance of enrichment performed by Fisher's Exact Test.
-#' Color bar and size bar are shown in the draw.
-#' Besides, the target size and the driver gene/transcript bio-type is shown at the bottom of the draw.
 #'
-#' @param driver_list a vector of characters, the name for the top drivers.
-#' @param show_label a vector of characters, the name for the top drivers to display on the plot.
-#' If NULL, will display the name in driver_list. Default is NULL.
-#' @param Z_val a vector of numeric values, the Z statistics for the driver_list.
-#' Better to give name to the vector, otherwise will automatically use driver_list as the name.
-#' @param driver_type a vector of characters, the bio-type or other characteristics for the driver.
-#' If not NULL, will display the type on the plot.
-#' Better to give name to the vector, otherwise will automatically use driver_list as the name.
-#' @param target_list a list for the target gene information for the drivers. The names for the list must contain the driver in driver_list.
-#' Each object in the list must be a data.frame and should contain one column ("target") to save the target genes.
-#' Strongly suggest to follow the NetBID2 pipeline, and the \code{target_list} could be automatically generated by \code{get_net2target_list} by
-#' running \code{get.SJAracne.network}.
-#' @param transfer2symbol2type data.frame, the transfer table for the original ID to the gene symbol and gene biotype (at gene level)
-#' or transcript symbol and transcript biotype (at transcript level). strongly suggest to use \code{get_IDtransfer2symbol2type} to generate the transfer table.
-#' @param gs2gene a list for geneset to genes, the name for the list is the gene set name and the content in each list is the vector for genes belong to that gene set.
-#' If NULL, will use all_gs2gene loaded by using \code{gs.preload}. Default is NULL.
-#' @param use_gs a vector of characters, the name for gene set category used for anlaysis.
-#' If gs2gene is set to NULL, use_gs must be the subset of \code{names(all_gs2gene)}.
-#' Could check \code{all_gs2gene_info} for the cateogory description.
-#' Default is 'H', 'CP:BIOCARTA', 'CP:REACTOME', 'CP:KEGG'.
-#' @param display_gs_list a vector of characters, the list of gene set names to display on the plot.
-#' If NULL, the gene sets are shown according to the significant ranking.
+#' @param driver_list a vector of characters, the names of top drivers.
+#' @param show_label a vector of characters, the names of top drivers to be displayed in the plot.
+#' If NULL, the names in \code{driver_list} will be displayed. Default is NULL.
+#' @param Z_val a vector of numerics, the Z statistics of the \code{driver_list}.
+#' It is highly suggested to assign names to this vector. If the vector is nameless, the function will use the names of \code{driver_list} by default.
+#' @param driver_type a vector of characters, the biotype or other characteristics of the driver. In the demo, we use \code{ms_tab[driver_list,'gene_biotype']} as input.
+#' It is highly suggested to assign names to this vector. If the vector is nameless, the function will use the names of \code{driver_list} by default.
 #' Default is NULL.
-#' @param bg_list a vector of characters, the background list of genes for analysis. Only accept gene symbols.
-#' Default is NULL, will use all genes in the gs2gene as the background list.
-#' @param min_gs_size numeric, minimum gene set size for analysis, default is 5.
-#' @param max_gs_size numeric, maximum gene set size for analysis, default is 500.
-#' @param Pv_adj character, p-value adjustment method, could check \code{p.adjust.methods} for the available options. Default is 'none'.
-#' @param Pv_thre numeric, cutoff value for the adjusted p-values for significance.Default is 0.1.
-#' @param top_geneset_number number for the top enriched gene sets to be displayed on the plot. Default is 30.
-#' @param top_driver_number number for the top significant drivers to be displayed on the plot. Default is 30.
-#' @param main character, \code{main} for the title on the plot.
-#' @param pdf_file character, file path for the pdf file to save the figure into pdf format.If NULL, will not generate pdf file. Default is NULL.
-#' @param mark_gene a vector of characters, if not NULL, the drivers in the mark_gene will be labelled red in the draw. Default is NULL.
-#' @param driver_cex numeric, \code{cex} for the driver displayed on the plot. Default is 1.
-#' @param gs_cex numeric, \code{cex} for the gene sets displayed on the plot. Default is 1.
+#' @param target_list list, the driver-to-target list object. The names of the list elements are drivers.
+#' Each element is a data frame, usually contains three columns. "target", target gene names; "MI", mutual information; "spearman", spearman correlation coefficient.
+#' Users can call \code{get_net2target_list} to create this list and follow the suggested pipeline.
+#' @param transfer2symbol2type data.frame, the ID-conversion table for converting the original ID into gene symbol and gene biotype (at gene level),
+#' or into transcript symbol and transcript biotype (at transcript level).
+#' It is highly suggested to use \code{get_IDtransfer2symbol2type} to create this ID-conversion table.
+#' @param gs2gene list, a list contains elements of gene sets. The name of the element is gene set, each element contains a vector of genes in that gene set.
+#' If NULL, will use \code{all_gs2gene}, which is created by function \code{gs.preload}. Default is NULL.
+#' @param use_gs a vector of characters, the names of gene sets. If \code{gs2gene} is NULL, \code{all_gs2gene} will be used. And the \code{use_gs} must be the subset of names(all_gs2gene).
+#' Please check \code{all_gs2gene_info} for detailed cateogory description.
+#' Default is c("H", "CP:BIOCARTA", "CP:REACTOME", "CP:KEGG").
+#' @param display_gs_list a vector of characters, the names of gene sets to be displayed in the plot.
+#' If NULL, all the gene sets will be displayed in descending order of their significance. Default is NULL.
+#' @param bg_list a vector of characters, a vector of background gene symbols. If NULL, genes in \code{gs2gene} will be used as background. Default is NULL.
+#' @param min_gs_size numeric, the minimum size of gene set to analysis. Default is 5.
+#' @param max_gs_size numeric, the maximum size of gene set to analysis, Default is 500.
+#' @param Pv_adj character, method to adjust P-value. Default is "none". For details, please check \code{p.adjust.methods}.
+#' @param Pv_thre numeric, threshold for the adjusted P-values. Default is 0.1.
+#' @param top_geneset_number integer, the number of top enriched gene sets to be displayed in the plot. Default is 30.
+#' @param top_driver_number integer, the number of top significant drivers to be displayed in the plot. Default is 30.
+#' @param main character, an overall title for the plot.
+#' @param pdf_file character, the file path to save as PDF file. If NULL, no PDF file will be save. Default is NULL.
+#' @param mark_gene a vector of characters, a vector of gene symbols to be highlighted red in the plot. Default is NULL.
+#' @param driver_cex numeric, giving the amount by which the text of driver symbols should be magnified relative to the default. Default is 1.
+#' @param gs_cex numeric, giving the amount by which the text of gene set names should be magnified relative to the default. Default is 1.
+#' @param only_return_mat logicial, if TRUE, the function will only return the gene set Vs. driver matrix and will not plot the figure. Default is FALSE.
 #'
-#' @return
-#' Will return logical value indicating whether the plot has been successfully generated
+#' @return Return a logical value. If TRUE, the plot has been created successfully.
 #'
 #' @examples
 #' analysis.par <- list()
@@ -5060,7 +5061,7 @@ draw.bubblePlot <- function(driver_list=NULL,show_label=driver_list,Z_val=NULL,d
                             display_gs_list=NULL,
                             Pv_adj='none',Pv_thre=0.1,
                             top_geneset_number=30,top_driver_number=30,
-                            pdf_file=NULL,main="",mark_gene=NULL,driver_cex=1,gs_cex=1){
+                            pdf_file=NULL,main="",mark_gene=NULL,driver_cex=1,gs_cex=1,only_return_mat=FALSE){
   ## check NULL
 
   if(is.null(names(show_label))==TRUE){names(show_label) <- driver_list}
@@ -5088,7 +5089,8 @@ draw.bubblePlot <- function(driver_list=NULL,show_label=driver_list,Z_val=NULL,d
   names(target_gene) <- driver_list
   ##
   f_res <- lapply(target_gene,function(x){
-    funcEnrich.Fisher(input_list=x[[1]],bg_list=bg_list,gs2gene=gs2gene,use_gs=use_gs,min_gs_size=min_gs_size,max_gs_size=max_gs_size,
+    funcEnrich.Fisher(input_list=x[[1]],bg_list=bg_list,gs2gene=gs2gene,use_gs=use_gs,
+                      min_gs_size=min_gs_size,max_gs_size=max_gs_size,
                       Pv_adj='none',Pv_thre=Pv_thre)
   })
   names(f_res) <- names(target_gene)
@@ -5106,7 +5108,7 @@ draw.bubblePlot <- function(driver_list=NULL,show_label=driver_list,Z_val=NULL,d
     as.data.frame(x)[all_path,5:6]
   })
   f_mat2 <- do.call(rbind,lapply(f_mat,function(x)-qnorm(x[[2]])))
-#  print(do.call(rbind,lapply(f_mat,function(x)x[[2]])))
+  #  print(do.call(rbind,lapply(f_mat,function(x)x[[2]])))
   f_mat2[which(is.na(f_mat2)==TRUE | f_mat2==-Inf)] <- 0
   f_mat1 <- do.call(rbind,lapply(f_mat,function(x)x[,1]))
   colnames(f_mat1) <- all_path
@@ -5139,15 +5141,16 @@ draw.bubblePlot <- function(driver_list=NULL,show_label=driver_list,Z_val=NULL,d
   }
   nr <- ncol(f_mat1)
   nc <- nrow(f_mat1)
+  if(only_return_mat==TRUE) return(f_mat2)
   plot_part <- function(ori=FALSE,before_off=FALSE){
     gsWidth  <- max(strwidthMod(colnames(f_mat1),'inches',cex=gs_cex,ori=ori))+par.char2inch()[1]
     gsHeight <- max(strheightMod(colnames(f_mat1),'inches',cex=gs_cex)*nrow(f_mat1))
     driverWidth  <- max(strwidthMod(show_label[rownames(f_mat1)],'inches',cex=driver_cex,ori=ori))+par.char2inch()[2]
     driverHeight <- max(strheightMod(show_label[rownames(f_mat1)],'inches',cex=driver_cex)*ncol(f_mat1))
     if(is.null(driver_type)==FALSE){
-      rw <- max(strwidthMod(driver_type[driver_list],'inches',cex=gs_cex,ori=ori))+4*par.char2inch()[1]
+      rw <- max(strwidthMod(driver_type[driver_list],'inches',cex=gs_cex,ori=ori))+6*par.char2inch()[1]
     }else{
-      rw <- 6*par.char2inch()[1]
+      rw <- 15*par.char2inch()[1]
     }
     gsWidth <- max(gsWidth,+par.char2inch()[1]*10+strwidthMod('target_size\n(protein_coding)','inches',cex=0.8,ori=ori))
     ## output to pdf
@@ -5236,32 +5239,28 @@ draw.bubblePlot <- function(driver_list=NULL,show_label=driver_list,Z_val=NULL,d
   return(TRUE)
 }
 
-#' GSEA (gene set enrichment analysis) plot for a gene set or a driver.
+#' GSEA (Gene Set Enrichment Analysis) Plot for one Gene Set or one Driver
 #'
-#' \code{draw.GSEA} will generate a GSEA plot for a gene set (with annotated gene list) or a driver (with target gene list).
+#' \code{draw.GSEA} draws a GSEA plot to analyze one gene set (with gene list annotated) or one driver (with list of target genes).
 #'
-#' This is a plot function to draw GSEA for a gene set or a driver by input differentiated expression profile.
-#' User could input the annotation text for the significance or the function could display the significance calculated by Kolmogorov-Smirnov tests.
-#' ATTENTION: when user input the \code{use_direction}, the rank profile will be duplicated (here Zero cross at the middle) and
-#' genes with negative direction (-1 in the use_direction list) will be put in the mirror position of the original place.
 #'
-#' @param rank_profile a vector of numerics. The ranking profile for the differentiated values in a specific sample condition comparison.
-#' The names of the vector must be the gene names. The value in the vector could be the logFC or t-statistics.
-#' @param use_genes a vector of characters, the list of genes for analysis. The ID must be the subset of the names of \code{rank_profile}.
-#' This could either be the annotated gene list for the gene set or the target gene list for the driver.
-#' @param use_direction a vector of numerics, indicate the direction for the driver and the target gene list.
-#' 1 indicates positive regulation and -1 indicates negative regulation.
-#' If NULL, will not consider direction information. Default is NULL.
-#' @param main character, title for the draw. Default is "".
-#' @param pdf_file character, file path for the pdf file to save the figure into pdf format.If NULL, will not generate pdf file. Default is NULL.
-#' @param annotation character, annotation for the significance to be displayed on the plot.
-#' If NULL, will perform Kolmogorov-Smirnov tests to get significance. Default is NULL.
-#' @param annotation_cex numeric, \code{cex} for the annotation displayed on the plot. Default is 1.2
-#' @param left_annotation character, annotation displayed on the left of the figure representing left condition of the rank_profile. Default is "".
-#' @param right_annotation character, annotation displayed on the right of the figure representing right condition of the rank_profile. Default is "".
+#' @param rank_profile a named vector of numerics, the differential values (DE or DA) calculated from a sample comparison (e.g. "G4 vs. Others").
+#' Names of the vector must be gene names. The differential values can be "logFC" or "t-statistics".
+#' @param use_genes a vector of characters, a vector of genes to display. The genes can either be annotated genes in gene set or the targe genes from a specific driver.
+#' The gene names must be a subset of \code{names(rank_profile)}.
+#' @param use_direction a vector of numeric 1s and -1s, 1 is positive regulation from driver, -1 is negative regulation from driver.
+#' Users can get this vector by converting the signs of "spearman". If NULL, no regulation direction will be displayed. Default is NULL.
+#' @param main character, an overall title for the plot. Default is "".
+#' @param pdf_file character, the file path to save as PDF file. If NULL, no PDF file will be saved. Default is NULL.
+#' @param annotation character, the annotation set by users for easier reference.
+#' Normally the annotation is the P-value or other statistics to show the significance of the interested gene set or driver.
+#' If NULL, will perform a Kolmogorov-Smirnov test to get the significance value. Default is NULL.
+#' @param annotation_cex numeric, giving the amount by which the text of annotation should be magnified relative to the default. Default is 1.2.
+#' @param left_annotation character, annotation displayed on the left of the figure, representing left condition of the \code{rank_profile}. Default is "".
+#' @param right_annotation character, annotation displayed on the right of the figure, representing right condition of the \code{rank_profile}. Default is "".
 #'
-#' @return logical value indicating whether the plot has been successfully generated
-
+#' @return Return a logical value. If TRUE, the plot has been created successfully.
+#'
 #' @examples
 #' analysis.par <- list()
 #' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
@@ -5465,7 +5464,7 @@ draw.GSEA <- function(rank_profile=NULL,use_genes=NULL,use_direction=NULL,main="
       if(pv==0){
         pv <- '<2.2e-16'
       }else{
-        if(pv<0.01) pv <- format(pv,digits = 3,scientific = TRUE)
+        if(pv<0.01) pv <- format(pv,digits = 3,scientific = TRUE) else pv <- signif(pv,3)
       }
       annotation <- sprintf("KS test p-value:%s",pv)
     }
@@ -5536,64 +5535,60 @@ get_z2p <- function(x,use_star=FALSE,digit_num=2){
   return(use_p)
 }
 
-#' GSEA (gene set enrichment analysis) plot for the list of drivers.
+#' Draw GSEA (gene set enrichment analysis) Plot with NetBID Analysis of Drivers
 #'
-#' \code{draw.GSEA.NetBID} will generate a GSEA plot for the list of drivers, including the target genes' position on the differentiated expression profile, with
-#' statistics of differentiated expression (DE) and differentiated activity (DA) for each driver.
+#' \code{draw.GSEA.NetBID} creates a GSEA plot for drivers with more NetBID analysis information. Such as, number of target genes, ranking of target genes in
+#' differential expressed file, differential expression (DE) and differential activity (DA) values.
 #'
-#' This is a plot function to draw GSEA for the list of drivers by the input of differentiated expression profile.
-#' User could choose to display the target genes in one row or two rows, by selecting black color or red to blue color bar.
 #'
-#' @param DE data.frame,the differentiated expression results.
-#' This data.frame could be generated by using \code{getDE.limma.2G} or \code{getDE.BID.2G}.
-#' If user want to generate this data.frame by other strategies, the rownames must be the gene names or need one column to be the gene name
-#' (set in \code{name_col}) and must contain the columns indicating the differentiated expression profile.
-#' @param name_col character, the name of the column in \code{DE}, which contains the gene name. If NULL, will use the rownames of \code{DE}.
+#' @param DE data.frame, a data.frame created either by function \code{getDE.limma.2G} or \code{getDE.BID.2G}. Row names are gene/driver names,
+#' columns must include gene/driver name and calculated differencial values (e.g. "ID", "logFC", "AveExpr", "P.Value" etc.).
+#' @param name_col character, the name of the column in \code{DE} contains gene names. If NULL, will use the row names of \code{DE}.
 #' Default is NULL.
-#' @param profile_col character, the name of the column in \code{DE}, which will be used as the differentiated expression profile.
-#' If DE is created by \code{getDE.limma.2G} or \code{getDE.BID.2G}, this parameter could be 'logFC' or 't'.
-#' @param profile_trend character, the choice of how to display the profile, from high/positive to low/negative ('pos2neg')
-#' or low/negative to high/positive ('neg2pos').Default is 'pos2neg'.
-#' @param driver_list a vector of characters, the name for the top drivers.
-#' @param show_label a vector of characters, the name for the top drivers to display on the plot.
-#' If NULL, will display the name in driver_list. Default is NULL.
-#' @param driver_DA_Z a vector of numeric values, the Z statistics of differentiated activity (DA) for the driver_list.
-#' Better to give name to the vector, otherwise will automatically use driver_list as the name.
-#' @param driver_DE_Z a vector of numeric values, the Z statistics of differentiated expression (DE) for the driver_list.
-#' Better to give name to the vector, otherwise will automatically use driver_list as the name.
-#' @param target_list a list for the target gene information for the drivers. The names for the list must contain the driver in driver_list.
-#' Each object in the list must be a data.frame and should contain one column ("target") to save the target genes.
-#' Strongly suggest to follow the NetBID2 pipeline, and the \code{target_list} could be automatically generated by \code{get_net2target_list} by
-#' running \code{get.SJAracne.network}.
-#' @param top_driver_number numeric, number for the top significant drivers to be displayed on the plot. Default is 30.
-#' @param target_nrow numeric, number of rows for each driver display on the plot. Two options, 1 or 2.
-#' If set to 1, the target genes' position on the profile will be displayed in one row.
-#' If set to 2, the target genes' position on the profile will be displayed in two rows,
-#' with positive regulated genes displayed on the first row and negative regulated genes displayed on the second row.
-#' Default is 2.
-#' @param target_col character, choice of color pattern used to display the targets. Two options,'black' or 'RdBu'.
-#' If set to 'black', the lines will be colored in black.
-#' If set to 'RdBu', the lines will be colored into Red to Blue color bar.
+#' @param profile_col character, the name of the column in \code{DE} contains calculated differencial value (e.g. "logFC" or "P.Value").
+#' If \code{DE} is created by \code{getDE.limma.2G} or \code{getDE.BID.2G}, this parameter should be set to "logFC" or "t".
+#' @param profile_trend character, users can choose between "pos2neg" and "neg2pos". "pos2neg" means high \code{profile_col} in target group will be shown on the left.
+#' "neg2pos" means high \code{profile_col} in control group will be shown on the left. Default is "pos2neg".
+#' For details, please check "NetBID_GSEA_demo1.pdf" and "NetBID_GSEA_demo2.pdf" plotted by demo script.
+#' @param driver_list a vector of characters, the names of top drivers.
+#' @param show_label a vector of characters, the names of top drivers.
+#' If NULL, will display the names in \code{driver_list}. Default is NULL.
+#' @param driver_DA_Z a vector of numerics, the Z statistics of differential activity (DA) value of the \code{driver_list}.
+#' It is highly suggested to give names to the vector, otherwise the names of \code{driver_list} will be used.
+#' @param driver_DE_Z a vector of numerics, the Z statistics of differential expressed (DE) value of the \code{driver_list}.
+#' It is highly suggested to give names to the vector, otherwise the names of \code{driver_list} will be used.
+#' @param target_list list, the driver-to-target list object. The names of the list elements are drivers.
+#' Each element is a data frame, usually contains three columns. "target", target gene names; "MI", mutual information; "spearman", spearman correlation coef- ficient.
+#' Users can call \code{get_net2target_list} to create this list.
+#' @param top_driver_number numeric, number for the top significant drivers to be displayed in the plot. Default is 30.
+#' @param target_nrow numeric, users can choose between 1 and 2. Number of panels to mark the ranking of target genes.
+#' If 1, the ranking of target genes will be marked in one panel.
+#' If 2, the ranking of target genes will be marked in two panels. Upper panel for positively-regulated, lower panel for negatively-regulated.
+#' Default is 2. For details, please check "NetBID_GSEA_demo3.pdf" and "NetBID_GSEA_demo5.pdf" plotted by demo script.
+#' @param target_col character, name of the color palette used for display marker line in the panel. Users can choose between "black" and "RdBu".
+#' If "black", the marker line in the panel is black.
+#' If "RdBu", the marker line in the panel is Red to Blue.
 #' If \code{target_col_type} is set as 'PN', the positive regulated genes will be colored in red and negative regulated genes in blue.
 #' If \code{target_col_type} is set as 'DE', the color for the target genes is set according to its value in the differentiated expression profile,
 #' with significant high set for red and low for blue. The significant threshold is set by \code{profile_sig_thre}.
 #' Default is 'RdBu'.
-#' @param target_col_type character, choice of the pattern used to display the color for target genes, only work when \code{target_col} is set as 'RdBu'.
-#' Two options,'PN' or 'DE'.
-#' If set as 'PN', the positive regulated genes will be colored in red and negative regulated genes in blue.
-#' If set as 'DE', the color for the target genes is set according to its value in the differentiated expression profile,
-#' Default is 'PN'.
-#' @param left_annotation character, annotation displayed on the left of the figure representing left condition of the rank_profile. Default is "".
-#' @param right_annotation character, annotation displayed on the right of the figure representing right condition of the rank_profile. Default is "".
-#' @param main character, title for the plot. Default is "".
-#' @param profile_sig_thre numeric, threshold for the absolute values in profile to be treated as significance.
-#' Target genes without signifcant values in the profile will be colored in grey. Only work when \code{target_col_type} is set as "DE" and \code{target_col} is set as "RdBu".
-#' Default is 0.
-#' @param Z_sig_thre numeric, threshold for the Z statistics in \code{driver_DA_Z} and \code{driver_DE_Z} to be treated as signifcance.
-#' Only signifcant values will have background color. Default is 1.64.
-#' @param pdf_file character, file path for the pdf file to save the figure into pdf format.If NULL, will not generate pdf file. Default is NULL.
+#' @param target_col_type character, name of the color palette used for display target genes. This parameter works only when \code{target_col} is set as "RdBu".
+#' Users can choose between "PN" and "DE".
+#' If "PN", positively-regulated genes will be colored red and negatively-regulated genes will be colored blue.
+#' If "DE", the color shades is decided by its differentiated value.
+#' Default is "PN".
+#' @param left_annotation character, annotation on the left of GSEA curve, indicating high in control group or target group.
+#' Default is "".
+#' @param right_annotation character, annotation on the right of GSEA curve, indicating high in the opposite group of \code{left_annotation}.
+#' Default is "".
+#' @param main character, an overall title for the plot. Default is "".
+#' @param profile_sig_thre numeric, threshold value for target genes. This parameter works only when \code{target_col_type} is set as "DE" and \code{target_col} is set as "RdBu".
+#' Non-significant target genes will be colored grey. Default is 0.
+#' @param Z_sig_thre numeric, threshold value of Z statistics from \code{driver_DA_Z} and \code{driver_DE_Z}. Significant values will have background color.
+#' Default is 1.64.
+#' @param pdf_file character, the file path to save figure as PDF file. If NULL, no PDF file will be saved. Default is NULL.
 #'
-#' @return logical value indicating whether the plot has been successfully generated
+#' @return Return a logical value. If TRUE, the plot has been created successfully.
 
 #' @examples
 #' analysis.par <- list()
@@ -5922,47 +5917,38 @@ draw.GSEA.NetBID <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_tren
   return(TRUE)
 }
 ###
-#' GSEA (gene set enrichment analysis) plot for the list of gene sets.
+#' Draw GSEA (gene set enrichment analysis) Plot with NetBID Analysis of Gene Sets
 #'
-#' \code{draw.GSEA.NetBID.GS} will generate a GSEA plot for the list of gene sets, including the annotated genes' position on the differentiated expression profile, with
-#' statistics of differentiated activity (DA) for each gene set.
+#' \code{draw.GSEA.NetBID.GS} creates a GSEA plot for gene sets with more NetBID analysis information.
+#' Such as, number of genes in each gene set, marking the rank of annotated genes in the differential expression profile and differential activity (DA) values.
 #'
-#' This is a plot function to draw GSEA for the list of gene sets by the input of differentiated expression profile.
-#' User could choose to display the annotated genes by selecting black color or red to blue color bar.
-#' @param DE data.frame,the differentiated expression results.
-#' This data.frame could be generated by using \code{getDE.limma.2G} or \code{getDE.BID.2G}.
-#' If user want to generate this data.frame by other strategies, the rownames must be the gene names and
-#' must contain the columns indicating the differentiated expression profile.
-#' @param name_col character, the name of the column in \code{DE}, which contains the gene name. If NULL, will use the rownames of \code{DE}.
-#' Default is NULL.
-#' @param profile_col character, the name of the column in \code{DE}, which will be used as the differentiated expression profile.
-#' If DE is created by \code{getDE.limma.2G} or \code{getDE.BID.2G}, this parameter could be 'logFC' or 't'.
-#' @param profile_trend character, the choice of how to display the profile, from high/positive to low/negative ('pos2neg')
-#' or low/negative to high/positive ('neg2pos').Default is 'pos2neg'.
-#' @param use_gs2gene a list for geneset to genes, the name for the list is the gene set name and the content in each list is the vector for genes belong to that gene set.
-#' This parameter could be obtained by choosing one from \code{all_gs2gene[['CP:KEGG']]}, or merge several categories by \code{merge_gs}.
-#' @param sig_gs_list a vector of characters, the name for the top gene sets.
-#' @param gs_DA_Z a vector of numeric values, the Z statistics of differentiated activity (DA) for the sig_gs_list.
-#' Better to give name to the vector, otherwise will automatically use sig_gs_list as the name.
-#' @param top_gs_number numeric, number for the top significant gene sets to be displayed on the plot. Default is 30.
-#' @param target_col character, choice of color pattern used to display the targets. Two options,'black' or 'RdBu'.
-#' If set to 'black', the lines will be colored in black.
-#' If set to 'RdBu', the lines will be colored into Red to Blue color bar. The color for the annotated genes is set according
-#' to its value in the differentiated expression profile, with significant high set for red and low for blue.
-#' The significant threshold is set by \code{profile_sig_thre}.
-#' Default is 'RdBu'.
-#' @param left_annotation character, annotation displayed on the left of the figure representing left condition of the rank_profile. Default is "".
-#' @param right_annotation character, annotation displayed on the right of the figure representing right condition of the rank_profile. Default is "".
-#' @param main character, title for the plot. Default is "".
-#' @param profile_sig_thre numeric, threshold for the absolute values in profile to be treated as significance.
-#' annotated genes without signifcant values in the profile will be colored in grey. Only work when \code{target_col_type} is set as "DE" and \code{target_col} is set as "RdBu".
-#' Default is 0.
-#' @param Z_sig_thre numeric, threshold for the Z statistics in \code{driver_DA_Z} and \code{driver_DE_Z} to be treated as signifcance.
-#' Only signifcant values will have background color. Default is 1.64.
-#' @param pdf_file character, file path for the pdf file to save the figure into pdf format.If NULL, will not generate pdf file. Default is NULL.
 #'
-#' @return logical value indicating whether the plot has been successfully generated
-
+#' @param DE data.frame, a data.frame created either by function \code{getDE.limma.2G} or \code{getDE.BID.2G}.
+#' Row names are gene names, columns must include the calculated differencial values (e.g. "ID", "logFC", "AveExpr", "P.Value" etc.).
+#' @param name_col character, the name of the column in \code{DE} contains gene names. If NULL, will use the row names of \code{DE}. Default is NULL.
+#' @param profile_col character, the name of the column in \code{DE} contains calculated differencial value (e.g. "logFC" or "P.Value").
+#' If \code{DE} is created by \code{getDE.limma.2G} or \code{getDE.BID.2G}, this parameter should be set to "logFC" or "t".
+#' @param profile_trend character, users can choose between "pos2neg" and "neg2pos". "pos2neg" means high \code{profile_col} in target group will be shown on the left.
+#' "neg2pos" means high \code{profile_col} in control group will be shown on the left. Default is "pos2neg".
+#' @param use_gs2gene list, contains elements of gene sets. Element name is gene set name, each element contains a vector of genes belong to that gene set.
+#' This list can be created by calling one element from \code{all_gs2gene}, or merge several gene sets into one by using \code{merge_gs}.
+#' @param sig_gs_list a vector of characters, the names of top gene sets.
+#' @param gs_DA_Z a vector of numerics, the Z-statistics of differentail activity (DA) values for the \code{sig_gs_list}.
+#' It is highly suggested to assign name to the vector, otherwise will use name of \code{sig_gs_list}.
+#' @param top_gs_number integer, the number of top significant gene sets to be displayed. Default is 30.
+#' @param target_col character, name of the color palette used for display marker line in the panel.
+#' Users can choose between "black" and "RdBu". If "black", the marker line in the panel is black. If "RdBu", the marker line in the panel is Red to Blue.
+#' The color shade of the marker line is decided by each gene's significance of differentiation. High in red, low in blue.
+#' Default is "RdBu".
+#' @param left_annotation character, annotation on the left of GSEA curve, indicating high in control group or target group. Default is "".
+#' @param right_annotation character, annotation on the right of GSEA curve, indicating high in the opposite group of \code{left_annotation}. Default is "".
+#' @param main character, an overall title for the plot. Default is "".
+#' @param profile_sig_thre numeric, threshold value for target genes. This parameter works only when \code{target_col_type} is set as "DE" and \code{target_col} is set as "RdBu".
+#' Non-significant target genes will be colored grey. Default is 0.
+#' @param Z_sig_thre numeric, threshold value of Z-statistics from \code{driver_DA_Z} and \code{driver_DE_Z}. Significant values will have background color. Default is 1.64.
+#' @param pdf_file character, the file path to save figure as PDF file. If NULL, no PDF file will be saved. Default is NULL.
+#'
+#' @return Return a logical value. If TRUE, the plot has been created successfully.
 #' @examples
 #' \dontrun{
 #' db.preload(use_level='transcript',use_spe='human',update=FALSE)
@@ -6182,7 +6168,7 @@ draw.GSEA.NetBID.GS <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_t
     segments(x0=ss,x1=ss,y0=pp[4],y1=pp[4]+(pp[4]-pp[3])/150,xpd=TRUE)
     text(x=ss,y=pp[4]+(pp[4]-pp[3])/100,srt=90,sst,xpd=TRUE,adj=0,cex=0.8)
     text('Size',x=tt_left-tt/10,y=pp[4]+(pp[4]-pp[3])/50,adj=1,xpd=TRUE,cex=0.8)
-  ##
+    ##
   }
   if(is.null(pdf_file)==FALSE){plot_part(ori=TRUE);plot_part(ori=TRUE,before_off=TRUE);dev.off();dev.off();} else {plot_part()}
   layout(1);
@@ -6191,18 +6177,16 @@ draw.GSEA.NetBID.GS <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_t
 
 
 
-#' Merge target list for two drivers.
+#' Merge Target Gene List for Two Drivers
 #'
-#' \code{merge_target_list} is a function to merge the target list for two drivers.
-#' Higher MI statistics for the shared target genes by the two drivers will be kept in the final target list.
+#' \code{merge_target_list} merges target gene list for two drivers together. Shared target genes with high "MI (mutual information)" statistics will be kept in the final target list.
 #'
-#' @param driver1 character, the name for the first driver to merge.
-#' @param driver2 character, the name for the second driver to merge.
-#' @param target_list a list for the target gene information for the drivers. The names for the list must contain the driver1 and driver2.
-#' Each object in the list must be a data.frame and should contain one column ("target") to save the target genes.
-#' Strongly suggest to follow the NetBID2 pipeline, and the \code{target_list} could be automatically generated by \code{get_net2target_list} by
-#' running \code{get.SJAracne.network}.
-#' @return a list for the target gene information.
+#' @param driver1 character, the name of the first driver.
+#' @param driver2 character, the name of the second driver.
+#' @param target_list list, the driver-to-target list object. The names of the list elements are drivers (e.g. driver1 and driver2).
+#' Each element is a data frame, usually contains three columns. "target", target gene names; "MI", mutual information; "spearman", spearman correlation coefficient.
+#' Users can call \code{get_net2target_list} to create this list.
+#' @return Return a data.frame with rows of target genes, column of "target", "MI", "spearman".
 #' @examples
 #' analysis.par <- list()
 #' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
@@ -6235,36 +6219,31 @@ merge_target_list <- function(driver1=NULL,driver2=NULL,target_list=NULL){
   return(t_out)
 }
 #
-#' Box plot and stripchart for the gene's expression levels and driver's activity values in samples with different categories.
+#' Scatter Box Plot of Driver's Expression Values and Activity Values across Subgroup of Samples
 #'
-#' \code{draw.categoryValue} will draw the box plot with stripchart for the gene's expression levels and/or driver's activity values
-#'  in samples with different phenotype categories.
+#' \code{draw.categoryValue} draws a scatter box plot to visualize one selected driver's expression value and activity value across different phenotype subgroups of samples.
+#' Two side-by-side scatter box plots will be created. The left plot shows driver's activity values in different phenotype subgroups, each point is a sample.
+#' The right plot shows driver's expression value in different phenotype subgroups, each point is a sample.
 #'
-#' This is a function to draw the gene's expression level and driver's activity values at the same time in one plot
-#' across samples with different phenotype categories. Also, only draw of expression level or activity level is accepted.
+#' @param ac_val a vector of numerics, the activity values of the selected driver across all samples.
+#' @param exp_val a vector of numerics, the expression values of the selected driver across all samples.
+#' @param use_obs_class a vector of characters, the category of sample. The order of samples here must match the order in \code{ac_val} and \code{exp_val}.
+#' Users can call \code{get_obs_label} to create this vector.
+#' @param class_order a vector of characters, the order of catefory (subgroup).
+#' If NULL, will use the alphabetical order of the category (subgroup). Default is NULL.
+#' @param category_color a vector of characters, a vector of color codes for each category in \code{class_order}.
+#' If NULL, will call \code{get.class.color} to create the vector. Default is NULL.
+#' @param stripchart_color character, the color of the scatter of points. Default is "black" with transparency alpha equals 0.7.
+#' @param strip_cex numeric, giving the amount by which the size of scattered points should be magnified relative to the default. Default is 1.
+#' @param class_srt numeric, rotation angle of the column labels (subgroup labels) at the bottom of the box plot. Default is 90.
+#' @param class_cex numeric, giving the amount by which the text of category (subgroup) labels should be magnified relative to the default. Default is 1.
+#' @param pdf_file character, the file path to save as PDF file. If NULL, no PDF file will be save. Default is NULL.
+#' @param main_ac character, the main title of the plot to show activity values. Default is "".
+#' @param main_exp character, the main title of the plot to show expression values. Default is "".
+#' @param main_cex numeric, giving the amount by which the text of the main title should be magnified relative to the default. Default is 1.
 #'
-#' @param ac_val a vector of numeric values, the activity level for the interested driver across all samples.
-#' @param exp_val a vector of numeric values, the expression level for the interested gene across all samples.
-#' @param use_obs_class a vector of characters, the cateogory class for all samples.
-#' The order of samples in \code{use_obs_class} must be the same with \code{ac_val} or \code{exp_val}.
-#' This vector could be generated by the function \code{get_obs_label} to extract this vector from the dataframe of \code{pData(eset)}
-#' by selecting the column name.
-#' @param class_order a vector of characters, the order of category class displayed on the figure.
-#' If NULL, will use the alphabetical order of the category class name. Default is NULL.
-#' @param category_color a vector of characters, each item is the color for the class in \code{class_order}.
-#' If NULL, will automatically use function \code{get.class.color} generate the color bar. Default is NULL.
-#' @param stripchart_color character, the color for the stripchart. Default is 'black' with transparent alpha set at 0.7.
-#' @param strip_cex numeric, \code{cex} for points on the plot. Default is 1.
-#' @param class_srt numeric, the displayed category class label rotation in degrees. Default is 90.
-#' @param class_cex numeric, \code{cex} for the category class label displayed on the plot. Default is 1.
-#' @param pdf_file character, file path for the pdf file to save the figure into pdf format.If NULL, will not generate pdf file. Default is NULL.
-#' @param main_ac character, main for the sub-plot of activity level. Default is "".
-#' @param main_exp character,main for the sub-plot of expression level. Default is "".
-#' @param main_cex numeric, \code{cex} for the main title displayed on the plot. Default is 1.
+#' @return Return a logical value. If TRUE, the plot has been created successfully.
 #'
-#' @return
-#' Will return logical value indicating whether the plot has been successfully generated
-
 #' @examples
 #' analysis.par <- list()
 #' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
@@ -6390,27 +6369,24 @@ get_label_manual <- function(x){
   unlist(x1)
 }
 
-#' Target network structure plot for the driver.
+#' Target Network Structure Plot for One Driver
 #'
-#' \code{draw.targetNet} will draw the network structure for the selected driver and its target genes.
+#' \code{draw.targetNet} draws a network structure to display the target genes of one selected driver. Edges of positively-regulated target genes are orange,
+#' edges of negatively-regulated target genes are green. The width of the edges shows the strength of regulation.
 #'
-#' This is a function to draw target network structure for the selected driver.
-#' The color bar represents the positive (red) or negative (blue) regulation with line width showing the strength.
+#' @param source_label character, the label of selected one driver.
+#' @param source_z numeric, the Z-statistic of the selected driver. The color shade of driver's node in the network is decided by this Z-statistic.
+#' If NULL, the driver node will be colored grey. Default is NULL.
+#' @param edge_score a named vector of numerics, indicating the correlation between the driver and its target genes. The range of the numeric value is from -1 to 1.
+#' Positive value means it is positively-regulated by driver and vice versa. The names of the vector are gene names.
+#' @param label_cex numeric, giving the amount by which the text of target gene names should be magnified relative to the default. Default is 0.7.
+#' @param source_cex numeric, giving the amount by which the text of driver name should be magnified relative to the default. Default is 1.
+#' @param arrow_direction character, users can choose between "in" and "out". Default is "out".
+#' @param pdf_file character, the file path to save as PDF file. If NULL, no PDF file will be saved. Default is NULL.
+#' @param n_layer integer, number of circle layers to display. Default is 1.
+#' @param alphabetical_order logical, if TRUE, the targe gene names will be sorted alphabetically. If FALSE, will be sorted by statistics. Default is FALSE.
 #'
-#' @param source_label the label for the driver displayed on the plot.
-#' @param source_z numeric, the Z statistic for the driver, used to color the driver point.
-#' If NULL, the driver will be colored in grey. Default is NULL.
-#' @param edge_score a vector of numeric values, indicating the correlation between the driver and the target genes.
-#' The value ranges from -1 to 1, with positive value indicating postivie regulation and negative value indicating negative correlation.
-#' The names for the vector is the gene labels displayed on the plot.
-#' @param label_cex numeric, \code{cex} for the target genes displayed on the plot. Default is 0.7.
-#' @param source_cex numeric, \code{cex} for the source genes displayed on the plot. Default is 1.
-#' @param arrow_direction character, choose from 'in' or 'out'. Default is 'out'.
-#' @param pdf_file character, file path for the pdf file to save the figure into pdf format.If NULL, will not generate pdf file. Default is NULL.
-#' @param n_layer integer, number of circle layers to display, default is 1.
-#' @param alphabetical_order logical, whether the target gene labels are sorted by the alphabetical order, if FALSE will be ordered by statistics. Default is FALSE.
-#'
-#' @return Will return logical value indicating whether the plot has been successfully generated
+#' @return Return a logical value. If TRUE, the plot has been created successfully.
 #'
 #' @examples
 #' source_label <- 'test1'
@@ -6497,12 +6473,12 @@ draw.targetNet <- function(source_label="",source_z=NULL,edge_score=NULL,
       if(arrow_direction=='out'){
         p2<-t2xy(tt,radius=each_v-label_cex/36);
         p3<-t2xy(tt,radius=each_v-label_cex/48);
-        arrows(x0=0,y0=0,x1=p2$x,y1=p2$y,col=ec[g1_use],lwd=ew[g1_use],angle=10,length=0.1*label_cex);
+        arrows(x0=0,y0=0,x1=p2$x,y1=p2$y,col=ec[g1_use],lwd=ew[g1_use],angle=10,length=0.1*label_cex,xpd=TRUE);
       }else{
         p2<-t2xy(tt,radius=each_v-label_cex/36);
         p3<-t2xy(tt,radius=each_v-label_cex/36);
         p4<-t2xy(tt,radius=geneWidth/2);
-        arrows(x0=p2$x,y0=p2$y,x1=p4$x,y1=p4$y,col=ec[g1_use],lwd=ew[g1_use],angle=5,length=0.1*label_cex);
+        arrows(x0=p2$x,y0=p2$y,x1=p4$x,y1=p4$y,col=ec[g1_use],lwd=ew[g1_use],angle=5,length=0.1*label_cex,xpd=TRUE);
       }
       points(p3$x,p3$y,pch=16,col='dark grey',cex=label_cex)
     }
@@ -6526,38 +6502,35 @@ draw.targetNet <- function(source_label="",source_z=NULL,edge_score=NULL,
 }
 
 
-#' Target network structure plot for two drivers.
+#' Target Ntwork Structure Plot for Two Drivers
 #'
-#' \code{draw.targetNet.TWO} will draw the network structure for the selected two drivers and their target genes.
+#' \code{draw.targetNet.TWO} draws a network structure to display the target genes of two selected drivers. Edges of positively-regulated target genes are orange,
+#' edges of negatively-regulated target genes are green. The width of the edges shows the strength of regulation.
+#' It will also print out the number of shared and unique targe genes for each driver, with P-value and odds ratio.
 #'
-#' This is a function to draw target network structure for the selected two drivers.
-#' The color bar represents the positive (red) or negative (blue) regulation with line width showing the strength.
-#'
-#' @param source1_label the label for the first(left) driver displayed on the plot.
-#' @param source2_label the label for the second(right) driver displayed on the plot.
-#' @param source1_z numeric, the Z statistic for the first driver, used to color the driver point.
-#' If NULL, the driver will be colored in grey. Default is NULL.
-#' @param source2_z numeric, the Z statistic for the second driver, used to color the driver point.
-#' If NULL, the driver will be colored in grey. Default is NULL.
-#' @param edge_score1 a vector of numeric values, indicating the correlation between the first driver and the target genes.
-#' The value ranges from -1 to 1, with positive value indicating postivie regulation and negative value indicating negative correlation.
-#' The names for the vector is the gene labels displayed on the plot.
-#' @param edge_score2 a vector of numeric values, indicating the correlation between the second driver and the target genes.
-#' Similar with \code{edge_score1}
-#' @param arrow1_direction character, the arrow direction for source1, choose from 'in' or 'out'. Default is 'out'.
-#' @param arrow2_direction character, the arrow direction for source2, choose from 'in' or 'out'. Default is 'out'.
-#' @param label_cex numeric, \code{cex} for the target genes displayed on the plot. Default is 0.7.
-#' @param source_cex numeric, \code{cex} for the source genes displayed on the plot. Default is 1.
-#' @param pdf_file character, file path for the pdf file to save the figure into pdf format.If NULL, will not generate pdf file. Default is NULL.
-#' @param total_possible_target numeric or a vector of characters. If input numeric, will be the total number of possible targets.
-#' If input a vector of characters, will be the background list of all possible target genes.
+#' @param source1_label character, the label of the first selected driver (to be displayed on the left).
+#' @param source2_label character, the label of the second selected driver (to be displayed on the right).
+#' @param source1_z numeric, the Z-statistic of the first driver. The color shade of driver’s node in the network is decided by this Z-statistic.
+#' If NULL, the driver will be colored grey. Default is NULL.
+#' @param source2_z numeric, the Z-statistic of the second driver.The color shade of driver’s node in the network is decided by this Z-statistic.
+#' If NULL, the driver will be colored grey. Default is NULL.
+#' @param edge_score1 a named vector of numerics, indicating the correlation between the first driver and its target genes.
+#' The range of the numeric value is from -1 to 1. Positive value means it is positively-regulated by driver and vice versa. The names of the vector are gene names.
+#' @param edge_score2 a named vector of numerics, indicating the correlation between the seconde driver and its target genes.
+#' The range of the numeric value is from -1 to 1. Positive value means it is positively-regulated by driver and vice versa. The names of the vector are gene names.
+#' @param arrow1_direction character, the arrow direction for first driver. Users can choose between "in" and "out". Default is "out".
+#' @param arrow2_direction character, the arrow direction for second driver. Users can choose between "in" and "out". Default is "out".
+#' @param label_cex numeric, giving the amount by which the text of target gene names should be magnified relative to the default. Default is 0.7.
+#' @param source_cex numeric, giving the amount by which the text of driver name should be magnified relative to the default. Default is 1.
+#' @param pdf_file character, the file path to save as PDF file. If NULL, no PDF file will be saved. Default is NULL.
+#' @param total_possible_target numeric or a vector of characters. If input is numeric, it is the total number of possible target genes.
+#' If input is a vector of characters, it is the background list of all possible target genes.
 #' This parameter will be passed to function \code{test.targetNet.overlap} to test whether the target genes of the two drivers are significantly intersected.
 #' If NULL, will do not perform this test. Default is NULL.
-#' @param show_test logical, indicating whether the testing results will be printed and returned. Default is FALSE.
-#' @param n_layer integer, number of circle layers to display, default is 1.
-#' @param alphabetical_order logical, whether the target gene labels are sorted by the alphabetical order, if FALSE will be ordered by statistics. Default is FALSE.
-#'
-#' @return if \code{show_test}==FALSE, will return logical value indicating whether the plot has been successfully generated, otherwise will return the statistics of testing.
+#' @param show_test logical, if TRUE, the test result will be printed and returned. Default is FALSE.
+#' @param n_layer integer, number of circle layers to display. Default is 1.
+#' @param alphabetical_order logical, if TRUE, the targe gene names will be sorted alphabetically. If FALSE, will be sorted by statistics. Default is FALSE.
+#' @return If \code{show_test}==FALSE, will return a logical value indicating whether the plot has been successfully generated, otherwise will return the statistics of testing.
 #'
 #' @examples
 #' source1_label <- 'test1'
@@ -6678,12 +6651,12 @@ draw.targetNet.TWO <- function(source1_label="",source2_label="",
         if(arrow1_direction=='out'){
           p2<-t2xy(tt,radius=each_v-label_cex/36,init.angle= -180);
           p3<-t2xy(tt,radius=each_v-label_cex/48,init.angle= -180);
-          arrows(x0=-lp,y0=0,x1=p2$x-lp,y1=p2$y,col=ec1[g1_use],lwd=ew1[g1_use],angle=10,length=0.1*label_cex);
+          arrows(x0=-lp,y0=0,x1=p2$x-lp,y1=p2$y,col=ec1[g1_use],lwd=ew1[g1_use],angle=10,length=0.1*label_cex,xpd=TRUE);
         }else{
           p2<-t2xy(tt,radius=each_v-label_cex/36,init.angle= -180);
           p3<-t2xy(tt,radius=each_v-label_cex/36,init.angle= -180);
           p4<-t2xy(tt,radius=geneWidth/2,init.angle= -180);
-          arrows(x0=p2$x-lp,y0=p2$y,x1=p4$x-lp,y1=p4$y,col=ec1[g1_use],lwd=ew1[g1_use],angle=5,length=0.1*label_cex);
+          arrows(x0=p2$x-lp,y0=p2$y,x1=p4$x-lp,y1=p4$y,col=ec1[g1_use],lwd=ew1[g1_use],angle=5,length=0.1*label_cex,xpd=TRUE);
         }
         points(p3$x-lp,p3$y,pch=16,col='dark grey',cex=label_cex)
       }
@@ -6721,12 +6694,12 @@ draw.targetNet.TWO <- function(source1_label="",source2_label="",
         if(arrow2_direction=='out'){
           p2<-t2xy(tt,radius=each_v-label_cex/36);
           p3<-t2xy(tt,radius=each_v-label_cex/48);
-          arrows(x0=lp,y0=0,x1=p2$x+lp,y1=p2$y,col=ec2[g1_use],lwd=ew2[g1_use],angle=10,length=0.1*label_cex);
+          arrows(x0=lp,y0=0,x1=p2$x+lp,y1=p2$y,col=ec2[g1_use],lwd=ew2[g1_use],angle=10,length=0.1*label_cex,xpd=TRUE);
         }else{
           p2<-t2xy(tt,radius=each_v-label_cex/36);
           p3<-t2xy(tt,radius=each_v-label_cex/36);
           p4<-t2xy(tt,radius=geneWidth/2);
-          arrows(x0=p2$x+lp,y0=p2$y,x1=p4$x+lp,y1=p4$y,col=ec2[g1_use],lwd=ew2[g1_use],angle=5,length=0.1*label_cex);
+          arrows(x0=p2$x+lp,y0=p2$y,x1=p4$x+lp,y1=p4$y,col=ec2[g1_use],lwd=ew2[g1_use],angle=5,length=0.1*label_cex,xpd=TRUE);
         }
         points(p3$x+lp,p3$y,pch=16,col='dark grey',cex=label_cex)
       }
@@ -6748,16 +6721,16 @@ draw.targetNet.TWO <- function(source1_label="",source2_label="",
       xx <- rep(xx,length.out=length(xx)*each_col_n)[1:length(g12)]
 
       if(arrow1_direction=='out'){
-        arrows(x0=-lp,y0=0,x1=xx,y1=tt,col=ec1[g12],lwd=ew1[g12],angle=10,length=0.1*label_cex)
+        arrows(x0=-lp,y0=0,x1=xx,y1=tt,col=ec1[g12],lwd=ew1[g12],angle=10,length=0.1*label_cex,xpd=TRUE)
       }else{
         p4<-t2xy(tt,radius=geneWidth/2);
-        arrows(x0=xx,y0=tt,x1=-lp,y1=0,col=ec1[g12],lwd=ew1[g12],angle=5,length=0.1*label_cex);
+        arrows(x0=xx,y0=tt,x1=-lp,y1=0,col=ec1[g12],lwd=ew1[g12],angle=5,length=0.1*label_cex,xpd=TRUE);
       }
       if(arrow2_direction=='out'){
-        arrows(x0=lp,y0=0,x1=xx,y1=tt,col=ec2[g12],lwd=ew2[g12],angle=10,length=0.1*label_cex)
+        arrows(x0=lp,y0=0,x1=xx,y1=tt,col=ec2[g12],lwd=ew2[g12],angle=10,length=0.1*label_cex,xpd=TRUE)
       }else{
         p4<-t2xy(tt,radius=geneWidth/2);
-        arrows(x0=xx,y0=tt,x1=lp,y1=0,col=ec1[g12],lwd=ew1[g12],angle=5,length=0.1*label_cex);
+        arrows(x0=xx,y0=tt,x1=lp,y1=0,col=ec1[g12],lwd=ew1[g12],angle=5,length=0.1*label_cex,xpd=TRUE);
       }
       boxtext(xx,tt,labels=g12,col.bg=get_transparent('light grey',0.3),cex=label_cex)
     }
@@ -6786,20 +6759,19 @@ draw.targetNet.TWO <- function(source1_label="",source2_label="",
   return(TRUE)
 }
 
-#' Test for the target genes' intersection between two drivers.
+#' Test for Intersection of Target Genes between Two Drivers
 #'
-#' \code{test.targetNet.overlap} will test whether the target genes of two drivers are significantly intersected.
+#' \code{test.targetNet.overlap} performs Fisher's exact test to see whether the target genes from two drivers are significantly intersected.
 #'
-#' This is a function to perform Fisher's Exact Test for the intersection of the target genes from two drivers.
 #'
-#' @param source1_label character, the label for the first driver.
-#' @param source2_label character, the label for the second driver.
-#' @param target1 a vector of characters, the list of target genes for the first driver.
-#' @param target2 a vector of characters, the list of target genes for the second driver.
-#' @param total_possible_target numeric or a vector of characters. If input numeric, will be the total number of possible targets.
-#' If input a vector of characters, will be the background list of all possible target genes.
+#' @param source1_label character, the label of the first selected driver.
+#' @param source2_label character, the label of the second selected driver.
+#' @param target1 a vector of characters, the list of target genes from the first driver.
+#' @param target2 a vector of characters, the list of target genes from the second driver.
+#' @param total_possible_target numeric or a vector of characters. If input is numeric, it is the total number of possible target genes.
+#' If input is a vector of characters, it is the background list of all possible target genes.
 #'
-#' @return Return the statistics of testing, including the \code{P.Value}, \code{Odds_Ratio} and \code{Intersected_Nuumber}.
+#' @return Return statistics of the testing, including the \code{P.Value}, \code{Odds_Ratio} and \code{Intersected_Nuumber}.
 #'
 #' @examples
 #' source1_label <- 'test1'
@@ -6837,16 +6809,19 @@ test.targetNet.overlap <- function(source1_label=NULL,source2_label=NULL,
   return(res)
 }
 
-#' Get target list by input network information from data.frame.
+#' Convert Pairwise Network Data Frame to Driver-to-Target List
 #'
-#' \code{get_net2target_list} is included in the \code{get.SJAracne.network},
-#' the reason to make it invokable just for user to read in network files prepared by themselves.
+#' \code{get_net2target_list} is a helper function in the \code{get.SJAracne.network}.
+#' But if users have their own pairwise gene network files, they can convert it to driver-to-target list object.
 #'
-#' @param net_dat data.frame, must contain columns named with "source" and "target",
-#' "MI" and "spearman" are strongly suggested but not required.
-#' If these two columns missed, some options may be error in some of the functions in the following steps
-#' (such as es.method='weightedmean' in \code{cal.Activity}).
-#' @return a list for the target gene information for the drivers. Each object in the list is a data.frame to save the target genes.
+#' @param net_dat data.frame, must contain two columns with column names "source" (driver) and "target" (target genes).
+#' "MI" (mutual information) and "spearman" (spearman correlation coefficient) columns are optional, but strongly suggested to use.
+#' If "MI" and "spearman" columns are missing, errors may occur in some following steps (e.g. es.method='weightedmean' in \code{cal.Activity}).
+#'
+#' @return Return a list. The names of the list elements are drivers.
+#' Each element is a data frame, contains three columns. "target", target gene names;
+#' "MI", mutual information; "spearman", spearman correlation coefficient.
+#'
 #' @examples
 #' tf.network.file <- sprintf('%s/demo1/network/SJAR/project_2019-02-14/%s/%s',
 #'                    system.file(package = "NetBID2"),
@@ -6866,22 +6841,23 @@ get_net2target_list <- function(net_dat=NULL) {
   return(all_target)
 }
 
-#' Generate data structure to save network information by input network file generated by SJAracne
+#' Read SJARACNe Network Result and Return it as List Object
 #'
-#' \code{get.SJAracne.network} is a function to read in network file generated by SJAracne
-#' (consensus_network_ncol_.txt file in the result directory)
+#' \code{get.SJAracne.network} reads SJARACNe network construction result and returns a list object
+#' with network data frame, driver-to-target list and igraph object wrapped inside.
 #'
-#' This function aims to read in network files generated by SJAracne and save the network information into three lists,
-#' \code{network_dat} is a data.frame to save all the information in the network file;
-#' \code{target_list} is a list containing the target genes' information for the drivers. The names for the list is the driver name
-#' and each object in the list is a data.frame to save the target genes.
-#' \code{igraph_obj} is an igraph object to save the network, it is a directed, weighted network.
-#' The function will set two edge attributes to the igraph_obj, \code{weight} is the MI values and \code{sign} is the sign for the spearman value
-#' to indicate positive regulation (1) or negative regulation (-1).
+#' In the demo, "consensus_network_ncol_.txt" file will be read and convert into a list object.
+#' This list contains three elements, \code{network_data}, \code{target_list} and \code{igraph_obj}.
+#' \code{network_dat} is a data.frame, contains all the information of the network SJARACNe constructed.
+#' \code{target_list} is a driver-to-target list object. Please check details in \code{get_net2target_list}.
+#' \code{igraph_obj} is an igraph object used to save this directed and weighted network.
+#' Each edge of the network has two attributes, \code{weight} and \code{sign}.
+#' \code{weight} is the "MI (mutual information)" value and \code{sign} is the sign of the spearman
+#' correlation coefficient (1, positive regulation; -1, negative regulation).
 #'
-#' @param network_file character, file path for the network file. Must use the file (consensus_network_ncol_.txt) in the result directory.
+#' @param network_file character, the path for storing network file.
 #'
-#' @return This function will return a list containing three items, \code{network_dat}, \code{target_list} and \code{igraph_obj}.
+#' @return Return a list containing three elements, \code{network_dat}, \code{target_list} and \code{igraph_obj}.
 #'
 #' @examples
 #' if(exists('analysis.par')==TRUE) rm(analysis.par)
@@ -6890,7 +6866,7 @@ get_net2target_list <- function(net_dat=NULL) {
 #' project_main_dir <- 'test/'
 #' project_name <- 'test_driver'
 #' analysis.par  <- NetBID.analysis.dir.create(project_main_dir=project_main_dir,
-#'                                             prject_name=project_name,
+#'                                             project_name=project_name,
 #'                                             network_dir=network.dir,
 #'                                             network_project_name=network.project.name)
 #' analysis.par$tf.network  <- get.SJAracne.network(network_file=analysis.par$tf.network.file)
@@ -6911,45 +6887,36 @@ get.SJAracne.network <- function(network_file=NULL){
   return(list(network_dat=net_dat,target_list=target_list,igraph_obj=igraph_obj))
 }
 
-#' Update the network information in the structured network list dataset
+#' Update Network List Object Using Constraints
 #'
-#' \code{update_SJAracne.network} is a function to update the network information by input threshold for statistics or input gene list for use.
+#' \code{update_SJAracne.network} updates the network object created by \code{get.SJAracne.network}, using constraints like statistical thresholds and interested gene list.
 #'
-#' This function aims to update the network list dataset generated by \code{get.SJAracne.network}
-#' and return the list dataset passed the filtration with the same data structure.
-#'
-#' @param network_list list,the network list dataset generated by \code{get.SJAracne.network},
-#' contains \code{network_dat}, \code{target_list} and \code{igraph_obj}.
-#' @param all_possible_drivers a vector of characters,all possible driver list used to filter the network file.
-#' If NULL, will set to the possible drivers from \code{network_list}. Default is NULL.
-#' @param all_possible_targets a vector of characters,all possible target list used to filter the network file.
-#' If NULL, will set to the possible targets \code{network_list}. Default is NULL.
-#' @param force_all_drivers logical, whether or not to include all genes in the \code{all_possible_drivers} in the final network.
-#' For \code{network_dat} and \code{target_list}, if \code{force_all_drivers} is set to TRUE, genes in \code{all_possible_drivers}
-#' will not be filtered by the following statistical thresholds.
-#' For \code{igraph_obj}, if \code{force_all_drivers} is set to TRUE, all genes in \code{all_possible_drivers},
-#' even not exist in the original network file will be include in the vertice of the igraph object.
+#' @param network_list list, the network list object created by \code{get.SJAracne.network}.
+#' The list contains three elements, \code{network_dat}, \code{target_list} and \code{igraph_obj}. For details, please check \code{get.SJAracne.network}.
+#' @param all_possible_drivers a vector of characters, all possible drivers used to filter the network.
+#' If NULL, will use drivers from \code{network_list}. Default is NULL.
+#' @param all_possible_targets a vector of characters, all possible target genes used to filter the network.
+#' If NULL, will use targets from \code{network_list}. Default is NULL.
+#' @param force_all_drivers logical, if TRUE, will include all drivers from \code{all_possible_drivers} into the final network.
+#' For \code{network_dat} and \code{target_list} in the network list object, all genes in \code{all_possible_drivers} will not be filtered using the following statistical thresholds.
+#' For \code{igraph_obj} in the network list object, all genes in \code{all_possible_drivers} that don't exist in the original network, will be kept as vertices.
 #' Default is TRUE.
-#' @param force_all_targets logical, whether or not to include all genes in the \code{all_possible_targets} in the final network.
-#' For \code{network_dat} and \code{target_list}, if \code{all_possible_targets} is set to TRUE, genes in \code{all_possible_targets}
-#' will not be filtered by the following statistical thresholds.
-#' For \code{igraph_obj}, if \code{force_all_targets} is set to TRUE, all genes in \code{all_possible_targets},
-#' even not exist in the original network file will be include in the vertice of the igraph object.
+#' @param force_all_targets logical, if TRUE, will include all genes from \code{all_possible_targets} into the final network.
+#' For \code{network_dat} and \code{target_list} in the network list object, all genes in \code{all_possible_drivers} will not be filtered using the following statistical thresholds.
+#' For \code{igraph_obj} in the network list object, all genes in \code{all_possible_drivers} that don't exist in the original network, will be kept as vertices.
 #' Default is TRUE.
-#' @param min_MI numeric, minimum threshold for MI. Default is 0.
-#' @param max_p.value numeric, maximum threshold for p.value. Default is 1.
+#' @param min_MI numeric, minimum threshold for "MI (mutual information)". Default is 0.
+#' @param max_p.value numeric, maximum threshold for P-value. Default is 1.
 #' @param min_spearman_value numeric, minimum threshold for spearman absolute value. Default is 0.
 #' @param min_pearson_value numeric, minimum threshold for pearson absolute value. Default is 0.
-#' @param spearman_sign_use a vector of numeric value, 1 indicates positve values in spearman will be used. -1 indicates negative values will be used.
-#' If only want to include positive values, set \code{spearman_sign_use} to 1.
-#' Default is c(1,-1).
-#' @param pearson_sign_use a vector of numeric value, 1 indicates positve values in pearson will be used. -1 indicates negative values will be used.
-#' If only want to include positive values, set \code{pearson_sign_use} to 1.
-#' Default is c(1,-1).
-#' @param directed logical, whether the network in igraph is directed or not. Default is TRUE.
-#' @param weighted logical, whether to add the edge weight in the igraph object. Default is TRUE.
+#' @param spearman_sign_use a vector of numerics, users can choose from 1, -1 and c(1, -1). 1 means only positve spearman values will be used.
+#' -1 means only negative spearman values will be used. Default is c(1,-1).
+#' @param pearson_sign_use a vector of numerics, users can choose from 1, -1 and c(1, -1). 1 means only positve pearson values will be used.
+#' -1 means only negative pearson values will be used. Default is c(1,-1).
+#' @param directed logical, if TRUE, the network is a directed graph. Default is TRUE.
+#' @param weighted logical, if TRUE, the network is weighted. Default is TRUE.
 #'
-#' @return This function will return a list containing three items, \code{network_dat}, \code{target_list} and \code{igraph_obj}.
+#' @return Return a list containing three elements, \code{network_dat}, \code{target_list} and \code{igraph_obj}.
 #'
 #' @examples
 #' if(exists('analysis.par')==TRUE) rm(analysis.par)
@@ -6958,7 +6925,7 @@ get.SJAracne.network <- function(network_file=NULL){
 #' project_main_dir <- 'test/'
 #' project_name <- 'test_driver'
 #' analysis.par  <- NetBID.analysis.dir.create(project_main_dir=project_main_dir,
-#'                                             prject_name=project_name,
+#'                                             project_name=project_name,
 #'                                             network_dir=network.dir,
 #'                                             network_project_name=network.project.name)
 #' analysis.par$tf.network  <- get.SJAracne.network(network_file=analysis.par$tf.network.file)
@@ -7042,20 +7009,20 @@ update_SJAracne.network <- function(network_list=NULL,
 }
 
 
-#' Generate QC plot for the network object
+#' QC Tables and Plots for Network Object
 #'
-#' \code{draw.network.QC} is a function to draw the QC plot for the network object,
-#' mainly the density plot for the degree and the check for scale-free feature.
+#' \code{draw.network.QC} creates tables and plots for showing some basic statistics,
+#' driver statistics and scale-free checking of the target network.
 #'
-#' @param igraph_obj igraph object, this could be generated by \code{get.SJAracne.network}
-#' @param outdir character, the output directory to save the QC figures.
-#' @param prefix character, the prefix for the QC figure name.Default is "".
-#' @param directed logical, whether to treat the network as directed network. Default is TRUE.
-#' @param weighted logical, whether to treat the network as weighted network. Default is FALSE.
-#' @param generate_html logical, whether to generate html file for the report.
-#' If TRUE, will generate a html file by rmarkdown, otherwise will generate separate pdf files.
+#' @param igraph_obj igraph object, created by \code{get.SJAracne.network}.
+#' @param outdir character, the output directory for saving QC tables and plots.
+#' @param prefix character, the prefix of output QC figures names. Default is "".
+#' @param directed logical, if TRUE, this network will be treated as a directed network. Default is TRUE.
+#' @param weighted logical, if TRUE, this network will be treated as a weighted network. Default is FALSE.
+#' @param generate_html logical, if TRUE, a html file will be created by R Markdown.
+#' If FALSE, plots will be save as separated PDFs.
 #' Default is TRUE.
-#' @return logical value indicating whether the plot has been successfully generated
+#' @return Return a logical value. If TRUE, success in creating QC tables and plots.
 #'
 #' @examples
 #' \dontrun{
@@ -7065,7 +7032,7 @@ update_SJAracne.network <- function(network_list=NULL,
 #' project_main_dir <- 'test/'
 #' project_name <- 'test_driver'
 #' analysis.par  <- NetBID.analysis.dir.create(project_main_dir=project_main_dir,
-#'                                             prject_name=project_name,
+#'                                             project_name=project_name,
 #'                                             network_dir=network.dir,
 #'                                             network_project_name=network.project.name)
 #' analysis.par$tf.network  <- get.SJAracne.network(network_file=analysis.par$tf.network.file)
@@ -7083,8 +7050,8 @@ draw.network.QC <- function(igraph_obj,outdir=NULL,prefix="",directed=TRUE,weigh
   if(class(igraph_obj)!='igraph'){
     message('Should input igraph object ! ');return(FALSE);
   }
+  net <- igraph_obj
   if(generate_html==TRUE){
-    net <- igraph_obj
     directed <- directed
     weighted <- weighted
     output_rmd_file <- sprintf('%s/%snetQC.Rmd',outdir,prefix)
@@ -7093,10 +7060,16 @@ draw.network.QC <- function(igraph_obj,outdir=NULL,prefix="",directed=TRUE,weigh
     return(TRUE)
   }
   res_file <- sprintf('%s/%snetwork_info.pdf',outdir,prefix)
-  pdf(res_file);
-  plot(density(igraph::degree(igraph_obj)),xlab='Degree',main=sprintf('Density plot for degree distribution \n (network node:%d, network edge:%d)',length(V(igraph_obj)),length(E(igraph_obj))));
-  hist(igraph::degree(igraph_obj),xlab='Degree',main='Histogram of degree')
-  check_scalefree(igraph_obj);
+  pdf(res_file,width=8,height=8);
+  par(mar=c(6,6,6,8))
+  a <- hist(igraph::degree(net),xlab='Degree',cex.lab=1.2,cex.axis=1.2,cex.main=1.2,
+            main=sprintf('Density plot for degree distribution \n (network node:%d, network edge:%d)',length(V(net)),length(E(net))));
+  d1 <- density(igraph::degree(net))
+  mm <- max(a$counts)/max(d1$y);mm1 <- seq(0,max(d1$y),length.out = 5);mm2 <- format(mm1,scientific=TRUE,digits=3);mm2[0]<-'0';
+  lines(x=d1$x,y=d1$y*mm,col=get_transparent('red',0.5),lwd=1.5)
+  axis(side=4,at=mm*mm1,labels=mm2,las=2);
+  mtext(side=4,line = 6,'Density',cex=1.2)
+  res1 <- check_scalefree(net)
   dev.off()
   return(TRUE)
 }
@@ -7106,30 +7079,32 @@ check_scalefree <- function(igraph_obj) {
   gr1 <- igraph_obj
   fp1 <- degree_distribution(gr1)
   dd <- as.data.frame(cbind(k = 1:max(igraph::degree(gr1)), pk = fp1[-1]))
+  dd$pk <- dd$pk + 1 / length(V(gr1))
   r2 <-
-    lm(log(dd$pk + 1 / length(V(gr1))) ~ log(dd$k))
+    lm(log10(dd$pk) ~ log10(dd$k))
   r3 <- summary(r2)$adj.r.squared
-  plot(pk ~ k,data = dd,log = 'xy',main = sprintf('R2:%f', r3))
+  if(length(dd$k)>100) plot(pk ~ k,data = dd,log = 'xy',main = sprintf('R2:%s', format(r3,digits=4)),pch=16,col=get_transparent('dark grey',0.8),cex.lab=1.4,cex.axis=1.2)
+  if(length(dd$k)<=100) plot(pk ~ k,data = dd,log = 'xy',main = sprintf('R2:%s', format(r3,digits=4)),pch=16,col=get_transparent('black',0.8),cex.lab=1.4,cex.axis=1.2)
+  abline(a=r2$coefficients[1],b=r2$coefficients[2],col=get_transparent('red',0.5),lwd=2)
   return(r3)
 }
 
 
-#' Prepare for running SJaracne
+#' Prepare Data Files for Running SJARACNe
 #'
-#' \code{SJAracne.prepare} is a function to prepare files for running SJAracne.
-#'
-#' Detailed description to run SJAracne could be found in Github.
-#' Check \url{https://github.com/jyyulab/SJARACNe/} for detail.
+#' \code{SJAracne.prepare} prepares data files for running SJAracne. SJARACNe is a scalable software tool for gene network reverse engineering from big data.
+#' Detailed description and how to run SJARACNe can be found in its GitHub repository.
+#' Please check \url{https://github.com/jyyulab/SJARACNe/} for details.
 #'
 #' @param eset an ExpressionSet class object, which contains the expression matrix.
-#' @param use.samples a vector of characters, the sample list used for running SJAracne.
-#' @param TF_list a vector of characters, the TF list used for analysis.
-#' @param SIG_list a vector of characters, the SIG list used for analysis.
-#' @param SJAR.main_dir character, the file path to save the results for SJAracne
-#' @param SJAR.project_name character, the name of the project used to label the output directory.
-#' @param IQR.thre numeric, threshold for IQR filter for all non-driver genes.
-#' @param IQR.loose_thre numeric, threshold for IQR filter for all driver(TF/SIG) genes.
-#' @param add_options additional options used to run sjaracne.
+#' @param use.samples a vector of characters, the list of sample used to run SJARACNe.
+#' @param TF_list a vector of characters, the TF list.
+#' @param SIG_list a vector of characters, the SIG list.
+#' @param SJAR.main_dir character, the path to save the results generated by SJARACNe.
+#' @param SJAR.project_name character, the project name used to label the output directory.
+#' @param IQR.thre numeric, the IQR filter threshold to filter all non-driver genes.
+#' @param IQR.loose_thre numeric, the IQR filter threshold to filter for all driver(TF/SIG) genes.
+#' @param add_options additional option for running SJARACNe.
 #' @examples
 #' \dontrun{
 #' network.par <- list()
@@ -7220,79 +7195,74 @@ SJAracne.prepare <-
   }
 
 ####
-#' Calculate differential expression (DE)/differential activity (DA) by Bayesian Inference.
+#' Calculate Differential Expression (DE) or Differential Activity (DA) by Using Bayesian Inference
 #'
-#' \code{bid} is a function to get differential expression (DE)/differential activity (DA) by Bayesian Inference.
+#' \code{bid} calculates the differential expression (DE) / differential activity (DA) by using Bayesian Inference method.
+#' Users can choose different regression models and pooling strategies.
 #'
-#' It is the inner function for \code{getDE.BID.2G} and also could be directly called.
-#' More options related with statistics in Bayesian Inference is provided in this function.
-#' If user input the ID conversion table \code{use_feature_info}, the original input expression matrix could be at probe/transcript level,
-#' and the output for DE/DA could be at gene level. Three pooling strategies could be selected for calculation.
-#' The P-value is approximately estimated by the posterior distribution of the coefficient and test whether it is significantly different from 0.
+#' It is a core function inside \code{getDE.BID.2G}.
+#' This function allows users to have access to more options when calculating the statistics using Bayesian Inference method.
+#' In some cases, the input table for ID conversion could be at probe/transcript level, but DE/DA calculated at gene level is expected.
+#' By setting pooling strategy, users can successfully solve the special cases.
+#' The P-value is estimated by the posterior distribution of the coefficient.
 #'
-#' @param mat matrix, input expression/activity matrix for IDs (gene/transcript/probe) belong to one gene/gene set, each column is one sample.
-#' The matrix is strongly suggest to contain rownames for IDs and colnames for samples.
-#' Supposing geneA has multiple probes A1,A2, in Samples (Case-rep1, Case-rep2, Case-rep3, Control-rep1, Control-rep2, Control-rep3).
-#' The \code{mat} will be a 2*6 numeric matrix.
-#' If the gene only contains one probe, the matrix should be a one-row matrix.
-#' @param use_obs_class a vector of characters, the cateogory class for all samples.
-#' The order of samples in use_obs_class must be the same with mat if no names of the vector is provided.
-#' This vector could be generated by the function get_obs_label to extract this vector from the dataframe of pData(eset) by selecting the column name.
-#' @param class_order a vector of characters, the order for the sample classes.
-#' Attention: The first class in this order vector will be treated as control.
-#' If class_ordered==TRUE, The order must be consistent with the phenotypic trend, such as "low", "medium", "high". Else, only the first order is important.
-#' If NULL, will use the alphabetical order in \code{use_obs_class}. Default is NULL.
-#' @param class_ordered logical, whether the sample class in class_order is ordered or not. Default is TRUE.
-#' @param method character, choose from 'MLE' or 'Bayesian'.
-#' 'MLE' stands for maximum likelihood estimation, that the function will use generalized linear model(glm/glmer) to fit the data
-#' for the expression value and sample phenotype, and use MLE to estimate the regression coefficients.
-#' 'Bayesian' means that the function will use Bayesian generalized linear model (bayesglm)
-#' or multivariate generalized linear mixed model (MCMCglmm) to fit the data.
-#' Default is 'Bayesian'.
-#' @param family a description of the error distribution and link function to be used in the model.
-#' This can be a character string naming a family function, a family function or the result of a call to a family function.
-#' (See family for details of family functions).
-#' Currently only support gaussian,poisson,binomial(two group sample class)/category(multi-group sample class)/ordinal(multi-group sample class with class_ordered=TRUE)
-#' If set at gaussian or poission, the response variable will be the expression level and the regressors will be the sample phenotype.
-#' If set at binomial,the response variable will be the sample phenotype and the regressors will be the expression level.
-#' For the input of binomial, category and ordinal, the family will be automatically reset by the input sample class level and the setting of class_ordered.
+#' @param mat matrix, the expression/activity matrix of IDs (gene/transcript/probe) from one gene/gene set. Rows are IDs, columns are samples.
+#' It is strongly suggested to contain rownames of IDs and column names of samples. Example, geneA has two probes A1 and A2 across all 6 samples (Case-rep1, Case-rep2, Case-rep3, Control-rep1, Control-rep2 and Control-rep3).
+#' The \code{mat} of geneA is a 2*6 numeric matrix. Likewise, if geneA has only one probe, the \code{mat} is a one-row matrix.
+#' @param use_obs_class a vector of characters, the category of sample.
+#' If the vector names are not available, the order of samples in \code{use_obs_class} must be the same as in \code{mat}, .
+#' Users can call \code{get_obs_label} to create this vector.
+#' @param class_order a vector of characters, the order of the sample's category.
+#' The first class in this vector will be considered as the control group by default.
+#' If NULL, the order will be assigned using alphabetical order. Default is NULL.
+#' @param class_ordered logical, if TRUE, the \code{class_order} will be ordered. And the order must be consistent with the phenotypic trend,
+#' such as "low", "medium", "high". Default is TRUE.
+#' @param method character, users can choose between "MLE" and "Bayesian".
+#' "MLE", the maximum likelihood estimation, will call generalized linear model(glm/glmer) to perform data regression.
+#' "Bayesian", will call Bayesian generalized linear model (bayesglm) or multivariate generalized linear mixed model (MCMCglmm) to perform data regression.
+#' Default is "Bayesian".
+#' @param family character or family function or the result of a call to a family function.
+#' This parameter is used to define the model's error distribution. See \code{?family} for details.
+#' Currently, options are gaussian, poisson, binomial(for two-group sample classes)/category(for multi-group sample classes)/ordinal(for multi-group sample classes with class_ordered=TRUE).
+#' If set with gaussian or poission, the response variable in the regression model will be the expression level, and the independent variable will be the sample's phenotype.
+#' If set with binomial, the response variable in the regression model will be the sample phenotype, and the independent variable will be the expression level.
+#' For binomial, category and ordinal input, the family will be automatically reset, based on the sample's class level and the setting of \code{class_ordered}.
 #' Default is gaussian.
-#' @param pooling character, choose from 'full','no','partial'. The strategy for the calculation of DE/DA.
-#' Supposing geneA has multiple probes A1,A2, in Samples (Case-rep1, Case-rep2, Case-rep3, Control-rep1, Control-rep2, Control-rep3).
-#' The \code{mat} contains the expression for probes A1,A2 in all samples.
-#' The purpose is to testify the DE of geneA between Case and Control.
-#' 'full' means to pull the probe together and treat them as indepedent observations.
-#' 'no' means to treat the probe information as an independent variable in the regression model.
-#' 'partial' means to treat the probe information as a random effect in the regression model.
-#' Default is 'full'.
-#' @param prior.V.scale numeric, parameters used in the prior list for \code{MCMCglmm}.
-#' Useful when setting method as 'Bayesian' and pooling as 'partial'.
-#' Default is 0.02
-#' @param prior.R.nu numeric, parameters in the prior list for used in \code{MCMCglmm}.
-#' Useful when setting method as 'Bayesian' and pooling as 'partial'.
-#' Default is 1
-#' @param prior.G.nu numeric, parameters in the prior list for used in \code{MCMCglmm}.
-#' Useful when setting method as 'Bayesian' and pooling as 'partial'.
-#' Default is 2
-#' @param nitt numeric, number of MCMC iterations, parameters used in \code{MCMCglmm}.
-#' Useful when setting method as 'Bayesian' and pooling as 'partial'.
-#' Default is 13000
-#' @param burnin numeric, parameters used in \code{MCMCglmm}.
-#' Useful when setting method as 'Bayesian' and pooling as 'partial'.
-#' Default is 3000
-#' @param thin numeric, thinning interval, parameters used in \code{MCMCglmm}.
-#' Useful when setting method as 'Bayesian' and pooling as 'partial'.
-#' Default is 10
-#' @param std logical, whether to perform std to the original expression matrix. Default is TRUE
-#' @param logTransformed logical, whether the original data has been log transformation. Default is TRUE.
-#' @param log.base numeric, the base for log transformation, only used when do.logtransform is TRUE. Default is 2.
-#' @param average.method character, the strategy to calculate FC (fold change), choose from 'geometric','arithmetic'. Default is 'geometric'.
-#' @param pseudoCount integer, pseudo count to add for all value to avoid -Inf in log transformation when calculating FC (fold change).
-#' @param return_model logical, indicate what kind of data to return, if TRUE, the regression model will be returned, otherwise the basic statistics will be returned. Default is FALSE.
-#' @param use_seed integer, random seed, default is 999.
-#' @param verbose logical, whether to print addtional information.Default is FALSE.
+#' @param pooling character, users can choose from "full","no" and "partial".
+#' "full", use probes as independent observations.
+#' "no", use probes as independent variables in the regression model.
+#' "partial", use probes as random effect in the regression model.
+#' Default is "full".
+#' @param prior.V.scale numeric, the V in the parameter "prior" used in \code{MCMCglmm}.
+#' It is meaningful to set when one choose "Bayesian" as method,and "partial" as pooling.
+#' Default is 0.02.
+#' @param prior.R.nu numeric, the R-structure in the parameter "prior" used in \code{MCMCglmm}.
+#' It is meaningful to set when one choose "Bayesian" as method,and "partial" as pooling.
+#' Default is 1.
+#' @param prior.G.nu numeric, the G-structure in the parameter "prior" used in \code{MCMCglmm}.
+#' It is meaningful to set when one choose "Bayesian" as method,and "partial" as pooling.
+#' Default is 2.
+#' @param nitt numeric, the parameter "nitt" used in \code{MCMCglmm}.
+#' It is meaningful to set when one choose "Bayesian" as method,and "partial" as pooling.
+#' Default is 13000.
+#' @param burnin numeric, the parameter "burnin" used in \code{MCMCglmm}.
+#' It is meaningful to set when one choose "Bayesian" as method,and "partial" as pooling.
+#' Default is 3000.
+#' @param thin numeric, the parameter "thin" used in \code{MCMCglmm}.
+#' It is meaningful to set when one choose "Bayesian" as method,and "partial" as pooling.
+#' Default is 10.
+#' @param std logical, if TRUE, the expression matrix will be normalized by column. Default is TRUE.
+#' @param logTransformed logical, if TRUE, log transformation will be performed. Default is TRUE.
+#' @param log.base numeric, the base of log transformation when \code{do.logtransform} is set to TRUE. Default is 2.
+#' @param average.method character, the method applied to calculate FC (fold change). Users can choose between "geometric" and "arithmetic".
+#' Default is "geometric".
+#' @param pseudoCount integer, the integer added to avoid "-Inf" showing up during log transformation in the FC (fold change) calculation.
+#' @param return_model logical, if TRUE, the regression model will be returned; Otherwise, just return basic statistics from the model. Default is FALSE.
+#' @param use_seed integer, the random seed. Default is 999.
+#' @param verbose logical, if TRUE, print out additional information during calculation. Default is FALSE.
 #'
-#' @return one row data.frame containing the output statistics or the regression model if set return_model as TRUE.
+#' @return Return a one-row data frame with calculated statistics for one gene/gene set if \code{return_model} is FALSE.
+#' Otherwise, the regression model will be returned.
 #'
 #' @examples
 #' mat <- matrix(c(0.50099,1.2108,1.0524,-0.34881,-0.13441,-0.87112,
@@ -7546,7 +7516,7 @@ FC <- function(x,cl,logTransformed = TRUE,
     average.method <- 'geometric'
   if (logTransformed) {
     if (is.na(log.base) | log.base < 0)
-      stop('You must specify log.bsae !\n')
+      stop('Please specify log.base !\n')
     logFC <- mean(x.class1) - mean(x.class0)
     FC.val <- sign(logFC) * log.base ^ abs(logFC)
   } else{

@@ -10,7 +10,7 @@ current_date <- format(Sys.time(), "%Y-%m-%d") ## current date for project runni
 project_name <- sprintf('project_%s',current_date) ## project name for the project
 
 ## network.par is very essential in the analysis, if the environment already has this parameter, strongly suggest to delete it first
-network.par  <- NetBID.network.dir.create(project_main_dir=project_main_dir,prject_name=project_name) ## create working directory
+network.par  <- NetBID.network.dir.create(project_main_dir=project_main_dir,project_name=project_name) ## create working directory
 
 ########### !!!!!!!!!! pipelines !!!!!!!!!! ############
 
