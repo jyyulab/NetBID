@@ -922,6 +922,10 @@ load.exp.GEO <- function(out.dir = NULL,GSE = NULL,GPL = NULL,getGPL=TRUE,update
     message('GSE and GPL required, please re-try')
     return(FALSE)
   }
+  if(!grepl('^GSE',GSE)){
+    message('Only support GSE ID')
+    return(FALSE)
+  }
   expRData_dir <- sprintf('%s/%s_%s.RData', out.dir, GSE,GPL)
   if (file.exists(expRData_dir) & update == FALSE) {
     message(sprintf('RData exist in %s and update==TRUE, will directly load from RData .',expRData_dir))
@@ -933,6 +937,8 @@ load.exp.GEO <- function(out.dir = NULL,GSE = NULL,GPL = NULL,getGPL=TRUE,update
     else
       idx <- 1
     eset <- eset[[idx]]
+    if(GPL!=annotation(eset)) {GPL <- annotation(eset); message(sprintf('Real GPL:%s',GPL))}
+    expRData_dir <- sprintf('%s/%s_%s.RData', out.dir, GSE,GPL)
     save(eset, file = expRData_dir)
     message(sprintf('RData for the eset is saved in %s .',expRData_dir))
   }
@@ -1558,6 +1564,9 @@ std <- function(x) {
 cal.Activity <- function(target_list=NULL, cal_mat=NULL, es.method = 'weightedmean',std=TRUE) {
   ## mean, absmean, maxmean, weightedmean
   use_genes <- row.names(cal_mat)
+  if(length(use_genes)==0){
+    message('No genes in the cal_mat, please check and re-try!');return(FALSE);
+  }
   all_target <- target_list
   #all_target <- all_target[intersect(use_genes, names(all_target))] ## if the driver is not included in cal_mat but its target genes are included, will also calculate activity
   ac.mat <-
@@ -3198,6 +3207,7 @@ draw.2D.ellipse <- function(X,Y,class_label,xlab='PC1',ylab='PC2',legend_cex=0.8
 #' @param prefix character, the prefix for the QC figures' name. Default is "".
 #' @param choose_plot a vector of characters,
 #' choose one or many from 'heatmap', 'pca', 'density' and 'meansd' plots.
+#' Only useful when generate_html=FALSE.
 #' Default is all.
 #' @param generate_html logical, if TRUE, it will generate a html file by R Markdown. Otherwise, it will generate separate PDF files.
 #' Default is TRUE.
@@ -5921,7 +5931,6 @@ draw.GSEA.NetBID <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_tren
 #'
 #' \code{draw.GSEA.NetBID.GS} creates a GSEA plot for gene sets with more NetBID analysis information.
 #' Such as, number of genes in each gene set, marking the rank of annotated genes in the differential expression profile and differential activity (DA) values.
-#'
 #'
 #' @param DE data.frame, a data.frame created either by function \code{getDE.limma.2G} or \code{getDE.BID.2G}.
 #' Row names are gene names, columns must include the calculated differencial values (e.g. "ID", "logFC", "AveExpr", "P.Value" etc.).

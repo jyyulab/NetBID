@@ -23,6 +23,7 @@ Default is NULL.}
 
 \item{choose_plot}{a vector of characters,
 choose one or many from 'heatmap', 'pca', 'density' and 'meansd' plots.
+Only useful when generate_html=FALSE.
 Default is all.}
 
 \item{generate_html}{logical, if TRUE, it will generate a html file by R Markdown. Otherwise, it will generate separate PDF files.
