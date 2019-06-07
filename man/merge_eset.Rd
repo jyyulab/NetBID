@@ -17,7 +17,7 @@ merge_eset(eset1, eset2, group1 = NULL, group2 = NULL,
 
 \item{group2}{character, name of the second ExpressionSet.}
 
-\item{group_col_name, }{character, name of the column which contains the names defined in \code{group1} and \code{group2}.
+\item{group_col_name}{character, name of the column which contains the names defined in \code{group1} and \code{group2}.
 This column is designed to show which original ExpressionSet each sample comes from before combination.
 Default name of this column is "original_group".}
 
@@ -33,7 +33,8 @@ Return an ExressionSet class object.
 }
 \description{
 \code{merge_eset} merges two ExpressionSet class objects and returns one ExpresssionSet object.
-If genes in the two ExpressionSet objects are identical, the expression matrix will be combined directly. Otherwise, Z-transformation will be performed before combination.
+If genes in the two ExpressionSet objects are identical, the expression matrix will be combined directly.
+Otherwise, Z-transformation is strongly suggested to be performed before combination (set std=TRUE).
 }
 \examples{
 mat1 <- matrix(rnorm(10000),nrow=1000,ncol=10)

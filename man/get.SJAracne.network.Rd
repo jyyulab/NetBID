@@ -7,7 +7,7 @@
 get.SJAracne.network(network_file = NULL)
 }
 \arguments{
-\item{network_file}{character, the path for storing network file.}
+\item{network_file}{character, the path for storing network file. For the output of SJAracne, the name of the network file will be "consensus_network_ncol_.txt" under the output directory.}
 }
 \value{
 Return a list containing three elements, \code{network_dat}, \code{target_list} and \code{igraph_obj}.

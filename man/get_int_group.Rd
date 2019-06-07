@@ -7,7 +7,7 @@
 get_int_group(eset)
 }
 \arguments{
-\item{eset, }{an ExpressionSet object.}
+\item{eset}{an ExpressionSet object.}
 }
 \value{
 Return a vector of phenotype groups which could be used for sample cluster analysis.

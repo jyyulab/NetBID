@@ -38,7 +38,8 @@ Return a list contains the combined DE/DA analysis. Each single comparison resul
 Rows are genes/drivers, columns are combined statistics (e.g. "logFC", "AveExpr", "t", "P.Value" etc.).
 }
 \description{
-\code{combineDE} combines multiple comparisons of DE or DA analysis. Can only combine DE with DE, DA with DA.
+\code{combineDE} combines multiple comparisons of DE or DA analysis.
+Can combine DE with DE, DA with DA and also DE with DA if proper transfer table prepared.
 }
 \details{
 For example, there are 4 subgroups in the phenotype, G1, G2, G3 and G4. One DE analysis was performed on G1 vs. G2, and another DE was performed on G1 vs. G3.

@@ -9,7 +9,7 @@ funcEnrich.Fisher(input_list = NULL, bg_list = NULL, use_gs = NULL,
   Pv_adj = "fdr", Pv_thre = 0.1)
 }
 \arguments{
-\item{input_list}{a vector of characters, a vector of gene symbols. If gene symbols not available, users can call \code{get_IDtransfer}
+\item{input_list}{a vector of characters, a vector of gene symbols. If gene symbols are not available, users can call \code{get_IDtransfer}
 and \code{get_name_transfertab} for ID conversion.}
 
 \item{bg_list}{a vector of characters, a vector of background gene symbols. If NULL, genes in \code{gs2gene} will be used as background.

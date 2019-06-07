@@ -144,19 +144,28 @@ kable(dt1,align = "c") %>%
 
 ## Part III: Scale free distribution checking
 
-```{r echo=FALSE, fig.width=12, fig.height=10}
+```{r echo=FALSE, fig.width=8, fig.height=8}
 check_scalefree <- function(igraph_obj) {
   gr1 <- igraph_obj
   fp1 <- degree_distribution(gr1)
   dd <- as.data.frame(cbind(k = 1:max(igraph::degree(gr1)), pk = fp1[-1]))
+  dd$pk <- dd$pk + 1 / length(V(gr1))
   r2 <-
-    lm(log(dd$pk + 1 / length(V(gr1))) ~ log(dd$k))
+    lm(log10(dd$pk) ~ log10(dd$k))
   r3 <- summary(r2)$adj.r.squared
-  plot(pk ~ k,data = dd,log = 'xy',main = sprintf('R2:%f', r3))
+  if(length(dd$k)>100) plot(pk ~ k,data = dd,log = 'xy',main = sprintf('R2:%s', format(r3,digits=4)),pch=16,col=get_transparent('dark grey',0.8),cex.lab=1.4,cex.axis=1.2)
+  if(length(dd$k)<=100) plot(pk ~ k,data = dd,log = 'xy',main = sprintf('R2:%s', format(r3,digits=4)),pch=16,col=get_transparent('black',0.8),cex.lab=1.4,cex.axis=1.2)
+  abline(a=r2$coefficients[1],b=r2$coefficients[2],col=get_transparent('red',0.5),lwd=2)
   return(r3)
 }
-plot(density(igraph::degree(net)),xlab='Degree',main=sprintf('Density plot for degree distribution \n (network node:%d, network edge:%d)',length(V(net)),length(E(net))));
-hist(igraph::degree(net),xlab='Degree',main='Histogram of degree')
+par(mar=c(6,6,6,8))
+a <- hist(igraph::degree(net),xlab='Degree',cex.lab=1.2,cex.axis=1.2,cex.main=1.2,
+     main=sprintf('Density plot for degree distribution \n (network node:%d, network edge:%d)',length(V(net)),length(E(net))));
+d1 <- density(igraph::degree(net))
+mm <- max(a$counts)/max(d1$y);mm1 <- seq(0,max(d1$y),length.out = 5);mm2 <- format(mm1,scientific=TRUE,digits=3);mm2[1]<-'0';
+lines(x=d1$x,y=d1$y*mm,col=get_transparent('red',0.5),lwd=1.5)
+axis(side=4,at=mm*mm1,labels=mm2,las=2);
+mtext(side=4,line = 6,'Density',cex=1.2)
 res1 <- check_scalefree(net)
 ```
 

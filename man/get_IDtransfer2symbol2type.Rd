@@ -23,8 +23,8 @@ Default is NULL.}
 
 \item{use_level}{character, users can chose between "transcript" and "gene". Default is "gene".}
 
-\item{ignore_version}{logical, if TRUE and from_type is "ensembl_gene_id_version" or "ensembl_transcript_id_version",
-the version will be ignored. Default is FALSE.}
+\item{ignore_version}{logical, if it is set to TRUE and \code{from_type} is "ensembl_gene_id_version" or "ensembl_transcript_id_version",
+the version of the original ID will be ignored in ID mapping.}
 }
 \value{
 Return a data frame for ID conversion, from ID to gene symbol and gene biotype.

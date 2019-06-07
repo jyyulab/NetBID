@@ -22,12 +22,13 @@ If NULL, the names in \code{driver_list} will be displayed. Default is NULL.}
 \item{Z_val}{a vector of numerics, the Z statistics of the \code{driver_list}.
 It is highly suggested to assign names to this vector. If the vector is nameless, the function will use the names of \code{driver_list} by default.}
 
-\item{driver_type}{a vector of characters, the biotype or other characteristics of the driver. In the demo, we use \code{ms_tab[driver_list,'gene_biotype']} as input.
+\item{driver_type}{a vector of characters, the biotype or other characteristics of the driver.
+In the demo, we use \code{"gene_biotype"} column in the master table as input.
 It is highly suggested to assign names to this vector. If the vector is nameless, the function will use the names of \code{driver_list} by default.
 Default is NULL.}
 
 \item{target_list}{list, the driver-to-target list object. The names of the list elements are drivers.
-Each element is a data frame, usually contains three columns. "target", target gene names; "MI", mutual information; "spearman", spearman correlation coefficient.
+Each element is a data frame, usually contains at least three columns. "target", target gene names; "MI", mutual information; "spearman", spearman correlation coefficient.
 Users can call \code{get_net2target_list} to create this list and follow the suggested pipeline.}
 
 \item{transfer2symbol2type}{data.frame, the ID-conversion table for converting the original ID into gene symbol and gene biotype (at gene level),

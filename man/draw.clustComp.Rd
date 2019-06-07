@@ -9,7 +9,7 @@ draw.clustComp(pred_label, obs_label, strategy = "ARI", use_col = TRUE,
   outlier_cex = 0.3)
 }
 \arguments{
-\item{pred_label}{a vector of characters, the predicted labels created by classification (K-means).}
+\item{pred_label}{a vector of characters, the predicted labels created by classification (e.g K-means).}
 
 \item{obs_label}{a vector of characters, the observed labels annotated by phenotype data.}
 
@@ -21,7 +21,7 @@ Default is "ARI".}
 Default is TRUE.}
 
 \item{low_K}{integer, a threshold of sample number to be shown in a single cell.
-If too many samples gathered in a single table cell, it will be challenging for the eyes.
+If too many samples gathered in a single table cell, it will be challenging for eyes.
 By setting the value of this threshold, if the number of samples gathered in one table cell exceeded the threshold,
 only the number will be shown. Otherwise, all samples' names will be listed.
 Default is 5.}
@@ -40,7 +40,7 @@ Integer is the number of samples gathered in the corresponding label.
 }
 \description{
 \code{draw.clustComp} draws a table to show each sample's observed label vs. its predicted label.
-Each row represents an observed label (e.g. one subgroup of disease), each column represents the predicted label created by classification (K-means).
+Each row represents an observed label (e.g. one subgroup of disease), each column represents the predicted label created by classification algorithm (e.g K-means).
 }
 \details{
 The table provides more details about the side-by-side PCA biplot created by \code{draw.pca.kmeans}.

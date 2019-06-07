@@ -24,15 +24,15 @@ Default is NULL.}
 
 \item{input_attr_type}{character, the type of the TF_list and SIG_list.
 Details please check biomaRt, \url{https://bioconductor.org/packages/release/bioc/vignettes/biomaRt/inst/doc/biomaRt.html}.
-If TF_list and SIG_list are not specified, the list in db/${use_spe}_TF_${input_attr_type}.txt and db/${use_spe}_SIG_${input_attr_type}.txt will be used.
-This only support external_gene_name and ensembl_gene_id.
-Default is external_gene_name.}
+If TF_list and SIG_list are not specified, the list in the NetBID2 package will be used.
+This only support "external_gene_name" and "ensembl_gene_id".
+Default is "external_gene_name".}
 
 \item{main.dir}{character, the main directory for NetBID2.
-If NULL, will be set to \code{system.file(package = "NetBID2")}. Default is NULL.}
+If NULL, will be \code{system.file(package = "NetBID2")}. Default is NULL.}
 
 \item{db.dir}{character, a path for saving the RData.
-Default is \code{db} directory within the \code{main.dir}, if\code{main.dir} is provided.}
+Default is \code{db} directory under the \code{main.dir}, if \code{main.dir} is provided.}
 }
 \value{
 Return TRUE if loading is successful, otherwise return FALSE. Two variables will be loaded into R workspace, \code{tf_sigs} and \code{db_info}.

@@ -12,7 +12,7 @@ merge_target_list(driver1 = NULL, driver2 = NULL, target_list = NULL)
 \item{driver2}{character, the name of the second driver.}
 
 \item{target_list}{list, the driver-to-target list object. The names of the list elements are drivers (e.g. driver1 and driver2).
-Each element is a data frame, usually contains three columns. "target", target gene names; "MI", mutual information; "spearman", spearman correlation coefficient.
+Each element is a data frame, usually contains at least three columns. "target", target gene names; "MI", mutual information; "spearman", spearman correlation coefficient.
 Users can call \code{get_net2target_list} to create this list.}
 }
 \value{

@@ -69,13 +69,13 @@ library(rmarkdown)
 #' Default is NULL.
 #' @param input_attr_type character, the type of the TF_list and SIG_list.
 #' Details please check biomaRt, \url{https://bioconductor.org/packages/release/bioc/vignettes/biomaRt/inst/doc/biomaRt.html}.
-#' If TF_list and SIG_list are not specified, the list in db/${use_spe}_TF_${input_attr_type}.txt and db/${use_spe}_SIG_${input_attr_type}.txt will be used.
-#' This only support external_gene_name and ensembl_gene_id.
-#' Default is external_gene_name.
+#' If TF_list and SIG_list are not specified, the list in the NetBID2 package will be used.
+#' This only support "external_gene_name" and "ensembl_gene_id".
+#' Default is "external_gene_name".
 #' @param main.dir character, the main directory for NetBID2.
-#' If NULL, will be set to \code{system.file(package = "NetBID2")}. Default is NULL.
+#' If NULL, will be \code{system.file(package = "NetBID2")}. Default is NULL.
 #' @param db.dir character, a path for saving the RData.
-#' Default is \code{db} directory within the \code{main.dir}, if\code{main.dir} is provided.
+#' Default is \code{db} directory under the \code{main.dir}, if \code{main.dir} is provided.
 #'
 #' @return Return TRUE if loading is successful, otherwise return FALSE. Two variables will be loaded into R workspace, \code{tf_sigs} and \code{db_info}.
 #' @examples
@@ -320,7 +320,8 @@ get.TF_SIG.list <- function(use_genes=NULL,
 #' @param dataset character, name of the dataset used for ID conversion. For example, "hsapiens_gene_ensembl".
 #' If NULL, \code{db_info[1]} will be used. \code{db_info} requires the calling of \code{db.preload} in the previous steps.
 #' Default is NULL.
-#' @param ignore_version logical, if TRUE and \code{from_type} is "ensembl_gene_id_version" or "ensembl_transcript_id_version", the version will be ignored.
+#' @param ignore_version logical, if it is set to TRUE and \code{from_type} is "ensembl_gene_id_version" or "ensembl_transcript_id_version",
+#' the version of the original ID will be ignored in ID mapping.
 #' Default is FALSE.
 #'
 #' @return
@@ -512,8 +513,8 @@ get_IDtransfer_betweenSpecies <- function(from_spe='human',to_spe='mouse',
 #' If NULL, \code{db_info[1]} will be used. \code{db_info} requires the calling of \code{db.preload} in the previous steps.
 #' Default is NULL.
 #' @param use_level character, users can chose between "transcript" and "gene". Default is "gene".
-#' @param ignore_version logical, if TRUE and from_type is "ensembl_gene_id_version" or "ensembl_transcript_id_version",
-#' the version will be ignored. Default is FALSE.
+#' @param ignore_version logical, if it is set to TRUE and \code{from_type} is "ensembl_gene_id_version" or "ensembl_transcript_id_version",
+#' the version of the original ID will be ignored in ID mapping.
 #'
 #' @return
 #' Return a data frame for ID conversion, from ID to gene symbol and gene biotype.
@@ -1142,7 +1143,8 @@ generate.eset <- function(exp_mat=NULL, phenotype_info=NULL, feature_info=NULL, 
 #' Merge Two ExpressionSet Class Objects into One
 #'
 #' \code{merge_eset} merges two ExpressionSet class objects and returns one ExpresssionSet object.
-#' If genes in the two ExpressionSet objects are identical, the expression matrix will be combined directly. Otherwise, Z-transformation will be performed before combination.
+#' If genes in the two ExpressionSet objects are identical, the expression matrix will be combined directly.
+#' Otherwise, Z-transformation is strongly suggested to be performed before combination (set std=TRUE).
 #'
 #' @param eset1 ExpressionSet class, the first ExpressionSet.
 #' @param eset2 ExpressionSet class, the second ExpressionSet.
@@ -1150,7 +1152,7 @@ generate.eset <- function(exp_mat=NULL, phenotype_info=NULL, feature_info=NULL, 
 #' @param group2 character, name of the second ExpressionSet.
 #' @param use_col a vector of characters, the column names in the phenotype information to be kept.
 #' If NULL, shared column names of \code{eset1} and \code{eset2} will be used. Default is NULL.
-#' @param group_col_name, character, name of the column which contains the names defined in \code{group1} and \code{group2}.
+#' @param group_col_name character, name of the column which contains the names defined in \code{group1} and \code{group2}.
 #' This column is designed to show which original ExpressionSet each sample comes from before combination.
 #' Default name of this column is "original_group".
 #' @param remove_batch logical, if TRUE, remove the batch effects from these two expression datasets. Default is FALSE.
@@ -1545,8 +1547,8 @@ std <- function(x) {
 #' This function requires two inputs, the driver-to-target list object \code{target_list} and the expression matrix.
 #'
 #' @param target_list list, the driver-to-target list object. The names of the list elements are drivers.
-#' Each element is a data frame, usually contains three columns. "target", target gene names;
-#' "MI", mutual information; "spearman", spearman correlation coefficient. Users can call \code{get_net2target_list} to create this list.
+#' Each element is a data frame, usually contains at least three columns. "target", target gene names;
+#' "MI", mutual information; "spearman", spearman correlation coefficient. Users can call \code{get_net2target_list} to create this list from the network file generated by SJAracne.
 #' @param cal_mat numeric matrix, the expression matrix of genes/transcripts.
 #' @param es.method character, method applied to calculate the activity value. User can choose from "mean", "weightedmean", "maxmean" and "absmean".
 #' The "weightedmean" requires "MI" and "spearman" columns included in the \code{target_list} data.
@@ -1777,7 +1779,8 @@ getDE.BID.2G <-function(eset,output_id_column=NULL,G1=NULL, G0=NULL,G1_name=NULL
 
 #' Combine Multiple Comparison Results from Differential Expression (DE) or Differential Activity (DA) Analysis
 #'
-#' \code{combineDE} combines multiple comparisons of DE or DA analysis. Can only combine DE with DE, DA with DA.
+#' \code{combineDE} combines multiple comparisons of DE or DA analysis.
+#' Can combine DE with DE, DA with DA and also DE with DA if proper transfer table prepared.
 #'
 #' For example, there are 4 subgroups in the phenotype, G1, G2, G3 and G4. One DE analysis was performed on G1 vs. G2, and another DE was performed on G1 vs. G3.
 #' If user is interested in the DE analysis between G1 vs. (G2 and G3), he can call this function to combine the two comparison results above toghether.
@@ -1991,7 +1994,7 @@ getDE.limma.2G <- function(eset=NULL, G1=NULL, G0=NULL,G1_name=NULL,G0_name=NULL
 #'
 #' \code{combinePvalVector} is a function to combine multiple comparison's P values using Fisher's method or Stouffer's method.
 #'
-#' @param pvals, a vector of numerics, the P values from multiple comparison need to be combined.
+#' @param pvals a vector of numerics, the P values from multiple comparison need to be combined.
 #' @param method character, users can choose between "Stouffer" and "Fisher". Default is "Stouffer".
 #' @param signed logical, if TRUE, will give a sign to the P value to indicate the direction of testing.
 #' Default is TRUE.
@@ -2173,7 +2176,7 @@ merge_TF_SIG.network <- function(TF_network=NULL,SIG_network=NULL){
 #' @param network list, a driver-to-target list. The names of the list elements are drivers. Each element is a data frame, usually contains three columns.
 #' "target", target gene names; "MI", mutual information; "spearman", spearman correlation coefficient.
 #' It is highly suggested to follow the NetBID2 pipeline, and the \code{TF_network} could be generated by \code{get_net2target_list} and \code{get.SJAracne.network}.
-#' @param main_id_type character, the type of driver's ID. It comes from th attribute name in biomaRt package.
+#' @param main_id_type character, the type of driver's ID. It comes from the attribute name in biomaRt package.
 #' Such as "ensembl_gene_id", "ensembl_gene_id_version", "ensembl_transcript_id", "ensembl_transcript_id_version" or "refseq_mrna".
 #' For details, user can call \code{listAttributes()} to display all available attributes in the selected dataset.
 #' @param transfer_tab data.frame, the data frame for ID conversion. This can be obtained by calling \code{get_IDtransfer}.
@@ -2594,7 +2597,7 @@ get_obs_label <- function(phe_info,use_col,collapse='|'){
 #' \code{get_int_group} is a function to extract interested phenotype groups from the ExpressionSet object
 #' with 'cluster-meaningful' sample features.
 #'
-#' @param eset, an ExpressionSet object.
+#' @param eset an ExpressionSet object.
 #' @return Return a vector of phenotype groups which could be used for sample cluster analysis.
 #'
 #' @examples
@@ -2666,13 +2669,13 @@ get_jac <- function(pred_label, obs_label) {
 #' Visualize Each Sample's Observed Label vs. Predicted Label in Table
 #'
 #' \code{draw.clustComp} draws a table to show each sample's observed label vs. its predicted label.
-#' Each row represents an observed label (e.g. one subgroup of disease), each column represents the predicted label created by classification (K-means).
+#' Each row represents an observed label (e.g. one subgroup of disease), each column represents the predicted label created by classification algorithm (e.g K-means).
 #'
 #' The table provides more details about the side-by-side PCA biplot created by \code{draw.pca.kmeans}.
 #' The purpose is to find if any abnormal sample (outlier) exists. The darker the table cell is,
 #' the more samples are gathered in the corresponding label.
 #'
-#' @param pred_label a vector of characters, the predicted labels created by classification (K-means).
+#' @param pred_label a vector of characters, the predicted labels created by classification (e.g K-means).
 #' @param obs_label a vector of characters, the observed labels annotated by phenotype data.
 #' @param strategy character, method to quantify the similarity between predicted labels vs. observed labels.
 #' Users can choose from "ARI (adjusted rand index)", "NMI (normalized mutual information)" and "Jaccard".
@@ -2680,7 +2683,7 @@ get_jac <- function(pred_label, obs_label) {
 #' @param use_col logical, If TRUE, the table will be colored. The more sample gathered in one table cell, the darker shade it has.
 #' Default is TRUE.
 #' @param low_K integer, a threshold of sample number to be shown in a single cell.
-#' If too many samples gathered in a single table cell, it will be challenging for the eyes.
+#' If too many samples gathered in a single table cell, it will be challenging for eyes.
 #' By setting the value of this threshold, if the number of samples gathered in one table cell exceeded the threshold,
 #' only the number will be shown. Otherwise, all samples' names will be listed.
 #' Default is 5.
@@ -3656,7 +3659,7 @@ get_consensus_cluster <-function(mat,all_k=2:12,clusterAlg="km",plot='png',...)
 #' \code{draw.MICA} is a function to visualize the cluster result for the samples using MICA (mutual information based clustering analysis) algorithm.
 #' Users need to give the MICA project information (directory and name), and the samples real labels.
 #' MICA returns the K-value that yields the best clustering performance. Users can pick one comparison score to show in the plot, "ARI", "NMI" or "Jaccard".
-#' It is not suggested, when sample size is small.
+#' MICA is not suggested, when sample size is small.
 #'
 #' @param outdir character, the output directory for running MICA.
 #' @param prjname charater, the project name for running MICA.
@@ -3779,8 +3782,8 @@ get_clustComp_MICA <- function(outdir, all_k, obs_label, prjname = NULL,strategy
 
 #' Draw Volcano Plot for Top DE (differentiated expressed) Genes or DA (differentiated activity) Drivers
 #'
-#' \code{draw.volcanoPlot} draws the volcano plot to quickly identify DE genes or DA drivers with large fold change and significant P-value in large data sets.
-#' And return a data.frame of these highlighted genes/drivers.
+#' \code{draw.volcanoPlot} draws the volcano plot to identify and visualize DE genes or DA drivers with fold change threshold and significant P-value from the input dataset.
+#' The function will return a data.frame of these highlighted genes/drivers.
 #'
 #' Top genes or drivers will be colored (blue for down-regulated and red for up-regulated) and labeled with their names.
 #' This function requires the input of master table and two thresholds of logFC and P-value.
@@ -4071,11 +4074,11 @@ draw.NetBID <- function(DA_list=NULL,DE_list=NULL,main_id=NULL,top_number=30,
                         row_cex=1,column_cex=1,text_cex=1,col_srt=60,pdf_file=NULL){
   if(is.list(DA_list)==FALSE){message('Please input DA list!');return(FALSE)}
   if(is.list(DE_list)==FALSE){message('Please input DE list!');return(FALSE)}
-  if(!main_id %in% names(DA_list)){message('main id not in DA list!');return(FALSE)}
   if(top_number<1){message('top_number must be larger than 1!');return(FALSE)}
   DA_name <- names(DA_list)
   DE_name <- names(DE_list)
   if(is.null(main_id)==TRUE) main_id <- DA_name[1]
+  if(!main_id %in% names(DA_list)){message('main id not in DA list!');return(FALSE)}
   if(top_number > nrow(DA_list[[main_id]])) top_number <- nrow(DA_list[[main_id]])
   w1 <- rownames(DA_list[[main_id]][order(DE_list[[main_id]]$P.Value)[1:top_number],]) ## display ID
   w2 <- gsub('_TF','',w1);  w2 <- gsub('_SIG','',w2)
@@ -4321,9 +4324,13 @@ draw.heatmap <- function(mat=NULL,use_genes=rownames(mat),use_gene_label=use_gen
   names(use_gene_label) <- use_genes
   names(use_sample_label) <- use_samples
   if(is.null(rownames(phenotype_info))==FALSE){
-    phenotype_info <- phenotype_info[colnames(mat),]
+    ori_phenotype_info <- phenotype_info
+    phenotype_info <- as.data.frame(phenotype_info[colnames(mat),],stringsAsFactors=FALSE)
+    colnames(phenotype_info) <- colnames(ori_phenotype_info)
   }
-  phenotype_info <- lapply(phenotype_info,function(x)as.character(x))
+  for(i in colnames(phenotype_info)){
+    phenotype_info[,i] <- as.character(phenotype_info[,i])
+  }
   if(exists('row_names_gp')==FALSE) row_names_gp <- gpar(fontsize = 12)
   if(exists('column_names_gp')==FALSE) column_names_gp <- gpar(fontsize = 12)
   use_genes <- intersect(use_genes,rownames(mat))
@@ -4466,7 +4473,7 @@ vec2list <- function(input_v,sep=NULL){
 #' \code{funcEnrich.Fisher} performs gene set enrichment analysis to the input gene list, by using the Fisher's Exact Test.
 #' Background gene list is accepeted.
 #'
-#' @param input_list a vector of characters, a vector of gene symbols. If gene symbols not available, users can call \code{get_IDtransfer}
+#' @param input_list a vector of characters, a vector of gene symbols. If gene symbols are not available, users can call \code{get_IDtransfer}
 #' and \code{get_name_transfertab} for ID conversion.
 #' @param bg_list a vector of characters, a vector of background gene symbols. If NULL, genes in \code{gs2gene} will be used as background.
 #' Default is NULL.
@@ -4960,11 +4967,12 @@ draw.funcEnrich.cluster <- function(funcEnrich_res=NULL,top_number=30,Pv_col='Or
 #' If NULL, the names in \code{driver_list} will be displayed. Default is NULL.
 #' @param Z_val a vector of numerics, the Z statistics of the \code{driver_list}.
 #' It is highly suggested to assign names to this vector. If the vector is nameless, the function will use the names of \code{driver_list} by default.
-#' @param driver_type a vector of characters, the biotype or other characteristics of the driver. In the demo, we use \code{ms_tab[driver_list,'gene_biotype']} as input.
+#' @param driver_type a vector of characters, the biotype or other characteristics of the driver.
+#' In the demo, we use \code{"gene_biotype"} column in the master table as input.
 #' It is highly suggested to assign names to this vector. If the vector is nameless, the function will use the names of \code{driver_list} by default.
 #' Default is NULL.
 #' @param target_list list, the driver-to-target list object. The names of the list elements are drivers.
-#' Each element is a data frame, usually contains three columns. "target", target gene names; "MI", mutual information; "spearman", spearman correlation coefficient.
+#' Each element is a data frame, usually contains at least three columns. "target", target gene names; "MI", mutual information; "spearman", spearman correlation coefficient.
 #' Users can call \code{get_net2target_list} to create this list and follow the suggested pipeline.
 #' @param transfer2symbol2type data.frame, the ID-conversion table for converting the original ID into gene symbol and gene biotype (at gene level),
 #' or into transcript symbol and transcript biotype (at transcript level).
@@ -5547,9 +5555,8 @@ get_z2p <- function(x,use_star=FALSE,digit_num=2){
 
 #' Draw GSEA (gene set enrichment analysis) Plot with NetBID Analysis of Drivers
 #'
-#' \code{draw.GSEA.NetBID} creates a GSEA plot for drivers with more NetBID analysis information. Such as, number of target genes, ranking of target genes in
+#' \code{draw.GSEA.NetBID} creates a GSEA plot for drivers with more NetBID analysis information. Such as number of target genes, ranking of target genes in
 #' differential expressed file, differential expression (DE) and differential activity (DA) values.
-#'
 #'
 #' @param DE data.frame, a data.frame created either by function \code{getDE.limma.2G} or \code{getDE.BID.2G}. Row names are gene/driver names,
 #' columns must include gene/driver name and calculated differencial values (e.g. "ID", "logFC", "AveExpr", "P.Value" etc.).
@@ -5559,7 +5566,7 @@ get_z2p <- function(x,use_star=FALSE,digit_num=2){
 #' If \code{DE} is created by \code{getDE.limma.2G} or \code{getDE.BID.2G}, this parameter should be set to "logFC" or "t".
 #' @param profile_trend character, users can choose between "pos2neg" and "neg2pos". "pos2neg" means high \code{profile_col} in target group will be shown on the left.
 #' "neg2pos" means high \code{profile_col} in control group will be shown on the left. Default is "pos2neg".
-#' For details, please check "NetBID_GSEA_demo1.pdf" and "NetBID_GSEA_demo2.pdf" plotted by demo script.
+#' For details, please check online tutorial.
 #' @param driver_list a vector of characters, the names of top drivers.
 #' @param show_label a vector of characters, the names of top drivers.
 #' If NULL, will display the names in \code{driver_list}. Default is NULL.
@@ -5568,13 +5575,13 @@ get_z2p <- function(x,use_star=FALSE,digit_num=2){
 #' @param driver_DE_Z a vector of numerics, the Z statistics of differential expressed (DE) value of the \code{driver_list}.
 #' It is highly suggested to give names to the vector, otherwise the names of \code{driver_list} will be used.
 #' @param target_list list, the driver-to-target list object. The names of the list elements are drivers.
-#' Each element is a data frame, usually contains three columns. "target", target gene names; "MI", mutual information; "spearman", spearman correlation coef- ficient.
+#' Each element is a data frame, usually contains at least three columns. "target", target gene names; "MI", mutual information; "spearman", spearman correlation coef- ficient.
 #' Users can call \code{get_net2target_list} to create this list.
 #' @param top_driver_number numeric, number for the top significant drivers to be displayed in the plot. Default is 30.
 #' @param target_nrow numeric, users can choose between 1 and 2. Number of panels to mark the ranking of target genes.
 #' If 1, the ranking of target genes will be marked in one panel.
 #' If 2, the ranking of target genes will be marked in two panels. Upper panel for positively-regulated, lower panel for negatively-regulated.
-#' Default is 2. For details, please check "NetBID_GSEA_demo3.pdf" and "NetBID_GSEA_demo5.pdf" plotted by demo script.
+#' Default is 2. For details, please check online tutorial.
 #' @param target_col character, name of the color palette used for display marker line in the panel. Users can choose between "black" and "RdBu".
 #' If "black", the marker line in the panel is black.
 #' If "RdBu", the marker line in the panel is Red to Blue.
@@ -5587,9 +5594,9 @@ get_z2p <- function(x,use_star=FALSE,digit_num=2){
 #' If "PN", positively-regulated genes will be colored red and negatively-regulated genes will be colored blue.
 #' If "DE", the color shades is decided by its differentiated value.
 #' Default is "PN".
-#' @param left_annotation character, annotation on the left of GSEA curve, indicating high in control group or target group.
+#' @param left_annotation character, annotation on the left of profile curve, indicating high in control group or target group.
 #' Default is "".
-#' @param right_annotation character, annotation on the right of GSEA curve, indicating high in the opposite group of \code{left_annotation}.
+#' @param right_annotation character, annotation on the right of profile curve, indicating high in the opposite group of \code{left_annotation}.
 #' Default is "".
 #' @param main character, an overall title for the plot. Default is "".
 #' @param profile_sig_thre numeric, threshold value for target genes. This parameter works only when \code{target_col_type} is set as "DE" and \code{target_col} is set as "RdBu".
@@ -5949,8 +5956,8 @@ draw.GSEA.NetBID <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_tren
 #' Users can choose between "black" and "RdBu". If "black", the marker line in the panel is black. If "RdBu", the marker line in the panel is Red to Blue.
 #' The color shade of the marker line is decided by each gene's significance of differentiation. High in red, low in blue.
 #' Default is "RdBu".
-#' @param left_annotation character, annotation on the left of GSEA curve, indicating high in control group or target group. Default is "".
-#' @param right_annotation character, annotation on the right of GSEA curve, indicating high in the opposite group of \code{left_annotation}. Default is "".
+#' @param left_annotation character, annotation on the left of profile curve, indicating high in control group or target group. Default is "".
+#' @param right_annotation character, annotation on the right of profile curve, indicating high in the opposite group of \code{left_annotation}. Default is "".
 #' @param main character, an overall title for the plot. Default is "".
 #' @param profile_sig_thre numeric, threshold value for target genes. This parameter works only when \code{target_col_type} is set as "DE" and \code{target_col} is set as "RdBu".
 #' Non-significant target genes will be colored grey. Default is 0.
@@ -6193,7 +6200,7 @@ draw.GSEA.NetBID.GS <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_t
 #' @param driver1 character, the name of the first driver.
 #' @param driver2 character, the name of the second driver.
 #' @param target_list list, the driver-to-target list object. The names of the list elements are drivers (e.g. driver1 and driver2).
-#' Each element is a data frame, usually contains three columns. "target", target gene names; "MI", mutual information; "spearman", spearman correlation coefficient.
+#' Each element is a data frame, usually contains at least three columns. "target", target gene names; "MI", mutual information; "spearman", spearman correlation coefficient.
 #' Users can call \code{get_net2target_list} to create this list.
 #' @return Return a data.frame with rows of target genes, column of "target", "MI", "spearman".
 #' @examples
@@ -6448,7 +6455,7 @@ draw.targetNet <- function(source_label="",source_z=NULL,edge_score=NULL,
   plot_part <- function(ori=FALSE,before_off=FALSE){
     geneWidth <- max(strwidthMod(g1,'inches',cex=label_cex))
     if(before_off==TRUE) dev.off()
-    if(is.null(pdf_file)==FALSE) pdf(pdf_file,width=6+2*geneWidth,height=6+2*geneWidth)
+    if(is.null(pdf_file)==FALSE) pdf(pdf_file,width=6+2*geneWidth*n_layer,height=6+2*geneWidth*n_layer)
     par(mai=c(1,1,1,1))
     plot(1,xlim=c(-1,1),ylim=c(-1,1),bty='n',col='white',xlab="",ylab="",xaxt='n',yaxt='n')
     pp <- par()$usr
@@ -6539,7 +6546,8 @@ draw.targetNet <- function(source_label="",source_z=NULL,edge_score=NULL,
 #' @param show_test logical, if TRUE, the test result will be printed and returned. Default is FALSE.
 #' @param n_layer integer, number of circle layers to display. Default is 1.
 #' @param alphabetical_order logical, if TRUE, the targe gene names will be sorted alphabetically. If FALSE, will be sorted by statistics. Default is FALSE.
-#' @return If \code{show_test}==FALSE, will return a logical value indicating whether the plot has been successfully generated, otherwise will return the statistics of testing.
+#' @return If \code{show_test}==FALSE, will return a logical value indicating whether the plot has been successfully generated,
+#' otherwise will return the statistics of testing when total_possible_target is not NULL.
 #'
 #' @examples
 #' source1_label <- 'test1'
@@ -6864,7 +6872,7 @@ get_net2target_list <- function(net_dat=NULL) {
 #' \code{weight} is the "MI (mutual information)" value and \code{sign} is the sign of the spearman
 #' correlation coefficient (1, positive regulation; -1, negative regulation).
 #'
-#' @param network_file character, the path for storing network file.
+#' @param network_file character, the path for storing network file. For the output of SJAracne, the name of the network file will be "consensus_network_ncol_.txt" under the output directory.
 #'
 #' @return Return a list containing three elements, \code{network_dat}, \code{target_list} and \code{igraph_obj}.
 #'
@@ -7211,15 +7219,15 @@ SJAracne.prepare <-
 #'
 #' It is a core function inside \code{getDE.BID.2G}.
 #' This function allows users to have access to more options when calculating the statistics using Bayesian Inference method.
-#' In some cases, the input table for ID conversion could be at probe/transcript level, but DE/DA calculated at gene level is expected.
+#' In some cases, the input expression matrix could be at probe/transcript level, but DE/DA calculated at gene level is expected.
 #' By setting pooling strategy, users can successfully solve the special cases.
 #' The P-value is estimated by the posterior distribution of the coefficient.
 #'
-#' @param mat matrix, the expression/activity matrix of IDs (gene/transcript/probe) from one gene/gene set. Rows are IDs, columns are samples.
+#' @param mat matrix, the expression/activity matrix of IDs (gene/transcript/probe) from one gene. Rows are IDs, columns are samples.
 #' It is strongly suggested to contain rownames of IDs and column names of samples. Example, geneA has two probes A1 and A2 across all 6 samples (Case-rep1, Case-rep2, Case-rep3, Control-rep1, Control-rep2 and Control-rep3).
 #' The \code{mat} of geneA is a 2*6 numeric matrix. Likewise, if geneA has only one probe, the \code{mat} is a one-row matrix.
 #' @param use_obs_class a vector of characters, the category of sample.
-#' If the vector names are not available, the order of samples in \code{use_obs_class} must be the same as in \code{mat}, .
+#' If the vector names are not available, the order of samples in \code{use_obs_class} must be the same as in \code{mat}.
 #' Users can call \code{get_obs_label} to create this vector.
 #' @param class_order a vector of characters, the order of the sample's category.
 #' The first class in this vector will be considered as the control group by default.
@@ -7243,22 +7251,22 @@ SJAracne.prepare <-
 #' "partial", use probes as random effect in the regression model.
 #' Default is "full".
 #' @param prior.V.scale numeric, the V in the parameter "prior" used in \code{MCMCglmm}.
-#' It is meaningful to set when one choose "Bayesian" as method,and "partial" as pooling.
+#' It is meaningful to set when one choose "Bayesian" as method and "partial" as pooling.
 #' Default is 0.02.
 #' @param prior.R.nu numeric, the R-structure in the parameter "prior" used in \code{MCMCglmm}.
-#' It is meaningful to set when one choose "Bayesian" as method,and "partial" as pooling.
+#' It is meaningful to set when one choose "Bayesian" as method and "partial" as pooling.
 #' Default is 1.
 #' @param prior.G.nu numeric, the G-structure in the parameter "prior" used in \code{MCMCglmm}.
-#' It is meaningful to set when one choose "Bayesian" as method,and "partial" as pooling.
+#' It is meaningful to set when one choose "Bayesian" as method and "partial" as pooling.
 #' Default is 2.
 #' @param nitt numeric, the parameter "nitt" used in \code{MCMCglmm}.
-#' It is meaningful to set when one choose "Bayesian" as method,and "partial" as pooling.
+#' It is meaningful to set when one choose "Bayesian" as method and "partial" as pooling.
 #' Default is 13000.
 #' @param burnin numeric, the parameter "burnin" used in \code{MCMCglmm}.
-#' It is meaningful to set when one choose "Bayesian" as method,and "partial" as pooling.
+#' It is meaningful to set when one choose "Bayesian" as method and "partial" as pooling.
 #' Default is 3000.
 #' @param thin numeric, the parameter "thin" used in \code{MCMCglmm}.
-#' It is meaningful to set when one choose "Bayesian" as method,and "partial" as pooling.
+#' It is meaningful to set when one choose "Bayesian" as method and "partial" as pooling.
 #' Default is 10.
 #' @param std logical, if TRUE, the expression matrix will be normalized by column. Default is TRUE.
 #' @param logTransformed logical, if TRUE, log transformation will be performed. Default is TRUE.

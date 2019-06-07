@@ -23,7 +23,8 @@ If NULL, all genes will be selected.}
 If NULL, \code{db_info[1]} will be used. \code{db_info} requires the calling of \code{db.preload} in the previous steps.
 Default is NULL.}
 
-\item{ignore_version}{logical, if TRUE and \code{from_type} is "ensembl_gene_id_version" or "ensembl_transcript_id_version", the version will be ignored.
+\item{ignore_version}{logical, if it is set to TRUE and \code{from_type} is "ensembl_gene_id_version" or "ensembl_transcript_id_version",
+the version of the original ID will be ignored in ID mapping.
 Default is FALSE.}
 }
 \value{

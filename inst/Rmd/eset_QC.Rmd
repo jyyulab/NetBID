@@ -85,7 +85,7 @@ Distance between samples is calculated by dist2().
 nrow <- ceiling(length(intgroup)/2)
 par(mfrow = c(nrow, 2))
 par(mar = c(6, 6, 6, 6))
-    m <- dist2(use_mat)
+    m <- dist2.mod(use_mat)
     #dend <- as.dendrogram(hclust(as.dist(m), method = "single"))
     #ord <- order.dendrogram(dend)
     #m <- m[ord, ord]

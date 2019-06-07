@@ -37,9 +37,9 @@ Users can choose between "black" and "RdBu". If "black", the marker line in the 
 The color shade of the marker line is decided by each gene's significance of differentiation. High in red, low in blue.
 Default is "RdBu".}
 
-\item{left_annotation}{character, annotation on the left of GSEA curve, indicating high in control group or target group. Default is "".}
+\item{left_annotation}{character, annotation on the left of profile curve, indicating high in control group or target group. Default is "".}
 
-\item{right_annotation}{character, annotation on the right of GSEA curve, indicating high in the opposite group of \code{left_annotation}. Default is "".}
+\item{right_annotation}{character, annotation on the right of profile curve, indicating high in the opposite group of \code{left_annotation}. Default is "".}
 
 \item{main}{character, an overall title for the plot. Default is "".}
 

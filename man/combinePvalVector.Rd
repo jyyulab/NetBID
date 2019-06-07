@@ -8,7 +8,7 @@ combinePvalVector(pvals, method = c("Stouffer", "Fisher"),
   signed = TRUE, twosided = TRUE)
 }
 \arguments{
-\item{pvals, }{a vector of numerics, the P values from multiple comparison need to be combined.}
+\item{pvals}{a vector of numerics, the P values from multiple comparison need to be combined.}
 
 \item{method}{character, users can choose between "Stouffer" and "Fisher". Default is "Stouffer".}
 

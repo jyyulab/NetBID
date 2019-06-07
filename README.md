@@ -1,5 +1,5 @@
 # NetBID2
-data-driven Network-based Bayesian Inference of Drivers, Version II
+Network-based Bayesian Inference of Drivers, Version II
 
 # Install
 

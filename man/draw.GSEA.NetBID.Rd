@@ -24,7 +24,7 @@ If \code{DE} is created by \code{getDE.limma.2G} or \code{getDE.BID.2G}, this pa
 
 \item{profile_trend}{character, users can choose between "pos2neg" and "neg2pos". "pos2neg" means high \code{profile_col} in target group will be shown on the left.
 "neg2pos" means high \code{profile_col} in control group will be shown on the left. Default is "pos2neg".
-For details, please check "NetBID_GSEA_demo1.pdf" and "NetBID_GSEA_demo2.pdf" plotted by demo script.}
+For details, please check online tutorial.}
 
 \item{driver_list}{a vector of characters, the names of top drivers.}
 
@@ -38,7 +38,7 @@ It is highly suggested to give names to the vector, otherwise the names of \code
 It is highly suggested to give names to the vector, otherwise the names of \code{driver_list} will be used.}
 
 \item{target_list}{list, the driver-to-target list object. The names of the list elements are drivers.
-Each element is a data frame, usually contains three columns. "target", target gene names; "MI", mutual information; "spearman", spearman correlation coef- ficient.
+Each element is a data frame, usually contains at least three columns. "target", target gene names; "MI", mutual information; "spearman", spearman correlation coef- ficient.
 Users can call \code{get_net2target_list} to create this list.}
 
 \item{top_driver_number}{numeric, number for the top significant drivers to be displayed in the plot. Default is 30.}
@@ -46,7 +46,7 @@ Users can call \code{get_net2target_list} to create this list.}
 \item{target_nrow}{numeric, users can choose between 1 and 2. Number of panels to mark the ranking of target genes.
 If 1, the ranking of target genes will be marked in one panel.
 If 2, the ranking of target genes will be marked in two panels. Upper panel for positively-regulated, lower panel for negatively-regulated.
-Default is 2. For details, please check "NetBID_GSEA_demo3.pdf" and "NetBID_GSEA_demo5.pdf" plotted by demo script.}
+Default is 2. For details, please check online tutorial.}
 
 \item{target_col}{character, name of the color palette used for display marker line in the panel. Users can choose between "black" and "RdBu".
 If "black", the marker line in the panel is black.
@@ -62,10 +62,10 @@ If "PN", positively-regulated genes will be colored red and negatively-regulated
 If "DE", the color shades is decided by its differentiated value.
 Default is "PN".}
 
-\item{left_annotation}{character, annotation on the left of GSEA curve, indicating high in control group or target group.
+\item{left_annotation}{character, annotation on the left of profile curve, indicating high in control group or target group.
 Default is "".}
 
-\item{right_annotation}{character, annotation on the right of GSEA curve, indicating high in the opposite group of \code{left_annotation}.
+\item{right_annotation}{character, annotation on the right of profile curve, indicating high in the opposite group of \code{left_annotation}.
 Default is "".}
 
 \item{main}{character, an overall title for the plot. Default is "".}
@@ -82,7 +82,7 @@ Default is 1.64.}
 Return a logical value. If TRUE, the plot has been created successfully.
 }
 \description{
-\code{draw.GSEA.NetBID} creates a GSEA plot for drivers with more NetBID analysis information. Such as, number of target genes, ranking of target genes in
+\code{draw.GSEA.NetBID} creates a GSEA plot for drivers with more NetBID analysis information. Such as number of target genes, ranking of target genes in
 differential expressed file, differential expression (DE) and differential activity (DA) values.
 }
 \examples{

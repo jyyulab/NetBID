@@ -50,7 +50,8 @@ If NULL, will do not perform this test. Default is NULL.}
 \item{alphabetical_order}{logical, if TRUE, the targe gene names will be sorted alphabetically. If FALSE, will be sorted by statistics. Default is FALSE.}
 }
 \value{
-If \code{show_test}==FALSE, will return a logical value indicating whether the plot has been successfully generated, otherwise will return the statistics of testing.
+If \code{show_test}==FALSE, will return a logical value indicating whether the plot has been successfully generated,
+otherwise will return the statistics of testing when total_possible_target is not NULL.
 }
 \description{
 \code{draw.targetNet.TWO} draws a network structure to display the target genes of two selected drivers. Edges of positively-regulated target genes are orange,

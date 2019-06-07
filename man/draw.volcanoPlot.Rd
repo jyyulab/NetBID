@@ -48,8 +48,8 @@ If "distribute", location of labels will be rearranged to avoid overlap. Default
 Return a data.frame of selected significant genes or drivers, with columns contain \code{label_col}, \code{logFC_col} and \code{Pv_col}.
 }
 \description{
-\code{draw.volcanoPlot} draws the volcano plot to quickly identify DE genes or DA drivers with large fold change and significant P-value in large data sets.
-And return a data.frame of these highlighted genes/drivers.
+\code{draw.volcanoPlot} draws the volcano plot to identify and visualize DE genes or DA drivers with fold change threshold and significant P-value from the input dataset.
+The function will return a data.frame of these highlighted genes/drivers.
 }
 \details{
 Top genes or drivers will be colored (blue for down-regulated and red for up-regulated) and labeled with their names.

@@ -14,12 +14,12 @@ bid(mat = NULL, use_obs_class = NULL, class_order = NULL,
   verbose = FALSE)
 }
 \arguments{
-\item{mat}{matrix, the expression/activity matrix of IDs (gene/transcript/probe) from one gene/gene set. Rows are IDs, columns are samples.
+\item{mat}{matrix, the expression/activity matrix of IDs (gene/transcript/probe) from one gene. Rows are IDs, columns are samples.
 It is strongly suggested to contain rownames of IDs and column names of samples. Example, geneA has two probes A1 and A2 across all 6 samples (Case-rep1, Case-rep2, Case-rep3, Control-rep1, Control-rep2 and Control-rep3).
 The \code{mat} of geneA is a 2*6 numeric matrix. Likewise, if geneA has only one probe, the \code{mat} is a one-row matrix.}
 
 \item{use_obs_class}{a vector of characters, the category of sample.
-If the vector names are not available, the order of samples in \code{use_obs_class} must be the same as in \code{mat}, .
+If the vector names are not available, the order of samples in \code{use_obs_class} must be the same as in \code{mat}.
 Users can call \code{get_obs_label} to create this vector.}
 
 \item{class_order}{a vector of characters, the order of the sample's category.
@@ -49,27 +49,27 @@ Default is gaussian.}
 Default is "full".}
 
 \item{prior.V.scale}{numeric, the V in the parameter "prior" used in \code{MCMCglmm}.
-It is meaningful to set when one choose "Bayesian" as method,and "partial" as pooling.
+It is meaningful to set when one choose "Bayesian" as method and "partial" as pooling.
 Default is 0.02.}
 
 \item{prior.R.nu}{numeric, the R-structure in the parameter "prior" used in \code{MCMCglmm}.
-It is meaningful to set when one choose "Bayesian" as method,and "partial" as pooling.
+It is meaningful to set when one choose "Bayesian" as method and "partial" as pooling.
 Default is 1.}
 
 \item{prior.G.nu}{numeric, the G-structure in the parameter "prior" used in \code{MCMCglmm}.
-It is meaningful to set when one choose "Bayesian" as method,and "partial" as pooling.
+It is meaningful to set when one choose "Bayesian" as method and "partial" as pooling.
 Default is 2.}
 
 \item{nitt}{numeric, the parameter "nitt" used in \code{MCMCglmm}.
-It is meaningful to set when one choose "Bayesian" as method,and "partial" as pooling.
+It is meaningful to set when one choose "Bayesian" as method and "partial" as pooling.
 Default is 13000.}
 
 \item{burnin}{numeric, the parameter "burnin" used in \code{MCMCglmm}.
-It is meaningful to set when one choose "Bayesian" as method,and "partial" as pooling.
+It is meaningful to set when one choose "Bayesian" as method and "partial" as pooling.
 Default is 3000.}
 
 \item{thin}{numeric, the parameter "thin" used in \code{MCMCglmm}.
-It is meaningful to set when one choose "Bayesian" as method,and "partial" as pooling.
+It is meaningful to set when one choose "Bayesian" as method and "partial" as pooling.
 Default is 10.}
 
 \item{std}{logical, if TRUE, the expression matrix will be normalized by column. Default is TRUE.}
@@ -100,7 +100,7 @@ Users can choose different regression models and pooling strategies.
 \details{
 It is a core function inside \code{getDE.BID.2G}.
 This function allows users to have access to more options when calculating the statistics using Bayesian Inference method.
-In some cases, the input table for ID conversion could be at probe/transcript level, but DE/DA calculated at gene level is expected.
+In some cases, the input expression matrix could be at probe/transcript level, but DE/DA calculated at gene level is expected.
 By setting pooling strategy, users can successfully solve the special cases.
 The P-value is estimated by the posterior distribution of the coefficient.
 }

@@ -43,5 +43,5 @@ Return a vector of the predicted label (if return_type is "optimal") and a list 
 \code{draw.MICA} is a function to visualize the cluster result for the samples using MICA (mutual information based clustering analysis) algorithm.
 Users need to give the MICA project information (directory and name), and the samples real labels.
 MICA returns the K-value that yields the best clustering performance. Users can pick one comparison score to show in the plot, "ARI", "NMI" or "Jaccard".
-It is not suggested, when sample size is small.
+MICA is not suggested, when sample size is small.
 }
