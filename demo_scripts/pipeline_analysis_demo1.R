@@ -96,8 +96,8 @@ analysis.par$DA[[comp_name]] <- DA_driver_bid
 ## Third comparison: G4 vs. others
 # Combine the comparison results from `G4.Vs.WNT` and `G4.Vs.SHH`
 comp_name <- 'G4.Vs.otherTwo' # Each comparison must has a name
-DE_gene_comb <- combineDE(DE_list=list(WNT=analysis.par$DE$`G4.Vs.WNT`,SHH=analysis.par$DE$`G4.Vs.SHH`))
-DA_driver_comb <- combineDE(DE_list=list(WNT=analysis.par$DA$`G4.Vs.WNT`,SHH=analysis.par$DA$`G4.Vs.SHH`))
+DE_gene_comb <- combineDE(DE_list=list('G4.Vs.WNT'=analysis.par$DE$`G4.Vs.WNT`,'G4.Vs.SHH'=analysis.par$DE$`G4.Vs.SHH`))
+DA_driver_comb <- combineDE(DE_list=list('G4.Vs.WNT'=analysis.par$DA$`G4.Vs.WNT`,'G4.Vs.SHH'=analysis.par$DA$`G4.Vs.SHH`))
 analysis.par$DE[[comp_name]] <- DE_gene_comb$combine
 analysis.par$DA[[comp_name]] <- DA_driver_comb$combine
 
