@@ -69,10 +69,11 @@ If NULL, all the gene sets will be displayed in descending order of their signif
 
 \item{gs_cex}{numeric, giving the amount by which the text of gene set names should be magnified relative to the default. Default is 1.}
 
-\item{only_return_mat}{logicial, if TRUE, the function will only return the gene set Vs. driver matrix and will not plot the figure. Default is FALSE.}
+\item{only_return_mat}{logicial, if TRUE, the function will only return the gene set Vs. driver matrix with value representing the Z-statistics of the significance test;
+and the plot will not be generated. Default is FALSE.}
 }
 \value{
-Return a logical value. If TRUE, the plot has been created successfully.
+Return a logical value if only_return_mat=FALSE. If TRUE, the plot has been created successfully.
 }
 \description{
 \code{draw.bubblePlot} combines the matrix bubble chart and the heat map, using bubble color to compare P-values (performed by Fisher's Exact Test) and bubble size to compare the intersected size for target genes.

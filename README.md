@@ -51,28 +51,33 @@ pipeline_analysis_demo1.R
 ## demo scripts for following analysis, mainly focus on visualization
 analysis_and_plot_demo1.R
 
-Part I: for the top list of significant drivers 
+Part I: More details about the top drivers
 
-QI.1: How to get the top list of drivers with significantly different activity (DA) in G4 Vs. other subtypes ?
+QI.1: How to get the top drivers with significant differential activity (DA) in the comparison between G4 vs. other subtypes ?
 
-QI.2: How to understand the significance of those top DA drivers ?
+QI.2: How to interpret the significance of top DA drivers ?
 
-QI.3: What is the expression/activity pattern of those top DA drivers in samples with different subtype ?
+QI.3: What is the expression/activity pattern of these top DA drivers across sample subtypes?
 
-QI.4: What is the biological function of those top DA drivers ?
+QI.4: What are the biological functions of these top DA drivers ?
 
-QI.5: What is the biological function of the target genes of those top DA drivers ?
+QI.5: What are the biological functions of the target genes of these top DA drivers ?
 
-Part II: for a selected interested driver
+Part II: More details about the selected driver
 
-QII.1: How to understand the significance of the selected driver ?
+QII.1: How to interpret the significance of the selected driver ?
 
 QII.2: How to visualize the network structure of the selected driver ?
 
-QII.3: What is the expression/activity for this selected driver in samples with different subtypes ?
+QII.3: What is the expression/activity of this selected driver across subtypes of sample ?
 
-Part III: further analysis
+QII.4: What are the functions of the target genes of this selected driver ?
 
-QIII.1: What are the activities of the curated gene sets in all samples and what are the top significantly differed gene sets ?
+Part III: Other analyses NetBID2 can do
 
-QIII.2: How to find drivers with significantly overlapped target genes ?
+QIII.1: What are the activities of the curated gene sets across all samples ?
+
+QIII.2: How to find drivers share significantly overlapped target genes ?
+
+Q&A: How to modify the figure size created by draw. functions ?
+

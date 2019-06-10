@@ -1,85 +1,92 @@
 ---
+title: "Advanced analysis"
 layout: default
-title: Advanced analysis
 nav_order: 4
-has_children: false
 permalink: /docs/advanced_analysis
+has_children: no
 ---
 
-# Advanced analysis
+# Advanced analysis and visualization
 
-The purpose for this part: 
+The purpose of this part: 
 
-**further analyze and visualize the results for drivers**.
+**further analysis and visualization of the significant drivers**.
 
-The full demo script for this part could be found in [analysis_and_plot_demo1.R](https://github.com/jyyulab/NetBID-dev/blob/master/demo_scripts/analysis_and_plot_demo1.R).
+The complete demo script for network construction can be found here, [analysis_and_plot_demo1.R](https://github.com/jyyulab/NetBID-dev/blob/master/demo_scripts/analysis_and_plot_demo1.R).
 
-In this part, we will use the question-induced strategy to assist user for the choice and usage of those visualization functions. 
-The main purpose is that we want to **find potential hidden drivers in Group4 compared with the other subtypes by using NetBID2**, for which may be related with the specific clinical feature for Group4 MB.
-
+From the demo dataset, we've found the significant hidden drivers in Group4 compared to other subtype groups. These drivers may relate to specific clinical features of the adult medulloblastoma Group4, and hence the further investigation is needed. 
+Here, we've listed some important biological questions which can be further investigated using NetBID2.
 
 ----------
 ## Quick Navigation for this page
 
 - [Preparations](#preparations)
-- [Part I: for the top list of significant drivers](#part-i-for-the-top-list-of-significant-drivers)
-    - [QI.1: How to get the top list of drivers with significantly different activity (DA) in G4 Vs. other subtypes ?](#qi1-how-to-get-the-top-list-of-drivers-with-significantly-different-activity-da-in-g4-vs-other-subtypes-)
-    - [QI.2: How to understand the significance of those top DA drivers ?](#qi2-how-to-understand-the-significance-of-those-top-da-drivers-)
-    - [QI.3: What is the expression/activity pattern of those top DA drivers in samples with different subtype ?](#qi3-what-is-the-expressionactivity-pattern-of-those-top-da-drivers-in-samples-with-different-subtype-)
-    - [QI.4: What is the biological function of those top DA drivers ?](#qi4-what-is-the-biological-function-of-those-top-da-drivers-)
-    - [QI.5: What is the biological function of the target genes of those top DA drivers ?](#qi5-what-is-the-biological-function-of-the-target-genes-of-those-top-da-drivers-)
-- [Part II: for a selected interested driver](#part-ii-for-a-selected-interested-driver)
-    - [QII.1: How to understand the significance of the selected driver ?](#qii1-how-to-understand-the-significance-of-the-selected-driver-)
+- [Part I: More details about the top drivers](#part-i-more-details-about-the-top-drivers)
+    - [QI.1: How to get the top drivers with significant differential activity (DA) in the comparison between G4 vs. other subtypes ?](#qi1-how-to-get-the-top-drivers-with-significant-differential-activity-da-in-the-comparison-between-g4-vs-other-subtypes-)
+    - [QI.2: How to interpret the significance of top DA drivers ?](#qi2-how-to-interpret-the-significance-of-top-da-drivers-)
+    - [QI.3: What is the expression/activity pattern of these top DA drivers across sample subtypes?](#qi3-what-is-the-expressionactivity-pattern-of-these-top-da-drivers-across-sample-subtypes)
+    - [QI.4: What are the biological functions of these top DA drivers ?](#qi4-what-are-the-biological-functions-of-these-top-da-drivers-)
+    - [QI.5: What are the biological functions of the target genes of these top DA drivers ?](#qi5-what-are-the-biological-functions-of-the-target-genes-of-these-top-da-drivers-)
+- [Part II: More details about the selected driver](#part-ii-more-details-about-the-selected-driver)
+    - [QII.1: How to interpret the significance of the selected driver ?](#qii1-how-to-interpret-the-significance-of-the-selected-driver-)
     - [QII.2: How to visualize the network structure of the selected driver ?](#qii2-how-to-visualize-the-network-structure-of-the-selected-driver-)
-    - [QII.3: What is the expression/activity for this selected driver in samples with different subtypes ?](#qii3-what-is-the-expressionactivity-for-this-selected-driver-in-samples-with-different-subtypes-)
-    - [QII.4: What is the function of the target genes for this selected driver ?](#qii4-what-is-the-function-of-the-target-genes-for-this-selected-driver-)
-- [Part III: further analysis](#part-iii-further-analysis)
-    - [QIII.1: What are the activities of the curated gene sets in all samples and what are the top significantly differed gene sets ?](#qiii1-what-are-the-activities-of-the-curated-gene-sets-in-all-samples-and-what-are-the-top-significantly-differed-gene-sets-)
-    - [QIII.2: How to find drivers with significantly overlapped target genes ?](#qiii2-how-to-find-drivers-with-significantly-overlapped-target-genes-)
-      - [Q&A: How to modify the figures by adjusting the paramters in the draw. functions ?](#how-to-modify-the-figures-by-adjusting-the-paramters-in-the-draw-functions-)
+    - [QII.3: What is the expression/activity of this selected driver across subtypes of sample ?](#qii3-what-is-the-expressionactivity-of-this-selected-driver-across-subtypes-of-sample)
+    - [QII.4: What are the functions of the target genes of this selected driver ?](#qii4-what-are-the-functions-of-the-target-genes-of-this-selected-driver-)
+- [Part III: Other analyses NetBID2 can do](#part-iii-other-analyses-netbid2-can-do)
+    - [QIII.1: What are the activities of the curated gene sets across all samples ?](#qiii1-what-are-the-activities-of-the-curated-gene-sets-across-all-samples)
+    - [QIII.2: How to find drivers share significantly overlapped target genes ?](#qiii2-how-to-find-drivers-share-significantly-overlapped-target-genes-)
+      - [Q&A: How to modify the figure size created by `draw.` functions ?](#how-to-modify-the-figure-size-created-by-draw-functions-)
     
 ---------
 
 
 ## Preparations
 
-Library the installed NetBID2, set the directory to get the pre-saved RData in the `ms-tab` step. Here, we could use the demo in NetBID2 package.
-Print the `analysis.par$out.dir.PLOT` to get know where the plot figures will be saved. User could also choose to change to another local writable path.
+Make sure you have NetBID2 package. 
 
 ```R
-# library the package
 library(NetBID2)
-# set the directory to get the pre-saved RData
-analysis.par <- list()
-analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
-NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
-print(analysis.par$out.dir.PLOT)
-#analysis.par$out.dir.PLOT <- 'test/driver/PLOT' ## directory to save the plot figures
 ```
 
-## Part I: for the top list of significant drivers 
+Reload previous saved RData from `ms-tab` step. Here, we use the demo data from NetBID2 package.
+Users can call `analysis.par$out.dir.PLOT` to see where the plots created by later pipeline will be saved, this can be modified.
 
-### QI.1: How to get the top list of drivers with significantly different activity (DA) in G4 Vs. other subtypes ?
+```R
+# Give file path to reload `ms-tab` RData from driver estimation step
+analysis.par <- list()
+# Here we use demo data from NetBID2 package
+analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
+NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
+# To see where the plots created later will be saved
+print(analysis.par$out.dir.PLOT)
+#analysis.par$out.dir.PLOT <- 'test/driver/PLOT' # Users can modify this path
+```
 
-For simplicity, save the final master table to another variable `ms_tab` and set the comparison name `comp_name`. 
-Here we choose the `G4.Vs.others` as the demo.
-Before detailed analysis, the target size for the driver could be used as a filteration, drivers with too small target size (e.g <30) or too large target size (e.g >1000) will not be used.
+## Part I: More details about the top drivers 
+
+### QI.1: How to get the top drivers with significant differential activity (DA) in the comparison between G4 vs. other subtypes ?
+
+First, retrive the master table element from the `analysis.par` super list, and pass it to a new variable `ms_tab`. 
+Filter out drivers with target size too small (e.g. <30) and too big (e.g. >1000).
+Define the comparison name `comp_name` as `G4.Vs.others`.
 
 ```R
 ms_tab <- analysis.par$final_ms_tab ## get the master table data frame
-ms_tab <- ms_tab[which(ms_tab$Size>=30 & ms_tab$Size <=1000),] ## target size filteration
+ms_tab <- ms_tab[which(ms_tab$Size>=30 & ms_tab$Size <=1000),] 
 comp_name <- 'G4.Vs.others' ## get the comparison name
 ```
 
-We will use `draw.volcanoPlot()` to get the list of top DA drivers and plot the results. 
-The input is the data frame containing the columns of `label_col`, `logFC_col` and `Pv_col`. 
-User need to input the threshold for logFC (`logFC_thre`) and P.Value (`Pv_thre`).
-This function could choose not to display figures by setting `show_plot=FALSE` and only output the list of significant top drivers.
-If choose `show_label=TRUE`, the number of the drivers passed the threshold may not be very high as too many labels displayed on the figure will become a mess.
+- To quickly identify top DA drivers from large dataset, NetBID2 uses the volcano plot `draw.volcanoPlot()`. In this special scatter-plot, the y axis shows the significance of DA driver, the x axis shos the fold-change.
 
-For the activity value, the threshold for logFC may not be very high especially setting `std=TRUE` in `cal.Activity()`. 
+More handlers of `draw.volcanoPlot()`:
 
-- Top drivers with DA passed absolute logFC&ge;0.4 and P-value&le;1e-8, with detailed label information are shown:
+  - Input data frame must contain columns of `label_col`, `logFC_col` and `Pv_col`. 
+  - To set thresholds, please use `logFC_thre` (for logFC) and `Pv_thre` (for P-value).
+  - To turn off figure display, only return the top driver list, please set `show_plot=FALSE`.
+  - To show driver labels that passed the threshold only, please set `show_label=TRUE`.
+  - If one set `std=TRUE` to `cal.Activity()`, the threshold of logFC of the activity value should not be set very high.
+
+The figure below is to show the top DA drivers passed the thresholds of logFC&ge;0.4 and P-value&le;1e-8.
 
 ```R
 sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col=sprintf('logFC.%s_DA',comp_name),
@@ -90,7 +97,7 @@ sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',logFC_col=sprin
 
 ![vocalno_label_DA](vocalno_label_DA.png)
 
-- Volcano plot is also applicable for get the top DE genes. Top genes with DE passed absolute logFC&ge;1.5 and P-value&le;1e-4 are shown:
+- `draw.volcanoPlot()` is also applicable visualize the top DE genes. The figure below are top genes with DE passed thresholds of  logFC&ge;1.5 and P-value&le;1e-4.
 
 ```R
 sig_gene <- draw.volcanoPlot(dat=ms_tab,label_col='geneSymbol',logFC_col=sprintf('logFC.%s_DE',comp_name),
@@ -101,31 +108,30 @@ sig_gene <- draw.volcanoPlot(dat=ms_tab,label_col='geneSymbol',logFC_col=sprintf
 
 ![vocalno_label_DE](vocalno_label_DE.png)
 
-`sig_driver` and `sig_gene` are the data frame containing drivers and genes passed the threshold with detailed logFC and P.value statistics.
+- The returned `sig_driver` and `sig_gene` are the data frames containing drivers and genes that passed the thresholds.
 
-### QI.2: How to understand the significance of those top DA drivers ?
+### QI.2: How to interpret the significance of top DA drivers ?
 
-Those drivers are significant due to their activity difference in Group4 Vs. other subtypes. 
-The activity is calculated based on the expression pattern of their target genes.
-If the driver's activity is significantly up-regulated in Group4, which means that its positively regulated target genes are significantly up-regulated in Group4 and negative target genes are down-regulated.
-Based on this, we could use `draw.GSEA.NetBID()` to visualize this trend for top drivers. This function has more than 10 options, check the manual for detail by `?draw.GSEA.NetBID`.
+A driver's activity is evaluated from the expression pattern of its target genes. Due to this, if a driver's activity value is significantly up-regulated in G4 compared to other subtypes, it can be caused by two ways: (a) its positively-regulated target genes have significantly upregulation in G4 compared to others; (b) its negatively-regulated target genes have significantly downregulation in G4 compared to others.
 
-First, the differentiated expression (DE) profile in Group4 Vs. others should be used to estimate the performance of the target genes. 
-And `driver_list` need to be the `originalID_label` in the master table as it is the only unique column. In the above volcano plot, the rownames for the output data frame will be the rownames from the original master table, i.e the `originalID_label`. 
+`draw.GSEA.NetBID()` helps users to interpret the significance of these top DA drivers from the expression and regulation of their target genes.
+
+First, get the differential expression (DE) data frame of the target genes from the comparison between Group4 vs. others.
+Here, we need to pay attention to the gene ID type. The ID type should be the `originalID_label` column from the master table. The same ID type we used to draw the volcano plot.
 
 ```R
+# Get the DE data frame of target genes
 DE <- analysis.par$DE[[comp_name]]
-driver_list <- rownames(sig_driver) ## the rownames is the originalID_label
+driver_list <- rownames(sig_driver) # The rownames is the originalID_label
 ```
 
-The following figures differ in the option of `profile_trend`, `profile_col`, `target_nrow`, `target_col`, `target_col_type`. 
+The following 5 figures are showing the same content. The purpose is to list various visualizations that `draw.GSEA.NetBID()` can provide.
+The key handlers are `profile_trend`, `profile_col`, `target_nrow`, `target_col` and `target_col_type`.
 
-- In the first demo plot, the profile (above part of the figure) is from negative values to positive values (`profile_trend='neg2pos'`), indicating the `logFC` (set in `profile_col`) value for genes.
-The position for the genes are consistent in the profile figure and the GSEA-pattern figure (below part of the figure). 
-Each vertical line in each row stands for one target gene for the corresponding driver. 
-The target genes for one driver will be separated into positive-regulated sets and negative-regulated sets (`target_nrow=2`).
-The color for those target genes are the significance in the profile (`target_col_type='DE'`), with value passed the `profile_sig_thre` color in blue (negative value) and red (positive value).
-We could study from the figure that, the positively regulated target genes for the *down* DA drivers tend to lay in the left part of the profile and the negatively regulated in the right part. Contrary trend for *up* DA drivers. 
+- In the first demo plot below, 
+the top figure is a metric for the ranking of genes based on their `logFC` values (`profile_col`). The order of ranking is from negative values to positive values (`profile_trend='neg2pos'`). The bottom figure has three parts: on the left is a horizontal barplot showing the target size of up-regulated and down-regulated genes for each driver; in the middle are panels marking each target gene's ranking position (panel number for each driver can be 1 or 2, here `target_nrow=2`), and the name of the color palette used for display target genes marker lines is `target_col_type='DE'`; on the right is the DA and DE values for each driver (using threhold `profile_sig_thre`, blue is negative, red is positive). 
+
+From the figure below, we can see the positively-regulated target genes of the *down* DA drivers tend to have lower logFC expression values in G4 compared to other subtypes. For the *up* DA drivers, it shows the opposite. For example, GALNT4_SIG driver has a significantly negative activity value in G4 compared to other subtypes (marked in blue, P-value is 1e-09). It has around 160 positively-regulated target genes (orange bar on the left), and most of their logFC are negative values with high rankings (first panel with blue and grey marker lines). It means these positively-regulated target genes have significant negative logFC values in G4 compared to other subtypes. Vice versa for the negatively-regulated target genes. These two expression patterns of target genes contribute to their driver's DA value.
 
 ```R
 draw.GSEA.NetBID(DE=DE,profile_col='logFC',profile_trend='neg2pos',name_col='ID',
@@ -142,8 +148,7 @@ draw.GSEA.NetBID(DE=DE,profile_col='logFC',profile_trend='neg2pos',name_col='ID'
 
 ![NetBID_GSEA_demo1](NetBID_GSEA_demo1.png)
 
-- In the second demo plot,the profile is from positive values to negative values (`profile_trend='pos2neg'`), indicating the `t` (set in `profile_col`) value for genes.
-The color for those target genes are the same for positively-regulaion or negatively-regulation (`target_col_type='PN'`)
+- In the second demo plot below, the top figure is a metric for the ranking of genes based on their `t` values (`profile_col`). The order of ranking is from positive values to negative values (`profile_trend='pos2neg'`). The name of the color palette used for display target genes marker lines is `target_col_type='PN'`.
 
 ```R
 draw.GSEA.NetBID(DE=DE,profile_col='t',profile_trend='pos2neg',
@@ -160,7 +165,7 @@ draw.GSEA.NetBID(DE=DE,profile_col='t',profile_trend='pos2neg',
 
 ![NetBID_GSEA_demo2](NetBID_GSEA_demo2.png)
 
-- In the third demo plot, the color for those target genes are just black (`target_col='black'`).
+- In the third demo plot below, the color used to mark those target genes is black (`target_col='black'`).
 
 ```R
 draw.GSEA.NetBID(DE=DE,profile_col='t',profile_trend='pos2neg',
@@ -177,7 +182,7 @@ draw.GSEA.NetBID(DE=DE,profile_col='t',profile_trend='pos2neg',
 
 ![NetBID_GSEA_demo3](NetBID_GSEA_demo3.png)
 
-- In the forth demo plot, the positively-regulaion or negatively-regulation is not separately into two rows (`target_nrow = 1`), `target_col='RdBu'` and `target_col_type='DE'`.
+- In the forth demo plot below, the number of panels to mark each target gene's ranking position is 1, `target_nrow=1`. User can set `target_col='RdBu'` and `target_col_type='DE'` to distinguish positively-regulated target genes from negatively-regulated target genes.
 
 ```R
 draw.GSEA.NetBID(DE=DE,profile_col='t',profile_trend='pos2neg',
@@ -194,7 +199,7 @@ draw.GSEA.NetBID(DE=DE,profile_col='t',profile_trend='pos2neg',
 
 ![NetBID_GSEA_demo4](NetBID_GSEA_demo4.png)
 
-- In the fifth demo plot, the positively-regulaion or negatively-regulation is not separately into two rows (`target_nrow = 1`) and `target_col='black'`.
+- In the fifth demo plot below,  the number of panels to mark each target gene's ranking position is 1, `target_nrow=1`. And all the target genes marker lines are black, `target_col='black'`.
 
 ```R
 draw.GSEA.NetBID(DE=DE,profile_col='t',profile_trend='pos2neg',
@@ -211,23 +216,22 @@ draw.GSEA.NetBID(DE=DE,profile_col='t',profile_trend='pos2neg',
 
 ![NetBID_GSEA_demo5](NetBID_GSEA_demo5.png)
 
-### QI.3: What is the expression/activity pattern of those top DA drivers in samples with different subtype ?
+### QI.3: What is the expression/activity pattern of these top DA drivers across sample subtypes?
 
-Next, we'd like to know the expression/activity pattern for those top DA drivers in different group of samples, the most straightforward strategy is to use heatmap.
-In NetBID2, `draw.heatmap()` is designed to assist simple usage of heatmap. It is based on `Heatmap()` function in [ComplexHeatmap](https://bioconductor.org/packages/release/bioc/html/ComplexHeatmap.html). 
+Next, we'd like to know the expression/activity pattern of these top DA drivers from different sample subtypes.
+In NetBID2, `draw.heatmap()` is designed to assist this using user-friendly heatmap. It is based on `Heatmap()` function in [ComplexHeatmap](https://bioconductor.org/packages/release/bioc/html/ComplexHeatmap.html). 
 
-Get the expression matrix `exp_mat` and activity matrix `ac_mat` from `analysis.par`, and phenotype data frame `phe_info`.
+First, please get the expression matrix `exp_mat`, the activity matrix `ac_mat` and the phenotype data frame `phe_info` from `analysis.par` super list.
 
 ```R
-exp_mat <- exprs(analysis.par$cal.eset) ## expression,the rownames must be the originalID
-ac_mat <- exprs(analysis.par$merge.ac.eset) ## ac,the rownames must be the originalID_label
-phe_info <- pData(analysis.par$cal.eset)
-# could use addtional paramters in Heatmap()
+exp_mat <- exprs(analysis.par$cal.eset) # expression matrix, the rownames must be the originalID
+ac_mat <- exprs(analysis.par$merge.ac.eset) # activity matrix, the rownames must be the originalID_label
+phe_info <- pData(analysis.par$cal.eset) # phenotype data frame
 ```
 
-- Draw the expression value (scaled by samples `scale='row'`)  for top DA drivers across all samples and display the sample class label above. 
-Here, the `use_genes` must be the `originalID`.
-User could directly input `phenotype_info=phe_info` and choose which columns to display in `use_phe`.
+- Draw the heatmap using expression value of top DA drivers (scaled by samples `scale='row'`). 
+Here, the `use_genes` must be the `originalID`. Here, we displayed all the phenotype columns: gender, pathology, subgroup and age.
+Users can assign `phenotype_info=phe_info` and choose specific phenotype column(s) to display using `use_phe`.
 
 ```R
 draw.heatmap(mat=exp_mat,use_genes=ms_tab[driver_list,'originalID'],use_gene_label=ms_tab[driver_list,'geneSymbol'],
@@ -239,8 +243,9 @@ draw.heatmap(mat=exp_mat,use_genes=ms_tab[driver_list,'originalID'],use_gene_lab
 
 ![heatmap_demo1](heatmap_demo1.png)
 
-- Draw the activity value for top DA drivers, here, the `use_genes` must be the `originalID_label` but user could to display label in the `gene_label` column. 
-In this demo, the original label is also gene symbol, but in some cases the original label maybe the ensemble_gene_id, the originalID will be different and user could choose to display the gene symbol in `gene_label` (set by `use_gene_label`).
+- Draw the heatmap using activity value of top DA drivers. 
+Here, the `use_genes` must be the `originalID_label`. But user can also use the label in the `gene_label` column for display.
+In the demo, the original label is gene symbol. But in some cases, the original label can be the ensemble_gene_id, then the originalID will be different. In this case, user can choose the gene symbol in `gene_label` (set by `use_gene_label`) for display.
 
 ```R
 draw.heatmap(mat=ac_mat,use_genes=driver_list,use_gene_label=ms_tab[driver_list,'gene_label'],
@@ -252,10 +257,11 @@ draw.heatmap(mat=ac_mat,use_genes=driver_list,use_gene_label=ms_tab[driver_list,
 
 ![heatmap_demo2](heatmap_demo2.png)
 
-Compared with the two figures above, the activity pattern is much more clean than the expression pattern for top DA drivers, and also for top DE drivers (figures not shown here, but demo script is below), suggesting that the activity of drivers may be more robust in separating specific sample groups. 
+Now, we compare the two heatmaps we created using the expression matrix and the activity matrix of top DA drivers. As we can see, the activity matrix gives a much cleaner pattern than the expression matrix. Same observation from the top DE drivers. Figures not shown below, but users can use the script below to check. 
+This observation highly suggested the activity value of driver may be more robust than expression value in sample classification.
 
 ```R
-# try for the top DE genes             
+# Draw heatmaps using top DE genes             
 gene_list <- rownames(sig_gene) 
 draw.heatmap(mat=exp_mat,use_genes=ms_tab[gene_list,'originalID'],use_gene_label=ms_tab[gene_list,'geneSymbol'],
              use_samples=colnames(exp_mat),use_sample_label=phe_info[colnames(exp_mat),'geo_accession'],
@@ -270,57 +276,50 @@ draw.heatmap(mat=ac_mat,use_genes= gene_list,use_gene_label=ms_tab[gene_list,'ge
              row_names_gp = gpar(fontsize = 12),pdf_file=sprintf('%s/heatmap_demo4.pdf',analysis.par$out.dir.PLOT))
 ```
 
-### QI.4: What is the biological function of those top DA drivers ?
+### QI.4: What are the biological functions of these top DA drivers ?
 
-In order to study the function of those drivers, we could import curated gene sets from [MSigDB](http://software.broadinstitute.org/gsea/msigdb).
+In order to study the biological functions of these top DA drivers, we need to import the curated gene sets from [MSigDB](http://software.broadinstitute.org/gsea/msigdb).
 
 NetBID2 has provided one function `gs.preload()` to automatically download curated gene sets from MSigDB (based on [msigdbr](https://cran.r-project.org/web/packages/msigdbr/index.html)). 
-The only input is the species name, full list of available species name could be found by msigdbr_show_species(). Default is 'Homo sapiens'. 
-The dataset for human is already packed in NetBID2 R package. 
-Similar as `db.preload()`, if leave `main.dir=NULL`, the RData will be saved to `system.file(package = "NetBID2")/db/`. 
-If NetBID2 is installed in a public place with no permission to user, just set `main.dir` to another place and remember to use the same path next time using it.
+Users only need to give a species names as input to the function. All available species names can be found by calling `msigdbr_show_species()`. By default, the species name is "Homo sapiens". And NetBID2 has it downloaded in the package already.
 
-User can print `all_gs2gene_info` to check the detailed information of the global variable `all_gs2gene`. 
-The column `Category` and `Sub-Category` will be used as the label to extract categories of gene sets for use.  
+Similar to `db.preload()`, if users leave `main.dir=NULL`, the downloaded data will be save as RData into the followin path, `system.file(package = "NetBID2")/db/`. However, if NetBID2 is installed in a public server and user doesn't root permission, he needs to give accessible path to `main.dir`.
+
+To check the detailed information of the downloaded gene sets, user can use the following scripts. Print `all_gs2gene_info` from the global variable `all_gs2gene`. The column `Category` and `Sub-Category` will be used as the label to extract gene sets categories.
 
 ```R
-# load RData for all_gs2gene
+# Download gene sets from MSigDB and save as RData, creat a global variable all_gs2gene
 gs.preload(use_spe='Homo sapiens',update=FALSE)
 print(all_gs2gene_info)
 ```
 
 ![all_gs2gene_info](all_gs2gene_info.png)
 
-Now, user could choose to use the pre-loaded gene sets to perform Fisher based Gene Set enrichment analysis by `funcEnrich.Fisher()`. 
-The `input_list` and `bg_list` must be the gene symbol. This is easily obtained by using the `geneSymbol` column in the master table.
+To perform gene set enrichment analysis, NetBID2 provides `funcEnrich.Fisher()`. 
 
-`gs2gene` is the list for geneset to genes, the name for the list is the gene set name and the content in each list is the vector for genes belong to that gene set. 
-If NULL, will use `all_gs2gene` loaded by using `gs.preload()`. User do not need to prepare this if want to use MSigDB.
-
-`use_gs` is the vector of category name used in analysis, this could be the mixture of category names from `Category` and `Sub-Category`. 
-Do not worry about the redundant issue, all gene sets will be passed into `merge_gs()` and the gene sets with the same gene set name will be merged. 
+Details about how to use `funcEnrich.Fisher()`: `input_list` and `bg_list` must be the gene symbols, which is the `geneSymbol` column in the master table; `gs2gene` is a list contains elements of gene sets. The name of the element is gene set, each element contains a vector of genes in that gene set. If NULL, will use `all_gs2gene`, which is created by function `gs.preload()`; `use_gs` is a vector of the names of gene sets, it can be a mixture of `Category` name and `Sub-Category` name. Users don't need to worry about the gene redundant issue, all the gene sets will be handled by `merge_gs()`, which will merge the redundant information.
 
 ```R
+# Gene Set Enrichment Analysis
 driver_list_up <- rownames(sig_driver)[which(sig_driver[,2]>0)] # up
 driver_list_down <- rownames(sig_driver)[which(sig_driver[,2]<0)] # down
-res_up <- funcEnrich.Fisher(input_list=ms_tab[driver_list_up,'geneSymbol'],bg_list=unique(ms_tab[,'geneSymbol']),use_gs=c('H','CP:REACTOME','BP','CGP'),
-                           Pv_thre=0.1,Pv_adj = 'none',min_gs_size = 30, max_gs_size = 500)
-res_down <- funcEnrich.Fisher(input_list=ms_tab[driver_list_down,'geneSymbol'],bg_list=unique(ms_tab[,'geneSymbol']),use_gs=c('H','CP:REACTOME','BP','CGP'),
-                           Pv_thre=0.1,Pv_adj = 'none',min_gs_size = 30, max_gs_size = 500)                       
+res_up <- funcEnrich.Fisher(input_list=ms_tab[driver_list_up,'geneSymbol'],bg_list=unique(ms_tab[,'geneSymbol']),use_gs=c('H','CP:REACTOME','BP','CGP'), Pv_thre=0.1,Pv_adj = 'none',min_gs_size = 30, max_gs_size = 500)
+res_down <- funcEnrich.Fisher(input_list=ms_tab[driver_list_down,'geneSymbol'],bg_list=unique(ms_tab[,'geneSymbol']),use_gs=c('H','CP:REACTOME','BP','CGP'), Pv_thre=0.1,Pv_adj = 'none',min_gs_size = 30, max_gs_size = 500)                       
 ```
 
-`funcEnrich.Fisher()` will return detailed results for enrichment analysis, use `?funcEnrich.Fisher` to check the detail. And the [results](fisher_res.xlsx) could be output to excel file by `out2excel()`. 
+`funcEnrich.Fisher()` uses Fisher's Exact Test and return detailed results for the gene set enrichment analysis. And the [results](fisher_res.xlsx) can be saved as EXCEL file by `out2excel()`. 
 
 ```R
+# Save gene set enrichment analysis results as EXCEl
 out2excel(list(up=res_up,down=res_down),out.xlsx=sprintf('%s/fisher_res.xlsx',analysis.par$out.dir.PLOT))
 ```
 
-Meanwhile, the enrichment analysis results can be visualized by barplot (`draw.funcEnrich.bar()`) and cluster plot (`draw.funcEnrich.cluster()`).
+NetBID2 also designed two functions to visualze the gene set enrichment analysis for these top drivers: `draw.funcEnrich.bar()` and `draw.funcEnrich.cluster()`.
 
-- The barplot is a simply way to display the enriched P-value, with the example of intersected genes (if set `display_genes=TRUE`).
+- `draw.funcEnrich.bar()` draws a horizontal barplot to display the top enriched functions and the corresponding drivers (if set `display_genes=TRUE`).
 
 ```R
-# draw barplot
+# Gene set enrichment analysis Barplot
 draw.funcEnrich.bar(funcEnrich_res= res_up,top_number=30,main='Function Enrichment for Top drivers',pdf_file=sprintf('%s/funcEnrich_bar_nogene.pdf',analysis.par$out.dir.PLOT))
 draw.funcEnrich.bar(funcEnrich_res= res_up,top_number=30,main='Function Enrichment for Top drivers',display_genes = TRUE,gs_cex=0.6,
                     pdf_file=sprintf('%s/funcEnrich_bar_withgene.pdf',analysis.par$out.dir.PLOT))
@@ -328,20 +327,21 @@ draw.funcEnrich.bar(funcEnrich_res= res_up,top_number=30,main='Function Enrichme
 
 ![funcEnrich_bar_withgene](funcEnrich_bar_withgene.png)
 
-- Considering the function redudancy of gene sets and the cluster of genes by function similarity, the function cluster plot could be used. 
+- Considering the function redundancy of gene sets, users can call `draw.funcEnrich.cluster()` to cluster genes by their function similarity.
 
 ```R
+# Gene set enrichment analysis Function Cluster Plot
 draw.funcEnrich.cluster(funcEnrich_res= res_up,top_number=30,gs_cex = 1.4,gene_cex=1.5,pv_cex=1.2,pdf_file = sprintf('%s/funcEnrich_clusterBOTH.pdf',analysis.par$out.dir.PLOT),
                         cluster_gs=TRUE,cluster_gene = TRUE,h=0.95)
 ```
 
-In the figure below, top 30 enriched terms could be clustered into 6 clusters (cluster size adjusted by `h`). 
-We could easily get to know the related genes for each function clusters. 
-Here, top enriched gene sets are related with lipid biosynthetic process, with detailed description from: e.g ['GO_LIPID_BIOSYNTHETIC_PROCESS'](http://software.broadinstitute.org/gsea/msigdb/geneset_page.jsp?geneSetName=GO_LIPID_BIOSYNTHETIC_PROCESS)
+In the figure below, the top 30 enriched terms can be clustered into 6 groups (cluster size can be adjusted by `h`). 
+Genes belong to each term is marked with red in the table cell. 
+As we can see, the top enriched gene sets are related with lipid biosynthetic process. Detail about this process, please check ['GO_LIPID_BIOSYNTHETIC_PROCESS'](http://software.broadinstitute.org/gsea/msigdb/geneset_page.jsp?geneSetName=GO_LIPID_BIOSYNTHETIC_PROCESS)
 
 ![funcEnrich_clusterBOTH](funcEnrich_clusterBOTH.png)
 
-Try the below scripts and check the difference of the output figure:
+To explore the handlers in `draw.funcEnrich.cluster()`, please try the following scripts.
 
 ```R
 draw.funcEnrich.cluster(funcEnrich_res= res_up,top_number=30,gs_cex = 0.8,gene_cex=0.9,pv_cex=0.8,pdf_file = sprintf('%s/funcEnrich_clusterGS.pdf',analysis.par$out.dir.PLOT),
@@ -352,23 +352,21 @@ draw.funcEnrich.cluster(funcEnrich_res= res_up,top_number=30,gs_cex = 1.5,gene_c
                         cluster_gs=FALSE,cluster_gene = FALSE)
 ```
 
-### QI.5: What is the biological function of the target genes of those top DA drivers ?
+### QI.5: What are the biological functions of the target genes of these top DA drivers ?
 
-The function of those drivers is to regulate their target genes. Then, we will ask what is the biological function of the target genes of those top DA drivers ?
-NetBID2 has one function `draw.bubblePlot()` to calculate and visualize this purpose. 
+The biological function of driver is to regulated by its target genes. For a driver, what are the biological functions of its target genes? NetBID2 provides a function `draw.bubblePlot()` to investigate this question.
 
-Before that, we only accept gene symbol as the ID for gene set annotation (for the general usage, other kinds of usage will be shown in the last part of this section), so, we need to prepare a transfer table to transfer the originalID into gene symbol for all drivers and target genes.
-This transfer table is already saved in the `analysis.par`.
+First, get the ID conversion table. This is because NetBID2 only accepts gene symbol as ID type for gene set annotation (for more general application, please check the last part of this section). This conversion table is already wrapped inside `analysis.par` super list created by `get_IDtransfer2symbol2type()`. If not, user could use `get_IDtransfer2symbol2type()` to get.
 
 ```R
+# Get ID conversion table
 transfer_tab <- analysis.par$transfer_tab
 ```
 
-- This function has 21 options, but for the first trial, just follow the demo and the only thing to prepare is the transfer table (`transfer2symbol2type`). 
-Lots of parameters are the same as in `funcEnrich.Fisher()`. `display_gs_list` could be user defined if some other testing is performed and user only want to display some of the selected gene sets. 
+- `draw.bubblePlot()` has 21 parameters, but most of them are the same as in `funcEnrich.Fisher()`. For the demo, user only need to prepare the ID conversion table to `transfer2symbol2type`. Another interested parameter is `display_gs_list`, which can be set to pick which gene set(s) to be displayed in the plot. 
 
 ```R
-## draw
+# Bubble Plot to show target genes enriched biological functions
 draw.bubblePlot(driver_list= driver_list,show_label=ms_tab[driver_list,'gene_label'],
                 Z_val=ms_tab[driver_list,sprintf('Z.%s_DA',comp_name)],
                 driver_type=ms_tab[driver_list,'gene_biotype'],
@@ -379,14 +377,13 @@ draw.bubblePlot(driver_list= driver_list,show_label=ms_tab[driver_list,'gene_lab
                 main='Bubbleplot for top driver targets')
 ```
 
-- Each column in this plot is one driver, each row is the curated gene set, and the circle in the main plot region shows the significance of the target genes for the driver in the corresponding gene set.
-The size of the circle is the intersected gene number (legend on the top) and the color of the circle represents the significance of the P-value (legend on the right). The color boxes down below the main figure are the significance of the drivers (user need to input the Z-statistics), followed by the barplots showing the target size of the driver (filtered by protein coding), and the color cicles below showing the drivers' type (optional, if user input the `driver_type`).
+- **Explanation of the bubble plot.**
 
-The figure could tell user that, e.g the target genes of the Group4 up-regulated driver`PDE7B_SIG` are significantly enriched in `KEGG_AXON_GUIDANCE` with 17 intersected genes and P-value at about 1e-10. 
+Each column is a driver, each row is a curated gene set. The size of the circle is the number of intersected genes (legend on the top) and the color shade of the circle represents the significance using P-value (legend on the right). The color shade of boxes above the barplot shows the significance of the each driver (user need to input the Z-statistics). The barplot at the bottom shows the target size of each driver (filtered by protein coding), and the circle below the barplot represents the driver type (optional, `driver_type`). For example, the target genes of the Group4 *up* driver `PDE7B_SIG` are significantly enriched in `KEGG_AXON_GUIDANCE` term (with P-value of 1e-10), with 17 intersected genes.
 
 ![bubblePlot](bubblePlot.png)
 
-Try the following script to get familiar with the options in the function. 
+To explore the handlers in `draw.bubblePlot()`, please try the following scripts.
 
 ```R
 draw.bubblePlot(driver_list= driver_list,show_label=ms_tab[driver_list,'gene_label'],
@@ -397,7 +394,7 @@ draw.bubblePlot(driver_list= driver_list,show_label=ms_tab[driver_list,'gene_lab
                 top_geneset_number=30,top_driver_number=30,
                 pdf_file = sprintf('%s/bubblePlot_KEGG.pdf',analysis.par$out.dir.PLOT),
                 main='Bubbleplot for top driver targets')
-# add marker gene
+# Add marker genes
 mark_gene <- c('KCNA1','EOMES','KHDRBS2','RBM24','UNC5D') ## marker for Group4
 draw.bubblePlot(driver_list= driver_list,show_label=ms_tab[rownames(sig_driver),'gene_label'],
                 Z_val=ms_tab[driver_list,sprintf('Z.%s_DA',comp_name)],
@@ -410,25 +407,25 @@ draw.bubblePlot(driver_list= driver_list,show_label=ms_tab[rownames(sig_driver),
                 mark_gene=ms_tab[which(ms_tab$geneSymbol %in% mark_gene),'originalID_label'],gs_cex = 1,driver_cex=1.2)
 ```
 
+## Part II: More details about the selected driver
 
-## Part II: for a selected interested driver
+### QII.1: How to interpret the significance of the selected driver ?
 
-### QII.1: How to understand the significance of the selected driver ?
+To study a single driver or some specific drivers, NetBID2 provides function `draw.GSEA()` to draw the classic GSEA plot, in order to faciliate the interpretation of the significance of target driver(s).
 
-For each driver, NetBID2 provides function `draw.GSEA()` to draw the traditional style GSEA plot to understand the significance of the driver.
-Similar to `draw.GSEA.NetBID()`, firstly we need to prepare the profile for the differentiated expressed genes. 
+First, retrieve the differential expressed gene profile first.
 
 ```R
+# Get the DE file
 DE <- analysis.par$DE[[comp_name]]
 DE_profile <- DE$`Z-statistics`; 
 names(DE_profile) <- rownames(DE)
 ```
 
-Then, extract out the target gene list and the direction of the target genes for the selected driver.
-The annotation could use the p-value from master table. 
-Traditional GSEA test may have different significance statistics, user could calculate first and put it into the annotation.
+Then, extract out the target gene list and the regulation direction of the selected driver. Here, we use the P-value in master table as annotation for the enrichment. The classic GSEA plot test may use different statistics, user can decide which one to use as annotation and calculate it.
 
 ```R
+# Use the first driver in the driver list as an example
 use_driver <- driver_list[1]
 use_target_genes <- analysis.par$merge.network$target_list[[use_driver]]$target
 use_target_direction <- sign(analysis.par$merge.network$target_list[[use_driver]]$spearman) ## 1/-1
@@ -436,7 +433,7 @@ annot <- sprintf('P-value: %s',signif(ms_tab[use_driver,sprintf('P.Value.%s_DA',
 ```
 
 ```R
-## with direction
+# Draw classic GSEA plot for one driver
 draw.GSEA(rank_profile=DE_profile,use_genes=use_target_genes,use_direction=use_target_direction,
           main=sprintf('GSEA plot for driver %s',ms_tab[use_driver,'gene_label']),
           pdf_file = sprintf('%s/GSEA_each_direction.pdf',analysis.par$out.dir.PLOT),
@@ -446,10 +443,10 @@ draw.GSEA(rank_profile=DE_profile,use_genes=use_target_genes,use_direction=use_t
 
 ![GSEA_each_direction](GSEA_each_direction.png)
 
-If do not enter direction information, it will be traditional GSEA plot.
+NetBID2 will draw a classic GSEA plot, if no direction information is provided.
 
 ```R
-## GSEA plot without direction, without annotation, traditional GSEA plot
+# GSEA plot without direction, without annotation
 draw.GSEA(rank_profile=DE_profile,use_genes=use_target_genes,use_direction=NULL,
           main=sprintf('GSEA plot for driver %s',ms_tab[use_driver,'gene_label']),
           pdf_file = sprintf('%s/GSEA_each.pdf',analysis.par$out.dir.PLOT),
@@ -459,26 +456,28 @@ draw.GSEA(rank_profile=DE_profile,use_genes=use_target_genes,use_direction=NULL,
 
 ### QII.2: How to visualize the network structure of the selected driver ?
 
-The sub-network structure of the driver is very simple, the driver (source node) and its target genes (target nodes).
-The edge information could be the `mutual information` value with direction signed by `spearman`. 
+The sub-network structure of the selected driver composed of one source node (driver) and its target nodes (target genes).
+The edges of the network contains weight of `mutual information` and direction of the sign of`spearman`. 
 
 ```R
+# Use the first driver in the driver list as an example
 use_driver <- driver_list[1]
+# Define edges of the network
 edge_score <- analysis.par$merge.network$target_list[[use_driver]]$MI*sign(analysis.par$merge.network$target_list[[use_driver]]$spearman)
 names(edge_score) <- analysis.par$merge.network$target_list[[use_driver]]$target
 ```
 
-- User could set up the `n_layer` if the number of target genes is very large and adjust `label_cex` to get a better visualization. 
-By default, the `alphabetical_order=FALSE` and the edges are sorted by the edge score. If `alphabetical_order=TRUE`, the target genes are sorted by the alphabetical order from inner layer to outer.  
+- For better visualization, users can adjust `n_layer` and `label_cex` parameters. `n_layer` controls number of circle layers to display. `label_cex` controls the text size of the gene names. By default, the `alphabetical_order=FALSE` and the edges are sorted by the edge score. If `alphabetical_order=TRUE`, the target genes are sorted alphabetically from inner layer to outer layer.
 
 ```R
+# Draw sub-network structure of selected driver
 draw.targetNet(source_label=ms_tab[use_driver,'gene_label'],source_z=ms_tab[use_driver,sprintf('Z.%s_DA',comp_name)],
                edge_score = edge_score,pdf_file=sprintf('%s/targetNet_out.pdf',analysis.par$out.dir.PLOT),label_cex = 0.4,n_layer=4, alphabetical_order=TRUE)
 ```
 
 ![targetNet_out](targetNet_out.png)
 
-- The arrow direction could be changed to 'in' (target to source) and set `alphabetical_order=FALSE`, the target genes are sorted by the edge score (positive to negative) from inner layer to outer. 
+- Users can also change the arrow direction to "in" (from target to source), and set `alphabetical_order=FALSE`, so the target genes are sorted by the edge score (positive to negative) from inner layer to outer layer. As shown below.
 
 ```R
 draw.targetNet(source_label=ms_tab[use_driver,'gene_label'],source_z=ms_tab[use_driver,sprintf('Z.%s_DA',comp_name)],
@@ -487,10 +486,11 @@ draw.targetNet(source_label=ms_tab[use_driver,'gene_label'],source_z=ms_tab[use_
 
 ![targetNet_in](targetNet_in.png)
 
-- Similarly, `draw.targetNet.TWO()` could be used to display the network structure for two drivers. Here `n_layer` and `alphabetical_order` could also be used to modify the figure. Different from `draw.targetNet()`, if set `show_test=TRUE`, the intersected test between the target gene list of two drivers will be performed and displayed. The background gene list could be the all possible target genes in the network. User could also directly input the total number for calculation. 
+- **To draw the sub-network structure of two selected drivers,** users can call `draw.targetNet.TWO()`. Parameters like `n_layer` and `alphabetical_order` are the same as in `draw.targetNet()`. The overlapped target genes between these two drivers will be displayed in the middle as shown below.
 
 ```R
-# for two target
+# Draw sub-network structure for two selected drivers
+# Use the first two drivers in the driver list as an example
 use_driver2 <- driver_list[2]
 edge_score2 <- analysis.par$merge.network$target_list[[use_driver2]]$MI*sign(analysis.par$merge.network$target_list[[use_driver2]]$spearman)
 names(edge_score2) <- analysis.par$merge.network$target_list[[use_driver2]]$target
@@ -503,20 +503,20 @@ draw.targetNet.TWO(source1_label=ms_tab[use_driver,'gene_label'],edge_score1 = e
 
 ![targetNetTWO](targetNetTWO.png)
 
-The inner function of the test `test.targetNet.overlap()` could be directly called. 
+To check the overlapped target genes of these two drivers, users can call `test.targetNet.overlap()`.
 
 ```R
-# or directly get the test result
+# To show the overlapped target genes from two selected drivers
 test.targetNet.overlap(source1_label=ms_tab[use_driver,'gene_label'],source2_label=ms_tab[use_driver2,'gene_label'],
                        target1 = names(edge_score),target2 = names(edge_score2),total_possible_target=use_genes)
 ```
 
-### QII.3: What is the expression/activity for this selected driver in samples with different subtypes ?
+### QII.3: What is the expression/activity of this selected driver across subtypes of sample?
 
-- For a specific driver, user could choose to display the activity and expression in different subtypes of the samples to check the level trend. Here, `draw.categoryValue()` could be used for this purpose. The sample to class vector could be prepared by `get_obs_label()`. 
-The sample class order and combination of sample classes could be modified in this function. 
+- `draw.categoryValue()` draws a scatter box plot to visualize one selected driver’s expression value and activity value across different phenotype subgroups of samples. Two side-by-side scatter box plots will be created. The left plot shows driver’s activity values in different phenotype subgroups, each point is a sample. The right plot shows driver’s expression value in different phenotype sub- groups, each point is a sample. To convert sample names to subgroups, one can call `get_obs_label()`. To modify the order of subgroups, one can set `class_order`. As shown in the figure below.
 
 ```R
+# Creates a vector of each sample’s selected phenotype descriptive information
 use_obs_class <- get_obs_label(phe_info = phe_info,'subgroup')
 draw.categoryValue(ac_val=ac_mat[use_driver,],exp_val=exp_mat[ms_tab[use_driver,'originalID'],],use_obs_class=use_obs_class,
                    class_order=c('WNT','SHH','G4'),class_srt=30,main_ac = ms_tab[use_driver,'gene_label'],main_exp=ms_tab[use_driver,'geneSymbol'],
@@ -524,7 +524,7 @@ draw.categoryValue(ac_val=ac_mat[use_driver,],exp_val=exp_mat[ms_tab[use_driver,
 ```
 ![categoryValue_demo1](categoryValue_demo1.png)
 
-Try the below script to check what is different:
+To explore the handlers in `draw.categoryValue()`, please try the following scripts.
 
 ```R
 draw.categoryValue(ac_val=ac_mat[use_driver,],exp_val=NULL,use_obs_class=use_obs_class,class_order=c('WNT','SHH','G4'),
@@ -535,16 +535,17 @@ draw.categoryValue(ac_val=ac_mat[use_driver,],exp_val=exp_mat[ms_tab[use_driver,
                    pdf_file=sprintf('%s/categoryValue_demo3.pdf',analysis.par$out.dir.PLOT))
 ```
 
+### QII.4: What are the functions of the target genes of this selected driver ?
 
-### QII.4: What is the function of the target genes for this selected driver ?
-
-- Similar as the process for top drivers, the target genes for a specific diver could also be used for functional enrichment analysis. 
-If the original ID is not gene symbol, `get_name_transfertab()` could be used for ID conversion. 
+- Similar to the study of drivers, we can also study the functional enrichment for its target genes. First, please check the gene ID.
+If the original ID is not gene symbol, users can call `get_name_transfertab()` to convert ID.
 
 ```R
+# Use the first driver in the driver list as an example
 use_driver <- driver_list[1]
 use_target_genes <- analysis.par$merge.network$target_list[[use_driver]]$target
 #use_target_genes <- get_name_transfertab(use_genes= use_target_genes,transfer_tab=transfer_tab,ignore_version=TRUE)	# optional
+# Converts the original gene IDs into target gene IDs, with conversion table provided
 bg_list <- get_name_transfertab(use_genes= unique(analysis.par$merge.network$network_dat$target),transfer_tab=transfer_tab,ignore_version=TRUE)	
 res <- funcEnrich.Fisher(input_list= use_target_genes,bg_list= bg_list,use_gs=c('H','CP:REACTOME','BP','CGP','CP:KEGG'),
                            Pv_thre=0.1,Pv_adj = 'none',min_gs_size = 30, max_gs_size = 500)
@@ -556,43 +557,46 @@ draw.funcEnrich.cluster(funcEnrich_res= res,top_number=20,gs_cex = 1.2,gene_cex=
 ![funcEnrich_clusterBOTH_WBP11_SIG](funcEnrich_clusterBOTH_WBP11_SIG.png)
 
 
-## Part III: further analysis
+## Part III: Other analyses NetBID2 can do
 
-### QIII.1: What are the activities of the curated gene sets in all samples and what are the top significantly differed gene sets ?
+### QIII.1: What are the activities of the curated gene sets across all samples? 
 
-The study of drivers is to treat their target genes as a gene set (or regulon) and measure their activity values. Similarly, for the curated gene sets from public datasets, we could also calculate their activity values and do similar statistical testing. 
+The target genes of a driver can be seen as a special "gene set". We can use the same procedure to study the curated gene sets from the public datasets. Similar to the target-gene-study, we can calculate their activities and P-values.
 
-Firstly, the expression matrix with row names to gene symbols must be prepared. 
+First, prepare the expression matrix. The row names must be gene symbols.
 
 ```R
+# Preload database files into R workspace
 db.preload(use_level='gene',use_spe='human',update=FALSE)
-exp_mat <- exprs(analysis.par$cal.eset) ## expression,the rownames must be the originalID
-## get expression matrix for the transfered gene name, if original is gene-based expression matrix, just use the exp_mat
+# Get the expression matrix, row names must be gene symbols
+exp_mat <- exprs(analysis.par$cal.eset) 
+# If original is gene-based expression matrix, just use the exp_mat
 exp_mat_gene <- exp_mat
 ```
 
-Secondly, choose the gene sets for use, if user want to combine categories, `merge_gs()` could be used. Then, calculate the activity values for the gene sets across all samples by `cal.Activity.GS()`. 
+Second, choose gene sets. If users want to combine the categories, please use `merge_gs()`.
+Then, use `cal.Activity.GS()` to calculate the activity values for the gene sets across all samples.
 
 ```R
-## calculate activity for all genesets
+# Calculate activity for all gene sets
 use_gs2gene <- merge_gs(all_gs2gene=all_gs2gene,use_gs=c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG','C5'))
 ac_gs <- cal.Activity.GS(use_gs2gene = use_gs2gene,cal_mat = exp_mat_gene)
 ```
 
-Thirdly, do statistical testing for the activity value of the gene sets by `getDE.BID.2G()` or `getDE.limma.2G()`.
+Third, perform statistical testing for the activity value of the gene sets. Please call `getDE.BID.2G()` or `getDE.limma.2G()`.
 
 ```R
-## get DA
+# Calculate DA
 phe_info <- pData(analysis.par$cal.eset)
 G0  <- rownames(phe_info)[which(phe_info$`subgroup`!='G4')] # get sample list for G0
 G1  <- rownames(phe_info)[which(phe_info$`subgroup`=='G4')] # get sample list for G1
 DA_gs_bid <- getDE.BID.2G(eset=generate.eset(ac_gs),G1=G1,G0=G0,G1_name='G4',G0_name='others')
 ```
 
-- Now, we could visualize the results, and the first plot will be the `draw.volcanoPlot()` and also `sig_gs` will be returned. 
+- Draw a volcano plot to visualize the results. `draw.volcanoPlot()` will also return the significant gene sets to `sig_gs`. 
 
 ```R
-## draw vocalno plot for top sig-GS
+# Draw vocalno plot for top significant gene sets
 sig_gs <- draw.volcanoPlot(dat= DA_gs_bid,label_col='ID',logFC_col='logFC',
                                Pv_col='P.Value',logFC_thre=0.2,Pv_thre=1e-3,
                                main='Volcano Plot for gene sets',show_label=TRUE,label_type = 'distribute',label_cex = 0.5,
@@ -601,20 +605,19 @@ sig_gs <- draw.volcanoPlot(dat= DA_gs_bid,label_col='ID',logFC_col='logFC',
 
 ![vocalno_GS_DA](vocalno_GS_DA.png)
 
-- Heatmap for the top significant gene sets.
+- Draw a heatmap for the top significant gene sets.
 
 ```R
-## draw heatmap for top sig-GS
+# Draw heatmap for top significant gene sets
 draw.heatmap(mat=ac_gs[sig_gs$ID,],pdf_file=sprintf('%s/heatmap_GS.pdf',analysis.par$out.dir.PLOT),scale='row',
              phenotype_info=phe_info,use_phe=c('gender','subgroup'))
 ```
 
-- NetBID style GSEA plot could be drawn by `draw.GSEA.NetBID.GS()`. Different from `draw.GSEA.NetBID()`, the genes in the gene sets could not be divided into positively-regulated/negatively-regulated. If with some special design (e.g combine two opposite function gene sets), try to use `draw.GSEA.NetBID()`.
+- NetBID2 style GSEA plot of gene sets can be plotted by `draw.GSEA.NetBID.GS()`. Different from `draw.GSEA.NetBID()`, the genes in the gene sets will not be divided into positively-regulated/negatively-regulated groups. 
 
 ```R
-## draw GSEA plot for top sig-GS
+# Draw GSEA plot for top significant gene sets
 DE <- analysis.par$DE[[comp_name]]
-#
 draw.GSEA.NetBID.GS(DE=DE,name_col='ID',profile_col='t',profile_trend='pos2neg',
                  sig_gs_list = sig_gs$ID,
                  gs_DA_Z= DA_gs_bid[sig_gs$ID,'Z-statistics'],
@@ -627,7 +630,7 @@ draw.GSEA.NetBID.GS(DE=DE,name_col='ID',profile_col='t',profile_trend='pos2neg',
 
 ![NetBID_GSEA_GS_demo1](NetBID_GSEA_GS_demo1.png)
 
-- The `target_col` could be chosen from `RdBu` and `black`.
+- The `target_col` has two options, `RdBu` and `black`. The figure below is showing when `target_col = 'black'`.
 
 ```R
 draw.GSEA.NetBID.GS(DE=DE,name_col='ID',profile_col='t',profile_trend='pos2neg',
@@ -642,10 +645,10 @@ draw.GSEA.NetBID.GS(DE=DE,name_col='ID',profile_col='t',profile_trend='pos2neg',
 
 ![NetBID_GSEA_GS_demo2](NetBID_GSEA_GS_demo2.png)
 
-- For a specific gene set, `draw.GSEA()` could be used for display the genes' significance in the DE profile. 
+- For a specific gene set, `draw.GSEA()` can be used to display the significance of genes from the DE profile. 
 
 ```R
-## draw GSEA plot for each sig-GS
+# Draw GSEA plot for one gene set
 DE_profile <- DE$`Z-statistics`; names(DE_profile) <- rownames(DE)
 use_target_genes <- rownames(DE)[which(DE$ID %in% use_gs2gene[[sig_gs$ID[1]]])]
 use_gs <- sig_gs$ID[1]
@@ -658,10 +661,10 @@ draw.GSEA(rank_profile=DE_profile,use_genes=use_target_genes,
 
 ![GSEA_GS_each](GSEA_GS_each.png)
 
-- For a specific gene set, `draw.categoryValue()` could be used for display the activity pattern across all samples. 
+- For a specific gene set, `draw.categoryValue()` can be used to display the activity pattern across all samples. 
 
 ```R
-## draw category plot for each sig-GS
+# Draw category plot for one gene set
 use_obs_class <- get_obs_label(phe_info = phe_info,'subgroup')
 draw.categoryValue(ac_val=ac_gs[use_gs,],use_obs_class=use_obs_class,
                    class_order=c('WNT','SHH','G4'),class_srt=30,pdf_file=sprintf('%s/categoryValue_GS_demo1.pdf',analysis.par$out.dir.PLOT),
@@ -671,11 +674,10 @@ draw.categoryValue(ac_val=ac_gs[use_gs,],use_obs_class=use_obs_class,
 ![categoryValue_GS_demo1](categoryValue_GS_demo1.png)
 
 
-### QIII.2: How to find drivers with significantly overlapped target genes ?
+### QIII.2: How to find drivers share significantly overlapped target genes ?
 
-- Sometimes, user want to check the target genes' intersection between different drivers. 
-Here, `draw.bubblePlot()` could be used for this purpose by some modification. 
-User need to prepare a geneset to gene list and a fake transfer table.
+- To check the target gene overlapping among drivers, users can use `draw.bubblePlot()` in a different way.
+Just change the input into ome gene list (from gene set) and a fake conversion table.
 
 ```R
 gs2gene_target <- analysis.par$merge.network$target_list[driver_list]
@@ -696,10 +698,11 @@ draw.bubblePlot(driver_list= driver_list,show_label=ms_tab[driver_list,'gene_lab
 ![bubblePlot_overlap](bubblePlot_overlap.png)
 
 -------
-### *How to modify the figures by adjusting the paramters in the draw. functions ?*
+### *How to modify the figure size created by `draw.` functions ?*
 
-NetBID2 has 14 functions start with `draw.*`, those functions all have one option `pdf_file=`.
-- If set this not NULL, the function will directly output the plotting results into a pdf file with adjusted figure size. User could choose to modify all `cex` related options to adjust the text size and the pdf size will be automatically adjusted by selection. 
-- If set `pdf_file=NULL`, the figures will be displayed interactively and user could choose to add `pdf()` before calling the function and `dev.off()` after, or modify the figure size in the console and save into files.
+NetBID2 has 14 functions start with `draw.`. These functions all have one option `pdf_file=`.
+- If it is set with a file path, the function will automatically save the plot as a PDF file without adjusting the figure size.
+- If it is set to NULL, the figure will show in a new window without saving to PDF. But user can add `pdf()` before the `draw.` function, and add `dev.off()` after the `draw.` function to save it manually. In this way, one can customize the figure size. For details, please check `?pdf`.
+- `cex` option in all the `draw.` functions are used to adjust the text size, and the PDF figure size will be adjusted based on that.
 
 -------

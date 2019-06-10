@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=Edge">
   
-  <meta name="Description" content="NetBID2">
+  <meta name="Description" content="NetBID2 overview and installation">
   
 
   <title>NetBID2 - </title>
@@ -115,9 +115,9 @@
       <div class="main-content js-main-content" tabindex="0">
         
         <div id="main-content" class="page-content" role="main">
-          <h1 class="fs-9" id="netbid2-network-based-bayesian-inference-of-drivers-version-2">NetBID2: Network-based Bayesian Inference of Drivers. Version 2</h1>
+          <h1 class="fs-9" id="netbid2-data-driven-network-based-bayesian-inference-of-drivers-version-2">NetBID2: data-driven Network-based Bayesian Inference of Drivers, Version 2</h1>
 
-<p class="fs-6 fw-300">This is the documentation for the usage of NetBID2.</p>
+<p class="fs-6 fw-300">Online tutorial and documentation of NetBID2.</p>
 
 <p><a href="#getting-started" class="btn btn-primary fs-5 mb-4 mb-md-0 mr-2">Get started now</a> <a href="https://github.com/jyyulab/NetBID-dev" class="btn fs-5">View it on GitHub</a></p>
 
@@ -125,41 +125,45 @@
 
 <h2 id="overview">Overview</h2>
 
-<p>NetBID is a systems biology tool called data-driven network-based Bayesian inference of drivers, by integrating data from transcriptomics,proteomics and phosphoproteomics.</p>
+<p>NetBID is a data-driven system biology pipeline, using data-driven network-based Bayesian inference approach to find drivers from transcriptomics, proteomics and phosphoproteomics data.</p>
 
-<p>The drivers could be transcription facotrs (<strong>TF</strong>) or signaling factors (<strong>SIG</strong>).</p>
+<p>The drivers can be either transcription facotrs (<strong>TF</strong>) or signaling factors (<strong>SIG</strong>).</p>
 
-<p>NetBID2 is the second version of NetBID, which not only covers the main functions of NetBID, but also provides plenty of supporting functions and suggested workflow to finish a NetBID2-based analysis:</p>
+<p>NetBID2 is the upgraded second version of NetBID. 
+It inherites all the main functions from NetBID, and provides many more functions and pipelines to perform an advanced end-to-end NetBID analysis.</p>
 
-<p><strong>Provide data processing functions to assist</strong></p>
+<p><strong>More data processing functions:</strong></p>
 
 <ul>
   <li>Expression matrix pre-processing and quality assessment</li>
-  <li>SJAracne-based network construction</li>
-  <li>Activity calculation for drivers and gene sets</li>
-  <li>Estimation of differentiated expressed genes or differentiated activated drivers</li>
-  <li>Generation of master table for drivers</li>
+  <li>SJARACNe-based network construction</li>
+  <li>Activity calculation of drivers and gene sets</li>
+  <li>Discovery of differential expressed genes and differential activated drivers</li>
+  <li>Generation of the master table for drivers</li>
+  <li>For more data processing functions, please check NetBID2 PDF manual</li>
 </ul>
 
-<p><strong>Provide visualization functions to assist</strong></p>
+<p><strong>More visualization functions:</strong></p>
 
 <ul>
-  <li>Unsupervised clustering for samples and comparison with known labels</li>
-  <li>Display for a list of interested drivers, the profile of the significance and the feature of the target genes</li>
-  <li>Display for a specific driver, the profile of the significance, the feature of the target genes and the detailed network structure</li>
+  <li>Unsupervised learning of samples, comparison between the predicted labels vs. the observed labels</li>
+  <li>Display drivers with significance profiles and target genes</li>
+  <li>Display selected drivers with more details and its sub-network structure</li>
+  <li>For more visualization functions, please check NetBID2 PDF manual</li>
 </ul>
 
-<p><strong>Provide supporting functions to assist</strong></p>
+<p><strong>More supporting functions:</strong></p>
 
 <ul>
   <li>Gene/transcript ID conversion</li>
-  <li>Gene function enrichment analysis &amp; result visualization</li>
+  <li>Gene function enrichment analysis &amp; visualization</li>
   <li>Data and pipeline management</li>
+  <li>For more supporting functions, please check NetBID2 PDF manual</li>
 </ul>
 
 <hr />
 
-<h2 id="getting-started">Getting started</h2>
+<h2 id="installation">Installation</h2>
 
 <h3 id="dependencies">Dependencies</h3>
 
@@ -167,10 +171,10 @@
 
 <p><a href="docs/pre_request">Pre-request R packages</a></p>
 
-<h3 id="quick-start-install-r-packages-netbid2">Quick start: install R packages (NetBID2)</h3>
+<h3 id="two-ways-to-install-netbid2-r-package">Two ways to install NetBID2 R package</h3>
 
 <ul>
-  <li>install the R packages from github (not published yet)</li>
+  <li>From github,</li>
 </ul>
 
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">library</span><span class="p">(</span><span class="n">devtools</span><span class="p">)</span><span class="w">
@@ -178,7 +182,7 @@
 </span></code></pre></div></div>
 
 <ul>
-  <li>OR, download the released source package from <a href="https://github.com/jyyulab/NetBID-dev/releases/download/NetBID2-R/NetBID2_0.1.1.tar.gz">NetBID2_0.1.1.tar.gz</a> and local install</li>
+  <li>From source package <a href="https://github.com/jyyulab/NetBID-dev/releases/download/NetBID2-R/NetBID2_0.1.1.tar.gz">NetBID2_0.1.1.tar.gz</a>,</li>
 </ul>
 
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">install.packages</span><span class="p">(</span><span class="s1">'NetBID2_0.1.1.tar.gz'</span><span class="p">,</span><span class="n">repos</span><span class="o">=</span><span class="kc">NULL</span><span class="p">)</span><span class="w">
@@ -188,53 +192,57 @@
 
 <h2 id="design-manual">Design manual</h2>
 
-<p>The manual for all functions in NetBID2 could be obtained from <a href="https://github.com/jyyulab/NetBID-dev/blob/master/NetBID2_0.1.1.pdf">NetBID2_0.1.1.pdf</a>. All functions have the demo scripts.</p>
+<p>The manual of all the NetBID2 functions is linked here <a href="https://github.com/jyyulab/NetBID-dev/blob/master/NetBID2_0.1.1.pdf">NetBID2_0.1.1.pdf</a>. 
+Every function has its own demo scripts to demonstrate its functionality.</p>
 
-<p>All 67 invokable functions could be grouped as shown in the figure below:</p>
+<p>All these 67 functions can be grouped into their corresponding function modules,</p>
 
 <p><img src="function_group.png" alt="function group" /></p>
 
-<p>NetBID2 has four functions focusing on suggested pipeline (not required):</p>
+<p><strong>Here are 4 functions we think are ESSENTIAL for the NetBID2 pipeline management:</strong></p>
 
 <ul>
   <li>
-    <p><code class="highlighter-rouge">NetBID.network.dir.create()</code> will generate a working directory structure for the network construction part in NetBID2. This function aims to assist researchers to organize the working directory.</p>
+    <p><code class="highlighter-rouge">NetBID.network.dir.create()</code> helps users to create an organized working directory for the network construction step in NetBID2 analysis. It creates a hierarchcial working directory and returns a list containing this directory information.</p>
   </li>
   <li>
-    <p><code class="highlighter-rouge">NetBID.analysis.dir.create()</code>  will generate a working directory structure for the driver analysis part in NetBID2. This function aims to assist researchers to organize the working directory.</p>
+    <p><code class="highlighter-rouge">NetBID.analysis.dir.create()</code>  helps users to create an organized working directory for the driver estimation step in NetBID2 analysis. It also creates a hierarchcial working directory and returns a list contains this directory information.</p>
   </li>
   <li>
-    <p><code class="highlighter-rouge">NetBID.saveRData()</code> save the dataset of one designated step  the step into file.</p>
+    <p><code class="highlighter-rouge">NetBID.saveRData()</code> helps users to save complicated list object generated by certain steps of NetBID2’s pipeline. This function makes an easier data/pipeline management and reference.</p>
   </li>
   <li>
-    <p><code class="highlighter-rouge">NetBID.loadRData()</code> load the dataset of one designated step from file.</p>
+    <p><code class="highlighter-rouge">NetBID.loadRData()</code> pairs with <code class="highlighter-rouge">NetBID.saveRData()</code>, it reloads previous saved Rdata, so users don’t need to re-run everything.</p>
   </li>
 </ul>
 
-<p>Users could save two complicate list object, <code class="highlighter-rouge">network.par</code> in the <strong>network construction part</strong> and <code class="highlighter-rouge">analysis.par</code> in the <strong>driver analysis part</strong>, into the data directory (<code class="highlighter-rouge">network.par$out.dir.DATA</code> or <code class="highlighter-rouge">analysis.par$out.dir.DATA</code>), with the name of the RData marked by step name. 
-The two lists could make user to save the whole related dataset in each step <code class="highlighter-rouge">NetBID.saveRData()</code> and easy to get them back by using <code class="highlighter-rouge">NetBID.loadRData()</code>. 
-The RData saved from each step could be used to run the following analysis without repeating the former steps.</p>
+<p><strong>Here are 2 list objects we think are ESSENTIAL for the NetBID2 pipeline analysis:</strong></p>
 
-<p>The pipeline steps are suggested in the figure below with detailed component for the list object in the final step in the two parts:</p>
+<ul>
+  <li><code class="highlighter-rouge">network.par</code> is a variable in the <strong>network construction part</strong>. It is created by <code class="highlighter-rouge">NetBID.network.dir.create()</code> with network construction directory information wrapped inside. This list object is used to store all the important results from the network construction pipeline. It can be saved as RData and reloaded back using <code class="highlighter-rouge">NetBID.saveRData()</code> and  <code class="highlighter-rouge">NetBID.loadRData()</code>.</li>
+  <li><code class="highlighter-rouge">analysis.par</code> is a variable in the <strong>driver analysis part</strong>. It is created by <code class="highlighter-rouge">NetBID.analysis.dir.create()</code> with driver estimation directory information wrapped inside. This list object is used to store all the important results from the driver estimation pipeline. It also can be saved as RData and reloaded back using <code class="highlighter-rouge">NetBID.saveRData()</code> and  <code class="highlighter-rouge">NetBID.loadRData()</code>.</li>
+</ul>
+
+<p>The workflow of each NetBID2 pipeline is summarized in the figure below,</p>
 
 <p><img src="pipeline_part.png" alt="pipeline part" /></p>
 
-<p>Strongly suggest new users to follow the pipeline to manage the analysis project. The pipeline is included in the tutorial below. User could follow the demo in the tutorial for better understanding the design.</p>
-
-<p>Most of the functions in NetBID2 are not strictly dependent on the pipeline object, user could try to learn the usage of each function by running the example in each function and prepare the required input by themselves.</p>
+<p><strong>We highly suggest new users to follow the pipeline for driver analysis and visualization.</strong> Details of the NetBID2 pipeline is shown and explained using a demo dataset in the following tutorial.
+Of course, most functions in NetBID2 are still flexible to use and perform specific needs for users.</p>
 
 <h2 id="tutorial">Tutorial</h2>
 
 <p>We choose the demo dataset from GEO database: <a href="https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE116028">GSE116028</a>.</p>
 
-<p>This dataset contains microarray data for 13 adult medulloblastoma (MB) samples. 
-Three subgroups of adult MB were identified by distinct expression profiles, clinical features, pathological features, and prognosis, including 3 SHH, 4 WNT, and 6 Group4.
-From them, Group4 tumors in adult had significantly worse progression-free and overall survival compared with tumors of the other molecular subtypes. 
-Here, we want to <strong>find potential hidden drivers in Group4 compared with the other subtypes by using NetBID2</strong>, for which may be related with the specific clinical feature for Group4 MB.</p>
+<p>This microarray dataset contains 13 adult medulloblastoma (MB) samples. 
+Three phenotype subgroups of adult MB have been identified from distinguishabled expression profiles, clinical features, pathological features and prognosis.
+These subgroups together with their sample numbers are, 3 SHH, 4 WNT, and 6 Group4.
+Group4 tumors in adult have significantly worse progression-free and overall survival, compared to other molecular subtypes of tumor.
+Here, the goal is to <strong>find potential drivers in Group4 compared to other subtypes using NetBID2</strong>. This may relate to specific clinical feature of Group4 MB subtype.</p>
 
-<p><strong>Though the dataset in the tutorial is microarray, we will include the usage of processing RNASeq dataset in each step.</strong></p>
+<p><strong>Though the dataset in the tutorial is microarray, NetBID2 is also capable to analyze RNA-Seq data. We will show in the tutorial below as well.</strong></p>
 
-<p>The tutorials are divided by three ordered and relatively independent parts as follows:</p>
+<p>The tutorial contains three main parts, they can be followed by order or used independently:</p>
 
 <ol>
   <li>
@@ -252,7 +260,7 @@ Here, we want to <strong>find potential hidden drivers in Group4 compared with t
 
 <h2 id="about-the-project">About the project</h2>
 
-<p>For the detailed description of NetBID algorithm, please refer our lab page <a href="https://stjuderesearch.org/site/lab/yu">View Yu Lab@St. Jude</a>.</p>
+<p>For the detailed description of NetBID algorithm, please check our lab page <a href="https://stjuderesearch.org/site/lab/yu">View Yu Lab@St. Jude</a>.</p>
 
 <h3 id="license">License</h3>
 

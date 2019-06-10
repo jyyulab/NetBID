@@ -1,340 +1,381 @@
 ---
+title: "Network construction"
 layout: default
-title: Network construction
 nav_order: 2
-has_children: false
+output:
+  html_document:
+    df_print: paged
 permalink: /docs/network_construction
+has_children: no
 ---
 
 # Network Construction
 
-The purpose for this part: 
+The purpose of this part:
 
-**generate a gene regulatory network based on a transcriptomic datasets**.
+**create a gene regulatory network from transcriptome dataset**.
 
-The full demo script for this part could be found in [pipeline_network_demo1.R](https://github.com/jyyulab/NetBID-dev/blob/master/demo_scripts/pipeline_network_demo1.R).
+The complete demo script for network construction can be found here, [pipeline_network_demo1.R](https://github.com/jyyulab/NetBID-dev/blob/master/demo_scripts/pipeline_network_demo1.R).
 
 ----------
 ## Quick Navigation for this page
 
-- [Step0: preparations](#step0-preparations)
-- [Step1: load in gene expression datasets for network construction (exp-load)](#step1-load-in-gene-expression-datasets-for-network-construction-exp-load)
-   - [Q&A: The choice of expression dataset for network construction](#the-choice-of-expression-dataset-for-network-construction)
-   - [Q&A: Input RNASeq dataset](#input-rnaseq-dataset)
-   - [Q&A: Input expression matrix](#input-expression-matrix)
-- [Step2: normalization for the expression dataset (exp-QC)](#step2-normalization-for-the-expression-dataset-exp-qc)
-   - [Q&A: QC for RNASeq dataset](#qc-for-rnaseq-dataset)
+- [Step 0: Preparations](#step-0-preparations)
+- [Step 1: Load in gene expression datasets for network construction (exp-load)](#step-1-load-in-gene-expression-datasets-for-network-construction-exp-load)
+   - [Q&A: The choice of expression dataset for network construction](#the-choice-of-expression-data-set-for-network-construction)
+   - [Q&A: Input RNA-Seq dataset](#input-rna-seq-dataset)
+   - [Q&A: Input expression matrix not from GEO database](#input-expression-matrix-not-from-geo-database)
+- [Step 2: Normalization for the expression dataset (exp-QC)](#step-2-normalization-for-the-expression-dataset-exp-qc)
+   - [Q&A: QC for RNA-Seq dataset](#qc-for-rna-seq-dataset)
    - [Q&A: Combine two datasets](#combine-two-datasets)
-- [Step3: check sample cluster information, optional (exp-cluster)](#step3-check-sample-cluster-information-optional-exp-cluster)
-- [Step4: prepare SJARACNE (sjaracne-prep)](#step4-prepare-sjaracne-sjaracne-prep)
+- [Step 3: Check sample cluster information, optional (exp-cluster)](#step-3-check-sample-cluster-analysis-optional-exp-cluster)
+- [Step 4: Prepare files to run SJARACNe (sjaracne-prep)](#step-4-prepare-files-to-run-sjaracne-sjaracne-prep)
    - [Q&A: ID conversion](#id-conversion)
    
 ----------
 
 
-## Step0: preparations
+## Step 0: Preparations
+**Purpose: create an organized working directory for the network construction step in NetBID2 analysis.**
 
-Before start, we need to library the installed NetBID2. 
+Make sure you have NetBID2 package. 
 
 ```R
-# library the package
 library(NetBID2)
 ```
 
-This tutorial is based on the suggested pipeline design in NetBID2. 
-So, we need to set up a main directory for the project in `project_main_dir`. 
-The main directory could have multiple projects under the path, separeted by the `project_name` as the name for the sub-directory. 
-So user could use the same main directory for another project. 
-But project related files with the same `project_main_dir` and `project_name` will be covered. 
-So, in the script below, user could add a time tag in the `project_name` to avoid this by accident. 
+Create directories and folders to save and organize your analysis results.
+
+We have designed a function `NetBID.network.dir.create()` to handle the working directories, so users can have a better data organization.
+This function needs users to define the main working directory `project_main_dir` and the project’s name `project_name`. 
+To prevent previous project with the same `project_main_dir` and `project_name` from being rewrite, it is highly suggested to add a time tag to your `project_name`.
 
 ```R
-#set up paramters
-project_main_dir <- 'test/' ### user defined main directory for the project, one main directory could have multiple projects, separeted by project name
-current_date <- format(Sys.time(), "%Y-%m-%d") ## current date for project running, suggested to add the time tag
-project_name <- sprintf('project_%s',current_date) ## project name for the project
+# Define main working directory and project name
+project_main_dir <- './test' # user defined main directory for the project, one main directory could have multiple project folders, distinguished by project name.
+current_date <- format(Sys.time(), "%Y-%m-%d") # optional, if user like to add current date to name the project folder
+project_name <- sprintf('project_%s',current_date) # project name for the project folders under main directory.
 ```
 
-Once decided the `project_main_dir` and `project_name`, user could run `NetBID.network.dir.create()` to generate the sub-directories for the working directory, including QC/ to save QC related files, DATA/ to save RData and SJAR/ to save data for running [SJARACNe](https://github.com/jyyulab/SJARACNe). Besides, a global list variable `network.par` will be returned by the function. 
-Attention, if the current environment already has this variable, the function will do nothing, report a warning message and return the original `network.par`.  
+`NetBID.network.dir.create()` creates a main working directory with a subdirectory of the project. 
+It also automatically creates three subfolders (QC, DATA and SJAR) within the project folder. 
+QC/, storing Quality Control related plots; DATA/, saving data in RData format; SJAR/, storing files needed for running SJAracne [SJARACNe](https://github.com/jyyulab/SJARACNe). 
+It also returns a list object, here named `network.par` with directory information wrapped inside. 
+This list is an ESSENTIAL varaible for network construction, all the important intermediate data generated later on will be wrapped inside.
+If the current environment already has this variable, the function will only report a warning message and return the existed `network.par`.  
 
 ```R
-## network.par is very essential in the analysis, if the environment already has this parameter, strongly suggest to delete it first
-network.par  <- NetBID.network.dir.create(project_main_dir=project_main_dir,prject_name=project_name) ## create working directory
+# Create a hierarchcial working directory and return a list contains the hierarchcial working directory information
+# This list object (network.par) is an ESSENTIAL variable in network construction pipeline
+network.par  <- NetBID.network.dir.create(project_main_dir=project_main_dir,project_name=project_name)
 ```
 
-## Step1: load in gene expression datasets for network construction (exp-load)
+## Step 1: Load in gene expression datasets for network construction (exp-load)
+**Purpose: download the target expression profile and perform quality control analysis on the raw data.**
 
-Here, we use same demo dataset for network construction and following analysis (Check the [***The choice of expression dataset for network construction***](#the-choice-of-expression-dataset-for-network-construction) section below). 
-This dataset could be directly downloaded from GEO database by input the GSE ID and GPL ID.
-If set `getGPL=TRUE`, will download the gene annotation file. 
-The output of this function will be the [eSet](https://www.rdocumentation.org/packages/Biobase/versions/2.32.0/topics/ExpressionSet) class object and will save the RData into `out.dir`.
-Next time by running this function, it will try to load the RData in the `out.dir/{GSE}_{GPL}.RData` first (if `update=FALSE`).
+Here, we use `GSE116028` microarray data from GEO as the demo dataset. (Check [***The choice of expression dataset for network construction***](#the-choice-of-expression-data-set-for-network-construction) for more details). 
+Given the ID of GSE (GEO series) and GPL (GEO platform), `load.exp.GEO()` will download the corresponding expression dataset from GEO database.
+The data will be saved as [eSet](https://www.rdocumentation.org/packages/Biobase/versions/2.32.0/topics/ExpressionSet) class object in the environment, and will also be saved as RData in the `out.dir` folder.
+To download gene annotation file, one need to set `getGPL=TRUE`. 
+To prevent repetitive download instead of updating, one need to set `update=FALSE`, so `load.exp.GEO()` will reload the existed RData (in this demo, RData will be reload from `DATA/GSE116028_GPL6480.RData`) directly.
 
 ```R
-# from GEO, need to provide GSE and GPL
+# Download expression dataset from GEO, need to provide GSE ID and GPL ID
 net_eset <- load.exp.GEO(out.dir=network.par$out.dir.DATA,GSE='GSE116028',GPL='GPL6480',getGPL=TRUE,update=FALSE)
 ```
 
 *Optional:*
-User could choose to update the feature data frame in the eSet object by `update_eset.feature()`. 
-This function allows user to change the main ID from `from_feature` to `to_feature` by inputting the transfer table `use_feature_info` and choosing the `merge_method`.
+Directly looking at the probe expression value from the raw expression dataset is not much meaningful.
+`update_eset.feature()` allows users to reassign the featureData slot of ExpressionSet object based on user’s demand. For example, from probe IDs to gene IDs.
+Given the conversion table `use_feature_info`, `from_feature` and `to_feature`, this function will convert old IDs into new IDs using `merge_method`.
 
 ```R
-# ID conversion, or merge transcript level to expression level, use_feature_info can be other dataframe info; optional;
-net_eset <- update_eset.feature(use_eset=net_eset,use_feature_info=fData(net_eset),from_feature='ID',to_feature='GENE_SYMBOL',merge_method='median') ### !!! need modify
+# ID conversion, or merge transcript level to expression level, use_feature_info can be other dataframe instead of fData; optional;
+net_eset <- update_eset.feature(use_eset=net_eset,use_feature_info=fData(net_eset),from_feature='ID',to_feature='GENE_SYMBOL',merge_method='median')
 ```
 
 *Optional:*
-User could choose to update the phenotype data frame in the eSet object by `update_eset.phenotype()`. 
-This function allows user to get phenotype information from the data frame `use_phenotype_info` by indicating the column that matched the sample name.
-The `use_col` could be used to tell the function which column in `use_phenotype_info` will be kept. If set to 'auto', wil extract columns with unique sample feature ranges from 2 to sample size-1. 
-If set to 'GEO-auto', will extract columns: 'geo_accession','title','source_name_ch1',and columns end with ':ch1'.
+Users can use `update_eset.phenotype()` to extract interested phenotype information from phenoData slot of ExpressionSet object, and update it.
+Use `use_col` to tell the function which column(s) in `use_phenotype_info` to keep. If set to `auto`, it only extracting "cluster-meaningful" sample features (e.g. it is meaningless to use "gender"" as clustering feature, if all samples are female).
+If set to `GEO-auto`, it will extract columns: "geo_accession"", "title", "source_name_ch1" and columns names ended with ":ch1".
 
 ```R
-# select phenotype columns or user add phenotype info; optional
+# Select phenotype columns or user added phenotype info; optional
 net_eset <- update_eset.phenotype(use_eset=net_eset,use_phenotype_info=pData(net_eset),use_sample_col='geo_accession',use_col='GEO-auto')
 ```
 
-Now, we need to check the data quality of the eSet by `draw.eset.QC()`. 
-The QC report html mainly contains four parts, *heatmap*, *pca*, *density* and *meansd*.
-The `intgroup` could be used to indicate which column from the `fData(eset)` will be used in the plot (*heatmap*, *pca*, *density*).
-If set to NULL, will automatcially extract all possible groups by `get_int_group()`.
-
-For the usage of `draw.eset.QC`, pandoc is required for `generate_html=TRUE`. 
-If `pandoc_available()=FALSE`, please install pandoc and set environment of pandoc by `Sys.setenv(RSTUDIO_PANDOC=---installed path---)`.
+**Now, wrap this ExpressionSet object `net_eset` into the ESSENTIAL variable `network.par`.**
 
 ```R
-# QC for the raw expdatasets
-# if intgroup==NULL, will auto get intgroup
-# prefix: prefix for the pdf files
-draw.eset.QC(network.par$net.eset,outdir=network.par$out.dir.QC,intgroup=NULL,do.logtransform=FALSE,prefix='beforeQC_')
-```
-
-- What to check for the QC report html [before_QC.html](beforeQC_QC.html) ? 
-The number of samples and genes (probes/transcripts/...);
-All samples will be clustered by the expression pattern from all genes, check possible mis-labeled samples; 
-The density plots show the range and distribution for the expression values, may judge whether the original dataset has been log transformed;
-The meansd plots show the relationship between the mean and standard deviation of the genes, used to verify whether there is a dependence of the standard deviation (or variance) on the mean. 
-
-Now, basic processing steps are finished for the input expression dataset. Save it to `network.par`.
-
-```R
-# add the variable into network.par, very essential !
+# Add the variable into network.par. ESSENTIAL STEP.
 network.par$net.eset <- net_eset
 ```
 
-Save `network.par` into the RData file and give the step name to it, e.g `exp-load`. 
-The RData could be found in `network.par$out.dir.DATA/network.par.Step.{exp-load}.RData`.
+**Perform quality control for the raw ExpressionSet object.**
+Call `draw.eset.QC()`, an HTML report containing quality control analysis plots will be created. 
+Users can choose interested phenotype information from phenoData slot to do this quality control, by assigning value to `intgroup`. 
+If `intgroup` is NULL, all the columns from phenoData slot will be used.
+The HTML created by `draw.eset.QC()` is using pandoc. Please make sure you have it installed.
+Checking the availability of pandoc, one can call `pandoc_available()`.
+Installing and setting the environment for pandoc, one can call `Sys.setenv(RSTUDIO_PANDOC=$installed_path)`, here replace `$installed_path` with the installed path of pandoc. If pandoc not available, users could set `generate_html=FALSE` and plots in pdf format will be generated. 
 
 ```R
-# save to RData
+# QC for the raw eset
+draw.eset.QC(network.par$net.eset,outdir=network.par$out.dir.QC,intgroup=NULL,do.logtransform=FALSE,prefix='beforeQC_')
+```
+
+**- What information can you get from the HTML QC report?**  ([before_QC.html](beforeQC_QC.html))
+  - A table. It contains phenotype information of samples. Descriptive variables, such as number of samples and genes (probes/transcripts/...);
+  - A heatmap and a PCA biplot. All samples will be clustered using the raw expression values across all the genes as features. The aim of this is to check possible mis-labeled samples; 
+  - A density plot. It shows the range and the distribution of the expression values. This also helps to judge if the original dataset has been log transformed;
+  - A meansd plot. It shows the relationship between the mean and standard deviation of raw gene expression values. This helps to verify if the mean and the standard deviation are independent.
+
+Now, the basic pre-processing steps are done for the raw data. 
+For persistent storage of data, and prevent the re-run of all previous steps. Users can checkout and save `network.par` as RData for this part.
+The function `NetBID.saveRData()` provide easier pipeline step checkout and reference. 
+Giving pipeline step name to `step`, the `network.par` will be saved with step name as `network.par$out.dir.DATA/network.par.Step.{exp-load}.RData`.
+
+```R
+# Save Step 1 network.par as RData
 NetBID.saveRData(network.par = network.par,step='exp-load')
 ```
 
 ----------
-### *The choice of expression dataset for network construction*
+### *The choice of expression data set for network construction*
 
-- For a NetBID2 project, the analysis expression dataset is selected first to assist the investigation of a biological story. 
-The network construction expression dataset could be the same as the analysis expression dataset but need to consider some other factors. 
+- For a NetBID2 project, users need to decide what expression dataset to use for starting their biological story.
+Here are some important factors need to be considered, when using the expression dataset to construct regulatory network.
 
-   - The theory of using expression dataset to infer gene regulatory networks is based on [SJARACNe](https://academic.oup.com/bioinformatics/advance-article/doi/10.1093/bioinformatics/bty907/5156064). 
-   It uses an information theoretic approach to eliminate the majority of indirect interactions inferred by co-expression methods. More samples, higher sensitivity and precision will be obtained by experiment. 
-   Typically, more than 100 samples is a better choice. 
-   - Large size public datasets from the same tissue, cell line or biological background as the analysis dataset are recommended. User could search the public databases such as [GEO](#the-choice-of-expression-dataset-for-network-construction), [TCGA](#https://portal.gdc.cancer.gov). 
-   - Computational inferred networks will surely have false positive edges, especially for those with relative small mutual information (MI) score. Functions related with network processing will be described in the [Driver estimation](../docs/driver_estimation) part. 
-   - Once a high quality network is generated, user could put them into a common shared place that multiple projects with similar biological background could rely on that. 
+   - The reasoning of using expression dataset to infer gene regulatory network is based on [SJARACNe](https://academic.oup.com/bioinformatics/advance-article/doi/10.1093/bioinformatics/bty907/5156064). 
+   It uses the information-theoretic approach to eliminate the majority of indirect interactions inferred by co-expression methods. The more samples, the higher sensitivity and precision.
+   Typically, more than 100 samples is recommended. 
+   - Large size public datasets from the same tissue, cell line or biological background are recommended to use as the expression datasets. Users can search through public databases, such as [GEO](#the-choice-of-expression-dataset-for-network-construction) and [TCGA](#https://portal.gdc.cancer.gov). 
+   - Computationally inferred networks cannot avoid to have false positive edges. Especially for edges with relatively low mutual information (MI) scores. Functional interpretation from the regulatory network will be explained in the [Driver estimation](../docs/driver_estimation) part. 
 
-- The demo used in the tutorial actually is not a good network construction expression dataset in real practice. Just used to assist user get familar with the procedure of NetBID2. 
+- In real-world practice, the demo's expression dataset is too small to construct a high quality network. However, it provides a handy visualization for the procedure of the NetBID2.
 
 ----------
 
-### *Input RNASeq dataset*   
+### *Input RNA-Seq dataset*   
 
-- Another two functions can be applied to load expression dataset from RNASeq, `load.exp.RNASeq.demo()` and `load.exp.RNASeq.demoSalmon()`. 
-**BUT** this two function are just demo functions, which do not support complicated options in `tximport()` and `DESeq()`. 
-Besides, the output format may be different by using different dataset as reference that these two load functions may not work well.
-Suggest to use the original functions if have some experience of coding.
+- NetBID2 provides two functions to load expression dataset from RNA-Seq, `load.exp.RNASeq.demo()` and `load.exp.RNASeq.demoSalmon()`. 
+**BUT** these two function are still in demo version, and don't support the complicated options in `tximport()` and `DESeq()`. 
+It's challenging due to the various output format from RNA-Seq (e.g. using different reference genomes). We suggest to use those well-developped tools in this case.
 
-- If try to use `load.exp.RNASeq.demo()` and `load.exp.RNASeq.demoSalmon()`, be **ATTENTION** to the `return_type` option in the functions. 
-    - 'txi' is the output of `tximport()`, a simple list containing matrices: abundance, counts, length.
-    - 'counts' is the output of raw count matrix.
-    - 'tpm' is the output of raw tpm.
-    - 'dds' is the DESeqDataSet class object, the data has been processed by `DESeq()`.
-    - 'eset' is the ExpressionSet class object, the expression data matrix has been processed by `DESeq(), vst()`.
+- If users like to try `load.exp.RNASeq.demo()` and `load.exp.RNASeq.demoSalmon()`, be aware to the `return_type` in these functions. 
+    - 'txi' is the output of `tximport()`. It is a list containing three matrices, abundance, counts and length. "counts" is the matrix of raw count.
+    - 'counts' is the matrix of raw count.
+    - 'tpm' is the raw tpm.
+    - 'dds' is the DESeqDataSet class object, which is processed by `DESeq()`.
+    - 'eset' is the ExpressionSet class object, which is processed by `DESeq()` and `vst()`.
     
-    Default is 'tpm'. If user do not choose 'eset', the output will not be directly used in the following scripts in the tutorial. Check the ***Input expression matrix*** section below.
+    Default is 'tpm'. If users don't choose 'eset' as return type. The output object cannot be directly used in the rest pipeline so far. 
+    Please check the ***Input expression matrix not from GEO database*** section to see how to proceed.
 
 ----------
-### *Input expression matrix*   
-- If the user decide to prepare the expression matrix by themselves. The eSet object could be directly obtained by using `generate.eset()`.
-For example for RNASeq dataset with 'tpm' as the output:
+### *Input expression matrix not from GEO database*   
+- If users have expression matrix not obtained from GEO database. They still can prepared the ExpressionSet class object using `generate.eset()`.
+
+For example, RNA-Seq dataset processed into TPM (transcripts per million).
 ```R
 #tpm <- load.exp.RNASeq.demo(XXX)
 tmp_mat  <- log2(tpm)
 tmp_eset <- generate.eset(exp_mat = tmp_mat, phenotype_info = NULL,feature_info = NULL, annotation_info = "")
 ```
-For the option of `generate.eset()`, 
-if `phenotype_info = NULL`, a one column named with 'group' will be automatically generated. 
-if `feature_info = NULL`, a one column named with 'gene' will be automatically generated. 
+Some details of `generate.eset()`:
+it generates ExpressionSet class object to contain and describe the high-throughput assays;
+Users can define its slots, which are expression matrix (required), phenotype information and feature information (optional);
+If `phenotype_info = NULL`, a column named with 'group' will be automatically generated;
+If `feature_info = NULL`, a column named with 'gene' will be automatically generated. 
 
 ----------
 
-## Step2: normalization for the expression dataset (exp-QC)
+## Step 2: Normalization for the expression dataset (exp-QC)
+**Purpose: normalize the expression data and perform quality control analysis on the normalized data.**
 
-Before start, load the RData from the previous step if user want to re-run the following steps or re-open the R session. 
-Remember to set the temporary `network.par` if re-open the R session and `network.par$out.dir.DATA` will be used to find the correct RData file. 
-No need to run this if continue working from the previous step. 
+Please skip the following line if you didn't close R session after completed Step 1.
+
+Don't skip, if you have checked out and closed R session after completed the Step 1. Before start Step 2, please reload `network.par` RData from Step 1.
+`NetBID.loadRData()` reloads RData saved by `NetBID.saveRData()`. It prevents user from repeating former pipeline steps.
+If the re-opened R session doesn't have `network.par` in the environment, please comment off the first two command lines. It will create a temporary `network.par`
+with path of the saved Step 1 RData, `network.par$out.dir.DATA`. The path `test//project_2019-05-02//DATA/` here is just an example, 
+users need to give their own path used to save `network.par` RData from Step 1.
 
 ```R
-# load from RData
+# Reload network.par RData from Step 1
 #network.par <- list()
 #network.par$out.dir.DATA <- 'test//project_2019-05-02//DATA/'
 NetBID.loadRData(network.par = network.par,step='exp-load')
 ```
 
-Following basic QC steps are suggested procedure for **microarray** dataset, all of the steps are ***optional***.
+The following QC steps are highly suggested for **microarray** dataset, but not essential.
 
-Firstly, check the `NA` values in the expression dataset by counting the number of `NA` values for each sample and for each gene (or probes/transcripts/...). 
-If one sample or gene with too many `NA` values, user could choose to remove that gene or sample or do imputation by `impute.knn()`. 
+**First, the handling of missing data.**
+
+Count the number of `NA` values for each sample and each gene (or probes/transcripts/...). 
+If one sample or gene has too many `NA` values, user can choose to remove that sample or gene, or perform imputation by using `impute.knn()`. 
 
 ```R
-## following QC steps are optional !!!!
+# Get the expression matrix from ExpressionSet object
 mat <- exprs(network.par$net.eset)
-# remove possible NA? or imputation ? ## need to user-decide
+# Count and show number of NAs across samples and genes
 sample_na_count <- apply(mat,1,function(x){length(which(is.na(x)==TRUE))})
 print(table(sample_na_count))
 gene_na_count <- apply(mat,2,function(x){length(which(is.na(x)==TRUE))})
 print(table(gene_na_count))
+# Perform imputation
 if(sum(sample_na_count)+sum(gene_na_count)>0) mat <- impute.knn(mat)$data
 ```
 
-Secondly, the log2 transformation. Sometimes it is hard to know whether the original dataset has been log2 transformed or not. 
-Here, we provide an experienced judging threshold for the median value. This is may not be suitable for all conditions. 
+**Second, the log2 transformation.**
+
+Sometimes it is hard to know whether the raw dataset has been log2-transformed or not. 
+Here, we use a threshold from experience to check the median value. It may not be suitable for all cases, users can modify the threshold based on their own experience.
 
 ```R
-# log2 transformation
-med_val <- median(apply(mat,2,median));print(med_val)
+# Perform log2 transformation
+med_val <- median(apply(mat,2,median)); print(med_val)
 if(med_val>16){mat <- log2(mat)}
 ```
 
-Thirdly, the quantile normalization between samples. This is suggested for dealing with microarray dataset and not for RNASeq, even the log2tpm etc.  
+**Third, the quantile normalization across samples.**
+
+This is suggested for dealing with microarray dataset, but not for RNA-Seq or log2tpm etc.  
 
 ```R
-# quantile normalization
-mat <- normalizeQuantiles(mat) ## limma quantile normalization
+# Perform limma quantile normalization
+mat <- normalizeQuantiles(mat) 
 ```
 
-Fourthly, remove low expressed genes across nearly all samples. 
-The suggested threshold is shown below, try to remove genes that in more than 90% samples, the expression value is lower than 5%. 
+**Fourth, filter out genes with very low expression values (bottom 5%) in most samples (more than 90%).**
+
+The presence of low-expression genes are less informative for network construction. 
 
 ```R
-# remove low expressed genes, such as whether in more than 90% samples, the expression value is lower than 5%
+# Filter out low-expression genes
 choose1 <- apply(mat<= quantile(mat, probs = 0.05), 1, sum)<= ncol(mat) * 0.90
 print(table(choose1))
 mat <- mat[choose1,]
 ```
 
-Now, the expression matrix has been updated, need to save into the eSet class object by using `generate.eset()`. 
-Update the `network.par$net.eset`, generate the QC report html by `draw.eset.QC()` and save to RData by `NetBID.saveRData()`. 
+Now, the expression matrix has been updated. Users need to wrap it into the ExpressionSet class object, so it can be used for later pipeline studies.
+`generate.eset()` is designed to create the ExpressionSet object when only expression matrix is available.
+Users can also update the `network.par$net.eset`, and generate the HTML QC report to the normalized data, and save it as RData.
+Please use `draw.eset.QC()` to create QC report and `NetBID.saveRData()` to save the normalized `network.par`. 
 
 ```R
-# update eset
+# Update eset with normalized expression matrix
 net_eset <- generate.eset(exp_mat=mat, phenotype_info=pData(network.par$net.eset)[colnames(mat),],
                           feature_info=fData(network.par$net.eset)[rownames(mat),],
                           annotation_info=annotation(network.par$net.eset))
+# Updata network.par with new eset
 network.par$net.eset <- net_eset
+# QC for the normalized eset
 draw.eset.QC(network.par$net.eset,outdir=network.par$out.dir.QC,intgroup=NULL,do.logtransform=FALSE,prefix='afterQC_')
-# save to RData
+# Save Step 2 network.par as RData
 NetBID.saveRData(network.par = network.par,step='exp-QC')
 ```
 
-- What to check for the QC report html after QC steps [after_QC.html](afterQC_QC.html)? 
-The number of samples and genes (probes/transcripts/...), whether large amount of genes/samples are removed;
-All samples will be clustered by the expression pattern from all genes, check possible mis-labeled samples; 
-The density plots show the range and distribution for the expression values, whether the low expressed genes have been removed;
-The meansd plots show the relationship between the mean and standard deviation of the genes, used to verify whether there is a dependence of the standard deviation (or variance) on the mean. 
-
+**- What information can you get from the HTML QC report after QC steps?** ([after_QC.html](afterQC_QC.html))
+  - A table. Compare the table with the one in Step 1. To see if a large amount of genes/samples has been removed;
+  - A heatmap and a PCA biplot. All samples will be clustered using the normalized expression values across all the genes as features. The aim of this is to check possible mis-labeled samples;
+  - A density plot. Compare the table with the one in Step 1. To see if the low expressed genes have been removed;
+  - A measd plot. It shows the relationship between the mean and standard deviation of normalized gene expression values. This helps to verify if the mean and the standard deviation are independent after QC steps.
 
 ----------
-### *QC for RNASeq dataset*  
-- No matter what strategy is used to input the RNASeq dataset, only the fourth step 'remove low expressed genes' is suggested. 
-For example, if use `load.exp.RNASeq.demo()` or `load.exp.RNASeq.demoSalmon()` and output `dds` or `eset`, no previous normlization is required.
-- If user use the raw count as the expression matrix, the `RNASeqCount.normalize.scale()` could be used to normalize the count data, followed by 'log2 transformation'.
-- For the fpkm(Fragments per kilobase of exon per million reads mapped ), tpm(Transcripts Per Million), cpm(Counts Per Million), 
-the second step 'log2 transformation' is suggested. 
-- User is strongly suggested to judge which QC step to use for their own dataset or follow the pipeline suggested by the different calling software. 
+### *QC for RNA-Seq dataset*  
+- QC Step 1 to Step 3 are not suitable for RNA-Seq dataset, regardless of their pre-processing strategies. Only QC Step 4, "removing low expressed genes" is suggested to perform.
+For example, if one uses `load.exp.RNASeq.demo()` or `load.exp.RNASeq.demoSalmon()` with settings of `dds` or `eset`. There is no need for normalization.
+- If one uses the raw count data as the expression matrix, he can call `RNASeqCount.normalize.scale()` to perform normalizaiton, which is followed by "log2 transformation".
+- If one uses the FPKM (Fagments Per Kilobase Million), TPM (Transcripts Per Million), CPM (Counts Per Million), the "log2 transformation" from QC Step 2 is suggested.
+- The quality control analysis is different from case to case, NetBID2 only provides functions and tools to faciliate users to make their own decisions. Following the calling softwares' pipeline is strongly suggested.
 
 ----------
 ### *Combine two datasets*  
-- If user want to combine two datasets, `merge_eset()` could be used. 
-- If the original two datasets are generated from the same platform with the same expression gene list, no Z-transformation will be performed; 
-otherwise Z-transformation will be performed before merging the dataset. 
-- The merged eSet will automatically generate one phenotype column named by `group_col_name`. By default, the function will not remove batches between the two datasets. 
-Strongly suggest to remove the batch for microarray dataset but not for RNASeq dataset. 
-For the RNASeq dataset, user could follow the tutorial in the Step3 for detailed sample clustering checking and re-run the code in this step. 
+- To combine two expression datasets, please call `merge_eset()`. 
+- If the two expression datasets come from the same platform and contain the same gene list, no Z-transformation will be performed. 
+Otherwise, Z-transformation is suggested to be performed before combining these two datasets.
+- The merged ExpressionSet class object will include a new phenotype column set by `group_col_name`, this column is used to distinguish each sample's original dataset. 
+- No batch effect will be removed during combination by default. It is strongly suggested to check the sample clustering results before trying to remove the batch (User could follow the pipeline in the following Step 3). Generally, batch effect exists for microarray dataset but not for RNA-Seq dataset with the same protocal. 
 
 ----------
 
+## Step 3: Check sample cluster analysis, optional (exp-cluster)
+**Purpose: check if the highly variable genes can be used to perform good sample cluster analysis (predicted labels vs. real labels).**
+This step is not necessary to perform NetBID2. Just creat plots for visualization, no modifiction to the data.
 
-## Step3: check sample cluster information, optional (exp-cluster)
+Please skip the following line if you didn't close R session after completed Step 1 and Step 2.
 
-Before start, load the RData from the previous step if user want to re-run the following steps or re-open the R session. 
-Remember to set the temporary `network.par` if re-open the R session and `network.par$out.dir.DATA` will be used to find the correct RData file. 
-No need to run this if continue working from the previous step. 
-
+Don't skip, if you have checked out and closed R session after completed the Step 1 and Step 2. Before start Step 3, please reload `network.par` RData from Step 2.
+`NetBID.loadRData()` reloads RData saved by `NetBID.saveRData()`. It prevents user from repeating former pipeline steps.
+If the re-opened R session doesn't have `network.par` in the environment, please comment off the first two command lines. It will create a temporary `network.par`
+with path of the saved Step 1 RData, `network.par$out.dir.DATA`. The path `test//project_2019-05-02//DATA/` here is just an example, 
+users need to give their own path used to save `network.par` RData from Step 2.
 
 ```R
-# load from RData
+# Reload network.par RData from Step 2
 #network.par <- list()
 #network.par$out.dir.DATA <- 'test//project_2019-05-02//DATA/'
 NetBID.loadRData(network.par = network.par,step='exp-QC')
 ```
 
-Select the most variable genes for the sample clustering analysis by `IQR.filter()`. 
-In the script below, the most 50% variable genes will be used. 
-For the `IQR.filter()` function, it allows user to input a list of genes (`loose_gene`), which can be applied to `loose_thre`. 
-This is applicable when user need to keep more interested genes (e.g transcription factors) by using a looser threshold for filteration. 
+**Select the most variable genes across samples using `IQR.filter()` to perform sample cluster analysis.**
+IQR (interquartile range) is a measure of statistical dispersion. It is calculated for each gene across all the samples. 
+`IQR.filter` extract top 50% variable genes from the expression matrix by setting `thre` to 0.5. 
+Users can also set a list of interested genes `loose_gene` to pass a less stringent filter, by setting a looser threshold value to `loose_thre`.
 
 ```R
-# use most variable genes for cluster
+# Select the most variable genes across samples
 mat <- exprs(network.par$net.eset)
-choose1 <- IQR.filter(exp_mat=mat,use_genes=rownames(mat),thre = 0.5,loose_gene=NULL,loose_thre=0.1)
+choose1 <- IQR.filter(exp_mat=mat,use_genes=rownames(mat),thre = 0.5)
 print(table(choose1))
 mat <- mat[choose1,]
 ```
 
-Generate a temporary eSet and get the html QC report [Cluster_QC.html](Cluster_QC.html). 
-Here give a first galance of sample clustering results Vs. pre-defined sample groups. 
+**To have a taste of how IQR filtered genes will affect the cluster analysis of samples.**
+Wrap the filtered genes into a temporary ExpressionSet object and create a HTML QC report. [Cluster_QC.html](Cluster_QC.html)
 
 ```R
-# generate tmp eset
+# Generate temporary eset
 tmp_net_eset <- generate.eset(exp_mat=mat, phenotype_info=pData(network.par$net.eset)[colnames(mat),],
                           feature_info=fData(network.par$net.eset)[rownames(mat),], annotation_info=annotation(network.par$net.eset))
-# QC plots
+# QC plot for IQR filtered eset
 draw.eset.QC(tmp_net_eset,outdir=network.par$out.dir.QC,intgroup=NULL,do.logtransform=FALSE,prefix='Cluster_')
 ```
 
-In the following scripts, user could get lots of plots. 
-Firstly, get the phenotype information data frame `pData(network.par$net.eset)` and all possible phenotype classes `intgroup`.
+The following scripts provide various ways to visualize and check if the IQR filter selected genes can be used to perform good sample cluster analysis (observed labels vs. predicted labels). 
+Figures will be displayed instead of saving as files.
 
-For each `intgroup`, use could choose to use `draw.pca.kmeans()` or `draw.umap.kmeans()` to display the sample clustering results between the observed label and predicted label. The prediction is performed by kmeans based on pca or umap dimension reduction results. 
-If user use [MICA](https://github.com/jyyulab/scMINER/tree/master/MICA) for clustering, `draw.MICA()` also could be used for result display.
+**First, extract "cluster-meaningful" phenotype columns.**
 
-The output for those functions will be the predicted label for the best `k` if setting `return_type='optimal'` or the results for `all_k` if `return_type='all'`.
+Each column of the phenotype information data frame `pData(network.par$net.eset)` can contain certain categories.
+For example, the "gender" column in the phenotype data frame, it has two categories, "Male" and "Female". This categorial information gives the observed labels to samples.
+If users don't know which phenotype columns to extract, `get_int_group` will extract all "cluster-meaningful" phenotype columns from the ExpressionSet object.
+For example, if "gender" column only contains "Female", it is meaningless to extract is to do cluster analysis, cause all samples will be clustered as one.
+Another example, if all samples have differnet age, it is meaningless to extract "age" column, cause all samples will be grouped separately.
 
 ```R
-# more cluster functions (will not directly save to file, but actively layout)
+# Extract phenotype information data frame from eset
 phe <- pData(network.par$net.eset)
+# Extract all "cluster-meaningful" phenotype columns
 intgroup <- get_int_group(network.par$net.eset)
-# pca+kmeans in 2D
+```
+
+**Second, perform clustering analysis on all "cluster-meaningful" phenotype columns and draw plots.**
+for each phenotype column in the `intgroup`, user can choose `draw.pca.kmeans()` or `draw.umap.kmeans()` to cluster samples and visualize the result between the observed label vs. the predicted label. The clustering is performed by K-means, and the result can be plotted using PCA biplot or UMAP (Uniform Manifold Approximation and Projection). 
+User can also choose another clustering method, [MICA](https://github.com/jyyulab/scMINER/tree/master/MICA), by calling `draw.MICA()`. 
+All three functions can either return the K-value yielding the optimal result (setting `return_type='optimal'`), or all the K-values (setting `return_type='all'`) used for clustering. 
+
+```R
+# Cluster analysis using Kmeans and plot result using PCA biplot (pca+kmeans in 2D)
 for(i in 1:length(intgroup)){
   print(intgroup[i])
   pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,intgroup[i]))
 }
 ```
 
-Take `subgroup` as an example, the following scripts will generate:
+**Here, we pick the `subgroup` column from the demo's phenotype data frame as an example, to show various visualization tools NetBID2 can provide.**
+`get_obs_label()` returns a vector of selected phenotype descriptive information for each sample.
 
 ```R
 use_int <- 'subgroup'
@@ -343,9 +384,9 @@ pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,u
 
 ![sample_cluster_1](sample_cluster_1.png)
 
-This is the basic scatter plot to display the samples with color coded by observed and predicted label. 
-The statistics in the right figure is the score between predicted label and observed label by `get_clustComp()`. 
-ARI stands for 'adjusted rand index', which ranges from 0 to 1 with higher value indicates higher similarity. 
+Above is a side-by-side basic scatter plot of samples. The categories of observed labels (left figure) and predicted labels (right figure) are distinguished by color.
+The calculated statistics on top of the right figure quantifies the similarity between observed labels an predicted labels. 
+ARI is short for "adjusted rand index", ranges from 0 to 1. Higher ARI value indicates higher similarity. For details, please check `get_clustComp()`. 
 
 ```R
 pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,use_int),plot_type='2D.ellipse')
@@ -353,7 +394,7 @@ pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,u
 
 ![sample_cluster_2](sample_cluster_2.png)
 
-This is the scatter plot with ellipse to cover the points belong to one class. 
+Above is a side-by-side scatter plot with an ellipse drawn around each cluster of samples. Each ellipse is marked with its cluster label.
 
 ```R
 pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,use_int),plot_type='2D.text')
@@ -361,7 +402,8 @@ pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,u
 
 ![sample_cluster_3](sample_cluster_3.png)
 
-This is the scatter plot with sample name directly labelled on the plot, which is useful for outlier checking. 
+Above is a side-by-side scatter plot with sample names labeled. The categories of observed labels (left figure) and predicted labels (right figure) are distinguished by color.
+This figure is useful for checking outliers.
 
 ```R
 pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,use_int),plot_type='3D')
@@ -369,96 +411,99 @@ pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,u
 
 ![sample_cluster_4](sample_cluster_4.png)
 
-This is the 3D scatter plot.
+Above is a side-by-side scatter plot in 3D. Here, we use the first three principle component as axises.
 
 ```R
 print(table(list(pred_label=pred_label,obs_label=get_obs_label(phe, use_int))))
-draw.clustComp(pred_label,obs_label=get_obs_label(phe,use_int),outlier_cex=1,low_K=10) ## display the comparison in detail
+draw.clustComp(pred_label,obs_label=get_obs_label(phe,use_int),outlier_cex=1,low_K=10) 
 ```
 
 ![sample_cluster_4](sample_cluster_5.png)
 
-This is the table to display the detailed difference between predicted label and observed label. We can see from the table here, 4 WNTs are further separated into two groups.
+Above is a table to visualize each sample’s observed label vs. its predicted label, it shows more details. 
+The darker the table cell is, the more samples are gathered in the corresponding label. We can see 4 WNTs can be further separated into two sub-groups.
+However, in this demo dataset, no obvious outlier samples are observed. 
+If user found an outlier sample and removed it, we suggest to re-run Step 2 and Step 3 to see whether the data got cleaner after the remove of outlier.
 
-In this demo dataset, no clear outlier samples are observed. If user find some samples need to remove, please remove the samples and re-run the exp-QC steps. 
 
-## Step4: prepare SJARACNE (sjaracne-prep)
+## Step 4: Prepare files to run SJARACNe (sjaracne-prep)
+**Purpose: download SJARACNe needed database to local folders and prepare files to run SJARACNe.**
 
-Before start, load the RData from the 'exp-QC' step if user want to re-run the following steps or re-open the R session. 
-Remember to set the temporary `network.par` if re-open the R session and `network.par$out.dir.DATA` will be used to find the correct RData file. 
-No need to run this if continue working from the previous step. 
+Please skip the following line if you didn't close R session after completed Step 1 and Step 2 (doesn't matter if you runned Step 3 or not).
+
+Don't skip, if you have checked out and closed R session after completed the Step 1 and Step 2. Before start Step 4, please reload `network.par` RData from Step 2.
+`NetBID.loadRData()` reloads RData saved by `NetBID.saveRData()`. It prevents user from repeating former pipeline steps.
+If the re-opened R session doesn't have `network.par` in the environment, please comment off the first two command lines. It will create a temporary `network.par`
+with path of the saved Step 1 RData, `network.par$out.dir.DATA`. The path `test//project_2019-05-02//DATA/` here is just an example, 
+users need to give their own path used to save `network.par` RData from Step 2.
 
 ```R
-# load from RData
+# Reload network.par RData from Step 2
 #network.par <- list()
 #network.par$out.dir.DATA <- 'test//project_2019-05-02//DATA/'
 NetBID.loadRData(network.par = network.par,step='exp-QC')
 ```
 
-Load the transcription facotrs (**TF**) and signaling factors (**SIG**) list from database by `db.preload()`.NetBID2 has prepared both 'gene' and 'transcript' level RData files for human.
+**First, use `db.preload()` to download the transcription facotrs (TF) list and signaling factors (SIG) list, with species and level defined.**
 
-If user's input is not human, could run `db.preload()` to prepare the database files. 
-If leave `main.dir=NULL`, the RData will be saved to `system.file(package = "NetBID2")/db/`. 
-If NetBID2 is installed in a public place with no permission to user, just set `main.dir` to another place and remember to use the same path next time using it.
+For the TF and SIG list, NetBID2 has `external_gene_name` and `ensembl_gene_id` ID type files for human and mouse embedded in the package. (e.g. `MOUSE_SIG_ensembl_gene_id.txt` in `system.file(package = "NetBID2")/db/`). To use these files, just set `TF_list=NULL` or `SIG_list=NULL`. If users would like to use their own list, please pass them to `TF_list=NULL` or `SIG_list=NULL`. 
 
-For the TF and SIG list, NetBID2 has provided the files in 'external_gene_name' and 'ensembl_gene_id' ID type for human and mouse. (e.g `MOUSE_SIG_ensembl_gene_id.txt` in `system.file(package = "NetBID2")/db/`). 
-The function will automatically use those files if set `TF_list=NULL` or `SIG_list=NULL`. 
-User could also input their own list and input by setting `TF_list` or `SIG_list`.
+For the species and level, NetBID2 has prepared both "gene-level"" and "transcript-level" RData for human by default. If the target species is not human, user can set `use_spe` to target species, and `db.preload()` will prepare that species database. 
+
+For the storage of downloaded data, if user leaves `main.dir=NULL`, the RData will be saved automatically to `system.file(package = "NetBID2")/db/`. 
+If NetBID2 is installed in a public place and user doesn't have the root permissions, one can set `main.dir` to another path with permission. 
+And please make sure to use the same path for the further analysis.
 
 ```R
-# load database
+# Load database
 db.preload(use_level='gene',use_spe='human',update=FALSE)
 ```
 
-After loading the database, user need to set the ID attribute type `use_gene_type` for the input expression matrix. Check [***ID conversion***](#id-conversion) section below for detailed description of ID conversion issue. 
+**Second, converts gene ID into the corresponding TF/SIG list, with selected gene/transcript type.**
+Users can set `use_gene_type` in the function `get.TF_SIG.list()` to pick the attribute name to convert to.
+Options are, "ensembl_gene_id", "ensembl_gene_id_version", "ensembl_transcript_id", "ensembl_transcript_id_version" and "refseq_mrna".
+For details, please check [***ID conversion***](#id-conversion) section below.
+Conversion is *not required*, if user can get the `TF_list` and `SIG_list` with the same ID type as in the expression matrix. 
+In this case, users can jump to the final step to call `SJAracne.prepare()`.
+
 
 ```R
-# ID convertion, get TF/SIG list !!!!
-use_gene_type <- 'external_gene_name' ## this should user-defined !!!
+# Converts gene ID into the corresponding TF/SIG list
+use_gene_type <- 'external_gene_name' # user-defined
 use_genes <- rownames(fData(network.par$net.eset))
 use_list  <- get.TF_SIG.list(use_genes,use_gene_type=use_gene_type)
 ```
 
-The above two steps are *not required* if user could get the `TF_list` and `SIG_list` with the same ID type as the expression matrix, just input them in the `SJAracne.prepare()`. 
+**Last, use `SJAracne.prepare()` to prepare files for running SJARACNe.**
 
-The final step is to prepare the input for running SJAracne. 
-
-User could choose to use part of the samples or use all. 
-And in one project, multiple networks could be generated by setting different `prj.name`. For example, if want to generate Group4 specific network, user could choose to use samples in Group4 by setting the `use.samples` and give it an easily identified project name such as `prj.name='Group4_net'`. This `prj.name` is important in the [Driver estimation](../driver_estimation) part. 
-
-The `IQR.thre` and `IQR.loose_thre` will be passed to `IQR.filter()`. The `loose_gene` in this function will be the genes in `TF_list` and `SIG_list` as we want to keep more possible drivers in the network construction.
-In the demo network of NetBID2, in order to control the file size, the `IQR.thre=0.9` and `IQR.loose_thre=0.7`. In real practice, `IQR.thre=0.5` and `IQR.loose_thre=0.1` is recommended.
+For sample selection: user can choose to use all the samples or some of them. Here we use all the samples.
+For creating multiple networks: user can set `prj.name` for easier reference. For example, if user wants to create Group4 specific network using Group4 samples. Just specify `use.samples` 
+and `prj.name = 'Group4_net'`. This `prj.name` setting is important for the [Driver estimation](../driver_estimation) part. 
+For other parameters: the `IQR.thre` and `IQR.loose_thre` will be passed to `IQR.filter()`. The `loose_gene` will be the genes in `TF_list` and `SIG_list`, which pre-defined as the possible drivers during network construction.
+For output file size: here in the demo, in order to control the file size, we set `IQR.thre=0.9` and `IQR.loose_thre=0.7`. However, in real practice, `IQR.thre=0.5` and `IQR.loose_thre=0.1` is recommended.
 
 ```R
-# select sample for analysis
+# Select samples for analysis
 phe <- pData(network.par$net.eset)
-use.samples <- rownames(phe) ## use all samples, or choose to use some samples
-prj.name <- network.par$project.name # can use other names, if need to run different use samples
+use.samples <- rownames(phe) # here is using all samples, users can modify
+prj.name <- network.par$project.name # if use different samples, need to change the project name
 SJAracne.prepare(eset=network.par$net.eset,use.samples=use.samples,
                     TF_list=use_list$tf,SIG_list=use_list$sig,
                     IQR.thre = 0.5,IQR.loose_thre = 0.1,
                     SJAR.project_name=prj.name,SJAR.main_dir=network.par$out.dir.SJAR)
 ```
 
-Next is to follow the message to run [SJAracne](https://github.com/jyyulab/SJARACNe). 
-As SJAracne will consume lots of memory in running, which may be not suitable in R session, user need to follow the instructions to run SJAracne.
+Due to the memory consumption and speed computational capability, SJARACNe will handle the network construction, please follow the github tutorial to run [SJARACNe](https://github.com/jyyulab/SJARACNe).
 
 ----------
 ### *ID conversion*  
 
-We will use the ID name from [biomaRt](https://bioconductor.org/packages/release/bioc/vignettes/biomaRt/inst/doc/biomaRt.html).
-Some common attribute names are 'ensembl_transcript_id', 'ensembl_gene_id', 'external_transcript_name', 'external_gene_name', 'hgnc_symbol', 'entrezgene', 'refseq_mrna'. 
-If the original input is 'ensembl_gene_id_version' or 'ensembl_transcript_id_version', user could set `ignore_version=TRUE` to neglect the version number. 
+We use the ID conversion tools from [biomaRt](https://bioconductor.org/packages/release/bioc/vignettes/biomaRt/inst/doc/biomaRt.html).
+The ID names with different types (e.g gene symbols) or ID related attributes (e.g gene biotype) in biomaRt package, are the values we are interested in to retrieve.
+The commonly used ID types are "external_gene_name","ensembl_gene_id", "ensembl_gene_id_version", "ensembl_transcript_id", "ensembl_transcript_id_version" and "refseq_mrna". 
+The listAttributes() function displays all available attributes in the selected dataset.
 
-**ATTENTION!** 
-- biomaRt will use the newest version number of [GENCODE](https://www.gencodegenes.org) and all the ID conversion related functions `db.preload(), get.TF_SIG.list(), get_IDtransfer(), get_IDtransfer2symbol2type(), get_IDtransfer_betweenSpecies()` will remotely call the database from biomaRt through the web link.
-So, the version number of ensembl ID may be different when running the same code at different time. 
-- `get_IDtransfer(), get_IDtransfer2symbol2type(), get_IDtransfer_betweenSpecies()` will output a transfer table used for `get_name_transfertab()`. User could use their own curated one. 
-
-----------
-
-Finish network construction part !!! Cheers !!!
-
-
-
-
+**ATTENTION** 
+- biomaRt will use the newest version number of [GENCODE](https://www.gencodegenes.org). Since all the ID conversion related functions `db.preload()`, `get.TF_SIG.list()`, `get_IDtransfer()`, `get_IDtransfer2symbol2type()` and `get_IDtransfer_betweenSpecies()` will access the archived database through website link, the version number of ensembl ID may vary from different runs. Users can set `ignore_version=TRUE` to ignore the version number for ensembl IDs. 
+- Functions like, `get_IDtransfer()`, `get_IDtransfer2symbol2type()` and `get_IDtransfer_betweenSpecies()` can generate the conversion table for `get_name_transfertab()`. 
+However, users can choose to use their own curated one.

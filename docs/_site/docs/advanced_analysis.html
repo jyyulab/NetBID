@@ -115,45 +115,45 @@
           
         
         <div id="main-content" class="page-content" role="main">
-          <h1 id="advanced-analysis">Advanced analysis</h1>
+          <h1 id="advanced-analysis-and-visualization">Advanced analysis and visualization</h1>
 
-<p>The purpose for this part:</p>
+<p>The purpose of this part:</p>
 
-<p><strong>further analyze and visualize the results for drivers</strong>.</p>
+<p><strong>further analysis and visualization of the significant drivers</strong>.</p>
 
-<p>The full demo script for this part could be found in <a href="https://github.com/jyyulab/NetBID-dev/blob/master/demo_scripts/analysis_and_plot_demo1.R">analysis_and_plot_demo1.R</a>.</p>
+<p>The complete demo script for network construction can be found here, <a href="https://github.com/jyyulab/NetBID-dev/blob/master/demo_scripts/analysis_and_plot_demo1.R">analysis_and_plot_demo1.R</a>.</p>
 
-<p>In this part, we will use the question-induced strategy to assist user for the choice and usage of those visualization functions. 
-The main purpose is that we want to <strong>find potential hidden drivers in Group4 compared with the other subtypes by using NetBID2</strong>, for which may be related with the specific clinical feature for Group4 MB.</p>
+<p>From the demo dataset, we’ve found the significant hidden drivers in Group4 compared to other subtype groups. These drivers may relate to specific clinical features of the adult medulloblastoma Group4, and hence the further investigation is needed. 
+Here, we’ve listed some important biological questions which can be further investigated using NetBID2.</p>
 
 <hr />
 <h2 id="quick-navigation-for-this-page">Quick Navigation for this page</h2>
 
 <ul>
   <li><a href="#preparations">Preparations</a></li>
-  <li><a href="#part-i-for-the-top-list-of-significant-drivers">Part I: for the top list of significant drivers</a>
+  <li><a href="#part-i-more-details-about-the-top-drivers">Part I: More details about the top drivers</a>
     <ul>
-      <li><a href="#qi1-how-to-get-the-top-list-of-drivers-with-significantly-different-activity-da-in-g4-vs-other-subtypes-">QI.1: How to get the top list of drivers with significantly different activity (DA) in G4 Vs. other subtypes ?</a></li>
-      <li><a href="#qi2-how-to-understand-the-significance-of-those-top-da-drivers-">QI.2: How to understand the significance of those top DA drivers ?</a></li>
-      <li><a href="#qi3-what-is-the-expressionactivity-pattern-of-those-top-da-drivers-in-samples-with-different-subtype-">QI.3: What is the expression/activity pattern of those top DA drivers in samples with different subtype ?</a></li>
-      <li><a href="#qi4-what-is-the-biological-function-of-those-top-da-drivers-">QI.4: What is the biological function of those top DA drivers ?</a></li>
-      <li><a href="#qi5-what-is-the-biological-function-of-the-target-genes-of-those-top-da-drivers-">QI.5: What is the biological function of the target genes of those top DA drivers ?</a></li>
+      <li><a href="#qi1-how-to-get-the-top-drivers-with-significant-differential-activity-da-in-the-comparison-between-g4-vs-other-subtypes-">QI.1: How to get the top drivers with significant differential activity (DA) in the comparison between G4 vs. other subtypes ?</a></li>
+      <li><a href="#qi2-how-to-interpret-the-significance-of-top-da-drivers-">QI.2: How to interpret the significance of top DA drivers ?</a></li>
+      <li><a href="#qi3-what-is-the-expressionactivity-pattern-of-these-top-da-drivers-across-sample-subtypes">QI.3: What is the expression/activity pattern of these top DA drivers across sample subtypes?</a></li>
+      <li><a href="#qi4-what-are-the-biological-functions-of-these-top-da-drivers-">QI.4: What are the biological functions of these top DA drivers ?</a></li>
+      <li><a href="#qi5-what-are-the-biological-functions-of-the-target-genes-of-these-top-da-drivers-">QI.5: What are the biological functions of the target genes of these top DA drivers ?</a></li>
     </ul>
   </li>
-  <li><a href="#part-ii-for-a-selected-interested-driver">Part II: for a selected interested driver</a>
+  <li><a href="#part-ii-more-details-about-the-selected-driver">Part II: More details about the selected driver</a>
     <ul>
-      <li><a href="#qii1-how-to-understand-the-significance-of-the-selected-driver-">QII.1: How to understand the significance of the selected driver ?</a></li>
+      <li><a href="#qii1-how-to-interpret-the-significance-of-the-selected-driver-">QII.1: How to interpret the significance of the selected driver ?</a></li>
       <li><a href="#qii2-how-to-visualize-the-network-structure-of-the-selected-driver-">QII.2: How to visualize the network structure of the selected driver ?</a></li>
-      <li><a href="#qii3-what-is-the-expressionactivity-for-this-selected-driver-in-samples-with-different-subtypes-">QII.3: What is the expression/activity for this selected driver in samples with different subtypes ?</a></li>
-      <li><a href="#qii4-what-is-the-function-of-the-target-genes-for-this-selected-driver-">QII.4: What is the function of the target genes for this selected driver ?</a></li>
+      <li><a href="#qii3-what-is-the-expressionactivity-of-this-selected-driver-across-subtypes-of-sample">QII.3: What is the expression/activity of this selected driver across subtypes of sample ?</a></li>
+      <li><a href="#qii4-what-are-the-functions-of-the-target-genes-of-this-selected-driver-">QII.4: What are the functions of the target genes of this selected driver ?</a></li>
     </ul>
   </li>
-  <li><a href="#part-iii-further-analysis">Part III: further analysis</a>
+  <li><a href="#part-iii-other-analyses-netbid2-can-do">Part III: Other analyses NetBID2 can do</a>
     <ul>
-      <li><a href="#qiii1-what-are-the-activities-of-the-curated-gene-sets-in-all-samples-and-what-are-the-top-significantly-differed-gene-sets-">QIII.1: What are the activities of the curated gene sets in all samples and what are the top significantly differed gene sets ?</a></li>
-      <li><a href="#qiii2-how-to-find-drivers-with-significantly-overlapped-target-genes-">QIII.2: How to find drivers with significantly overlapped target genes ?</a>
+      <li><a href="#qiii1-what-are-the-activities-of-the-curated-gene-sets-across-all-samples">QIII.1: What are the activities of the curated gene sets across all samples ?</a></li>
+      <li><a href="#qiii2-how-to-find-drivers-share-significantly-overlapped-target-genes-">QIII.2: How to find drivers share significantly overlapped target genes ?</a>
         <ul>
-          <li><a href="#how-to-modify-the-figures-by-adjusting-the-paramters-in-the-draw-functions-">Q&amp;A: How to modify the figures by adjusting the paramters in the draw. functions ?</a></li>
+          <li><a href="#how-to-modify-the-figure-size-created-by-draw-functions-">Q&amp;A: How to modify the figure size created by <code class="highlighter-rouge">draw.</code> functions ?</a></li>
         </ul>
       </li>
     </ul>
@@ -164,43 +164,52 @@ The main purpose is that we want to <strong>find potential hidden drivers in Gro
 
 <h2 id="preparations">Preparations</h2>
 
-<p>Library the installed NetBID2, set the directory to get the pre-saved RData in the <code class="highlighter-rouge">ms-tab</code> step. Here, we could use the demo in NetBID2 package.
-Print the <code class="highlighter-rouge">analysis.par$out.dir.PLOT</code> to get know where the plot figures will be saved. User could also choose to change to another local writable path.</p>
+<p>Make sure you have NetBID2 package.</p>
 
-<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># library the package</span><span class="w">
-</span><span class="n">library</span><span class="p">(</span><span class="n">NetBID2</span><span class="p">)</span><span class="w">
-</span><span class="c1"># set the directory to get the pre-saved RData</span><span class="w">
-</span><span class="n">analysis.par</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">list</span><span class="p">()</span><span class="w">
-</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.DATA</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">system.file</span><span class="p">(</span><span class="s1">'demo1'</span><span class="p">,</span><span class="s1">'driver/DATA/'</span><span class="p">,</span><span class="n">package</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"NetBID2"</span><span class="p">)</span><span class="w">
-</span><span class="n">NetBID.loadRData</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">=</span><span class="n">analysis.par</span><span class="p">,</span><span class="n">step</span><span class="o">=</span><span class="s1">'ms-tab'</span><span class="p">)</span><span class="w">
-</span><span class="n">print</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.PLOT</span><span class="p">)</span><span class="w">
-</span><span class="c1">#analysis.par$out.dir.PLOT &lt;- 'test/driver/PLOT' ## directory to save the plot figures</span><span class="w">
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">library</span><span class="p">(</span><span class="n">NetBID2</span><span class="p">)</span><span class="w">
 </span></code></pre></div></div>
 
-<h2 id="part-i-for-the-top-list-of-significant-drivers">Part I: for the top list of significant drivers</h2>
+<p>Reload previous saved RData from <code class="highlighter-rouge">ms-tab</code> step. Here, we use the demo data from NetBID2 package.
+Users can call <code class="highlighter-rouge">analysis.par$out.dir.PLOT</code> to see where the plots created by later pipeline will be saved, this can be modified.</p>
 
-<h3 id="qi1-how-to-get-the-top-list-of-drivers-with-significantly-different-activity-da-in-g4-vs-other-subtypes-">QI.1: How to get the top list of drivers with significantly different activity (DA) in G4 Vs. other subtypes ?</h3>
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Give file path to reload `ms-tab` RData from driver estimation step</span><span class="w">
+</span><span class="n">analysis.par</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">list</span><span class="p">()</span><span class="w">
+</span><span class="c1"># Here we use demo data from NetBID2 package</span><span class="w">
+</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.DATA</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">system.file</span><span class="p">(</span><span class="s1">'demo1'</span><span class="p">,</span><span class="s1">'driver/DATA/'</span><span class="p">,</span><span class="n">package</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"NetBID2"</span><span class="p">)</span><span class="w">
+</span><span class="n">NetBID.loadRData</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">=</span><span class="n">analysis.par</span><span class="p">,</span><span class="n">step</span><span class="o">=</span><span class="s1">'ms-tab'</span><span class="p">)</span><span class="w">
+</span><span class="c1"># To see where the plots created later will be saved</span><span class="w">
+</span><span class="n">print</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.PLOT</span><span class="p">)</span><span class="w">
+</span><span class="c1">#analysis.par$out.dir.PLOT &lt;- 'test/driver/PLOT' # Users can modify this path</span><span class="w">
+</span></code></pre></div></div>
 
-<p>For simplicity, save the final master table to another variable <code class="highlighter-rouge">ms_tab</code> and set the comparison name <code class="highlighter-rouge">comp_name</code>. 
-Here we choose the <code class="highlighter-rouge">G4.Vs.others</code> as the demo.
-Before detailed analysis, the target size for the driver could be used as a filteration, drivers with too small target size (e.g &lt;30) or too large target size (e.g &gt;1000) will not be used.</p>
+<h2 id="part-i-more-details-about-the-top-drivers">Part I: More details about the top drivers</h2>
+
+<h3 id="qi1-how-to-get-the-top-drivers-with-significant-differential-activity-da-in-the-comparison-between-g4-vs-other-subtypes-">QI.1: How to get the top drivers with significant differential activity (DA) in the comparison between G4 vs. other subtypes ?</h3>
+
+<p>First, retrive the master table element from the <code class="highlighter-rouge">analysis.par</code> super list, and pass it to a new variable <code class="highlighter-rouge">ms_tab</code>. 
+Filter out drivers with target size too small (e.g. &lt;30) and too big (e.g. &gt;1000).
+Define the comparison name <code class="highlighter-rouge">comp_name</code> as <code class="highlighter-rouge">G4.Vs.others</code>.</p>
 
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">ms_tab</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">analysis.par</span><span class="o">$</span><span class="n">final_ms_tab</span><span class="w"> </span><span class="c1">## get the master table data frame</span><span class="w">
-</span><span class="n">ms_tab</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">ms_tab</span><span class="p">[</span><span class="n">which</span><span class="p">(</span><span class="n">ms_tab</span><span class="o">$</span><span class="n">Size</span><span class="o">&gt;=</span><span class="m">30</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">ms_tab</span><span class="o">$</span><span class="n">Size</span><span class="w"> </span><span class="o">&lt;=</span><span class="m">1000</span><span class="p">),]</span><span class="w"> </span><span class="c1">## target size filteration</span><span class="w">
+</span><span class="n">ms_tab</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">ms_tab</span><span class="p">[</span><span class="n">which</span><span class="p">(</span><span class="n">ms_tab</span><span class="o">$</span><span class="n">Size</span><span class="o">&gt;=</span><span class="m">30</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">ms_tab</span><span class="o">$</span><span class="n">Size</span><span class="w"> </span><span class="o">&lt;=</span><span class="m">1000</span><span class="p">),]</span><span class="w"> 
 </span><span class="n">comp_name</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="s1">'G4.Vs.others'</span><span class="w"> </span><span class="c1">## get the comparison name</span><span class="w">
 </span></code></pre></div></div>
 
-<p>We will use <code class="highlighter-rouge">draw.volcanoPlot()</code> to get the list of top DA drivers and plot the results. 
-The input is the data frame containing the columns of <code class="highlighter-rouge">label_col</code>, <code class="highlighter-rouge">logFC_col</code> and <code class="highlighter-rouge">Pv_col</code>. 
-User need to input the threshold for logFC (<code class="highlighter-rouge">logFC_thre</code>) and P.Value (<code class="highlighter-rouge">Pv_thre</code>).
-This function could choose not to display figures by setting <code class="highlighter-rouge">show_plot=FALSE</code> and only output the list of significant top drivers.
-If choose <code class="highlighter-rouge">show_label=TRUE</code>, the number of the drivers passed the threshold may not be very high as too many labels displayed on the figure will become a mess.</p>
+<ul>
+  <li>To quickly identify top DA drivers from large dataset, NetBID2 uses the volcano plot <code class="highlighter-rouge">draw.volcanoPlot()</code>. In this special scatter-plot, the y axis shows the significance of DA driver, the x axis shos the fold-change.</li>
+</ul>
 
-<p>For the activity value, the threshold for logFC may not be very high especially setting <code class="highlighter-rouge">std=TRUE</code> in <code class="highlighter-rouge">cal.Activity()</code>.</p>
+<p>More handlers of <code class="highlighter-rouge">draw.volcanoPlot()</code>:</p>
 
 <ul>
-  <li>Top drivers with DA passed absolute logFC≥0.4 and P-value≤1e-8, with detailed label information are shown:</li>
+  <li>Input data frame must contain columns of <code class="highlighter-rouge">label_col</code>, <code class="highlighter-rouge">logFC_col</code> and <code class="highlighter-rouge">Pv_col</code>.</li>
+  <li>To set thresholds, please use <code class="highlighter-rouge">logFC_thre</code> (for logFC) and <code class="highlighter-rouge">Pv_thre</code> (for P-value).</li>
+  <li>To turn off figure display, only return the top driver list, please set <code class="highlighter-rouge">show_plot=FALSE</code>.</li>
+  <li>To show driver labels that passed the threshold only, please set <code class="highlighter-rouge">show_label=TRUE</code>.</li>
+  <li>If one set <code class="highlighter-rouge">std=TRUE</code> to <code class="highlighter-rouge">cal.Activity()</code>, the threshold of logFC of the activity value should not be set very high.</li>
 </ul>
+
+<p>The figure below is to show the top DA drivers passed the thresholds of logFC≥0.4 and P-value≤1e-8.</p>
 
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">sig_driver</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">draw.volcanoPlot</span><span class="p">(</span><span class="n">dat</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">,</span><span class="n">label_col</span><span class="o">=</span><span class="s1">'gene_label'</span><span class="p">,</span><span class="n">logFC_col</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'logFC.%s_DA'</span><span class="p">,</span><span class="n">comp_name</span><span class="p">),</span><span class="w">
                                </span><span class="n">Pv_col</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'P.Value.%s_DA'</span><span class="p">,</span><span class="n">comp_name</span><span class="p">),</span><span class="n">logFC_thre</span><span class="o">=</span><span class="m">0.4</span><span class="p">,</span><span class="n">Pv_thre</span><span class="o">=</span><span class="m">1e-8</span><span class="p">,</span><span class="w">
@@ -211,7 +220,7 @@ If choose <code class="highlighter-rouge">show_label=TRUE</code>, the number of 
 <p><img src="vocalno_label_DA.png" alt="vocalno_label_DA" /></p>
 
 <ul>
-  <li>Volcano plot is also applicable for get the top DE genes. Top genes with DE passed absolute logFC≥1.5 and P-value≤1e-4 are shown:</li>
+  <li><code class="highlighter-rouge">draw.volcanoPlot()</code> is also applicable visualize the top DE genes. The figure below are top genes with DE passed thresholds of  logFC≥1.5 and P-value≤1e-4.</li>
 </ul>
 
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">sig_gene</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">draw.volcanoPlot</span><span class="p">(</span><span class="n">dat</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">,</span><span class="n">label_col</span><span class="o">=</span><span class="s1">'geneSymbol'</span><span class="p">,</span><span class="n">logFC_col</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'logFC.%s_DE'</span><span class="p">,</span><span class="n">comp_name</span><span class="p">),</span><span class="w">
@@ -222,32 +231,33 @@ If choose <code class="highlighter-rouge">show_label=TRUE</code>, the number of 
 
 <p><img src="vocalno_label_DE.png" alt="vocalno_label_DE" /></p>
 
-<p><code class="highlighter-rouge">sig_driver</code> and <code class="highlighter-rouge">sig_gene</code> are the data frame containing drivers and genes passed the threshold with detailed logFC and P.value statistics.</p>
+<ul>
+  <li>The returned <code class="highlighter-rouge">sig_driver</code> and <code class="highlighter-rouge">sig_gene</code> are the data frames containing drivers and genes that passed the thresholds.</li>
+</ul>
 
-<h3 id="qi2-how-to-understand-the-significance-of-those-top-da-drivers-">QI.2: How to understand the significance of those top DA drivers ?</h3>
+<h3 id="qi2-how-to-interpret-the-significance-of-top-da-drivers-">QI.2: How to interpret the significance of top DA drivers ?</h3>
 
-<p>Those drivers are significant due to their activity difference in Group4 Vs. other subtypes. 
-The activity is calculated based on the expression pattern of their target genes.
-If the driver’s activity is significantly up-regulated in Group4, which means that its positively regulated target genes are significantly up-regulated in Group4 and negative target genes are down-regulated.
-Based on this, we could use <code class="highlighter-rouge">draw.GSEA.NetBID()</code> to visualize this trend for top drivers. This function has more than 10 options, check the manual for detail by <code class="highlighter-rouge">?draw.GSEA.NetBID</code>.</p>
+<p>A driver’s activity is evaluated from the expression pattern of its target genes. Due to this, if a driver’s activity value is significantly up-regulated in G4 compared to other subtypes, it can be caused by two ways: (a) its positively-regulated target genes have significantly upregulation in G4 compared to others; (b) its negatively-regulated target genes have significantly downregulation in G4 compared to others.</p>
 
-<p>First, the differentiated expression (DE) profile in Group4 Vs. others should be used to estimate the performance of the target genes. 
-And <code class="highlighter-rouge">driver_list</code> need to be the <code class="highlighter-rouge">originalID_label</code> in the master table as it is the only unique column. In the above volcano plot, the rownames for the output data frame will be the rownames from the original master table, i.e the <code class="highlighter-rouge">originalID_label</code>.</p>
+<p><code class="highlighter-rouge">draw.GSEA.NetBID()</code> helps users to interpret the significance of these top DA drivers from the expression and regulation of their target genes.</p>
 
-<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">DE</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">analysis.par</span><span class="o">$</span><span class="n">DE</span><span class="p">[[</span><span class="n">comp_name</span><span class="p">]]</span><span class="w">
-</span><span class="n">driver_list</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">rownames</span><span class="p">(</span><span class="n">sig_driver</span><span class="p">)</span><span class="w"> </span><span class="c1">## the rownames is the originalID_label</span><span class="w">
+<p>First, get the differential expression (DE) data frame of the target genes from the comparison between Group4 vs. others.
+Here, we need to pay attention to the gene ID type. The ID type should be the <code class="highlighter-rouge">originalID_label</code> column from the master table. The same ID type we used to draw the volcano plot.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Get the DE data frame of target genes</span><span class="w">
+</span><span class="n">DE</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">analysis.par</span><span class="o">$</span><span class="n">DE</span><span class="p">[[</span><span class="n">comp_name</span><span class="p">]]</span><span class="w">
+</span><span class="n">driver_list</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">rownames</span><span class="p">(</span><span class="n">sig_driver</span><span class="p">)</span><span class="w"> </span><span class="c1"># The rownames is the originalID_label</span><span class="w">
 </span></code></pre></div></div>
 
-<p>The following figures differ in the option of <code class="highlighter-rouge">profile_trend</code>, <code class="highlighter-rouge">profile_col</code>, <code class="highlighter-rouge">target_nrow</code>, <code class="highlighter-rouge">target_col</code>, <code class="highlighter-rouge">target_col_type</code>.</p>
+<p>The following 5 figures are showing the same content. The purpose is to list various visualizations that <code class="highlighter-rouge">draw.GSEA.NetBID()</code> can provide.
+The key handlers are <code class="highlighter-rouge">profile_trend</code>, <code class="highlighter-rouge">profile_col</code>, <code class="highlighter-rouge">target_nrow</code>, <code class="highlighter-rouge">target_col</code> and <code class="highlighter-rouge">target_col_type</code>.</p>
 
 <ul>
-  <li>In the first demo plot, the profile (above part of the figure) is from negative values to positive values (<code class="highlighter-rouge">profile_trend='neg2pos'</code>), indicating the <code class="highlighter-rouge">logFC</code> (set in <code class="highlighter-rouge">profile_col</code>) value for genes.
-The position for the genes are consistent in the profile figure and the GSEA-pattern figure (below part of the figure). 
-Each vertical line in each row stands for one target gene for the corresponding driver. 
-The target genes for one driver will be separated into positive-regulated sets and negative-regulated sets (<code class="highlighter-rouge">target_nrow=2</code>).
-The color for those target genes are the significance in the profile (<code class="highlighter-rouge">target_col_type='DE'</code>), with value passed the <code class="highlighter-rouge">profile_sig_thre</code> color in blue (negative value) and red (positive value).
-We could study from the figure that, the positively regulated target genes for the <em>down</em> DA drivers tend to lay in the left part of the profile and the negatively regulated in the right part. Contrary trend for <em>up</em> DA drivers.</li>
+  <li>In the first demo plot below, 
+the top figure is a metric for the ranking of genes based on their <code class="highlighter-rouge">logFC</code> values (<code class="highlighter-rouge">profile_col</code>). The order of ranking is from negative values to positive values (<code class="highlighter-rouge">profile_trend='neg2pos'</code>). The bottom figure has three parts: on the left is a horizontal barplot showing the target size of up-regulated and down-regulated genes for each driver; in the middle are panels marking each target gene’s ranking position (panel number for each driver can be 1 or 2, here <code class="highlighter-rouge">target_nrow=2</code>), and the name of the color palette used for display target genes marker lines is <code class="highlighter-rouge">target_col_type='DE'</code>; on the right is the DA and DE values for each driver (using threhold <code class="highlighter-rouge">profile_sig_thre</code>, blue is negative, red is positive).</li>
 </ul>
+
+<p>From the figure below, we can see the positively-regulated target genes of the <em>down</em> DA drivers tend to have lower logFC expression values in G4 compared to other subtypes. For the <em>up</em> DA drivers, it shows the opposite. For example, GALNT4_SIG driver has a significantly negative activity value in G4 compared to other subtypes (marked in blue, P-value is 1e-09). It has around 160 positively-regulated target genes (orange bar on the left), and most of their logFC are negative values with high rankings (first panel with blue and grey marker lines). It means these positively-regulated target genes have significant negative logFC values in G4 compared to other subtypes. Vice versa for the negatively-regulated target genes. These two expression patterns of target genes contribute to their driver’s DA value.</p>
 
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">draw.GSEA.NetBID</span><span class="p">(</span><span class="n">DE</span><span class="o">=</span><span class="n">DE</span><span class="p">,</span><span class="n">profile_col</span><span class="o">=</span><span class="s1">'logFC'</span><span class="p">,</span><span class="n">profile_trend</span><span class="o">=</span><span class="s1">'neg2pos'</span><span class="p">,</span><span class="n">name_col</span><span class="o">=</span><span class="s1">'ID'</span><span class="p">,</span><span class="w">
                  </span><span class="n">driver_list</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">driver_list</span><span class="p">,</span><span class="w">
@@ -264,8 +274,7 @@ We could study from the figure that, the positively regulated target genes for t
 <p><img src="NetBID_GSEA_demo1.png" alt="NetBID_GSEA_demo1" /></p>
 
 <ul>
-  <li>In the second demo plot,the profile is from positive values to negative values (<code class="highlighter-rouge">profile_trend='pos2neg'</code>), indicating the <code class="highlighter-rouge">t</code> (set in <code class="highlighter-rouge">profile_col</code>) value for genes.
-The color for those target genes are the same for positively-regulaion or negatively-regulation (<code class="highlighter-rouge">target_col_type='PN'</code>)</li>
+  <li>In the second demo plot below, the top figure is a metric for the ranking of genes based on their <code class="highlighter-rouge">t</code> values (<code class="highlighter-rouge">profile_col</code>). The order of ranking is from positive values to negative values (<code class="highlighter-rouge">profile_trend='pos2neg'</code>). The name of the color palette used for display target genes marker lines is <code class="highlighter-rouge">target_col_type='PN'</code>.</li>
 </ul>
 
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">draw.GSEA.NetBID</span><span class="p">(</span><span class="n">DE</span><span class="o">=</span><span class="n">DE</span><span class="p">,</span><span class="n">profile_col</span><span class="o">=</span><span class="s1">'t'</span><span class="p">,</span><span class="n">profile_trend</span><span class="o">=</span><span class="s1">'pos2neg'</span><span class="p">,</span><span class="w">
@@ -283,7 +292,7 @@ The color for those target genes are the same for positively-regulaion or negati
 <p><img src="NetBID_GSEA_demo2.png" alt="NetBID_GSEA_demo2" /></p>
 
 <ul>
-  <li>In the third demo plot, the color for those target genes are just black (<code class="highlighter-rouge">target_col='black'</code>).</li>
+  <li>In the third demo plot below, the color used to mark those target genes is black (<code class="highlighter-rouge">target_col='black'</code>).</li>
 </ul>
 
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">draw.GSEA.NetBID</span><span class="p">(</span><span class="n">DE</span><span class="o">=</span><span class="n">DE</span><span class="p">,</span><span class="n">profile_col</span><span class="o">=</span><span class="s1">'t'</span><span class="p">,</span><span class="n">profile_trend</span><span class="o">=</span><span class="s1">'pos2neg'</span><span class="p">,</span><span class="w">
@@ -301,7 +310,7 @@ The color for those target genes are the same for positively-regulaion or negati
 <p><img src="NetBID_GSEA_demo3.png" alt="NetBID_GSEA_demo3" /></p>
 
 <ul>
-  <li>In the forth demo plot, the positively-regulaion or negatively-regulation is not separately into two rows (<code class="highlighter-rouge">target_nrow = 1</code>), <code class="highlighter-rouge">target_col='RdBu'</code> and <code class="highlighter-rouge">target_col_type='DE'</code>.</li>
+  <li>In the forth demo plot below, the number of panels to mark each target gene’s ranking position is 1, <code class="highlighter-rouge">target_nrow=1</code>. User can set <code class="highlighter-rouge">target_col='RdBu'</code> and <code class="highlighter-rouge">target_col_type='DE'</code> to distinguish positively-regulated target genes from negatively-regulated target genes.</li>
 </ul>
 
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">draw.GSEA.NetBID</span><span class="p">(</span><span class="n">DE</span><span class="o">=</span><span class="n">DE</span><span class="p">,</span><span class="n">profile_col</span><span class="o">=</span><span class="s1">'t'</span><span class="p">,</span><span class="n">profile_trend</span><span class="o">=</span><span class="s1">'pos2neg'</span><span class="p">,</span><span class="w">
@@ -319,7 +328,7 @@ The color for those target genes are the same for positively-regulaion or negati
 <p><img src="NetBID_GSEA_demo4.png" alt="NetBID_GSEA_demo4" /></p>
 
 <ul>
-  <li>In the fifth demo plot, the positively-regulaion or negatively-regulation is not separately into two rows (<code class="highlighter-rouge">target_nrow = 1</code>) and <code class="highlighter-rouge">target_col='black'</code>.</li>
+  <li>In the fifth demo plot below,  the number of panels to mark each target gene’s ranking position is 1, <code class="highlighter-rouge">target_nrow=1</code>. And all the target genes marker lines are black, <code class="highlighter-rouge">target_col='black'</code>.</li>
 </ul>
 
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">draw.GSEA.NetBID</span><span class="p">(</span><span class="n">DE</span><span class="o">=</span><span class="n">DE</span><span class="p">,</span><span class="n">profile_col</span><span class="o">=</span><span class="s1">'t'</span><span class="p">,</span><span class="n">profile_trend</span><span class="o">=</span><span class="s1">'pos2neg'</span><span class="p">,</span><span class="w">
@@ -336,23 +345,22 @@ The color for those target genes are the same for positively-regulaion or negati
 
 <p><img src="NetBID_GSEA_demo5.png" alt="NetBID_GSEA_demo5" /></p>
 
-<h3 id="qi3-what-is-the-expressionactivity-pattern-of-those-top-da-drivers-in-samples-with-different-subtype-">QI.3: What is the expression/activity pattern of those top DA drivers in samples with different subtype ?</h3>
+<h3 id="qi3-what-is-the-expressionactivity-pattern-of-these-top-da-drivers-across-sample-subtypes">QI.3: What is the expression/activity pattern of these top DA drivers across sample subtypes?</h3>
 
-<p>Next, we’d like to know the expression/activity pattern for those top DA drivers in different group of samples, the most straightforward strategy is to use heatmap.
-In NetBID2, <code class="highlighter-rouge">draw.heatmap()</code> is designed to assist simple usage of heatmap. It is based on <code class="highlighter-rouge">Heatmap()</code> function in <a href="https://bioconductor.org/packages/release/bioc/html/ComplexHeatmap.html">ComplexHeatmap</a>.</p>
+<p>Next, we’d like to know the expression/activity pattern of these top DA drivers from different sample subtypes.
+In NetBID2, <code class="highlighter-rouge">draw.heatmap()</code> is designed to assist this using user-friendly heatmap. It is based on <code class="highlighter-rouge">Heatmap()</code> function in <a href="https://bioconductor.org/packages/release/bioc/html/ComplexHeatmap.html">ComplexHeatmap</a>.</p>
 
-<p>Get the expression matrix <code class="highlighter-rouge">exp_mat</code> and activity matrix <code class="highlighter-rouge">ac_mat</code> from <code class="highlighter-rouge">analysis.par</code>, and phenotype data frame <code class="highlighter-rouge">phe_info</code>.</p>
+<p>First, please get the expression matrix <code class="highlighter-rouge">exp_mat</code>, the activity matrix <code class="highlighter-rouge">ac_mat</code> and the phenotype data frame <code class="highlighter-rouge">phe_info</code> from <code class="highlighter-rouge">analysis.par</code> super list.</p>
 
-<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">exp_mat</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">exprs</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">cal.eset</span><span class="p">)</span><span class="w"> </span><span class="c1">## expression,the rownames must be the originalID</span><span class="w">
-</span><span class="n">ac_mat</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">exprs</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.ac.eset</span><span class="p">)</span><span class="w"> </span><span class="c1">## ac,the rownames must be the originalID_label</span><span class="w">
-</span><span class="n">phe_info</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">pData</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">cal.eset</span><span class="p">)</span><span class="w">
-</span><span class="c1"># could use addtional paramters in Heatmap()</span><span class="w">
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">exp_mat</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">exprs</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">cal.eset</span><span class="p">)</span><span class="w"> </span><span class="c1"># expression matrix, the rownames must be the originalID</span><span class="w">
+</span><span class="n">ac_mat</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">exprs</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.ac.eset</span><span class="p">)</span><span class="w"> </span><span class="c1"># activity matrix, the rownames must be the originalID_label</span><span class="w">
+</span><span class="n">phe_info</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">pData</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">cal.eset</span><span class="p">)</span><span class="w"> </span><span class="c1"># phenotype data frame</span><span class="w">
 </span></code></pre></div></div>
 
 <ul>
-  <li>Draw the expression value (scaled by samples <code class="highlighter-rouge">scale='row'</code>)  for top DA drivers across all samples and display the sample class label above. 
-Here, the <code class="highlighter-rouge">use_genes</code> must be the <code class="highlighter-rouge">originalID</code>.
-User could directly input <code class="highlighter-rouge">phenotype_info=phe_info</code> and choose which columns to display in <code class="highlighter-rouge">use_phe</code>.</li>
+  <li>Draw the heatmap using expression value of top DA drivers (scaled by samples <code class="highlighter-rouge">scale='row'</code>). 
+Here, the <code class="highlighter-rouge">use_genes</code> must be the <code class="highlighter-rouge">originalID</code>. Here, we displayed all the phenotype columns: gender, pathology, subgroup and age.
+Users can assign <code class="highlighter-rouge">phenotype_info=phe_info</code> and choose specific phenotype column(s) to display using <code class="highlighter-rouge">use_phe</code>.</li>
 </ul>
 
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">draw.heatmap</span><span class="p">(</span><span class="n">mat</span><span class="o">=</span><span class="n">exp_mat</span><span class="p">,</span><span class="n">use_genes</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'originalID'</span><span class="p">],</span><span class="n">use_gene_label</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'geneSymbol'</span><span class="p">],</span><span class="w">
@@ -365,8 +373,9 @@ User could directly input <code class="highlighter-rouge">phenotype_info=phe_inf
 <p><img src="heatmap_demo1.png" alt="heatmap_demo1" /></p>
 
 <ul>
-  <li>Draw the activity value for top DA drivers, here, the <code class="highlighter-rouge">use_genes</code> must be the <code class="highlighter-rouge">originalID_label</code> but user could to display label in the <code class="highlighter-rouge">gene_label</code> column. 
-In this demo, the original label is also gene symbol, but in some cases the original label maybe the ensemble_gene_id, the originalID will be different and user could choose to display the gene symbol in <code class="highlighter-rouge">gene_label</code> (set by <code class="highlighter-rouge">use_gene_label</code>).</li>
+  <li>Draw the heatmap using activity value of top DA drivers. 
+Here, the <code class="highlighter-rouge">use_genes</code> must be the <code class="highlighter-rouge">originalID_label</code>. But user can also use the label in the <code class="highlighter-rouge">gene_label</code> column for display.
+In the demo, the original label is gene symbol. But in some cases, the original label can be the ensemble_gene_id, then the originalID will be different. In this case, user can choose the gene symbol in <code class="highlighter-rouge">gene_label</code> (set by <code class="highlighter-rouge">use_gene_label</code>) for display.</li>
 </ul>
 
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">draw.heatmap</span><span class="p">(</span><span class="n">mat</span><span class="o">=</span><span class="n">ac_mat</span><span class="p">,</span><span class="n">use_genes</span><span class="o">=</span><span class="n">driver_list</span><span class="p">,</span><span class="n">use_gene_label</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'gene_label'</span><span class="p">],</span><span class="w">
@@ -378,9 +387,10 @@ In this demo, the original label is also gene symbol, but in some cases the orig
 
 <p><img src="heatmap_demo2.png" alt="heatmap_demo2" /></p>
 
-<p>Compared with the two figures above, the activity pattern is much more clean than the expression pattern for top DA drivers, and also for top DE drivers (figures not shown here, but demo script is below), suggesting that the activity of drivers may be more robust in separating specific sample groups.</p>
+<p>Now, we compare the two heatmaps we created using the expression matrix and the activity matrix of top DA drivers. As we can see, the activity matrix gives a much cleaner pattern than the expression matrix. Same observation from the top DE drivers. Figures not shown below, but users can use the script below to check. 
+This observation highly suggested the activity value of driver may be more robust than expression value in sample classification.</p>
 
-<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># try for the top DE genes             </span><span class="w">
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Draw heatmaps using top DE genes             </span><span class="w">
 </span><span class="n">gene_list</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">rownames</span><span class="p">(</span><span class="n">sig_gene</span><span class="p">)</span><span class="w"> 
 </span><span class="n">draw.heatmap</span><span class="p">(</span><span class="n">mat</span><span class="o">=</span><span class="n">exp_mat</span><span class="p">,</span><span class="n">use_genes</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">gene_list</span><span class="p">,</span><span class="s1">'originalID'</span><span class="p">],</span><span class="n">use_gene_label</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">gene_list</span><span class="p">,</span><span class="s1">'geneSymbol'</span><span class="p">],</span><span class="w">
              </span><span class="n">use_samples</span><span class="o">=</span><span class="n">colnames</span><span class="p">(</span><span class="n">exp_mat</span><span class="p">),</span><span class="n">use_sample_label</span><span class="o">=</span><span class="n">phe_info</span><span class="p">[</span><span class="n">colnames</span><span class="p">(</span><span class="n">exp_mat</span><span class="p">),</span><span class="s1">'geo_accession'</span><span class="p">],</span><span class="w">
@@ -395,55 +405,48 @@ In this demo, the original label is also gene symbol, but in some cases the orig
              </span><span class="n">row_names_gp</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">gpar</span><span class="p">(</span><span class="n">fontsize</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">12</span><span class="p">),</span><span class="n">pdf_file</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'%s/heatmap_demo4.pdf'</span><span class="p">,</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.PLOT</span><span class="p">))</span><span class="w">
 </span></code></pre></div></div>
 
-<h3 id="qi4-what-is-the-biological-function-of-those-top-da-drivers-">QI.4: What is the biological function of those top DA drivers ?</h3>
+<h3 id="qi4-what-are-the-biological-functions-of-these-top-da-drivers-">QI.4: What are the biological functions of these top DA drivers ?</h3>
 
-<p>In order to study the function of those drivers, we could import curated gene sets from <a href="http://software.broadinstitute.org/gsea/msigdb">MSigDB</a>.</p>
+<p>In order to study the biological functions of these top DA drivers, we need to import the curated gene sets from <a href="http://software.broadinstitute.org/gsea/msigdb">MSigDB</a>.</p>
 
 <p>NetBID2 has provided one function <code class="highlighter-rouge">gs.preload()</code> to automatically download curated gene sets from MSigDB (based on <a href="https://cran.r-project.org/web/packages/msigdbr/index.html">msigdbr</a>). 
-The only input is the species name, full list of available species name could be found by msigdbr_show_species(). Default is ‘Homo sapiens’. 
-The dataset for human is already packed in NetBID2 R package. 
-Similar as <code class="highlighter-rouge">db.preload()</code>, if leave <code class="highlighter-rouge">main.dir=NULL</code>, the RData will be saved to <code class="highlighter-rouge">system.file(package = "NetBID2")/db/</code>. 
-If NetBID2 is installed in a public place with no permission to user, just set <code class="highlighter-rouge">main.dir</code> to another place and remember to use the same path next time using it.</p>
+Users only need to give a species names as input to the function. All available species names can be found by calling <code class="highlighter-rouge">msigdbr_show_species()</code>. By default, the species name is “Homo sapiens”. And NetBID2 has it downloaded in the package already.</p>
 
-<p>User can print <code class="highlighter-rouge">all_gs2gene_info</code> to check the detailed information of the global variable <code class="highlighter-rouge">all_gs2gene</code>. 
-The column <code class="highlighter-rouge">Category</code> and <code class="highlighter-rouge">Sub-Category</code> will be used as the label to extract categories of gene sets for use.</p>
+<p>Similar to <code class="highlighter-rouge">db.preload()</code>, if users leave <code class="highlighter-rouge">main.dir=NULL</code>, the downloaded data will be save as RData into the followin path, <code class="highlighter-rouge">system.file(package = "NetBID2")/db/</code>. However, if NetBID2 is installed in a public server and user doesn’t root permission, he needs to give accessible path to <code class="highlighter-rouge">main.dir</code>.</p>
 
-<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># load RData for all_gs2gene</span><span class="w">
+<p>To check the detailed information of the downloaded gene sets, user can use the following scripts. Print <code class="highlighter-rouge">all_gs2gene_info</code> from the global variable <code class="highlighter-rouge">all_gs2gene</code>. The column <code class="highlighter-rouge">Category</code> and <code class="highlighter-rouge">Sub-Category</code> will be used as the label to extract gene sets categories.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Download gene sets from MSigDB and save as RData, creat a global variable all_gs2gene</span><span class="w">
 </span><span class="n">gs.preload</span><span class="p">(</span><span class="n">use_spe</span><span class="o">=</span><span class="s1">'Homo sapiens'</span><span class="p">,</span><span class="n">update</span><span class="o">=</span><span class="kc">FALSE</span><span class="p">)</span><span class="w">
 </span><span class="n">print</span><span class="p">(</span><span class="n">all_gs2gene_info</span><span class="p">)</span><span class="w">
 </span></code></pre></div></div>
 
 <p><img src="all_gs2gene_info.png" alt="all_gs2gene_info" /></p>
 
-<p>Now, user could choose to use the pre-loaded gene sets to perform Fisher based Gene Set enrichment analysis by <code class="highlighter-rouge">funcEnrich.Fisher()</code>. 
-The <code class="highlighter-rouge">input_list</code> and <code class="highlighter-rouge">bg_list</code> must be the gene symbol. This is easily obtained by using the <code class="highlighter-rouge">geneSymbol</code> column in the master table.</p>
+<p>To perform gene set enrichment analysis, NetBID2 provides <code class="highlighter-rouge">funcEnrich.Fisher()</code>.</p>
 
-<p><code class="highlighter-rouge">gs2gene</code> is the list for geneset to genes, the name for the list is the gene set name and the content in each list is the vector for genes belong to that gene set. 
-If NULL, will use <code class="highlighter-rouge">all_gs2gene</code> loaded by using <code class="highlighter-rouge">gs.preload()</code>. User do not need to prepare this if want to use MSigDB.</p>
+<p>Details about how to use <code class="highlighter-rouge">funcEnrich.Fisher()</code>: <code class="highlighter-rouge">input_list</code> and <code class="highlighter-rouge">bg_list</code> must be the gene symbols, which is the <code class="highlighter-rouge">geneSymbol</code> column in the master table; <code class="highlighter-rouge">gs2gene</code> is a list contains elements of gene sets. The name of the element is gene set, each element contains a vector of genes in that gene set. If NULL, will use <code class="highlighter-rouge">all_gs2gene</code>, which is created by function <code class="highlighter-rouge">gs.preload()</code>; <code class="highlighter-rouge">use_gs</code> is a vector of the names of gene sets, it can be a mixture of <code class="highlighter-rouge">Category</code> name and <code class="highlighter-rouge">Sub-Category</code> name. Users don’t need to worry about the gene redundant issue, all the gene sets will be handled by <code class="highlighter-rouge">merge_gs()</code>, which will merge the redundant information.</p>
 
-<p><code class="highlighter-rouge">use_gs</code> is the vector of category name used in analysis, this could be the mixture of category names from <code class="highlighter-rouge">Category</code> and <code class="highlighter-rouge">Sub-Category</code>. 
-Do not worry about the redundant issue, all gene sets will be passed into <code class="highlighter-rouge">merge_gs()</code> and the gene sets with the same gene set name will be merged.</p>
-
-<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">driver_list_up</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">rownames</span><span class="p">(</span><span class="n">sig_driver</span><span class="p">)[</span><span class="n">which</span><span class="p">(</span><span class="n">sig_driver</span><span class="p">[,</span><span class="m">2</span><span class="p">]</span><span class="o">&gt;</span><span class="m">0</span><span class="p">)]</span><span class="w"> </span><span class="c1"># up</span><span class="w">
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Gene Set Enrichment Analysis</span><span class="w">
+</span><span class="n">driver_list_up</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">rownames</span><span class="p">(</span><span class="n">sig_driver</span><span class="p">)[</span><span class="n">which</span><span class="p">(</span><span class="n">sig_driver</span><span class="p">[,</span><span class="m">2</span><span class="p">]</span><span class="o">&gt;</span><span class="m">0</span><span class="p">)]</span><span class="w"> </span><span class="c1"># up</span><span class="w">
 </span><span class="n">driver_list_down</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">rownames</span><span class="p">(</span><span class="n">sig_driver</span><span class="p">)[</span><span class="n">which</span><span class="p">(</span><span class="n">sig_driver</span><span class="p">[,</span><span class="m">2</span><span class="p">]</span><span class="o">&lt;</span><span class="m">0</span><span class="p">)]</span><span class="w"> </span><span class="c1"># down</span><span class="w">
-</span><span class="n">res_up</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">funcEnrich.Fisher</span><span class="p">(</span><span class="n">input_list</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list_up</span><span class="p">,</span><span class="s1">'geneSymbol'</span><span class="p">],</span><span class="n">bg_list</span><span class="o">=</span><span class="n">unique</span><span class="p">(</span><span class="n">ms_tab</span><span class="p">[,</span><span class="s1">'geneSymbol'</span><span class="p">]),</span><span class="n">use_gs</span><span class="o">=</span><span class="nf">c</span><span class="p">(</span><span class="s1">'H'</span><span class="p">,</span><span class="s1">'CP:REACTOME'</span><span class="p">,</span><span class="s1">'BP'</span><span class="p">,</span><span class="s1">'CGP'</span><span class="p">),</span><span class="w">
-                           </span><span class="n">Pv_thre</span><span class="o">=</span><span class="m">0.1</span><span class="p">,</span><span class="n">Pv_adj</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'none'</span><span class="p">,</span><span class="n">min_gs_size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">30</span><span class="p">,</span><span class="w"> </span><span class="n">max_gs_size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">500</span><span class="p">)</span><span class="w">
-</span><span class="n">res_down</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">funcEnrich.Fisher</span><span class="p">(</span><span class="n">input_list</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list_down</span><span class="p">,</span><span class="s1">'geneSymbol'</span><span class="p">],</span><span class="n">bg_list</span><span class="o">=</span><span class="n">unique</span><span class="p">(</span><span class="n">ms_tab</span><span class="p">[,</span><span class="s1">'geneSymbol'</span><span class="p">]),</span><span class="n">use_gs</span><span class="o">=</span><span class="nf">c</span><span class="p">(</span><span class="s1">'H'</span><span class="p">,</span><span class="s1">'CP:REACTOME'</span><span class="p">,</span><span class="s1">'BP'</span><span class="p">,</span><span class="s1">'CGP'</span><span class="p">),</span><span class="w">
-                           </span><span class="n">Pv_thre</span><span class="o">=</span><span class="m">0.1</span><span class="p">,</span><span class="n">Pv_adj</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'none'</span><span class="p">,</span><span class="n">min_gs_size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">30</span><span class="p">,</span><span class="w"> </span><span class="n">max_gs_size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">500</span><span class="p">)</span><span class="w">                       
+</span><span class="n">res_up</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">funcEnrich.Fisher</span><span class="p">(</span><span class="n">input_list</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list_up</span><span class="p">,</span><span class="s1">'geneSymbol'</span><span class="p">],</span><span class="n">bg_list</span><span class="o">=</span><span class="n">unique</span><span class="p">(</span><span class="n">ms_tab</span><span class="p">[,</span><span class="s1">'geneSymbol'</span><span class="p">]),</span><span class="n">use_gs</span><span class="o">=</span><span class="nf">c</span><span class="p">(</span><span class="s1">'H'</span><span class="p">,</span><span class="s1">'CP:REACTOME'</span><span class="p">,</span><span class="s1">'BP'</span><span class="p">,</span><span class="s1">'CGP'</span><span class="p">),</span><span class="w"> </span><span class="n">Pv_thre</span><span class="o">=</span><span class="m">0.1</span><span class="p">,</span><span class="n">Pv_adj</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'none'</span><span class="p">,</span><span class="n">min_gs_size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">30</span><span class="p">,</span><span class="w"> </span><span class="n">max_gs_size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">500</span><span class="p">)</span><span class="w">
+</span><span class="n">res_down</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">funcEnrich.Fisher</span><span class="p">(</span><span class="n">input_list</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list_down</span><span class="p">,</span><span class="s1">'geneSymbol'</span><span class="p">],</span><span class="n">bg_list</span><span class="o">=</span><span class="n">unique</span><span class="p">(</span><span class="n">ms_tab</span><span class="p">[,</span><span class="s1">'geneSymbol'</span><span class="p">]),</span><span class="n">use_gs</span><span class="o">=</span><span class="nf">c</span><span class="p">(</span><span class="s1">'H'</span><span class="p">,</span><span class="s1">'CP:REACTOME'</span><span class="p">,</span><span class="s1">'BP'</span><span class="p">,</span><span class="s1">'CGP'</span><span class="p">),</span><span class="w"> </span><span class="n">Pv_thre</span><span class="o">=</span><span class="m">0.1</span><span class="p">,</span><span class="n">Pv_adj</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'none'</span><span class="p">,</span><span class="n">min_gs_size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">30</span><span class="p">,</span><span class="w"> </span><span class="n">max_gs_size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">500</span><span class="p">)</span><span class="w">                       
 </span></code></pre></div></div>
 
-<p><code class="highlighter-rouge">funcEnrich.Fisher()</code> will return detailed results for enrichment analysis, use <code class="highlighter-rouge">?funcEnrich.Fisher</code> to check the detail. And the <a href="fisher_res.xlsx">results</a> could be output to excel file by <code class="highlighter-rouge">out2excel()</code>.</p>
+<p><code class="highlighter-rouge">funcEnrich.Fisher()</code> uses Fisher’s Exact Test and return detailed results for the gene set enrichment analysis. And the <a href="fisher_res.xlsx">results</a> can be saved as EXCEL file by <code class="highlighter-rouge">out2excel()</code>.</p>
 
-<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">out2excel</span><span class="p">(</span><span class="nf">list</span><span class="p">(</span><span class="n">up</span><span class="o">=</span><span class="n">res_up</span><span class="p">,</span><span class="n">down</span><span class="o">=</span><span class="n">res_down</span><span class="p">),</span><span class="n">out.xlsx</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'%s/fisher_res.xlsx'</span><span class="p">,</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.PLOT</span><span class="p">))</span><span class="w">
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Save gene set enrichment analysis results as EXCEl</span><span class="w">
+</span><span class="n">out2excel</span><span class="p">(</span><span class="nf">list</span><span class="p">(</span><span class="n">up</span><span class="o">=</span><span class="n">res_up</span><span class="p">,</span><span class="n">down</span><span class="o">=</span><span class="n">res_down</span><span class="p">),</span><span class="n">out.xlsx</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'%s/fisher_res.xlsx'</span><span class="p">,</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.PLOT</span><span class="p">))</span><span class="w">
 </span></code></pre></div></div>
 
-<p>Meanwhile, the enrichment analysis results can be visualized by barplot (<code class="highlighter-rouge">draw.funcEnrich.bar()</code>) and cluster plot (<code class="highlighter-rouge">draw.funcEnrich.cluster()</code>).</p>
+<p>NetBID2 also designed two functions to visualze the gene set enrichment analysis for these top drivers: <code class="highlighter-rouge">draw.funcEnrich.bar()</code> and <code class="highlighter-rouge">draw.funcEnrich.cluster()</code>.</p>
 
 <ul>
-  <li>The barplot is a simply way to display the enriched P-value, with the example of intersected genes (if set <code class="highlighter-rouge">display_genes=TRUE</code>).</li>
+  <li><code class="highlighter-rouge">draw.funcEnrich.bar()</code> draws a horizontal barplot to display the top enriched functions and the corresponding drivers (if set <code class="highlighter-rouge">display_genes=TRUE</code>).</li>
 </ul>
 
-<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># draw barplot</span><span class="w">
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Gene set enrichment analysis Barplot</span><span class="w">
 </span><span class="n">draw.funcEnrich.bar</span><span class="p">(</span><span class="n">funcEnrich_res</span><span class="o">=</span><span class="w"> </span><span class="n">res_up</span><span class="p">,</span><span class="n">top_number</span><span class="o">=</span><span class="m">30</span><span class="p">,</span><span class="n">main</span><span class="o">=</span><span class="s1">'Function Enrichment for Top drivers'</span><span class="p">,</span><span class="n">pdf_file</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'%s/funcEnrich_bar_nogene.pdf'</span><span class="p">,</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.PLOT</span><span class="p">))</span><span class="w">
 </span><span class="n">draw.funcEnrich.bar</span><span class="p">(</span><span class="n">funcEnrich_res</span><span class="o">=</span><span class="w"> </span><span class="n">res_up</span><span class="p">,</span><span class="n">top_number</span><span class="o">=</span><span class="m">30</span><span class="p">,</span><span class="n">main</span><span class="o">=</span><span class="s1">'Function Enrichment for Top drivers'</span><span class="p">,</span><span class="n">display_genes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">TRUE</span><span class="p">,</span><span class="n">gs_cex</span><span class="o">=</span><span class="m">0.6</span><span class="p">,</span><span class="w">
                     </span><span class="n">pdf_file</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'%s/funcEnrich_bar_withgene.pdf'</span><span class="p">,</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.PLOT</span><span class="p">))</span><span class="w">
@@ -452,20 +455,21 @@ Do not worry about the redundant issue, all gene sets will be passed into <code 
 <p><img src="funcEnrich_bar_withgene.png" alt="funcEnrich_bar_withgene" /></p>
 
 <ul>
-  <li>Considering the function redudancy of gene sets and the cluster of genes by function similarity, the function cluster plot could be used.</li>
+  <li>Considering the function redundancy of gene sets, users can call <code class="highlighter-rouge">draw.funcEnrich.cluster()</code> to cluster genes by their function similarity.</li>
 </ul>
 
-<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">draw.funcEnrich.cluster</span><span class="p">(</span><span class="n">funcEnrich_res</span><span class="o">=</span><span class="w"> </span><span class="n">res_up</span><span class="p">,</span><span class="n">top_number</span><span class="o">=</span><span class="m">30</span><span class="p">,</span><span class="n">gs_cex</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">1.4</span><span class="p">,</span><span class="n">gene_cex</span><span class="o">=</span><span class="m">1.5</span><span class="p">,</span><span class="n">pv_cex</span><span class="o">=</span><span class="m">1.2</span><span class="p">,</span><span class="n">pdf_file</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'%s/funcEnrich_clusterBOTH.pdf'</span><span class="p">,</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.PLOT</span><span class="p">),</span><span class="w">
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Gene set enrichment analysis Function Cluster Plot</span><span class="w">
+</span><span class="n">draw.funcEnrich.cluster</span><span class="p">(</span><span class="n">funcEnrich_res</span><span class="o">=</span><span class="w"> </span><span class="n">res_up</span><span class="p">,</span><span class="n">top_number</span><span class="o">=</span><span class="m">30</span><span class="p">,</span><span class="n">gs_cex</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">1.4</span><span class="p">,</span><span class="n">gene_cex</span><span class="o">=</span><span class="m">1.5</span><span class="p">,</span><span class="n">pv_cex</span><span class="o">=</span><span class="m">1.2</span><span class="p">,</span><span class="n">pdf_file</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'%s/funcEnrich_clusterBOTH.pdf'</span><span class="p">,</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.PLOT</span><span class="p">),</span><span class="w">
                         </span><span class="n">cluster_gs</span><span class="o">=</span><span class="kc">TRUE</span><span class="p">,</span><span class="n">cluster_gene</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">TRUE</span><span class="p">,</span><span class="n">h</span><span class="o">=</span><span class="m">0.95</span><span class="p">)</span><span class="w">
 </span></code></pre></div></div>
 
-<p>In the figure below, top 30 enriched terms could be clustered into 6 clusters (cluster size adjusted by <code class="highlighter-rouge">h</code>). 
-We could easily get to know the related genes for each function clusters. 
-Here, top enriched gene sets are related with lipid biosynthetic process, with detailed description from: e.g <a href="http://software.broadinstitute.org/gsea/msigdb/geneset_page.jsp?geneSetName=GO_LIPID_BIOSYNTHETIC_PROCESS">‘GO_LIPID_BIOSYNTHETIC_PROCESS’</a></p>
+<p>In the figure below, the top 30 enriched terms can be clustered into 6 groups (cluster size can be adjusted by <code class="highlighter-rouge">h</code>). 
+Genes belong to each term is marked with red in the table cell. 
+As we can see, the top enriched gene sets are related with lipid biosynthetic process. Detail about this process, please check <a href="http://software.broadinstitute.org/gsea/msigdb/geneset_page.jsp?geneSetName=GO_LIPID_BIOSYNTHETIC_PROCESS">‘GO_LIPID_BIOSYNTHETIC_PROCESS’</a></p>
 
 <p><img src="funcEnrich_clusterBOTH.png" alt="funcEnrich_clusterBOTH" /></p>
 
-<p>Try the below scripts and check the difference of the output figure:</p>
+<p>To explore the handlers in <code class="highlighter-rouge">draw.funcEnrich.cluster()</code>, please try the following scripts.</p>
 
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">draw.funcEnrich.cluster</span><span class="p">(</span><span class="n">funcEnrich_res</span><span class="o">=</span><span class="w"> </span><span class="n">res_up</span><span class="p">,</span><span class="n">top_number</span><span class="o">=</span><span class="m">30</span><span class="p">,</span><span class="n">gs_cex</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">0.8</span><span class="p">,</span><span class="n">gene_cex</span><span class="o">=</span><span class="m">0.9</span><span class="p">,</span><span class="n">pv_cex</span><span class="o">=</span><span class="m">0.8</span><span class="p">,</span><span class="n">pdf_file</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'%s/funcEnrich_clusterGS.pdf'</span><span class="p">,</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.PLOT</span><span class="p">),</span><span class="w">
                         </span><span class="n">cluster_gs</span><span class="o">=</span><span class="kc">TRUE</span><span class="p">,</span><span class="n">cluster_gene</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">FALSE</span><span class="p">)</span><span class="w">
@@ -475,23 +479,21 @@ Here, top enriched gene sets are related with lipid biosynthetic process, with d
                         </span><span class="n">cluster_gs</span><span class="o">=</span><span class="kc">FALSE</span><span class="p">,</span><span class="n">cluster_gene</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">FALSE</span><span class="p">)</span><span class="w">
 </span></code></pre></div></div>
 
-<h3 id="qi5-what-is-the-biological-function-of-the-target-genes-of-those-top-da-drivers-">QI.5: What is the biological function of the target genes of those top DA drivers ?</h3>
+<h3 id="qi5-what-are-the-biological-functions-of-the-target-genes-of-these-top-da-drivers-">QI.5: What are the biological functions of the target genes of these top DA drivers ?</h3>
 
-<p>The function of those drivers is to regulate their target genes. Then, we will ask what is the biological function of the target genes of those top DA drivers ?
-NetBID2 has one function <code class="highlighter-rouge">draw.bubblePlot()</code> to calculate and visualize this purpose.</p>
+<p>The biological function of driver is to regulated by its target genes. For a driver, what are the biological functions of its target genes? NetBID2 provides a function <code class="highlighter-rouge">draw.bubblePlot()</code> to investigate this question.</p>
 
-<p>Before that, we only accept gene symbol as the ID for gene set annotation (for the general usage, other kinds of usage will be shown in the last part of this section), so, we need to prepare a transfer table to transfer the originalID into gene symbol for all drivers and target genes.
-This transfer table is already saved in the <code class="highlighter-rouge">analysis.par</code>.</p>
+<p>First, get the ID conversion table. This is because NetBID2 only accepts gene symbol as ID type for gene set annotation (for more general application, please check the last part of this section). This conversion table is already wrapped inside <code class="highlighter-rouge">analysis.par</code> super list created by <code class="highlighter-rouge">get_IDtransfer2symbol2type()</code>. If not, user could use <code class="highlighter-rouge">get_IDtransfer2symbol2type()</code> to get.</p>
 
-<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">transfer_tab</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">analysis.par</span><span class="o">$</span><span class="n">transfer_tab</span><span class="w">
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Get ID conversion table</span><span class="w">
+</span><span class="n">transfer_tab</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">analysis.par</span><span class="o">$</span><span class="n">transfer_tab</span><span class="w">
 </span></code></pre></div></div>
 
 <ul>
-  <li>This function has 21 options, but for the first trial, just follow the demo and the only thing to prepare is the transfer table (<code class="highlighter-rouge">transfer2symbol2type</code>). 
-Lots of parameters are the same as in <code class="highlighter-rouge">funcEnrich.Fisher()</code>. <code class="highlighter-rouge">display_gs_list</code> could be user defined if some other testing is performed and user only want to display some of the selected gene sets.</li>
+  <li><code class="highlighter-rouge">draw.bubblePlot()</code> has 21 parameters, but most of them are the same as in <code class="highlighter-rouge">funcEnrich.Fisher()</code>. For the demo, user only need to prepare the ID conversion table to <code class="highlighter-rouge">transfer2symbol2type</code>. Another interested parameter is <code class="highlighter-rouge">display_gs_list</code>, which can be set to pick which gene set(s) to be displayed in the plot.</li>
 </ul>
 
-<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">## draw</span><span class="w">
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Bubble Plot to show target genes enriched biological functions</span><span class="w">
 </span><span class="n">draw.bubblePlot</span><span class="p">(</span><span class="n">driver_list</span><span class="o">=</span><span class="w"> </span><span class="n">driver_list</span><span class="p">,</span><span class="n">show_label</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'gene_label'</span><span class="p">],</span><span class="w">
                 </span><span class="n">Z_val</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'Z.%s_DA'</span><span class="p">,</span><span class="n">comp_name</span><span class="p">)],</span><span class="w">
                 </span><span class="n">driver_type</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'gene_biotype'</span><span class="p">],</span><span class="w">
@@ -503,15 +505,14 @@ Lots of parameters are the same as in <code class="highlighter-rouge">funcEnrich
 </span></code></pre></div></div>
 
 <ul>
-  <li>Each column in this plot is one driver, each row is the curated gene set, and the circle in the main plot region shows the significance of the target genes for the driver in the corresponding gene set.
-The size of the circle is the intersected gene number (legend on the top) and the color of the circle represents the significance of the P-value (legend on the right). The color boxes down below the main figure are the significance of the drivers (user need to input the Z-statistics), followed by the barplots showing the target size of the driver (filtered by protein coding), and the color cicles below showing the drivers’ type (optional, if user input the <code class="highlighter-rouge">driver_type</code>).</li>
+  <li><strong>Explanation of the bubble plot.</strong></li>
 </ul>
 
-<p>The figure could tell user that, e.g the target genes of the Group4 up-regulated driver<code class="highlighter-rouge">PDE7B_SIG</code> are significantly enriched in <code class="highlighter-rouge">KEGG_AXON_GUIDANCE</code> with 17 intersected genes and P-value at about 1e-10.</p>
+<p>Each column is a driver, each row is a curated gene set. The size of the circle is the number of intersected genes (legend on the top) and the color shade of the circle represents the significance using P-value (legend on the right). The color shade of boxes above the barplot shows the significance of the each driver (user need to input the Z-statistics). The barplot at the bottom shows the target size of each driver (filtered by protein coding), and the circle below the barplot represents the driver type (optional, <code class="highlighter-rouge">driver_type</code>). For example, the target genes of the Group4 <em>up</em> driver <code class="highlighter-rouge">PDE7B_SIG</code> are significantly enriched in <code class="highlighter-rouge">KEGG_AXON_GUIDANCE</code> term (with P-value of 1e-10), with 17 intersected genes.</p>
 
 <p><img src="bubblePlot.png" alt="bubblePlot" /></p>
 
-<p>Try the following script to get familiar with the options in the function.</p>
+<p>To explore the handlers in <code class="highlighter-rouge">draw.bubblePlot()</code>, please try the following scripts.</p>
 
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">draw.bubblePlot</span><span class="p">(</span><span class="n">driver_list</span><span class="o">=</span><span class="w"> </span><span class="n">driver_list</span><span class="p">,</span><span class="n">show_label</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="s1">'gene_label'</span><span class="p">],</span><span class="w">
                 </span><span class="n">Z_val</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'Z.%s_DA'</span><span class="p">,</span><span class="n">comp_name</span><span class="p">)],</span><span class="w">
@@ -521,7 +522,7 @@ The size of the circle is the intersected gene number (legend on the top) and th
                 </span><span class="n">top_geneset_number</span><span class="o">=</span><span class="m">30</span><span class="p">,</span><span class="n">top_driver_number</span><span class="o">=</span><span class="m">30</span><span class="p">,</span><span class="w">
                 </span><span class="n">pdf_file</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'%s/bubblePlot_KEGG.pdf'</span><span class="p">,</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.PLOT</span><span class="p">),</span><span class="w">
                 </span><span class="n">main</span><span class="o">=</span><span class="s1">'Bubbleplot for top driver targets'</span><span class="p">)</span><span class="w">
-</span><span class="c1"># add marker gene</span><span class="w">
+</span><span class="c1"># Add marker genes</span><span class="w">
 </span><span class="n">mark_gene</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="s1">'KCNA1'</span><span class="p">,</span><span class="s1">'EOMES'</span><span class="p">,</span><span class="s1">'KHDRBS2'</span><span class="p">,</span><span class="s1">'RBM24'</span><span class="p">,</span><span class="s1">'UNC5D'</span><span class="p">)</span><span class="w"> </span><span class="c1">## marker for Group4</span><span class="w">
 </span><span class="n">draw.bubblePlot</span><span class="p">(</span><span class="n">driver_list</span><span class="o">=</span><span class="w"> </span><span class="n">driver_list</span><span class="p">,</span><span class="n">show_label</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">rownames</span><span class="p">(</span><span class="n">sig_driver</span><span class="p">),</span><span class="s1">'gene_label'</span><span class="p">],</span><span class="w">
                 </span><span class="n">Z_val</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">driver_list</span><span class="p">,</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'Z.%s_DA'</span><span class="p">,</span><span class="n">comp_name</span><span class="p">)],</span><span class="w">
@@ -534,29 +535,30 @@ The size of the circle is the intersected gene number (legend on the top) and th
                 </span><span class="n">mark_gene</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">which</span><span class="p">(</span><span class="n">ms_tab</span><span class="o">$</span><span class="n">geneSymbol</span><span class="w"> </span><span class="o">%in%</span><span class="w"> </span><span class="n">mark_gene</span><span class="p">),</span><span class="s1">'originalID_label'</span><span class="p">],</span><span class="n">gs_cex</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">1</span><span class="p">,</span><span class="n">driver_cex</span><span class="o">=</span><span class="m">1.2</span><span class="p">)</span><span class="w">
 </span></code></pre></div></div>
 
-<h2 id="part-ii-for-a-selected-interested-driver">Part II: for a selected interested driver</h2>
+<h2 id="part-ii-more-details-about-the-selected-driver">Part II: More details about the selected driver</h2>
 
-<h3 id="qii1-how-to-understand-the-significance-of-the-selected-driver-">QII.1: How to understand the significance of the selected driver ?</h3>
+<h3 id="qii1-how-to-interpret-the-significance-of-the-selected-driver-">QII.1: How to interpret the significance of the selected driver ?</h3>
 
-<p>For each driver, NetBID2 provides function <code class="highlighter-rouge">draw.GSEA()</code> to draw the traditional style GSEA plot to understand the significance of the driver.
-Similar to <code class="highlighter-rouge">draw.GSEA.NetBID()</code>, firstly we need to prepare the profile for the differentiated expressed genes.</p>
+<p>To study a single driver or some specific drivers, NetBID2 provides function <code class="highlighter-rouge">draw.GSEA()</code> to draw the classic GSEA plot, in order to faciliate the interpretation of the significance of target driver(s).</p>
 
-<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">DE</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">analysis.par</span><span class="o">$</span><span class="n">DE</span><span class="p">[[</span><span class="n">comp_name</span><span class="p">]]</span><span class="w">
+<p>First, retrieve the differential expressed gene profile first.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Get the DE file</span><span class="w">
+</span><span class="n">DE</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">analysis.par</span><span class="o">$</span><span class="n">DE</span><span class="p">[[</span><span class="n">comp_name</span><span class="p">]]</span><span class="w">
 </span><span class="n">DE_profile</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">DE</span><span class="o">$</span><span class="n">`Z-statistics`</span><span class="p">;</span><span class="w"> 
 </span><span class="nf">names</span><span class="p">(</span><span class="n">DE_profile</span><span class="p">)</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">rownames</span><span class="p">(</span><span class="n">DE</span><span class="p">)</span><span class="w">
 </span></code></pre></div></div>
 
-<p>Then, extract out the target gene list and the direction of the target genes for the selected driver.
-The annotation could use the p-value from master table. 
-Traditional GSEA test may have different significance statistics, user could calculate first and put it into the annotation.</p>
+<p>Then, extract out the target gene list and the regulation direction of the selected driver. Here, we use the P-value in master table as annotation for the enrichment. The classic GSEA plot test may use different statistics, user can decide which one to use as annotation and calculate it.</p>
 
-<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">use_driver</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">driver_list</span><span class="p">[</span><span class="m">1</span><span class="p">]</span><span class="w">
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Use the first driver in the driver list as an example</span><span class="w">
+</span><span class="n">use_driver</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">driver_list</span><span class="p">[</span><span class="m">1</span><span class="p">]</span><span class="w">
 </span><span class="n">use_target_genes</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.network</span><span class="o">$</span><span class="n">target_list</span><span class="p">[[</span><span class="n">use_driver</span><span class="p">]]</span><span class="o">$</span><span class="n">target</span><span class="w">
 </span><span class="n">use_target_direction</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">sign</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.network</span><span class="o">$</span><span class="n">target_list</span><span class="p">[[</span><span class="n">use_driver</span><span class="p">]]</span><span class="o">$</span><span class="n">spearman</span><span class="p">)</span><span class="w"> </span><span class="c1">## 1/-1</span><span class="w">
 </span><span class="n">annot</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'P-value: %s'</span><span class="p">,</span><span class="nf">signif</span><span class="p">(</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">use_driver</span><span class="p">,</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'P.Value.%s_DA'</span><span class="p">,</span><span class="n">comp_name</span><span class="p">)],</span><span class="m">2</span><span class="p">))</span><span class="w">
 </span></code></pre></div></div>
 
-<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">## with direction</span><span class="w">
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Draw classic GSEA plot for one driver</span><span class="w">
 </span><span class="n">draw.GSEA</span><span class="p">(</span><span class="n">rank_profile</span><span class="o">=</span><span class="n">DE_profile</span><span class="p">,</span><span class="n">use_genes</span><span class="o">=</span><span class="n">use_target_genes</span><span class="p">,</span><span class="n">use_direction</span><span class="o">=</span><span class="n">use_target_direction</span><span class="p">,</span><span class="w">
           </span><span class="n">main</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'GSEA plot for driver %s'</span><span class="p">,</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">use_driver</span><span class="p">,</span><span class="s1">'gene_label'</span><span class="p">]),</span><span class="w">
           </span><span class="n">pdf_file</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'%s/GSEA_each_direction.pdf'</span><span class="p">,</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.PLOT</span><span class="p">),</span><span class="w">
@@ -566,9 +568,9 @@ Traditional GSEA test may have different significance statistics, user could cal
 
 <p><img src="GSEA_each_direction.png" alt="GSEA_each_direction" /></p>
 
-<p>If do not enter direction information, it will be traditional GSEA plot.</p>
+<p>NetBID2 will draw a classic GSEA plot, if no direction information is provided.</p>
 
-<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">## GSEA plot without direction, without annotation, traditional GSEA plot</span><span class="w">
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># GSEA plot without direction, without annotation</span><span class="w">
 </span><span class="n">draw.GSEA</span><span class="p">(</span><span class="n">rank_profile</span><span class="o">=</span><span class="n">DE_profile</span><span class="p">,</span><span class="n">use_genes</span><span class="o">=</span><span class="n">use_target_genes</span><span class="p">,</span><span class="n">use_direction</span><span class="o">=</span><span class="kc">NULL</span><span class="p">,</span><span class="w">
           </span><span class="n">main</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'GSEA plot for driver %s'</span><span class="p">,</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">use_driver</span><span class="p">,</span><span class="s1">'gene_label'</span><span class="p">]),</span><span class="w">
           </span><span class="n">pdf_file</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'%s/GSEA_each.pdf'</span><span class="p">,</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.PLOT</span><span class="p">),</span><span class="w">
@@ -578,27 +580,29 @@ Traditional GSEA test may have different significance statistics, user could cal
 
 <h3 id="qii2-how-to-visualize-the-network-structure-of-the-selected-driver-">QII.2: How to visualize the network structure of the selected driver ?</h3>
 
-<p>The sub-network structure of the driver is very simple, the driver (source node) and its target genes (target nodes).
-The edge information could be the <code class="highlighter-rouge">mutual information</code> value with direction signed by <code class="highlighter-rouge">spearman</code>.</p>
+<p>The sub-network structure of the selected driver composed of one source node (driver) and its target nodes (target genes).
+The edges of the network contains weight of <code class="highlighter-rouge">mutual information</code> and direction of the sign of<code class="highlighter-rouge">spearman</code>.</p>
 
-<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">use_driver</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">driver_list</span><span class="p">[</span><span class="m">1</span><span class="p">]</span><span class="w">
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Use the first driver in the driver list as an example</span><span class="w">
+</span><span class="n">use_driver</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">driver_list</span><span class="p">[</span><span class="m">1</span><span class="p">]</span><span class="w">
+</span><span class="c1"># Define edges of the network</span><span class="w">
 </span><span class="n">edge_score</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.network</span><span class="o">$</span><span class="n">target_list</span><span class="p">[[</span><span class="n">use_driver</span><span class="p">]]</span><span class="o">$</span><span class="n">MI</span><span class="o">*</span><span class="nf">sign</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.network</span><span class="o">$</span><span class="n">target_list</span><span class="p">[[</span><span class="n">use_driver</span><span class="p">]]</span><span class="o">$</span><span class="n">spearman</span><span class="p">)</span><span class="w">
 </span><span class="nf">names</span><span class="p">(</span><span class="n">edge_score</span><span class="p">)</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.network</span><span class="o">$</span><span class="n">target_list</span><span class="p">[[</span><span class="n">use_driver</span><span class="p">]]</span><span class="o">$</span><span class="n">target</span><span class="w">
 </span></code></pre></div></div>
 
 <ul>
-  <li>User could set up the <code class="highlighter-rouge">n_layer</code> if the number of target genes is very large and adjust <code class="highlighter-rouge">label_cex</code> to get a better visualization. 
-By default, the <code class="highlighter-rouge">alphabetical_order=FALSE</code> and the edges are sorted by the edge score. If <code class="highlighter-rouge">alphabetical_order=TRUE</code>, the target genes are sorted by the alphabetical order from inner layer to outer.</li>
+  <li>For better visualization, users can adjust <code class="highlighter-rouge">n_layer</code> and <code class="highlighter-rouge">label_cex</code> parameters. <code class="highlighter-rouge">n_layer</code> controls number of circle layers to display. <code class="highlighter-rouge">label_cex</code> controls the text size of the gene names. By default, the <code class="highlighter-rouge">alphabetical_order=FALSE</code> and the edges are sorted by the edge score. If <code class="highlighter-rouge">alphabetical_order=TRUE</code>, the target genes are sorted alphabetically from inner layer to outer layer.</li>
 </ul>
 
-<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">draw.targetNet</span><span class="p">(</span><span class="n">source_label</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">use_driver</span><span class="p">,</span><span class="s1">'gene_label'</span><span class="p">],</span><span class="n">source_z</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">use_driver</span><span class="p">,</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'Z.%s_DA'</span><span class="p">,</span><span class="n">comp_name</span><span class="p">)],</span><span class="w">
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Draw sub-network structure of selected driver</span><span class="w">
+</span><span class="n">draw.targetNet</span><span class="p">(</span><span class="n">source_label</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">use_driver</span><span class="p">,</span><span class="s1">'gene_label'</span><span class="p">],</span><span class="n">source_z</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">use_driver</span><span class="p">,</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'Z.%s_DA'</span><span class="p">,</span><span class="n">comp_name</span><span class="p">)],</span><span class="w">
                </span><span class="n">edge_score</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">edge_score</span><span class="p">,</span><span class="n">pdf_file</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'%s/targetNet_out.pdf'</span><span class="p">,</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.PLOT</span><span class="p">),</span><span class="n">label_cex</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">0.4</span><span class="p">,</span><span class="n">n_layer</span><span class="o">=</span><span class="m">4</span><span class="p">,</span><span class="w"> </span><span class="n">alphabetical_order</span><span class="o">=</span><span class="kc">TRUE</span><span class="p">)</span><span class="w">
 </span></code></pre></div></div>
 
 <p><img src="targetNet_out.png" alt="targetNet_out" /></p>
 
 <ul>
-  <li>The arrow direction could be changed to ‘in’ (target to source) and set <code class="highlighter-rouge">alphabetical_order=FALSE</code>, the target genes are sorted by the edge score (positive to negative) from inner layer to outer.</li>
+  <li>Users can also change the arrow direction to “in” (from target to source), and set <code class="highlighter-rouge">alphabetical_order=FALSE</code>, so the target genes are sorted by the edge score (positive to negative) from inner layer to outer layer. As shown below.</li>
 </ul>
 
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">draw.targetNet</span><span class="p">(</span><span class="n">source_label</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">use_driver</span><span class="p">,</span><span class="s1">'gene_label'</span><span class="p">],</span><span class="n">source_z</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">use_driver</span><span class="p">,</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'Z.%s_DA'</span><span class="p">,</span><span class="n">comp_name</span><span class="p">)],</span><span class="w">
@@ -608,10 +612,11 @@ By default, the <code class="highlighter-rouge">alphabetical_order=FALSE</code> 
 <p><img src="targetNet_in.png" alt="targetNet_in" /></p>
 
 <ul>
-  <li>Similarly, <code class="highlighter-rouge">draw.targetNet.TWO()</code> could be used to display the network structure for two drivers. Here <code class="highlighter-rouge">n_layer</code> and <code class="highlighter-rouge">alphabetical_order</code> could also be used to modify the figure. Different from <code class="highlighter-rouge">draw.targetNet()</code>, if set <code class="highlighter-rouge">show_test=TRUE</code>, the intersected test between the target gene list of two drivers will be performed and displayed. The background gene list could be the all possible target genes in the network. User could also directly input the total number for calculation.</li>
+  <li><strong>To draw the sub-network structure of two selected drivers,</strong> users can call <code class="highlighter-rouge">draw.targetNet.TWO()</code>. Parameters like <code class="highlighter-rouge">n_layer</code> and <code class="highlighter-rouge">alphabetical_order</code> are the same as in <code class="highlighter-rouge">draw.targetNet()</code>. The overlapped target genes between these two drivers will be displayed in the middle as shown below.</li>
 </ul>
 
-<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># for two target</span><span class="w">
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Draw sub-network structure for two selected drivers</span><span class="w">
+</span><span class="c1"># Use the first two drivers in the driver list as an example</span><span class="w">
 </span><span class="n">use_driver2</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">driver_list</span><span class="p">[</span><span class="m">2</span><span class="p">]</span><span class="w">
 </span><span class="n">edge_score2</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.network</span><span class="o">$</span><span class="n">target_list</span><span class="p">[[</span><span class="n">use_driver2</span><span class="p">]]</span><span class="o">$</span><span class="n">MI</span><span class="o">*</span><span class="nf">sign</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.network</span><span class="o">$</span><span class="n">target_list</span><span class="p">[[</span><span class="n">use_driver2</span><span class="p">]]</span><span class="o">$</span><span class="n">spearman</span><span class="p">)</span><span class="w">
 </span><span class="nf">names</span><span class="p">(</span><span class="n">edge_score2</span><span class="p">)</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.network</span><span class="o">$</span><span class="n">target_list</span><span class="p">[[</span><span class="n">use_driver2</span><span class="p">]]</span><span class="o">$</span><span class="n">target</span><span class="w">
@@ -624,28 +629,28 @@ By default, the <code class="highlighter-rouge">alphabetical_order=FALSE</code> 
 
 <p><img src="targetNetTWO.png" alt="targetNetTWO" /></p>
 
-<p>The inner function of the test <code class="highlighter-rouge">test.targetNet.overlap()</code> could be directly called.</p>
+<p>To check the overlapped target genes of these two drivers, users can call <code class="highlighter-rouge">test.targetNet.overlap()</code>.</p>
 
-<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># or directly get the test result</span><span class="w">
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># To show the overlapped target genes from two selected drivers</span><span class="w">
 </span><span class="n">test.targetNet.overlap</span><span class="p">(</span><span class="n">source1_label</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">use_driver</span><span class="p">,</span><span class="s1">'gene_label'</span><span class="p">],</span><span class="n">source2_label</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">use_driver2</span><span class="p">,</span><span class="s1">'gene_label'</span><span class="p">],</span><span class="w">
                        </span><span class="n">target1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">names</span><span class="p">(</span><span class="n">edge_score</span><span class="p">),</span><span class="n">target2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">names</span><span class="p">(</span><span class="n">edge_score2</span><span class="p">),</span><span class="n">total_possible_target</span><span class="o">=</span><span class="n">use_genes</span><span class="p">)</span><span class="w">
 </span></code></pre></div></div>
 
-<h3 id="qii3-what-is-the-expressionactivity-for-this-selected-driver-in-samples-with-different-subtypes-">QII.3: What is the expression/activity for this selected driver in samples with different subtypes ?</h3>
+<h3 id="qii3-what-is-the-expressionactivity-of-this-selected-driver-across-subtypes-of-sample">QII.3: What is the expression/activity of this selected driver across subtypes of sample?</h3>
 
 <ul>
-  <li>For a specific driver, user could choose to display the activity and expression in different subtypes of the samples to check the level trend. Here, <code class="highlighter-rouge">draw.categoryValue()</code> could be used for this purpose. The sample to class vector could be prepared by <code class="highlighter-rouge">get_obs_label()</code>. 
-The sample class order and combination of sample classes could be modified in this function.</li>
+  <li><code class="highlighter-rouge">draw.categoryValue()</code> draws a scatter box plot to visualize one selected driver’s expression value and activity value across different phenotype subgroups of samples. Two side-by-side scatter box plots will be created. The left plot shows driver’s activity values in different phenotype subgroups, each point is a sample. The right plot shows driver’s expression value in different phenotype sub- groups, each point is a sample. To convert sample names to subgroups, one can call <code class="highlighter-rouge">get_obs_label()</code>. To modify the order of subgroups, one can set <code class="highlighter-rouge">class_order</code>. As shown in the figure below.</li>
 </ul>
 
-<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">use_obs_class</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">get_obs_label</span><span class="p">(</span><span class="n">phe_info</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">phe_info</span><span class="p">,</span><span class="s1">'subgroup'</span><span class="p">)</span><span class="w">
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Creates a vector of each sample’s selected phenotype descriptive information</span><span class="w">
+</span><span class="n">use_obs_class</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">get_obs_label</span><span class="p">(</span><span class="n">phe_info</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">phe_info</span><span class="p">,</span><span class="s1">'subgroup'</span><span class="p">)</span><span class="w">
 </span><span class="n">draw.categoryValue</span><span class="p">(</span><span class="n">ac_val</span><span class="o">=</span><span class="n">ac_mat</span><span class="p">[</span><span class="n">use_driver</span><span class="p">,],</span><span class="n">exp_val</span><span class="o">=</span><span class="n">exp_mat</span><span class="p">[</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">use_driver</span><span class="p">,</span><span class="s1">'originalID'</span><span class="p">],],</span><span class="n">use_obs_class</span><span class="o">=</span><span class="n">use_obs_class</span><span class="p">,</span><span class="w">
                    </span><span class="n">class_order</span><span class="o">=</span><span class="nf">c</span><span class="p">(</span><span class="s1">'WNT'</span><span class="p">,</span><span class="s1">'SHH'</span><span class="p">,</span><span class="s1">'G4'</span><span class="p">),</span><span class="n">class_srt</span><span class="o">=</span><span class="m">30</span><span class="p">,</span><span class="n">main_ac</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ms_tab</span><span class="p">[</span><span class="n">use_driver</span><span class="p">,</span><span class="s1">'gene_label'</span><span class="p">],</span><span class="n">main_exp</span><span class="o">=</span><span class="n">ms_tab</span><span class="p">[</span><span class="n">use_driver</span><span class="p">,</span><span class="s1">'geneSymbol'</span><span class="p">],</span><span class="w">
                    </span><span class="n">pdf_file</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'%s/categoryValue_demo1.pdf'</span><span class="p">,</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.PLOT</span><span class="p">))</span><span class="w">
 </span></code></pre></div></div>
 <p><img src="categoryValue_demo1.png" alt="categoryValue_demo1" /></p>
 
-<p>Try the below script to check what is different:</p>
+<p>To explore the handlers in <code class="highlighter-rouge">draw.categoryValue()</code>, please try the following scripts.</p>
 
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">draw.categoryValue</span><span class="p">(</span><span class="n">ac_val</span><span class="o">=</span><span class="n">ac_mat</span><span class="p">[</span><span class="n">use_driver</span><span class="p">,],</span><span class="n">exp_val</span><span class="o">=</span><span class="kc">NULL</span><span class="p">,</span><span class="n">use_obs_class</span><span class="o">=</span><span class="n">use_obs_class</span><span class="p">,</span><span class="n">class_order</span><span class="o">=</span><span class="nf">c</span><span class="p">(</span><span class="s1">'WNT'</span><span class="p">,</span><span class="s1">'SHH'</span><span class="p">,</span><span class="s1">'G4'</span><span class="p">),</span><span class="w">
                    </span><span class="n">pdf_file</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'%s/categoryValue_demo2.pdf'</span><span class="p">,</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.PLOT</span><span class="p">))</span><span class="w">
@@ -655,16 +660,18 @@ The sample class order and combination of sample classes could be modified in th
                    </span><span class="n">pdf_file</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'%s/categoryValue_demo3.pdf'</span><span class="p">,</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.PLOT</span><span class="p">))</span><span class="w">
 </span></code></pre></div></div>
 
-<h3 id="qii4-what-is-the-function-of-the-target-genes-for-this-selected-driver-">QII.4: What is the function of the target genes for this selected driver ?</h3>
+<h3 id="qii4-what-are-the-functions-of-the-target-genes-of-this-selected-driver-">QII.4: What are the functions of the target genes of this selected driver ?</h3>
 
 <ul>
-  <li>Similar as the process for top drivers, the target genes for a specific diver could also be used for functional enrichment analysis. 
-If the original ID is not gene symbol, <code class="highlighter-rouge">get_name_transfertab()</code> could be used for ID conversion.</li>
+  <li>Similar to the study of drivers, we can also study the functional enrichment for its target genes. First, please check the gene ID.
+If the original ID is not gene symbol, users can call <code class="highlighter-rouge">get_name_transfertab()</code> to convert ID.</li>
 </ul>
 
-<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">use_driver</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">driver_list</span><span class="p">[</span><span class="m">1</span><span class="p">]</span><span class="w">
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Use the first driver in the driver list as an example</span><span class="w">
+</span><span class="n">use_driver</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">driver_list</span><span class="p">[</span><span class="m">1</span><span class="p">]</span><span class="w">
 </span><span class="n">use_target_genes</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.network</span><span class="o">$</span><span class="n">target_list</span><span class="p">[[</span><span class="n">use_driver</span><span class="p">]]</span><span class="o">$</span><span class="n">target</span><span class="w">
 </span><span class="c1">#use_target_genes &lt;- get_name_transfertab(use_genes= use_target_genes,transfer_tab=transfer_tab,ignore_version=TRUE)	# optional</span><span class="w">
+</span><span class="c1"># Converts the original gene IDs into target gene IDs, with conversion table provided</span><span class="w">
 </span><span class="n">bg_list</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">get_name_transfertab</span><span class="p">(</span><span class="n">use_genes</span><span class="o">=</span><span class="w"> </span><span class="n">unique</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.network</span><span class="o">$</span><span class="n">network_dat</span><span class="o">$</span><span class="n">target</span><span class="p">),</span><span class="n">transfer_tab</span><span class="o">=</span><span class="n">transfer_tab</span><span class="p">,</span><span class="n">ignore_version</span><span class="o">=</span><span class="kc">TRUE</span><span class="p">)</span><span class="w">	
 </span><span class="n">res</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">funcEnrich.Fisher</span><span class="p">(</span><span class="n">input_list</span><span class="o">=</span><span class="w"> </span><span class="n">use_target_genes</span><span class="p">,</span><span class="n">bg_list</span><span class="o">=</span><span class="w"> </span><span class="n">bg_list</span><span class="p">,</span><span class="n">use_gs</span><span class="o">=</span><span class="nf">c</span><span class="p">(</span><span class="s1">'H'</span><span class="p">,</span><span class="s1">'CP:REACTOME'</span><span class="p">,</span><span class="s1">'BP'</span><span class="p">,</span><span class="s1">'CGP'</span><span class="p">,</span><span class="s1">'CP:KEGG'</span><span class="p">),</span><span class="w">
                            </span><span class="n">Pv_thre</span><span class="o">=</span><span class="m">0.1</span><span class="p">,</span><span class="n">Pv_adj</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'none'</span><span class="p">,</span><span class="n">min_gs_size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">30</span><span class="p">,</span><span class="w"> </span><span class="n">max_gs_size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">500</span><span class="p">)</span><span class="w">
@@ -675,30 +682,33 @@ If the original ID is not gene symbol, <code class="highlighter-rouge">get_name_
 
 <p><img src="funcEnrich_clusterBOTH_WBP11_SIG.png" alt="funcEnrich_clusterBOTH_WBP11_SIG" /></p>
 
-<h2 id="part-iii-further-analysis">Part III: further analysis</h2>
+<h2 id="part-iii-other-analyses-netbid2-can-do">Part III: Other analyses NetBID2 can do</h2>
 
-<h3 id="qiii1-what-are-the-activities-of-the-curated-gene-sets-in-all-samples-and-what-are-the-top-significantly-differed-gene-sets-">QIII.1: What are the activities of the curated gene sets in all samples and what are the top significantly differed gene sets ?</h3>
+<h3 id="qiii1-what-are-the-activities-of-the-curated-gene-sets-across-all-samples">QIII.1: What are the activities of the curated gene sets across all samples?</h3>
 
-<p>The study of drivers is to treat their target genes as a gene set (or regulon) and measure their activity values. Similarly, for the curated gene sets from public datasets, we could also calculate their activity values and do similar statistical testing.</p>
+<p>The target genes of a driver can be seen as a special “gene set”. We can use the same procedure to study the curated gene sets from the public datasets. Similar to the target-gene-study, we can calculate their activities and P-values.</p>
 
-<p>Firstly, the expression matrix with row names to gene symbols must be prepared.</p>
+<p>First, prepare the expression matrix. The row names must be gene symbols.</p>
 
-<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">db.preload</span><span class="p">(</span><span class="n">use_level</span><span class="o">=</span><span class="s1">'gene'</span><span class="p">,</span><span class="n">use_spe</span><span class="o">=</span><span class="s1">'human'</span><span class="p">,</span><span class="n">update</span><span class="o">=</span><span class="kc">FALSE</span><span class="p">)</span><span class="w">
-</span><span class="n">exp_mat</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">exprs</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">cal.eset</span><span class="p">)</span><span class="w"> </span><span class="c1">## expression,the rownames must be the originalID</span><span class="w">
-</span><span class="c1">## get expression matrix for the transfered gene name, if original is gene-based expression matrix, just use the exp_mat</span><span class="w">
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Preload database files into R workspace</span><span class="w">
+</span><span class="n">db.preload</span><span class="p">(</span><span class="n">use_level</span><span class="o">=</span><span class="s1">'gene'</span><span class="p">,</span><span class="n">use_spe</span><span class="o">=</span><span class="s1">'human'</span><span class="p">,</span><span class="n">update</span><span class="o">=</span><span class="kc">FALSE</span><span class="p">)</span><span class="w">
+</span><span class="c1"># Get the expression matrix, row names must be gene symbols</span><span class="w">
+</span><span class="n">exp_mat</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">exprs</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">cal.eset</span><span class="p">)</span><span class="w"> 
+</span><span class="c1"># If original is gene-based expression matrix, just use the exp_mat</span><span class="w">
 </span><span class="n">exp_mat_gene</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">exp_mat</span><span class="w">
 </span></code></pre></div></div>
 
-<p>Secondly, choose the gene sets for use, if user want to combine categories, <code class="highlighter-rouge">merge_gs()</code> could be used. Then, calculate the activity values for the gene sets across all samples by <code class="highlighter-rouge">cal.Activity.GS()</code>.</p>
+<p>Second, choose gene sets. If users want to combine the categories, please use <code class="highlighter-rouge">merge_gs()</code>.
+Then, use <code class="highlighter-rouge">cal.Activity.GS()</code> to calculate the activity values for the gene sets across all samples.</p>
 
-<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">## calculate activity for all genesets</span><span class="w">
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Calculate activity for all gene sets</span><span class="w">
 </span><span class="n">use_gs2gene</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">merge_gs</span><span class="p">(</span><span class="n">all_gs2gene</span><span class="o">=</span><span class="n">all_gs2gene</span><span class="p">,</span><span class="n">use_gs</span><span class="o">=</span><span class="nf">c</span><span class="p">(</span><span class="s1">'H'</span><span class="p">,</span><span class="s1">'CP:BIOCARTA'</span><span class="p">,</span><span class="s1">'CP:REACTOME'</span><span class="p">,</span><span class="s1">'CP:KEGG'</span><span class="p">,</span><span class="s1">'C5'</span><span class="p">))</span><span class="w">
 </span><span class="n">ac_gs</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">cal.Activity.GS</span><span class="p">(</span><span class="n">use_gs2gene</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">use_gs2gene</span><span class="p">,</span><span class="n">cal_mat</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">exp_mat_gene</span><span class="p">)</span><span class="w">
 </span></code></pre></div></div>
 
-<p>Thirdly, do statistical testing for the activity value of the gene sets by <code class="highlighter-rouge">getDE.BID.2G()</code> or <code class="highlighter-rouge">getDE.limma.2G()</code>.</p>
+<p>Third, perform statistical testing for the activity value of the gene sets. Please call <code class="highlighter-rouge">getDE.BID.2G()</code> or <code class="highlighter-rouge">getDE.limma.2G()</code>.</p>
 
-<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">## get DA</span><span class="w">
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Calculate DA</span><span class="w">
 </span><span class="n">phe_info</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">pData</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">cal.eset</span><span class="p">)</span><span class="w">
 </span><span class="n">G</span><span class="m">0</span><span class="w">  </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">rownames</span><span class="p">(</span><span class="n">phe_info</span><span class="p">)[</span><span class="n">which</span><span class="p">(</span><span class="n">phe_info</span><span class="o">$</span><span class="n">`subgroup`</span><span class="o">!=</span><span class="s1">'G4'</span><span class="p">)]</span><span class="w"> </span><span class="c1"># get sample list for G0</span><span class="w">
 </span><span class="n">G</span><span class="m">1</span><span class="w">  </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">rownames</span><span class="p">(</span><span class="n">phe_info</span><span class="p">)[</span><span class="n">which</span><span class="p">(</span><span class="n">phe_info</span><span class="o">$</span><span class="n">`subgroup`</span><span class="o">==</span><span class="s1">'G4'</span><span class="p">)]</span><span class="w"> </span><span class="c1"># get sample list for G1</span><span class="w">
@@ -706,10 +716,10 @@ If the original ID is not gene symbol, <code class="highlighter-rouge">get_name_
 </span></code></pre></div></div>
 
 <ul>
-  <li>Now, we could visualize the results, and the first plot will be the <code class="highlighter-rouge">draw.volcanoPlot()</code> and also <code class="highlighter-rouge">sig_gs</code> will be returned.</li>
+  <li>Draw a volcano plot to visualize the results. <code class="highlighter-rouge">draw.volcanoPlot()</code> will also return the significant gene sets to <code class="highlighter-rouge">sig_gs</code>.</li>
 </ul>
 
-<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">## draw vocalno plot for top sig-GS</span><span class="w">
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Draw vocalno plot for top significant gene sets</span><span class="w">
 </span><span class="n">sig_gs</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">draw.volcanoPlot</span><span class="p">(</span><span class="n">dat</span><span class="o">=</span><span class="w"> </span><span class="n">DA_gs_bid</span><span class="p">,</span><span class="n">label_col</span><span class="o">=</span><span class="s1">'ID'</span><span class="p">,</span><span class="n">logFC_col</span><span class="o">=</span><span class="s1">'logFC'</span><span class="p">,</span><span class="w">
                                </span><span class="n">Pv_col</span><span class="o">=</span><span class="s1">'P.Value'</span><span class="p">,</span><span class="n">logFC_thre</span><span class="o">=</span><span class="m">0.2</span><span class="p">,</span><span class="n">Pv_thre</span><span class="o">=</span><span class="m">1e-3</span><span class="p">,</span><span class="w">
                                </span><span class="n">main</span><span class="o">=</span><span class="s1">'Volcano Plot for gene sets'</span><span class="p">,</span><span class="n">show_label</span><span class="o">=</span><span class="kc">TRUE</span><span class="p">,</span><span class="n">label_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'distribute'</span><span class="p">,</span><span class="n">label_cex</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">0.5</span><span class="p">,</span><span class="w">
@@ -719,21 +729,20 @@ If the original ID is not gene symbol, <code class="highlighter-rouge">get_name_
 <p><img src="vocalno_GS_DA.png" alt="vocalno_GS_DA" /></p>
 
 <ul>
-  <li>Heatmap for the top significant gene sets.</li>
+  <li>Draw a heatmap for the top significant gene sets.</li>
 </ul>
 
-<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">## draw heatmap for top sig-GS</span><span class="w">
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Draw heatmap for top significant gene sets</span><span class="w">
 </span><span class="n">draw.heatmap</span><span class="p">(</span><span class="n">mat</span><span class="o">=</span><span class="n">ac_gs</span><span class="p">[</span><span class="n">sig_gs</span><span class="o">$</span><span class="n">ID</span><span class="p">,],</span><span class="n">pdf_file</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'%s/heatmap_GS.pdf'</span><span class="p">,</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.PLOT</span><span class="p">),</span><span class="n">scale</span><span class="o">=</span><span class="s1">'row'</span><span class="p">,</span><span class="w">
              </span><span class="n">phenotype_info</span><span class="o">=</span><span class="n">phe_info</span><span class="p">,</span><span class="n">use_phe</span><span class="o">=</span><span class="nf">c</span><span class="p">(</span><span class="s1">'gender'</span><span class="p">,</span><span class="s1">'subgroup'</span><span class="p">))</span><span class="w">
 </span></code></pre></div></div>
 
 <ul>
-  <li>NetBID style GSEA plot could be drawn by <code class="highlighter-rouge">draw.GSEA.NetBID.GS()</code>. Different from <code class="highlighter-rouge">draw.GSEA.NetBID()</code>, the genes in the gene sets could not be divided into positively-regulated/negatively-regulated. If with some special design (e.g combine two opposite function gene sets), try to use <code class="highlighter-rouge">draw.GSEA.NetBID()</code>.</li>
+  <li>NetBID2 style GSEA plot of gene sets can be plotted by <code class="highlighter-rouge">draw.GSEA.NetBID.GS()</code>. Different from <code class="highlighter-rouge">draw.GSEA.NetBID()</code>, the genes in the gene sets will not be divided into positively-regulated/negatively-regulated groups.</li>
 </ul>
 
-<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">## draw GSEA plot for top sig-GS</span><span class="w">
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Draw GSEA plot for top significant gene sets</span><span class="w">
 </span><span class="n">DE</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">analysis.par</span><span class="o">$</span><span class="n">DE</span><span class="p">[[</span><span class="n">comp_name</span><span class="p">]]</span><span class="w">
-</span><span class="c1">#</span><span class="w">
 </span><span class="n">draw.GSEA.NetBID.GS</span><span class="p">(</span><span class="n">DE</span><span class="o">=</span><span class="n">DE</span><span class="p">,</span><span class="n">name_col</span><span class="o">=</span><span class="s1">'ID'</span><span class="p">,</span><span class="n">profile_col</span><span class="o">=</span><span class="s1">'t'</span><span class="p">,</span><span class="n">profile_trend</span><span class="o">=</span><span class="s1">'pos2neg'</span><span class="p">,</span><span class="w">
                  </span><span class="n">sig_gs_list</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sig_gs</span><span class="o">$</span><span class="n">ID</span><span class="p">,</span><span class="w">
                  </span><span class="n">gs_DA_Z</span><span class="o">=</span><span class="w"> </span><span class="n">DA_gs_bid</span><span class="p">[</span><span class="n">sig_gs</span><span class="o">$</span><span class="n">ID</span><span class="p">,</span><span class="s1">'Z-statistics'</span><span class="p">],</span><span class="w">
@@ -747,7 +756,7 @@ If the original ID is not gene symbol, <code class="highlighter-rouge">get_name_
 <p><img src="NetBID_GSEA_GS_demo1.png" alt="NetBID_GSEA_GS_demo1" /></p>
 
 <ul>
-  <li>The <code class="highlighter-rouge">target_col</code> could be chosen from <code class="highlighter-rouge">RdBu</code> and <code class="highlighter-rouge">black</code>.</li>
+  <li>The <code class="highlighter-rouge">target_col</code> has two options, <code class="highlighter-rouge">RdBu</code> and <code class="highlighter-rouge">black</code>. The figure below is showing when <code class="highlighter-rouge">target_col = 'black'</code>.</li>
 </ul>
 
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">draw.GSEA.NetBID.GS</span><span class="p">(</span><span class="n">DE</span><span class="o">=</span><span class="n">DE</span><span class="p">,</span><span class="n">name_col</span><span class="o">=</span><span class="s1">'ID'</span><span class="p">,</span><span class="n">profile_col</span><span class="o">=</span><span class="s1">'t'</span><span class="p">,</span><span class="n">profile_trend</span><span class="o">=</span><span class="s1">'pos2neg'</span><span class="p">,</span><span class="w">
@@ -763,10 +772,10 @@ If the original ID is not gene symbol, <code class="highlighter-rouge">get_name_
 <p><img src="NetBID_GSEA_GS_demo2.png" alt="NetBID_GSEA_GS_demo2" /></p>
 
 <ul>
-  <li>For a specific gene set, <code class="highlighter-rouge">draw.GSEA()</code> could be used for display the genes’ significance in the DE profile.</li>
+  <li>For a specific gene set, <code class="highlighter-rouge">draw.GSEA()</code> can be used to display the significance of genes from the DE profile.</li>
 </ul>
 
-<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">## draw GSEA plot for each sig-GS</span><span class="w">
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Draw GSEA plot for one gene set</span><span class="w">
 </span><span class="n">DE_profile</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">DE</span><span class="o">$</span><span class="n">`Z-statistics`</span><span class="p">;</span><span class="w"> </span><span class="nf">names</span><span class="p">(</span><span class="n">DE_profile</span><span class="p">)</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">rownames</span><span class="p">(</span><span class="n">DE</span><span class="p">)</span><span class="w">
 </span><span class="n">use_target_genes</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">rownames</span><span class="p">(</span><span class="n">DE</span><span class="p">)[</span><span class="n">which</span><span class="p">(</span><span class="n">DE</span><span class="o">$</span><span class="n">ID</span><span class="w"> </span><span class="o">%in%</span><span class="w"> </span><span class="n">use_gs2gene</span><span class="p">[[</span><span class="n">sig_gs</span><span class="o">$</span><span class="n">ID</span><span class="p">[</span><span class="m">1</span><span class="p">]]])]</span><span class="w">
 </span><span class="n">use_gs</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">sig_gs</span><span class="o">$</span><span class="n">ID</span><span class="p">[</span><span class="m">1</span><span class="p">]</span><span class="w">
@@ -780,10 +789,10 @@ If the original ID is not gene symbol, <code class="highlighter-rouge">get_name_
 <p><img src="GSEA_GS_each.png" alt="GSEA_GS_each" /></p>
 
 <ul>
-  <li>For a specific gene set, <code class="highlighter-rouge">draw.categoryValue()</code> could be used for display the activity pattern across all samples.</li>
+  <li>For a specific gene set, <code class="highlighter-rouge">draw.categoryValue()</code> can be used to display the activity pattern across all samples.</li>
 </ul>
 
-<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">## draw category plot for each sig-GS</span><span class="w">
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Draw category plot for one gene set</span><span class="w">
 </span><span class="n">use_obs_class</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">get_obs_label</span><span class="p">(</span><span class="n">phe_info</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">phe_info</span><span class="p">,</span><span class="s1">'subgroup'</span><span class="p">)</span><span class="w">
 </span><span class="n">draw.categoryValue</span><span class="p">(</span><span class="n">ac_val</span><span class="o">=</span><span class="n">ac_gs</span><span class="p">[</span><span class="n">use_gs</span><span class="p">,],</span><span class="n">use_obs_class</span><span class="o">=</span><span class="n">use_obs_class</span><span class="p">,</span><span class="w">
                    </span><span class="n">class_order</span><span class="o">=</span><span class="nf">c</span><span class="p">(</span><span class="s1">'WNT'</span><span class="p">,</span><span class="s1">'SHH'</span><span class="p">,</span><span class="s1">'G4'</span><span class="p">),</span><span class="n">class_srt</span><span class="o">=</span><span class="m">30</span><span class="p">,</span><span class="n">pdf_file</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'%s/categoryValue_GS_demo1.pdf'</span><span class="p">,</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.PLOT</span><span class="p">),</span><span class="w">
@@ -792,12 +801,11 @@ If the original ID is not gene symbol, <code class="highlighter-rouge">get_name_
 
 <p><img src="categoryValue_GS_demo1.png" alt="categoryValue_GS_demo1" /></p>
 
-<h3 id="qiii2-how-to-find-drivers-with-significantly-overlapped-target-genes-">QIII.2: How to find drivers with significantly overlapped target genes ?</h3>
+<h3 id="qiii2-how-to-find-drivers-share-significantly-overlapped-target-genes-">QIII.2: How to find drivers share significantly overlapped target genes ?</h3>
 
 <ul>
-  <li>Sometimes, user want to check the target genes’ intersection between different drivers. 
-Here, <code class="highlighter-rouge">draw.bubblePlot()</code> could be used for this purpose by some modification. 
-User need to prepare a geneset to gene list and a fake transfer table.</li>
+  <li>To check the target gene overlapping among drivers, users can use <code class="highlighter-rouge">draw.bubblePlot()</code> in a different way.
+Just change the input into ome gene list (from gene set) and a fake conversion table.</li>
 </ul>
 
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">gs2gene_target</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.network</span><span class="o">$</span><span class="n">target_list</span><span class="p">[</span><span class="n">driver_list</span><span class="p">]</span><span class="w">
@@ -818,12 +826,13 @@ User need to prepare a geneset to gene list and a fake transfer table.</li>
 <p><img src="bubblePlot_overlap.png" alt="bubblePlot_overlap" /></p>
 
 <hr />
-<h3 id="how-to-modify-the-figures-by-adjusting-the-paramters-in-the-draw-functions-"><em>How to modify the figures by adjusting the paramters in the draw. functions ?</em></h3>
+<h3 id="how-to-modify-the-figure-size-created-by-draw-functions-"><em>How to modify the figure size created by <code class="highlighter-rouge">draw.</code> functions ?</em></h3>
 
-<p>NetBID2 has 14 functions start with <code class="highlighter-rouge">draw.*</code>, those functions all have one option <code class="highlighter-rouge">pdf_file=</code>.</p>
+<p>NetBID2 has 14 functions start with <code class="highlighter-rouge">draw.</code>. These functions all have one option <code class="highlighter-rouge">pdf_file=</code>.</p>
 <ul>
-  <li>If set this not NULL, the function will directly output the plotting results into a pdf file with adjusted figure size. User could choose to modify all <code class="highlighter-rouge">cex</code> related options to adjust the text size and the pdf size will be automatically adjusted by selection.</li>
-  <li>If set <code class="highlighter-rouge">pdf_file=NULL</code>, the figures will be displayed interactively and user could choose to add <code class="highlighter-rouge">pdf()</code> before calling the function and <code class="highlighter-rouge">dev.off()</code> after, or modify the figure size in the console and save into files.</li>
+  <li>If it is set with a file path, the function will automatically save the plot as a PDF file without adjusting the figure size.</li>
+  <li>If it is set to NULL, the figure will show in a new window without saving to PDF. But user can add <code class="highlighter-rouge">pdf()</code> before the <code class="highlighter-rouge">draw.</code> function, and add <code class="highlighter-rouge">dev.off()</code> after the <code class="highlighter-rouge">draw.</code> function to save it manually. In this way, one can customize the figure size. For details, please check <code class="highlighter-rouge">?pdf</code>.</li>
+  <li><code class="highlighter-rouge">cex</code> option in all the <code class="highlighter-rouge">draw.</code> functions are used to adjust the text size, and the PDF figure size will be adjusted based on that.</li>
 </ul>
 
 <hr />

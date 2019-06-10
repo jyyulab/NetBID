@@ -8,393 +8,427 @@ permalink: /docs/driver_estimation
 
 # Driver Estimation
 
-The purpose for this part: 
+The purpose of this part: 
 
-**estimate potential drivers in a biological process and generate a master table**.
+**retrieve potential drivers for interested phenotype and generate a master table for drivers**.
 
-The full demo script for this part could be found in [pipeline_analysis_demo1.R](https://github.com/jyyulab/NetBID-dev/blob/master/demo_scripts/pipeline_analysis_demo1.R).
+The complete demo script for network construction can be found here, 
+[pipeline_analysis_demo1.R](https://github.com/jyyulab/NetBID-dev/blob/master/demo_scripts/pipeline_analysis_demo1.R).
 
 ----------
 ## Quick Navigation for this page
 
-- [Step0: preparations](#step0-preparations)
-- [Step1: load in gene expression dataset for analysis (exp-load,exp-cluster,exp-QC)](#step1-load-in-gene-expression-datasets-for-analysis-exp-load-exp-cluste-exp-qc)
-   - [Q&A: What to do if the ID type is different between the network construction dataset and analysis dataset ?](#what-to-do-if-the-id-type-is-different-between-the-network-construction-dataset-and-analysis-dataset-)
-- [Step2: read in network files and activity calculation (act-get)](#step2-read-in-network-files-and-activity-calculation-act-get)
+- [Step 0: Preparations](#step-0-preparations)
+- [Step 1: Load in the expression dataset for analysis (exp-load, exp-cluster, exp-QC)](#step-1-load-in-the-expression-dataset-for-analysis-exp-load-exp-cluster-exp-qc)
+   - [Q&A: What to do if the ID types from network-construction dataset and analysis dataset are different?](#what-to-do-if-the-id-types-from-network-construction-dataset-and-analysis-dataset-are-different)
+- [Step 2: Read in network files and calcualte driver activity (act-get)](#step-2-read-in-network-files-and-calcualte-driver-activity-act-get)
     - [Q&A: Why study driver’s activity ?](#why-study-drivers-activity-) 
-- [Step3: get differentiated expression/differentiated activity for all possible drivers (act-DA)](#step3-get-differentiated-expressiondifferentiated-activity-for-all-possible-drivers-act-da)
-- [Step4: generate master table (ms-tab)](#step4-generate-master-table-ms-tab)
-    - [Q&A: How to read and use the master table ?](#how-to-read-and-use-the-master-table-)
+- [Step 3: Get differential expression (DE) / differential activity (DA) for drivers (act-DA)](#step-3-get-differential-expression-de--differential-activity-da-for-drivers-act-da)
+- [Step 4: Generate a master table for drivers (ms-tab)](#step-4-generate-a-master-table-for-drivers-ms-tab)
+    - [Q&A: How to interpret and use the master table ?](#how-to-interpret-and-use-the-master-table-)
    
 ---------
 
-## Step0: preparations
+## Step 0: Preparations
+**Purpose: create an organized working directory for the driver estimation step in NetBID2 analysis.**
 
-Library the installed NetBID2. 
+Make sure you have NetBID2 package. 
 
 ```R
-# library the package
 library(NetBID2)
 ```
 
-This tutorial is based on the suggested pipeline design in NetBID2, and before start, some parameters need to be set.
+**First, retrieve a constructed network for driver analysis.**
+If user followed the [Network construction](../docs/network_construction) tutorial, 
+the path of the network project `network.dir` should have been set. For details, please check [Network construction: Step 0](../docs/network_construction#step-0-preparations).
+The `network.project.name` is used to distinguish different network construction jobs when using `SJAracne.prepare()`, under the main path of `network.dir`.
+By specifying `network.dir` and `network.project.name`, user should be able to retrieve the target network constructed by network construction part in NetBID2 and SJARACNe.
 
-First, user need to know which network to use. If followed the tutorial in the [Network construction](../docs/network_construction) part, user could specify the `network.dir` and `network.project.name`.
+For the online tutorial, we have already prepared the demo dataset's network constructed by SJARACNe. So users don't need to run SJARACNe for the demo, and can direclty proceed to the following pipeline.
 
 ```R
 network.dir <- sprintf('%s/demo1/network/',system.file(package = "NetBID2")) # use demo network in the package
-network.project.name <- 'project_2019-02-14' #
+network.project.name <- 'project_2019-02-14' 
 ```
+**Next, create directories and folders to save and organize your analysis results.**
 
-The `network.dir` is the path for the network project, i.e the `$project_main_dir/$project_name` when calling the `NetBID.network.dir.create()` function. 
-The `network.project.name` must be the project name whening calling the `SJAracne.prepare()` function. 
-Under the `network.dir` multiple `network.project.name` is allowed, and by specifying these two paramters simultaneously, unique network files (TF, SIG networks will be generated separately) could be obtained. 
-
-In the above scripts, to ensure the testing of demo scripts in this part independently, user could use the demo network in the NetBID2 package. 
-
-Next, we need to set up a main directory for saving the analysis results for this part, `project_main_dir`. User could choose to use the same directory as in the network construction. 
-And the project name `project_name` should also be settled. Similarly, the main directory could have multiple projects under the path, separeted by the `project_name` as the name for the sub-directory. 
-So user could use the same main directory for another project. But project related files with the same `project_main_dir` and `project_name` will be covered. 
-So, in the script below, user could add a time tag in the `project_name` to avoid this by accident. 
+We have designed a function `NetBID.analysis.dir.create()` to handle the working directories, so users can have a better data organization. Similar to the one in network construction.
+This function needs users to define the main working directory `project_main_dir` and the project’s name `project_name`. 
+To prevent previous project with the same `project_main_dir` and `project_name` from being rewrite, it is highly suggested to add a time tag to your `project_name`.
 
 ```R
-#set up paramters
-project_main_dir <- 'test/' ### user defined main directory for the project, one main directory could have multiple projects, separeted by project name
-current_date <- format(Sys.time(), "%Y-%m-%d") ## current date for project running, suggested to add the time tag
-project_name <- sprintf('driver_%s',current_date) ## project name for the project
+# Define main working directory and project name
+project_main_dir <- 'test/' # user defined main directory for the project, one main directory could
+current_date <- format(Sys.time(), "%Y-%m-%d") # optional, if user like to add current date to name the project folder
+project_name <- sprintf('driver_%s',current_date) # project name for the project folders under main directory
 ```
 
-Once decided the `network.dir`, `network.project.name`, `project_main_dir` and `project_name`, user could run `NetBID.analysis.dir.create()` to generate the sub-directories for the working directory, including QC/ to save QC related files, DATA/ to save RData and PLOT/ to save the visulization plots in the [Advanced analysis](../docs/advanced_analysis) part. 
-Besides, a global list variable `analysis.par` will be returned by the function. 
-Attention, if the current environment already has this variable, the function will do nothing, report a warning message and return the original `analysis.par`.  
+`NetBID.analysis.dir.create()` creates a main working directory with a subdirectory of the project. It also automatically creates three subfolders (QC, DATA and PLOT) within the project folder. QC/, storing Quality Control related plots; DATA/, saving data in RData format; PLOT/, storing output plots. 
+It also returns a list object, here named `analysis.par` with directory information wrapped inside. 
+This list is an ESSENTIAL variable for driver estimation step, all the important intermediate data generated later will be wrapped inside.
 
 ```R
-## analysis.par is very essential in the analysis, if the environment already has this parameter, strongly suggest to delete it first
-analysis.par  <- NetBID.analysis.dir.create(project_main_dir=project_main_dir, prject_name=project_name,
+# Create a hierarchcial working directory and return a list contains the hierarchcial working directory information
+# This list object (analysis.par) is an ESSENTIAL variable in driver estimation pipeline
+analysis.par  <- NetBID.analysis.dir.create(project_main_dir=project_main_dir, project_name=project_name,
                                             network_dir=network.dir, network_project_name=network.project.name)
 ```
 
-## Step1: load in gene expression dataset for analysis (exp-load,exp-cluster,exp-QC)
+## Step 1: Load in the expression dataset for analysis (exp-load, exp-cluster, exp-QC)
+**Purpose: load in the expression dataset for driver estimation analysis step.**
 
-Here, the analysis expression dataset need to be loaded for analysis. For demo, we used the same dataset for network construction and analysis. 
-If so, the expression dataset has already been processed by QC steps, just load from the RData in the `network.par$net.eset` and save it to `analysis.par$cal.eset`. 
+For driver estimation, we will need an expression dataset containing the interested phenotype with proper control samples. Compared with the dataset used for network construction, there is no strong requirement for large sample size. User could choose to use the same dataset in network construction for this part but not necessary. For demo, we choose to use the same dataset here. 
+
+If user choose to use the same dataset, no pre-processing of the dataset is required, since we saved the expression dataset after quality control as RData from network construction part in NetBID2, we can load it back directly. Users need to assign `network.par$net.eset` to `analysis.par$cal.eset`, cause for driver estimation step, the ESSENTIAL variable is `analysis.par`.
 
 ```R
-# if use same expression datasets as in the network construction, directly do the followings:
-load(sprintf('%s/DATA/network.par.Step.exp-QC.RData',network.dir)) ## RData from network construction
+# If use the same expression dataset as in the network construction, just reload it directly
+load(sprintf('%s/DATA/network.par.Step.exp-QC.RData',network.dir)) # RData saved after QC in the network construction step
 analysis.par$cal.eset <- network.par$net.eset
 ```
 
-However, in most of the cases, the datasets are not the same. User need to follow the similar steps in [Network construction](../docs/network_construction) for expression dataset loading, QC and sample cluster checking.
+If user choose to use a different dataset, please complete the first three steps in [Network construction](../docs/network_construction) first to process the dataset before further analysis.
 
-Save `analysis.par` into the RData file and give the step name to it, e.g `exp-QC`. 
-The RData could be found in `analysis.par$out.dir.DATA/analysis.par.Step.{exp-QC}.RData`.
+For persistent storage of data, and prevent the re-run of all previous steps. Users can checkout and save `analysis.par` as RData for this part.
+The function `NetBID.saveRData()` provide easier pipeline step checkout and reference. 
+Giving pipeline step name to `step`, the `analysis.par` will be saved with step name as `analysis.par$out.dir.DATA/analysis.par.Step.{exp-QC}.RData`.
 
 ```R
+# Save Step 1 network.par as RData
 NetBID.saveRData(analysis.par=analysis.par,step='exp-QC')
 ```
 
 ----------
-### *What to do if the ID type is different between the network construction dataset and analysis dataset ?*
+### *What to do if the ID types from network-construction dataset and analysis dataset are different?*
 
-- It is strongly recommended that **the main ID should be the ID type in the network construction dataset !**
+- **It is highly suggested to use the ID type from network-construction dataset as the main ID type.**
 
-- The purpose of NetBID2 is to infer potential drivers in a biological process. 
-The driver is defined as the source node in the network and its activity is calculated based on the network structure (its target nodes). 
-If one gene does not exist in the pre-generated network, it will not be used in the following analysis. 
-On the contrary, if one driver does not exist in the analyis expression dataset, it can still has its activity and could be used in the following analysis.
+- The purpose of NetBID2 is to find potential drivers in a biological process of interest based on the data-driven gene regulatory network.  Each drivers' activity is evaluated based on the network structure (its directly targeted genes). If a driver doesn't exist in the pre-generated network, it will not be used in activity calculation. On the contrary, if a driver doesn't exist in the analysis dataset, it can still have its activity been calculated (if its target genes' expression values are available).
 
-- So, we strongly recommend to align the ID type from the expression dataset to the network construction dataset by using `update_eset.feature()` and ID transfer table could be obtained from GPL files or use `get_IDtransfer()` or `get_IDtransfer_betweenSpecies()`. 
+- We strongly recommend to align the ID type from the analysis dataset to the network-construction dataset using `update_eset.feature()`. The ID conversion table can be obtained from GPL files or `get_IDtransfer()` and `get_IDtransfer_betweenSpecies()`. 
 
-- The most complicated condition is that the level of network construction ID type and the analysis expression dataset is different (e.g transcript level Vs. gene level). `update_eset.feature()` could deal with such conditions by setting the `distribute_method` and `merge_method`. But be careful by doing so and try to avoid such condition !
+- The most complicated situation is, the levels of network-construction ID type and the analysis expression dataset are different (e.g. transcript level vs. gene level).
+NetBID2 provides `update_eset.feature()` to solve this problem, by assigning `distribute_method` and `merge_method` parameters.
 
 ----------
 
-## Step2: read in network files and activity calculation (act-get)
+## Step 2: Read in network files and calcualte driver activity (act-get)
 
-Before start, load the RData from the previous step if user want to re-run the following steps or re-open the R session. 
-Remember to set the temporary `analysis.par` if re-open the R session and `analysis.par$out.dir.DATA` will be used to find the correct RData file. 
-No need to run this if continue working from the previous step. 
+Please skip the following line if you didn't close R session after completed Step 1.
+
+Don't skip, if you have checked out and closed R session after completed the Step 1. Before start Step 2, please reload `analysis.par` RData from Step 1.
+`NetBID.loadRData()` reloads RData saved by `NetBID.saveRData()`. It prevents user from repeating former pipeline steps.
+If the re-opened R session doesn't have `analysis.par` in the environment, please comment off the first two command lines. It will create a temporary `analysis.par`
+with path of the saved Step 1 RData, `analysis.par$out.dir.DATA`. The path `test//driver_2019-05-06//DATA/` here is just an example, 
+users need to give their own path used to save `analysis.par` RData from Step 1.
 
 ```R
-## load from RData
+# Reload network.par RData from Step 1
 #analysis.par <- list()
 #analysis.par$out.dir.DATA <- 'test//driver_2019-05-06//DATA/'
 NetBID.loadRData(analysis.par=analysis.par,step='exp-QC')
 ```
 
-Firstly, get the network generated by [SJAracne](https://github.com/jyyulab/SJARACNe). 
-If followed the pipeline, the file path will be `analysis.par$tf.network.file` and `analysis.par$sig.network.file`.
-Use `get.SJAracne.network()` to read in the network information. If not followed the pipeline, it is also working by directly input the file path here.
+**Firstly, get the network constructed by [SJAracne](https://github.com/jyyulab/SJARACNe).** If one followed the pipeline, the file path should be `analysis.par$tf.network.file` and `analysis.par$sig.network.file`.
+Use `get.SJAracne.network()` to read in the network information. 
+If one didn't follow the pipeline, just pass the directory of network to `get.SJAracne.network()`.
 
 ```R
-# get network info ! three list(network_dat, target_list, igraph_obj)
 analysis.par$tf.network  <- get.SJAracne.network(network_file=analysis.par$tf.network.file)
 analysis.par$sig.network <- get.SJAracne.network(network_file=analysis.par$sig.network.file)
 ```
 
-This function aims to read in network files generated by SJAracne and save the network information into three lists, `network_dat` is a data.frame to save all the information in the network file; `target_list` is a list for containing the target genes' information for the drivers. The names for the list is the driver name and each object in the list is a data.frame to save the target genes. `igraph_obj` is an igraph object to save the network, it is a directed, weighted network. The function will set two edge attributes to the `igraph_obj`, `weight` is the mutual information (MI) values and sign is the `sign` for the spearman value to indicate positive regulation (1) or negative regulation (-1).
+**More about `get.SJAracne.network()` and related function.** It reads SJARACNe network construction result and returns a list object contains three elements, `network_data`, `target_list` and `igraph_obj`. `network_dat` is a data.frame, contains all the information of the network SJARACNe constructed. `target_list` is a driver-to-target list object. Please check details in `get_net2target_list()`. `igraph_obj` is an igraph object used to save this directed and weighted network. Each edge of the network has two attributes, weight and sign. Weight is the "MI (mutual information)" value and sign is the sign of the spearman correlation coefficient (1, positive regulation; -1, negative regulation). To updata the network dataset, user can call `update_SJAracne.network()`. It updates the network object created by `get.SJAracne.network`, using constraints like statistical thresholds and interested gene list.
 
-The network dataset could be updated by using `update_SJAracne.network()`. 
-This function allows user to filter drivers or to add drivers without edges by setting `all_possible_drivers`. Similar for targets by `all_possible_targets`.
-Statistical filteration is also allowed by setting `min_MI`, `max_p.value`, `min_spearman_value`, `min_pearson_value` and the attribute of the network by setting `directed` and `weighted`.
-
-Generate an html QC report file for the network file with the `igraph_obj`.
+**Generate an HTML QC report for the constructed network, using `igraph_obj`.**
 
 ```R
 draw.network.QC(analysis.par$tf.network$igraph_obj,outdir=analysis.par$out.dir.QC,prefix='TF_net_')
 draw.network.QC(analysis.par$sig.network$igraph_obj,outdir=analysis.par$out.dir.QC,prefix='SIG_net_')
 ```
 
-The QC report files are generated for [TF network](TF_net_netQC.html) and [SIG network](SIG_net_netQC.html). 
-Basic statistics including `size`, `diameter` and several kinds of centrality will be calculated. 
-Scale free distrbution will be checked as well. 
+Two QC reports have been created. One for the transcription factor [TF network](TF_net_netQC.html), the other one is for signaling factor [SIG network](SIG_net_netQC.html). 
 
-Secondly, merge these two networks by `merge_TF_SIG.network()`. User could choose to merge the network first by `merge_TF_SIG.network()` and calculate driver activity based on the merged network or calculate the activity separately for TF and SIG network first and merge the activity results later by `merge_TF_SIG.AC()`. Both strategy will get the same final results. Drivers in the `analysis.par$merge.network` will have suffix of '_TF' and '_SIG' to indicate the driver type. One driver may have both '_TF' and '_SIG', but sometimes may have slightly different following results due to the network source. 
+**- What information can you get from the HTML QC report of network?**
+  - A table for network. It shows some basic statistics to characterize the target network, including size, diameter and centrality etc.
+  - A table for drivers. It shows detailed statistics for all drivers in the network.
+  - A density over histogram to show the distribution of the degree of nodes.
+  - A scatter plot to check if the network is scale-free.
+
+**Second, merge TF-network and SIG-network.**
+There are two ways to merge the networks. (1) Merge the networks first using `merge_TF_SIF.network()`, then calculate driver's activity value. (2) Calculate the driver's activity value in both TF-network and SIG-network, then merge them together using `merge_TF_SIG.AC()`. Both ways give the same result. 
+Drivers in the `analysis.par$merge.network` will have suffix of '_TF' and '_SIG' to distinguish the type of the driver. It is possible to see a driver with both '_TF' and '_SIG'.
 
 ```R
-# merge network first
+# Merge network first
 analysis.par$merge.network <- merge_TF_SIG.network(TF_network=analysis.par$tf.network,SIG_network=analysis.par$sig.network)
 ```
 
-Thirdly, get the activity matrix for all possible drivers by `cal.Activity()`. Activity will be used to estimate the driver's performance in a biological process, beside the expression level. 
-Basic idea to get driver's activity is to estimate the cumulative effect on its targets. 
-The summarization strategy could be 'mean', 'weighted mean', 'maxmean' and 'absmean', in which the weighted in the weighted mean is the MI (mutual information) value * sign of correlation (use the spearman correlation sign). If set `std=TRUE`, the expression matrix will be Z-transformed before calculating the activity. Higher expression of its positively regulated genes and lower expression of its negatively regulated genes indicate higher activity for this driver in the sample (if set 'weighted mean' as the calculation strategy). 
+**Third, get the activity matrix for all possible drivers using `cal.Activity()`.** 
+Driver's activity value quantifies its influence in a biological process. It is evaluated from the driver's accumulative effects to its targets.
+The evaluation strategies are "mean"", "weighted mean", "maxmean" and "absmean". "Weighted mean" is the MI (mutual information) value with the sign of the spearman correlation. 
+For example, if users choose "weighted mean" to calcualte the activity of driver. The higher expression value of its positively-regulated genes and the lower expression value of its negatively-regulated genes, the higher activity value of that driver will be.
+If user would like to perform Z-transformation to the expression matrix before calculating the activity values, he can set `std=TRUE`.
 
 ```R
-# get activity matrix
+# Get activity matrix
 ac_mat <- cal.Activity(target_list=analysis.par$merge.network$target_list,cal_mat=exprs(analysis.par$cal.eset),es.method='weightedmean')
 ```
-
-Consider that the activity matrix is similar as the expression matrix that each row represents a driver with each column a sample. The value in the matrix is the activity level for the driver in the corresponding sample. Thus, we will also use the eSet class to save the data information. The phenotype information for the activity matrix is the same as for the analysis expression dataset. 
+Now, we have an activity matrix `ac_mat` for drivers. Rows are drivers, columns are samples. 
+Due to the similar way of data display, and same phenotype information sharing, we can wrap the activity matrix into the ExpressionSet class object, just like expression matrix.
 
 ```R
+# Create eset using activity matrix
 analysis.par$merge.ac.eset <- generate.eset(exp_mat=ac_mat,phenotype_info=pData(analysis.par$cal.eset)[colnames(ac_mat),],
                                             feature_info=NULL,annotation_info='activity in net-dataset')
 ```
 
-Finally, use `draw.eset.QC()` to get the QC report for the `analysis.par$merge.ac.eset`. Check [QC for AC](AC_QC.html). 
-All functions related with eSet class manipulation are also applicable for `analysis.par$merge.ac.eset`. 
+**Fourth, create QC report for the activity matrix.**
+Use `draw.eset.QC()` to create the HTML QC report [QC for AC](AC_QC.html) of `analysis.par$merge.ac.eset`. 
 
 ```R
-# QC plots
+# QC plot for activity eset
 draw.eset.QC(analysis.par$merge.ac.eset,outdir=analysis.par$out.dir.QC,intgroup=NULL,do.logtransform=FALSE,prefix='AC_')
 ```
 
-Save `analysis.par` to the RData file by `NetBID.saveRData()`. 
+**Last, save `analysis.par`.**
+For persistent storage of data, and prevent the re-run of all previous steps. Users can checkout now and save `analysis.par` as RData for this part.
 
 ```R
-# save to RData
+# Save Step 2 analysis.par as RData
 NetBID.saveRData(analysis.par=analysis.par,step='act-get')
 ```
 
 ----------
 ### *Why study driver's activity ?*
 
-- Drivers, such as transcription factors (TF) bind to the enhancer or promoter regions of the target genes and regulate their expression level. Once the TF has been synthesized, there are still many steps between mRNA translation of a TF and the actual transcriptional regulation of target genes. And the activity will be controlled by lots of following processes, such as: nuclear localization (need to be directed into nucleus), activation through signal-sensing domain (e.g ligand binding or post-translational modification: methylated, ubiquinated or phosphorylated,  phosphorylations are often necessary for dimerization and binding to the target gene’s promoter), access to DNA-binding site (epigenetic feature of the genome), and interaction with other cofactors or TFs (form a complex). Thus, sometimes the expression trend and the activity pattern of the driver may be violated. Due to some 'hidden' effect, the activity of a driver may be essential in regulating the process while the expression level may not show significant difference in the process.
+- Drivers, such as transcription factors (TF) bind to the enhancer or promoter regions of the target genes and regulate their expression level. Once the TF has been synthesized, there are still many steps between mRNA translation of a TF and the actual transcriptional regulation of target genes. The activity is controlled by most of the following processes, nuclear localization (import into the cell nucleaus), activation through signal-sensing domain (e.g. ligand binding or post-translational modifications: methylation, ubiquitination and phosphorylation, which is essential for dimerization and promoter binding), access to the DNA-binding site (epigenetic features of the genome), and interaction with other cofactors or TFs (form a complex). Thus, sometimes the expression trend and the activity pattern of a driver may be contradicted. Due to these "hidden effects, the analysis of the activity of a driver maybe more fruitful than the analysis its expression level.
 
 ----------
 
-## Step3: get differentiated expression/differentiated activity for all possible drivers (act-DA)
+## Step 3: Get differential expression (DE) / differential activity (DA) for drivers (act-DA)
+**Purpose: get significantly differential expression (DE) and activity (DA) for all possible drivers between two phenotype groups.**
 
-Load the RData from the previous step if user want to re-run the following steps or re-open the R session. 
-Remember to set the temporary `analysis.par` if re-open the R session and `analysis.par$out.dir.DATA` will be used to find the correct RData file. 
-No need to run this if continue working from the previous step. 
+Please skip the following line if you didn't close R session after completed Step 1 and Step 2.
+
+Don't skip, if you have checked out and closed R session after completed the Step 1 and Step 2. Before start Step 3, please reload `analysis.par` RData from Step 2.
+`NetBID.loadRData()` reloads RData saved by `NetBID.saveRData()`. It prevents user from repeating former pipeline steps.
+If the re-opened R session doesn't have `analysis.par` in the environment, please comment off the first two command lines. It will create a temporary `analysis.par`
+with path of the saved Step 2 RData, `analysis.par$out.dir.DATA`. The path `test//driver_2019-05-06//DATA/` here is just an example, 
+users need to give their own path used to save `analysis.par` RData from Step 2.
 
 ```R
-## load from RData
+# Reload network.par RData from Step 2
 #analysis.par <- list()
 #analysis.par$out.dir.DATA <- 'test//driver_2019-05-06//DATA/'
 NetBID.loadRData(analysis.par=analysis.par,step='act-get')
 ```
 
-The main purpose of this step is to get significantly differentiated expression (DE) and activity (DA) for all possible drivers between a specific process. 
-For the RNASeq dataset, user could choose to use the DE output from DESeq2 but need to be attention about the column names (e.g pvalue) and prepare one column of `Z-statistics` in the following functions. 
-Here, NetBID2 provides two functions `getDE.BID.2G()` and `getDE.limma.2G()` to assist the analysis between two groups (`G1` Vs. `G0`). 
-User only need to get the sample list for `G1` and `G0` and specificy the name of `G1_name` and `G0_name` to use these two functions. 
-`getDE.BID.2G()` will use the bayesian inference strategy to get the DE and DA, if user choose `method='Bayesian'`, the calculation will take more time compared with `method='MLE'`.
+**To compare the drivers' activity between two phenotype groups.**
+In the demo dataset, one column of the phenotype data frame is "subgroup". It contains 3 phenotype groups, `WNT`, `SHH` and `G4`. To compare the driver's DE/DA between any two groups (`G1` vs. `G0` in the following functions), NetBID2 provides two major functions `getDE.BID.2G()` and `getDE.limma.2G()`. Users need to assign sample names from each group to `G1_name` and `G0_name`.
+In the script below, we compared between `G4.Vs.WNT` and `G4.Vs.SHH`. Each comparison has a name (highly suggested, will be displayed in the final master table), and the results are saved in `analysis.par$DE` and `analysis.par$DA`. 
 
-Ordinal phenotype condition is complicated and user could directly call `bid()` or functions in `limma()` to analyze. 
-
-In the demo script below, user could get DE/DA for drivers between `G4.Vs.WNT` and `G4.Vs.SHH`. Each comparison must specify a clear name, and results will be saved into `analysis.par$DE` and `analysis.par$DA`. 
-The comparison names will be displayed in the final master table. 
+**More detail.**
+`getDE.BID.2G()` uses Bayesian Inference method to calculate DE and DA values, by setting `method='Bayesian'`. If set `method='MLE'`, it will take shorter time to calculate.
+If the input is RNA-Seq dataset, user can use `DE` output from `DESeq2`. Just pay attention to the column names, one column should be `Z-statistics`.
+If the phenotype is ordinal or more complicated, user can use `bid()` or `limma()` to analyze. 
 
 ```R
-# generate a list for multiple comparisons
+# Create empty list to store comparison result
 analysis.par$DE <- list()
 analysis.par$DA <- list()
-# get compared sample names
+
+# First comparison: G4 vs. WNT
+comp_name <- 'G4.Vs.WNT' # Each comparison must has a name
+# Get sample names from each compared group
 phe_info <- pData(analysis.par$cal.eset)
-G1  <- rownames(phe_info)[which(phe_info$`subgroup`=='G4')] # get sample list for G1
-# G4 Vs. WNT
-comp_name <- 'G4.Vs.WNT'
-G0  <- rownames(phe_info)[which(phe_info$`subgroup`=='WNT')] # get sample list for G0
+G1  <- rownames(phe_info)[which(phe_info$`subgroup`=='G4')] # Experiment group
+G0  <- rownames(phe_info)[which(phe_info$`subgroup`=='WNT')] # Control group
 DE_gene_bid <- getDE.BID.2G(eset=analysis.par$cal.eset,G1=G1,G0=G0,G1_name='G4',G0_name='WNT')
 DA_driver_bid   <- getDE.BID.2G(eset=analysis.par$merge.ac.eset,G1=G1,G0=G0,G1_name='G4',G0_name='WNT')
-# save to analysis.par
+# Save comparison result to list element in analysis.par, with comparison name
 analysis.par$DE[[comp_name]] <- DE_gene_bid
 analysis.par$DA[[comp_name]] <- DA_driver_bid
 
-# G4 Vs. SHH
-comp_name <- 'G4.Vs.SHH'
-G0  <- rownames(phe_info)[which(phe_info$`subgroup`=='SHH')] # get sample list for G0
+# Second comparison: G4 vs. SHH
+comp_name <- 'G4.Vs.SHH' # Each comparison must has a name
+# Get sample names from each compared group
+phe_info <- pData(analysis.par$cal.eset)
+G1  <- rownames(phe_info)[which(phe_info$`subgroup`=='G4')] # Experiment group
+G0  <- rownames(phe_info)[which(phe_info$`subgroup`=='SHH')] # Control group
 DE_gene_bid <- getDE.BID.2G(eset=analysis.par$cal.eset,G1=G1,G0=G0,G1_name='G4',G0_name='SHH')
 DA_driver_bid   <- getDE.BID.2G(eset=analysis.par$merge.ac.eset,G1=G1,G0=G0,G1_name='G4',G0_name='SHH')
-# save to analysis.par
+# Save comparison result to list element in analysis.par, with comparison name
 analysis.par$DE[[comp_name]] <- DE_gene_bid
 analysis.par$DA[[comp_name]] <- DA_driver_bid
+
 ```
 
-If user want to combine the results from multiple comparisons, `combineDE()` could be applied just by creating a `DE_list` containing all the comparisons ready for merge. 
-The output will be a list of DE/DA results, with one more component named "combine" that include the combined results. Give a `comp_name` and save into `analysis.par$DE` and `analysis.par$DA`. 
+**To combine multiple comparison results.** Wrap all the comparison results into the `DE_list`, and pass it to `combineDE()`.
+It returns a list contains the combined DE/DA analysis. A data frame named "combine" inside the list is the combined analysis. Rows are genes/drivers, columns are combined statistics (e.g. "logFC", "AveExpr", "t", "P.Value" etc.).
 
 ```R
-## G4 Vs. others
-# combine the above two comparisons
-comp_name <- 'G4.Vs.otherTwo'
+## Third comparison: G4 vs. others
+# Combine the comparison results from `G4.Vs.WNT` and `G4.Vs.SHH`
+comp_name <- 'G4.Vs.otherTwo' # Each comparison must has a name
 DE_gene_comb <- combineDE(DE_list=list(WNT=analysis.par$DE$`G4.Vs.WNT`,SHH=analysis.par$DE$`G4.Vs.SHH`))
 DA_driver_comb <- combineDE(DE_list=list(WNT=analysis.par$DA$`G4.Vs.WNT`,SHH=analysis.par$DA$`G4.Vs.SHH`))
 analysis.par$DE[[comp_name]] <- DE_gene_comb$combine
 analysis.par$DA[[comp_name]] <- DA_driver_comb$combine
 ```
+NetBID2 also provides `draw.combineDE()` to visualize the top drivers with significant DE/DA from the combined comparison, with DE/DA values from seperate comparisons listed as well.
+Drivers are sorted based on the P-values from the third column, which is the combined comparison (`G4 vs. WNT+SHH`). 
 
-User could use `draw.combineDE()` to visualize the top significant DE/DA combining results compared with previous ones.
+- Driver table of top DE:
 
 ```R
+# Driver table of top DE
 draw.combineDE(DE_gene_comb)
-draw.combineDE(DE_gene_comb,pdf_file=sprintf('%s/combineDE.pdf',analysis.par$out.dir.PLOT))
+draw.combineDE(DE_gene_comb,pdf_file=sprintf('%s/combineDE.pdf',analysis.par$out.dir.PLOT)) # Save it as PDF
 ```
 
 ![`combineDE`](combineDE.png)
 
+- Driver table of top DA:
+
 ```R
+# Driver table of top DA
 draw.combineDE(DA_driver_comb)
-draw.combineDE(DA_driver_comb,pdf_file=sprintf('%s/combineDA.pdf',analysis.par$out.dir.PLOT))
+draw.combineDE(DA_driver_comb,pdf_file=sprintf('%s/combineDA.pdf',analysis.par$out.dir.PLOT)) # Save it as PDF
 ```
 
 ![`combineDA`](combineDA.png)
 
-
-Also, user could choose to combine the sample list first and call DE/DA between the two sample lists. The results may be different from the above `combineDE` strategy as they are different in the statistical hypothesis stating. 
+Another way to perform the comparison between one group versus multiple groups, is to choose the sample names from multiple groups as `G0_name` parameter in the `getDE.BID.2G()`. 
+In this way, the user doesn't need to call `combineDE`. But the final result may vary, due to the different statistical hypothesis.
 
 ```R
-# combine the sample list
+# Another way to do the third comparison: G4 vs. others
 comp_name <- 'G4.Vs.others'
-G0  <- rownames(phe_info)[which(phe_info$`subgroup`!='G4')] # get sample list for G0
+# Get sample names from each compared group
+phe_info <- pData(analysis.par$cal.eset)
+G1  <- rownames(phe_info)[which(phe_info$`subgroup`=='G4')] # Experiment group
+G0  <- rownames(phe_info)[which(phe_info$`subgroup`!='G4')] # Combine other groups as the Control group
 DE_gene_bid <- getDE.BID.2G(eset=analysis.par$cal.eset,G1=G1,G0=G0,G1_name='G4',G0_name='others')
 DA_driver_bid   <- getDE.BID.2G(eset=analysis.par$merge.ac.eset,G1=G1,G0=G0,G1_name='G4',G0_name='others')
-# save to analysis.par
+# Save comparison result to list element in analysis.par, with comparison name
 analysis.par$DE[[comp_name]] <- DE_gene_bid
 analysis.par$DA[[comp_name]] <- DA_driver_bid
 ```
 
-When finished, save to RData.
+Save the comparison results as RData.
 
 ```R
-# save to RData
+# Save Step 3 analysis.par as RData
 NetBID.saveRData(analysis.par=analysis.par,step='act-DA')
 ```
-Now, for the calculation part, we have obtained the top DA/DE list, we could directly draw the statistics for them (by default the top 30 drivers will be displayed):
+
+Now, we have get the top differential expression (DE) and activity (DA) drivers from different comparisons. We can use `draw.NetBID()` to visualize the top drivers (top 30 by default). Here, the displayed statistics for NetBID is set at `P.Value` and `logFC` for differential expression (set by `DA_display_col` and `DE_display_col`). 
 
 ```R
 draw.NetBID(DA_list=analysis.par$DA,DE_list=analysis.par$DE,main_id='G4.Vs.others')
-draw.NetBID(DA_list=analysis.par$DA,DE_list=analysis.par$DE,main_id='G4.Vs.others',pdf_file=sprintf('%s/NetBID_TOP.pdf',analysis.par$out.dir.PLOT),text_cex=0.8)
+draw.NetBID(DA_list=analysis.par$DA,DE_list=analysis.par$DE,main_id='G4.Vs.others',pdf_file=sprintf('%s/NetBID_TOP.pdf',analysis.par$out.dir.PLOT),text_cex=0.8) # Save as PDF
 ```
 
 ![`NetBID_TOP`](NetBID_TOP.png)
 
-User could choose which column to display in DA/DE results, check `?draw.NetBID` for detailed instruction. 
-**ATTENTION** for real practice, user may choose to display one comparison result, and the input of `DA_list` and `DE_list` must be the list class with names on it.
+Users can customize the table above, by choosing which column to display DE or DA, or by choosing which comparison to display. 
 
-## Step4: generate master table (ms-tab)
+## Step 4: Generate a master table for drivers (ms-tab)
+**Purpose: gather previous calculated data to create a final master table for all possible drivers.**
 
-Load the RData from the previous step if user want to re-run the following steps or re-open the R session. 
-Remember to set the temporary `analysis.par` if re-open the R session and `analysis.par$out.dir.DATA` will be used to find the correct RData file. 
-No need to run this if continue working from the previous step. 
+Please skip the following line if you didn't close R session after completed Step 1-3.
+
+Don't skip, if you have checked out and closed R session after completed the Step 1-3. Before start Step 4, please reload `analysis.par` RData from Step 3.
+`NetBID.loadRData()` reloads RData saved by `NetBID.saveRData()`. It prevents user from repeating former pipeline steps.
+If the re-opened R session doesn't have `analysis.par` in the environment, please comment off the first two command lines. It will create a temporary `analysis.par`
+with path of the saved Step 3 RData, `analysis.par$out.dir.DATA`. The path `test//driver_2019-05-06//DATA/` here is just an example, 
+users need to give their own path used to save `analysis.par` RData from Step 3.
 
 ```R
-## load from RData
+# Reload analysis.par RData from Step 3
 #analysis.par <- list()
 #analysis.par$out.dir.DATA <- 'test//driver_2019-05-06//DATA/'
 NetBID.loadRData(analysis.par=analysis.par,step='act-DA')
 ```
 
-Here, the main purpose is to generate the final master table for all possible drivers. 
-User need to prepare:
-- Use `db.preload()` to load in pre-saved TF/SIG gene's information by setting the `use_level`.
-- Get the list of comparison names `use_comp` for output in the master table, if all, could use `all_comp <- names(analysis.par$DE)` to get them.
-- The `DE` and `DA` results, if followed the above pipeline, just the `analysis.par$DE` and `analysis.par$DA`.
-- The `network` target list file, i.e `analysis.par$merge.network$target_list`.
-- The TF/SIG list `tf_sigs`, will be in the global environment if run `db.preload()`.
-- The column name for Z statistics (`z_col`), for the output of `getDE.limma.2G()` and `getDE.BID.2G()`, it will be `Z-statistics`.
-- Other column names wish to display in the final master table, e.g `logFC`, `P.Value`. 
-- `main_id_type`, this may be the *only* important parameter need to set here if followed the above pipeline. Check [ID conversion section](../network_construction#id-conversion) for the detailed description of the id types.
-- `transfer_tab`, the transfer table for ID conversion, could be obtained by `get_IDtransfer2symbol2type()`. If NULL, will automatically get the transfer table within the function if the `main_id_type` is not in the column names of 'tf_sigs'. User could also generate their own transfer table if do not want to use BioMart.
-- `column_order_stratey`, an option to order the columns in the mater table, if set to `type`, the columns will be ordered according to the column type; if set to `comp`, the columns will be ordered according to the comparisons. 
+**To create the final master table, users need to gather certian previous data and pass them to the parameters in `generate.masterTable()` function.**
+Here are the details,
+- `use_comp`, the vector of multiple comparison names. It will be used as the columns of master table. If use all the comparisons, just call `names(analysis.par$DE)`.
+- `DE` and `DA`, if following the previous pipeline, just use `analysis.par$DE` and `analysis.par$DA`.
+- `network`, the driver-to-target list. The names of the list elements are drivers. Each element is a data frame, usually contains three columns. "target", target gene names; "MI", mutual information; "spearman", spearman correlation coefficient. If following the previous pipeline, just use `analysis.par$merge.network$target_list`.
+- `tf_sigs`, contains all the detailed information of TF and Sig. Users need to call `db.preload()` for access.
+  - `db.preload()` reloads the TF/SIG gene lists into R workspace and saves it locally under db/ directory with specified species name and analysis level.
+- `z_col`, name of the column in `getDE.limma.2G()` and `getDE.BID.2G()` output data frame contains the Z-statistics. By default, it is "Z-statistics".
+- `display_col`, other driver's statistical values for display. This must columns from the `getDE.limma.2G()` and `getDE.BID.2G()` output data frame. For example, "logFC" and "P.Value".
+- `main_id_type`, the type of driver’s ID, **IMPORTANT**. It comes from the attribute name in `biomaRt` package. Such as "ensembl_gene_id", "ensembl_gene_id_version", "ensembl_transcript_id", "ensembl_transcript_id_version" or "refseq_mrna". For details, please heck [ID conversion section](../network_construction#id-conversion).
+- `transfer_tab`, the data frame for ID conversion. If NULL and `main_id_type` is not in the column names of `tf_sigs`, it will use the conversion table within the function. Users can also create their own ID conversion table. If user want to save it into `analysis.par`, we suggest to call `get_IDtransfer2symbol2type()` instead of `get_IDtransfer()` as the output of the former function could be used in more visualization functions (e.g `draw.bubblePlot()`).
+- `column_order_stratey`, an option to order to the columns in the mater table. If set as `type`, the columns will be ordered by column type; If set as `comp`, the columns will be ordered by comparison. 
 
 ```R
-# load db
+# Reload data into R workspace, and saves it locally under db/ directory with specified species name and analysis level.
 db.preload(use_level='gene',use_spe='human',update=FALSE)
-# generate master table
-all_comp <- names(analysis.par$DE) ## get all comparison name for output
-# prepare transfer table (optinal)
+# Get all comparison names
+all_comp <- names(analysis.par$DE) # Users can use index or name to get target ones
+# Prepare the conversion table (OPTIONAL)
 use_genes <- unique(c(analysis.par$merge.network$network_dat$source.symbol,analysis.par$merge.network$network_dat$target.symbol))
-transfer_tab <- get_IDtransfer2symbol2type(from_type = 'external_gene_name',use_genes=use_genes) ## get transfer table !!!
+transfer_tab <- get_IDtransfer2symbol2type(from_type = 'external_gene_name',use_genes=use_genes)
 analysis.par$transfer_tab <- transfer_tab
-# generate master table
+# Creat the final master table
 analysis.par$final_ms_tab <- generate.masterTable(use_comp=all_comp,DE=analysis.par$DE,DA=analysis.par$DA,
                                                network=analysis.par$merge.network$target_list,
                                                tf_sigs=tf_sigs,z_col='Z-statistics',display_col=c('logFC','P.Value'),
                                                main_id_type='external_gene_name')
 ```
 
-Note: There may exist some drivers only have activity but no expression level, this is due to the difference between the network-construction dataset and analysis dataset mentioned above. 
+**Please note**, there may exist some drivers with only activity values but no expression values. This is due to the fact that the network-construction dataset is different from the analysis dataset.
 
-Finally, output the master table into an excel file. Basic usage is just input the master table data frame into `out2excel()`. Marker genes `mark_gene` could also be highlighted. `mark_strategy` could be chosen from 'color' and 'add_column'. 'Color' means the mark_gene will be displayed by its background color; 'add_column' means the mark_gene will be displayed in separate columns with content TRUE/FALSE indicating whether the genes belong to each mark group. Check `?out2excel` for detailed usage description. Here, we create a list of MB subtype specific marker genes. The color could be random generated by `get.class.color()` or to user specified ones. Here, we could set up the `mark_col` as MB subtypes have pre-definied color codes.
+**Save the final master table as EXCEL file.** 
+NetBID2 provides `out2excel()` to save the master table as EXCEL, with multiple options to highlight interested data (e.g. marker genes, drivers with significant Z-values). 
+For more options, please check `?out2excel()`. **Download the master table EXCEL file [ms_tab.xlsx](driver_ms_tab.xlsx) here to see.**
 
 ```R
-# output into excel files
+# Path and file name of the output EXCEL file
 out_file <- sprintf('%s/%s_ms_tab.xlsx',analysis.par$out.dir.DATA,analysis.par$project.name)
-# can add marker gene
+# Highlight marker genes
 mark_gene <- list(WNT=c('WIF1','TNC','GAD1','DKK2','EMX2'),
                   SHH=c('PDLIM3','EYA1','HHIP','ATOH1','SFRP1'),
                   G4=c('KCNA1','EOMES','KHDRBS2','RBM24','UNC5D'))
-#mark_col <- get.class.color(names(mark_gene)) # this will randomly generate color code
+# Customize highlight color codes
+#mark_col <- get.class.color(names(mark_gene)) # this randomly assign color codes
 mark_col <- list(G4='green','WNT'='blue','SHH'='red')
+# Save the final master table as EXCEL file
 out2excel(analysis.par$final_ms_tab,out.xlsx = out_file,mark_gene,mark_col)
 ```
 
-Download the master table excel file [ms_tab.xlsx](driver_ms_tab.xlsx) to study the organization of the master table.
-
-Save the `analysis.par` to the RData file. This file contains all information for this project, which could be used for the [Advanced analysis](../docs/advanced_analysis) part and [NetBID2 shiny server](https://github.com/jyyulab/NetBID_shiny). 
-The `analysis.par` list need to include 13 components (`main.dir`, `project.name`, `out.dir`, `out.dir.QC`, `out.dir.DATA`, `out.dir.PLOT`, `merge.network`, `cal.eset`, `merge.ac.eset`, `DE`, `DA`, `final_ms_tab`, `transfer_tab`) in order to run in the shiny server. 
-
-**Strongly suggest to save the RData file in this step !**
+We've finished the driver estimation part of NetBID2. We need to save the `analysis.par` as RData, cause it contains all the important results of driver estimation.
+This is **ESSENTIAL** to run [Advanced analysis](../docs/advanced_analysis) part of NetBID2 and [NetBID2 shiny server](https://github.com/jyyulab/NetBID_shiny). 
+The `analysis.par` list includes 13 elements (`main.dir`, `project.name`, `out.dir`, `out.dir.QC`, `out.dir.DATA`, `out.dir.PLOT`, `merge.network`, `cal.eset`, `merge.ac.eset`, `DE`, `DA`, `final_ms_tab`, `transfer_tab`). They will be used to run NetBID shiny server. 
 
 ```R
-# save to RData
+# Save Step 4 analysis.par as RData, ESSENTIAL
 NetBID.saveRData(analysis.par=analysis.par,step='ms-tab')
 ```
 
 -------
-### *How to read and use the master table ?*
+### *How to interpret and use the master table ?*
 
-- `out2excel()` could output multiple master tables in different excel sheet. 
-- In each master table, it is divided into three parts:
-  - The first six columns are `gene_label`, `geneSymbol`, `originalID`, `originalID_label`, `funcType` and `Size`
-    - `gene_label` is the driver's gene symbol or transcript symbol with suffix '_TF' or '_SIG' to indicate the driver's type. This column is often used for display as gene/transcript symbol is the most common accpeted gene ID for communication.
-    - `geneSymbol` is the driver's gene symbol or transcript symbol.
+- `out2excel()` can save multiple master tables as excel sheets in one EXCEL file.
+- For one master table, it consists of three parts:
+  - The first six columns are `gene_label`, `geneSymbol`, `originalID`, `originalID_label`, `funcType` and `Size`.
+    - `gene_label` is the driver's gene symbol or transcript symbol, with suffix "_TF" or "_SIG" to show driver's type. 
+    - `geneSymbol` is the driver's gene symbol or transcript symbol, without suffix.
     - `originalID` is the original ID type used in network construction, which should match the ID type in `analysis.par$cal.eset`, `analysis.par$DE`.
-    - `originalID_label` is the original ID type with suffix '_TF' or '_SIG', which should match the the ID type in `analysis.par$merge.network`, `analysis.par$merge.ac.eset`,`analysis.par$DA`.
-    - **originalID_label** is the only ensured unique ID for each row !!!
-    - `funcType` is the 'TF' or 'SIG' used to indicate the driver's type.
-    - `Size` is the target size for the driver. 
-  - The main columns are named by $prefix.$comp_name_{DA or DE}, in which the prefix could be `Z`, `P.Value`, `logFC`, `AveExpr` to indicate the column's data type. `comp_name` is the comparison name in DA/DE. Columns of Z statistics will be automatically marked by the background color to indicate their significance.
-  - The next 13 columns (start from `ensembl_gene_id` to `refseq_mrna`) are the information for the genes.
-  - The last columns (optional) will be the marker information if set `mark_strategy='add_column'`.
-- User could filter by the target size, sort the columns with Z-statistics to get top significant drivers. OR, follow the tutorial in [Advanced analysis](../docs/advanced_analysis) part for analyze and visualization.
+    - `originalID_label` is the original ID type with suffix "_TF" or "_SIG", which should match the the ID type in `analysis.par$merge.network`, `analysis.par$merge.ac.eset`,`analysis.par$DA`.
+    - **`originalID_label`** is the only column to ensure unique ID for row record.
+    - `funcType` is either "TF" or "SIG" to mark driver's type. 
+    - `Size` is number of target genes for the driver. 
+  - The statistical columns are named as `prefix.comp_name_{DA or DE}`. The `prefix` can be `Z`, `P.Value`, `logFC` or `AveExpr` to indicate which statistical value is stored. The `comp_name` is the comparison name. For example, `Z.G4.Vs.WNT_DA` means the Z-statistics of the differential activity (DA) calculated from comparison between phenotype G4 and phenotype WNT. The color shade of the background indicated the significance of Z-statistics.
+  - The next 13 columns (from `ensembl_gene_id` to `refseq_mrna`) are detailed information of genes.
+  - The last columns (optional) are the detailed information of marker genes, users use `mark_strategy='add_column'` to set.
+- Users can fileter drivers by target size, or sort the Z-statistics to get top significant drivers. NetBID2 also provides [Advanced analysis](../docs/advanced_analysis) for advanced
+analysis and visualization.
 
 -------
 
-Finish driver estimation part !!! Cheers !!!
 
