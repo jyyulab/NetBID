@@ -21,7 +21,7 @@ Online tutorial and documentation of NetBID2.
 
 NetBID is a data-driven system biology pipeline, using data-driven network-based Bayesian inference approach to find drivers from transcriptomics, proteomics and phosphoproteomics data.
 
-The drivers can be either transcription facotrs (**TF**) or signaling factors (**SIG**).
+The drivers can be either transcription factors (**TF**) or signaling factors (**SIG**).
 
 NetBID2 is the upgraded second version of NetBID. 
 It inherites all the main functions from NetBID, and provides many more functions and pipelines to perform an advanced end-to-end NetBID analysis.
