@@ -143,17 +143,17 @@ analysis.par$sig.network <- get.SJAracne.network(network_file=analysis.par$sig.n
 **Generate an HTML QC report for the constructed network, using `igraph_obj`.**
 
 ```R
-draw.network.QC(analysis.par$tf.network$igraph_obj,outdir=analysis.par$out.dir.QC,prefix='TF_net_')
-draw.network.QC(analysis.par$sig.network$igraph_obj,outdir=analysis.par$out.dir.QC,prefix='SIG_net_')
+draw.network.QC(analysis.par$tf.network$igraph_obj,outdir=analysis.par$out.dir.QC,prefix='TF_net_',html_info_simple=FALSE)
+draw.network.QC(analysis.par$sig.network$igraph_obj,outdir=analysis.par$out.dir.QC,prefix='SIG_net_',html_info_simple=TRUE)
 ```
 
 Two QC reports have been created. One for the transcription factor [TF network](TF_net_netQC.html), the other one is for signaling factor [SIG network](SIG_net_netQC.html). 
 
 **- What information can you get from the HTML QC report of network?**
-  - A table for network. It shows some basic statistics to characterize the target network, including size, diameter and centrality etc.
+  - A table for network. It shows some basic statistics to characterize the target network, including size and centrality etc.
   - A table for drivers. It shows detailed statistics for all drivers in the network.
-  - A density over histogram to show the distribution of the degree of nodes.
-  - A scatter plot to check if the network is scale-free.
+  - A density over histogram to show the distribution of the degree of nodes and the target size of all drivers. The average target size around several hundreds may be good by experience. 
+  - A scatter plot to check if the network is scale-free. It is good but not necessary for a gene regulatory network to have the scale-free topology feature. 
 
 **Second, merge TF-network and SIG-network.**
 There are two ways to merge the networks. (1) Merge the networks first using `merge_TF_SIF.network()`, then calculate driver's activity value. (2) Calculate the driver's activity value in both TF-network and SIG-network, then merge them together using `merge_TF_SIG.AC()`. Both ways give the same result. 

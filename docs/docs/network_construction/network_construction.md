@@ -126,9 +126,10 @@ draw.eset.QC(network.par$net.eset,outdir=network.par$out.dir.QC,intgroup=NULL,do
 
 **- What information can you get from the HTML QC report?**  ([before_QC.html](beforeQC_QC.html))
   - A table. It contains phenotype information of samples. Descriptive variables, such as number of samples and genes (probes/transcripts/...);
-  - A heatmap and a PCA biplot. All samples will be clustered using the raw expression values across all the genes as features. The aim of this is to check possible mis-labeled samples; 
+  - A heatmap and a PCA biplot. All samples will be clustered using the raw expression values across all the genes as features. The aim of this is to check possible mis-labeled samples and the occurrence of batch effects; 
+  - A correlation plot for all sample pairs. This helps to check the correlation within group and between groups. 
   - A density plot. It shows the range and the distribution of the expression values. This also helps to judge if the original dataset has been log transformed;
-  - A meansd plot. It shows the relationship between the mean and standard deviation of raw gene expression values. This helps to verify if the mean and the standard deviation are independent.
+
 
 Now, the basic pre-processing steps are done for the raw data. 
 For persistent storage of data, and prevent the re-run of all previous steps. Users can checkout and save `network.par` as RData for this part.
@@ -279,8 +280,9 @@ NetBID.saveRData(network.par = network.par,step='exp-QC')
 **- What information can you get from the HTML QC report after QC steps?** ([after_QC.html](afterQC_QC.html))
   - A table. Compare the table with the one in Step 1. To see if a large amount of genes/samples has been removed;
   - A heatmap and a PCA biplot. All samples will be clustered using the normalized expression values across all the genes as features. The aim of this is to check possible mis-labeled samples;
+  - A correlation plot for all sample pairs. This helps to check the correlation within group and between groups. 
   - A density plot. Compare the table with the one in Step 1. To see if the low expressed genes have been removed;
-  - A measd plot. It shows the relationship between the mean and standard deviation of normalized gene expression values. This helps to verify if the mean and the standard deviation are independent after QC steps.
+
 
 ----------
 ### *QC for RNA-Seq dataset*  
@@ -395,15 +397,6 @@ pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,u
 ![sample_cluster_2](sample_cluster_2.png)
 
 Above is a side-by-side scatter plot with an ellipse drawn around each cluster of samples. Each ellipse is marked with its cluster label.
-
-```R
-pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,use_int),plot_type='2D.text')
-```
-
-![sample_cluster_3](sample_cluster_3.png)
-
-Above is a side-by-side scatter plot with sample names labeled. The categories of observed labels (left figure) and predicted labels (right figure) are distinguished by color.
-This figure is useful for checking outliers.
 
 ```R
 pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,use_int),plot_type='3D')
