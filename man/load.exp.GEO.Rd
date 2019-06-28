@@ -29,7 +29,8 @@ It also allows users to update the Gene Expression Series RData saved before.
 \examples{
 
 \dontrun{
-# Download the GSE116028 which performed on GPL6480 platform from GEO and save it to the current directory
+# Download the GSE116028 which performed on GPL6480 platform
+# from GEO and save it to the current directory
 # Assign this ExpressionSet object to net_eset
 net_eset <- load.exp.GEO(out.dir='./',
                          GSE='GSE116028',

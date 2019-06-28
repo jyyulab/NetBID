@@ -32,7 +32,7 @@ NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
 gs.preload(use_spe='Homo sapiens',update=FALSE)
 use_gs2gene <- merge_gs(all_gs2gene=all_gs2gene,
                         use_gs=c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG','C5'))
-exp_mat_gene <- exprs(analysis.par$cal.eset)
+exp_mat_gene <- Biobase::exprs(analysis.par$cal.eset)
 ## each row is a gene symbol, if not, must convert ID first
 ac_gs <- cal.Activity.GS(use_gs2gene = use_gs2gene,
                         cal_mat = exp_mat_gene)

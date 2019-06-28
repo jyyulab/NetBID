@@ -74,7 +74,7 @@ tf.network.update <- update_SJAracne.network(network_list=analysis.par$tf.networ
                                              force_all_drivers=TRUE,
                                              force_all_targets=FALSE,
                                              pearson_sign_use=1)
-print(intersect(c('addition_driver_1','addition_driver_2'),
+print(base::intersect(c('addition_driver_1','addition_driver_2'),
       names(V(tf.network.update$igraph_obj)))) ## check
 \dontrun{
 }

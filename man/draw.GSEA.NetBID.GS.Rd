@@ -64,7 +64,7 @@ db.preload(use_level='transcript',use_spe='human',update=FALSE)
 ## get all_gs2gene
 
 analysis.par <- list()
-analysis.par$out.dir.DATA <- system.file('demo','gene set/DATA/',package = "NetBID2")
+analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
 NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
 
 ms_tab <- analysis.par$final_ms_tab
@@ -73,7 +73,7 @@ DE <- analysis.par$DE[[comp]]
 analysis.par$out.dir.PLOT <- getwd()
 
 ## directory for saving the pdf files
-exp_mat_gene <- exprs(analysis.par$cal.eset)
+exp_mat_gene <- Biobase::exprs(analysis.par$cal.eset)
 
 ## calculate activity for all genesets
 use_gs2gene <- merge_gs(all_gs2gene=all_gs2gene,
@@ -81,7 +81,7 @@ use_gs2gene <- merge_gs(all_gs2gene=all_gs2gene,
 ac_gs <- cal.Activity.GS(use_gs2gene = use_gs2gene,cal_mat = exp_mat_gene)
 
 ## get DA for the gene set
-phe_info <- pData(analysis.par$cal.eset)
+phe_info <- Biobase::pData(analysis.par$cal.eset)
 G0  <- rownames(phe_info)[which(phe_info$`subgroup`!='G4')]
 # get sample list for G0
 G1  <- rownames(phe_info)[which(phe_info$`subgroup`=='G4')]
@@ -106,8 +106,8 @@ sig_gs <- draw.volcanoPlot(dat=DA_gs,
 ## GSEA plot for the significant gene sets
 draw.GSEA.NetBID.GS(DE=DE,name_col='ID',
                     profile_col='t',profile_trend='pos2neg',
-                    sig_gs_list = sig_gs$names,
-                    gs_DA_Z=DA_gs[sig_gs$names,'Z-statistics'],
+                    sig_gs_list = sig_gs$ID,
+                    gs_DA_Z=DA_gs[sig_gs$ID,'Z-statistics'],
                     use_gs2gene = use_gs2gene,
                     top_gs_number=5,target_col='RdBu',
                     left_annotation = 'test_left',

@@ -12,7 +12,10 @@ The purpose of this part:
 
 **retrieve potential drivers for interested phenotype and generate a master table for drivers**.
 
-The complete demo script for network construction can be found here, 
+One "lazy mode" function without flexiable options is available for this part of analysis: `NetBID.lazyMode.DriverEstimation()`. 
+User could check the manual for this function and try the demo code for usage.
+
+The complete step-by-step demo script for network construction can be found here, 
 [pipeline_analysis_demo1.R](https://github.com/jyyulab/NetBID-dev/blob/master/demo_scripts/pipeline_analysis_demo1.R).
 
 ----------
@@ -143,8 +146,8 @@ analysis.par$sig.network <- get.SJAracne.network(network_file=analysis.par$sig.n
 **Generate an HTML QC report for the constructed network, using `igraph_obj`.**
 
 ```R
-draw.network.QC(analysis.par$tf.network$igraph_obj,outdir=analysis.par$out.dir.QC,prefix='TF_net_',html_info_simple=FALSE)
-draw.network.QC(analysis.par$sig.network$igraph_obj,outdir=analysis.par$out.dir.QC,prefix='SIG_net_',html_info_simple=TRUE)
+draw.network.QC(analysis.par$tf.network$igraph_obj,outdir=analysis.par$out.dir.QC,prefix='TF_net_',html_info_limit=FALSE)
+draw.network.QC(analysis.par$sig.network$igraph_obj,outdir=analysis.par$out.dir.QC,prefix='SIG_net_',html_info_limit=TRUE)
 ```
 
 Two QC reports have been created. One for the transcription factor [TF network](TF_net_netQC.html), the other one is for signaling factor [SIG network](SIG_net_netQC.html). 
@@ -376,7 +379,7 @@ transfer_tab <- get_IDtransfer2symbol2type(from_type = 'external_gene_name',use_
 analysis.par$transfer_tab <- transfer_tab
 # Creat the final master table
 analysis.par$final_ms_tab <- generate.masterTable(use_comp=all_comp,DE=analysis.par$DE,DA=analysis.par$DA,
-                                               network=analysis.par$merge.network$target_list,
+                                               target_list=analysis.par$merge.network$target_list,
                                                tf_sigs=tf_sigs,z_col='Z-statistics',display_col=c('logFC','P.Value'),
                                                main_id_type='external_gene_name')
 ```

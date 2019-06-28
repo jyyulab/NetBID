@@ -13,7 +13,7 @@ If NULL, no filter will be performed to the TF/SIG list. Default is NULL.}
 
 \item{use_gene_type}{character, the attribute name inherited from the biomaRt package.
 Some options are, "ensembl_gene_id", "ensembl_gene_id_version", "ensembl_transcript_id", "ensembl_transcript_id_version" and "refseq_mrna".
-All options can be accessed by calling \code{useMart} (e.g. mart <- useMart('ensembl',db_info[1]); listAttributes(mart)$name).
+All options can be accessed by calling \code{biomaRt::useMart} (e.g. mart <- biomaRt::useMart('ensembl',db_info[1]); biomaRt::listAttributes(mart)$name).
 
 The type must match the gene type from the input \code{use_genes}. Default is "external_gene_name".}
 

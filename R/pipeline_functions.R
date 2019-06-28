@@ -1,4 +1,3 @@
-
 #' @import Biobase limma tximport igraph biomaRt openxlsx msigdbr ConsensusClusterPlus kableExtra
 #' @importFrom GEOquery getGEO
 #' @importFrom RColorBrewer brewer.pal
@@ -17,7 +16,9 @@
 #' @importFrom reshape melt
 #' @importFrom ordinal clm clmm
 #' @importFrom rmarkdown render
-
+#' @importFrom Matrix rowSums
+#' @importFrom SummarizedExperiment assay
+#' @importFrom lme4 lmer
 #' @importFrom grDevices col2rgb colorRampPalette dev.off pdf rgb
 #' @importFrom graphics abline arrows axis barplot boxplot hist image layout legend lines mtext par points polygon rect segments strheight stripchart strwidth text
 #' @importFrom stats IQR aggregate as.dendrogram as.dist cutree density dist fisher.test gaussian glm hclust kmeans ks.test lm median model.matrix na.omit order.dendrogram p.adjust pchisq pnorm prcomp pt qnorm quantile sd
@@ -52,6 +53,30 @@ library(reshape)
 library(ordinal)
 library(rmarkdown)
 
+
+##
+check_para <- function(para_name,envir){
+  if(base::exists(para_name,envir=envir)==FALSE){message(sprintf('%s missing !',para_name));return(0)}
+  if(is.null(base::get(para_name,envir=envir))==TRUE){message(sprintf('%s is NULL !',para_name));return(0)}
+  return(1)
+}
+check_option <- function(para_name,option_list,envir){
+  if(!base::get(para_name,envir=envir) %in% option_list){
+    message(sprintf('Only accept %s set at: %s !',para_name,base::paste(option_list,collapse=';')));return(0)
+  }
+  return(1)
+}
+clean_charVector <- function(x){
+  x1 <- names(x)
+  x <- as.character(x);
+  x[which(x=='')] <- 'NULL';
+  x[which(is.null(x)==TRUE)] <- 'NULL'
+  x[which(is.na(x)==TRUE)] <- 'NA'
+  names(x) <- x1
+  x
+}
+##
+#
 #' Preload database files into R workspace for NetBID2
 #'
 #' \code{db.preload} is a pre-processing function for NetBID2. It preloads needed data into R workspace,
@@ -90,6 +115,12 @@ db.preload <- function(use_level='transcript',use_spe='human',update = FALSE,
                        TF_list=NULL,SIG_list=NULL,input_attr_type='external_gene_name',
                        main.dir=NULL,
                        db.dir=sprintf("%s/db/",main.dir)){
+  all_input_para <- c('use_level','use_spe','update')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  check_res <- c(check_option('use_level',c('transcript','gene'),envir=environment()),
+                 check_option('update',c(TRUE,FALSE),envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
   ## load annotation info, including: TF/Sig list, gene info
   if(is.null(main.dir)==TRUE){
     main.dir <- system.file(package = "NetBID2")
@@ -99,30 +130,31 @@ db.preload <- function(use_level='transcript',use_spe='human',update = FALSE,
     db.dir <- sprintf("%s/db/",main.dir)
   }
   message(sprintf('Will use directory %s as the db.dir',db.dir))
+  message(sprintf('Your setting for species is %s, with level at %s',use_spe,use_level))
   use_spe <- toupper(use_spe)
   output.db.dir <- sprintf('%s/%s',db.dir,use_spe)
   RData.file <- sprintf('%s/%s_%s.RData', output.db.dir,use_spe,use_level)
   if (!file.exists(RData.file) | update==TRUE) { ## not exist or need to update
     ## get info from use_spe
-    ensembl <- useMart("ensembl")
-    all_ds  <- listDatasets(ensembl)
+    ensembl <- biomaRt::useMart("ensembl")
+    all_ds  <- biomaRt::listDatasets(ensembl)
     w1 <- grep(sprintf("^%s GENES",use_spe),toupper(all_ds$description))
-    if(length(w1)==0){
-      tmp_use_spe <- unlist(strsplit(use_spe,' ')); tmp_use_spe <- tmp_use_spe[length(tmp_use_spe)]
+    if(base::length(w1)==0){
+      tmp_use_spe <- unlist(strsplit(use_spe,' ')); tmp_use_spe <- tmp_use_spe[base::length(tmp_use_spe)]
       w1 <- grep(sprintf(".*%s_GENE_ENSEMBL",toupper(tmp_use_spe)),toupper(all_ds$dataset))
-      if(length(w1)==1){use_spe <- toupper(strsplit(all_ds[w1,2],' ')[[1]][1]); output.db.dir <- sprintf('%s/%s',db.dir,use_spe)}
+      if(base::length(w1)==1){use_spe <- toupper(strsplit(all_ds[w1,2],' ')[[1]][1]); output.db.dir <- sprintf('%s/%s',db.dir,use_spe)}
     }
-    if(length(w1)==1){
+    if(base::length(w1)==1){
       w2 <- all_ds[w1,1]
-      mart <- useMart(biomart="ensembl", dataset=w2) ## get id for input spe
+      mart <- biomaRt::useMart(biomart="ensembl", dataset=w2) ## get id for input spe
       message(sprintf('Read in ensembl annotation file for %s and output all db files in %s/%s !',use_spe,db.dir,use_spe))
     }
-    if(length(w1)==0){
+    if(base::length(w1)==0){
       message(sprintf('Check input use_spe parameter: %s, not included in the ensembl database',use_spe))
       return(FALSE)
     }
-    if(length(w1)>1){
-      w2 <- paste(all_ds[w1,2],collapse=';')
+    if(base::length(w1)>1){
+      w2 <- base::paste(all_ds[w1,2],collapse=';')
       message(sprintf('Check input use_spe parameter: %s, more than one species match in ensembl database : %s,
                       please check and re-try',use_spe,w2))
       return(FALSE)
@@ -134,8 +166,8 @@ db.preload <- function(use_level='transcript',use_spe='human',update = FALSE,
       dir.create(output.db.dir)
     }
     ## get attributes for mart
-    filters <- listFilters(mart)
-    attributes <- listAttributes(mart)
+    filters <- biomaRt::listFilters(mart)
+    attributes <- biomaRt::listAttributes(mart)
     ensembl.attr.transcript <- c('ensembl_transcript_id','ensembl_gene_id',
                                  'external_transcript_name','external_gene_name',
                                  'gene_biotype','gene_biotype',
@@ -147,9 +179,9 @@ db.preload <- function(use_level='transcript',use_spe='human',update = FALSE,
                            'description','phenotype_description','hgnc_symbol','entrezgene','refseq_mrna')
     ## do not output hgnc in non-human species
     if(use_spe != 'HUMAN')
-      ensembl.attr.transcript <- setdiff(ensembl.attr.transcript,'hgnc_symbol')
+      ensembl.attr.transcript <- base::setdiff(ensembl.attr.transcript,'hgnc_symbol')
     if(use_spe != 'HUMAN')
-      ensembl.attr.gene <- setdiff(ensembl.attr.gene,'hgnc_symbol')
+      ensembl.attr.gene <- base::setdiff(ensembl.attr.gene,'hgnc_symbol')
     ## if too much: Query ERROR: caught BioMart::Exception::Usage: Too many attributes selected for External References
     # judge input type if TF_list, Sig_list not equal to NULL
     if(is.null(TF_list)==FALSE | is.null(SIG_list)==FALSE){
@@ -170,17 +202,17 @@ db.preload <- function(use_level='transcript',use_spe='human',update = FALSE,
       TF_list <- read.delim(TF_f,stringsAsFactors=FALSE,header=F)$V1
       if(use_spe != 'HUMAN' & use_spe != 'MOUSE'){ ## if spe not human/mouse
         filter_attr <- 'external_gene_name'
-        tmp1 <- getBM(attributes=c('hsapiens_homolog_associated_gene_name','external_gene_name'),values=TRUE,mart=mart,filters='with_hsapiens_homolog')
-        TF_list <- unique(tmp1[which(tmp1[,1] %in% TF_list),2])
+        tmp1 <- biomaRt::getBM(attributes=c('hsapiens_homolog_associated_gene_name','external_gene_name'),values=TRUE,mart=mart,filters='with_hsapiens_homolog')
+        TF_list <- base::unique(tmp1[which(tmp1[,1] %in% TF_list),2])
       }
     }
     if(use_level=='transcript'){
       message(sprintf('Begin read TF list information from ensembl for %s !',use_spe))
-      TF_info  <- getBM(attributes = ensembl.attr.transcript,values=TF_list, mart=mart, filters=filter_attr)
+      TF_info  <- biomaRt::getBM(attributes = ensembl.attr.transcript,values=TF_list, mart=mart, filters=filter_attr)
     }
     if(use_level=='gene'){
       message(sprintf('Begin read TF list information from ensembl for %s !',use_spe))
-      TF_info  <- getBM(attributes = ensembl.attr.gene,values=TF_list, mart=mart, filters=filter_attr)
+      TF_info  <- biomaRt::getBM(attributes = ensembl.attr.gene,values=TF_list, mart=mart, filters=filter_attr)
     }
     # for SIG list
     if(is.null(SIG_list)){
@@ -189,33 +221,33 @@ db.preload <- function(use_level='transcript',use_spe='human',update = FALSE,
       SIG_list <- read.delim(SIG_f,stringsAsFactors=FALSE,header=F)$V1
       if(use_spe != 'HUMAN' & use_spe != 'MOUSE'){ ## if spe not human/mouse
         filter_attr <- 'external_gene_name'
-        tmp1 <- getBM(attributes=c('hsapiens_homolog_associated_gene_name','external_gene_name'),values=TRUE,mart=mart,filters='with_hsapiens_homolog')
-        SIG_list <- unique(tmp1[which(tmp1[,1] %in% SIG_list),2])
+        tmp1 <- biomaRt::getBM(attributes=c('hsapiens_homolog_associated_gene_name','external_gene_name'),values=TRUE,mart=mart,filters='with_hsapiens_homolog')
+        SIG_list <- base::unique(tmp1[which(tmp1[,1] %in% SIG_list),2])
       }
     }
     if(use_level=='transcript'){
       message(sprintf('Begin read SIG list information from ensembl for %s !',use_spe))
-      SIG_info  <- getBM(attributes = ensembl.attr.transcript,values=SIG_list, mart=mart, filters=filter_attr)
+      SIG_info  <- biomaRt::getBM(attributes = ensembl.attr.transcript,values=SIG_list, mart=mart, filters=filter_attr)
     }
     if(use_level=='gene'){
       message(sprintf('Begin read SIG list information from ensembl for %s !',use_spe))
-      SIG_info  <- getBM(attributes = ensembl.attr.gene,values=SIG_list, mart=mart, filters=filter_attr)
+      SIG_info  <- biomaRt::getBM(attributes = ensembl.attr.gene,values=SIG_list, mart=mart, filters=filter_attr)
     }
     # check input not in the list
-    miss_TF  <- unique(setdiff(TF_list,TF_info[[filter_attr]]))
-    miss_SIG <- unique(setdiff(SIG_list,SIG_info[[filter_attr]]))
-    if(length(miss_TF)>0){message(sprintf("%d TFs could not match,please check and choose to re-try : %s",
-                                          length(miss_TF),paste(sort(miss_TF),collapse=';')))}
-    if(length(miss_SIG)>0){message(sprintf("%d SIGs could not match,please check and choose to re-try : %s",
-                                           length(miss_SIG),paste(sort(miss_SIG),collapse=';')))}
+    miss_TF  <- base::unique(base::setdiff(TF_list,TF_info[[filter_attr]]))
+    miss_SIG <- base::unique(base::setdiff(SIG_list,SIG_info[[filter_attr]]))
+    if(base::length(miss_TF)>0){message(sprintf("%d TFs could not match,please check and choose to re-try : %s",
+                                          base::length(miss_TF),base::paste(sort(miss_TF),collapse=';')))}
+    if(base::length(miss_SIG)>0){message(sprintf("%d SIGs could not match,please check and choose to re-try : %s",
+                                           base::length(miss_SIG),base::paste(sort(miss_SIG),collapse=';')))}
     ####### output full info
     tf_sigs <- list();tf_sigs$tf <- list();tf_sigs$sig <- list();
     tf_sigs$tf$info  <- TF_info; tf_sigs$sig$info <- SIG_info;
-    for(each_id_type in intersect(c('ensembl_transcript_id','ensembl_gene_id',
+    for(each_id_type in base::intersect(c('ensembl_transcript_id','ensembl_gene_id',
                                     'external_transcript_name','external_gene_name','hgnc_symbol',
                                     'entrezgene','refseq_mrna'),colnames(TF_info))){
-      tf_sigs$tf[[each_id_type]] <- setdiff(unique(TF_info[[each_id_type]]),"")
-      tf_sigs$sig[[each_id_type]] <- setdiff(unique(SIG_info[[each_id_type]]),"")
+      tf_sigs$tf[[each_id_type]] <- base::setdiff(base::unique(TF_info[[each_id_type]]),"")
+      tf_sigs$sig[[each_id_type]] <- base::setdiff(base::unique(SIG_info[[each_id_type]]),"")
     }
     db_info <- all_ds[w1,]
     save(tf_sigs,db_info=db_info,file = RData.file)
@@ -233,7 +265,7 @@ db.preload <- function(use_level='transcript',use_spe='human',update = FALSE,
 #' If NULL, no filter will be performed to the TF/SIG list. Default is NULL.
 #' @param use_gene_type character, the attribute name inherited from the biomaRt package.
 #' Some options are, "ensembl_gene_id", "ensembl_gene_id_version", "ensembl_transcript_id", "ensembl_transcript_id_version" and "refseq_mrna".
-#' All options can be accessed by calling \code{useMart} (e.g. mart <- useMart('ensembl',db_info[1]); listAttributes(mart)$name).
+#' All options can be accessed by calling \code{biomaRt::useMart} (e.g. mart <- biomaRt::useMart('ensembl',db_info[1]); biomaRt::listAttributes(mart)$name).
 #'
 #' The type must match the gene type from the input \code{use_genes}. Default is "external_gene_name".
 #' @param ignore_version logical, if TRUE, the version "ensembl_gene_id_version" or "ensembl_transcript_id_version" will be ignored.
@@ -261,7 +293,16 @@ db.preload <- function(use_level='transcript',use_spe='human',update = FALSE,
 get.TF_SIG.list <- function(use_genes=NULL,
                             use_gene_type='external_gene_name',ignore_version=FALSE,
                             dataset=NULL){
+  #
+  all_input_para <- c('use_genes')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  check_res <- c(check_option('ignore_version',c(TRUE,FALSE),envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
   if(is.null(dataset)==TRUE){
+    check_res <- check_para('db_info',envir=environment())
+    if(base::min(check_res)==0){message('Please use db.preload() to get db_info or set dataset, check and re-try!');return(FALSE)}
     dataset <- db_info[1]
   }
   if(is.null(tf_sigs)==TRUE){
@@ -270,11 +311,11 @@ get.TF_SIG.list <- function(use_genes=NULL,
   n1 <- names(tf_sigs$tf)[-1]
   if(use_gene_type %in% n1){
     if(is.null(use_genes)==TRUE){
-      TF_list <- unique(tf_sigs$tf[[use_gene_type]])
-      SIG_list <- unique(tf_sigs$sig[[use_gene_type]])
+      TF_list <- base::unique(tf_sigs$tf[[use_gene_type]])
+      SIG_list <- base::unique(tf_sigs$sig[[use_gene_type]])
     }else{
-      TF_list <- unique(intersect(use_genes,tf_sigs$tf[[use_gene_type]]))
-      SIG_list <- unique(intersect(use_genes,tf_sigs$sig[[use_gene_type]]))
+      TF_list <- base::unique(base::intersect(use_genes,tf_sigs$tf[[use_gene_type]]))
+      SIG_list <- base::unique(base::intersect(use_genes,tf_sigs$sig[[use_gene_type]]))
     }
   }else{
     if(grepl('version$',use_gene_type)==TRUE & ignore_version==TRUE){
@@ -284,25 +325,21 @@ get.TF_SIG.list <- function(use_genes=NULL,
       TF_list <- transfer_tab[which(transfer_tab$from_type %in% tf_sigs$tf[[gsub('(.*)_version','\\1',use_gene_type)]]),'to_type']
       SIG_list <- transfer_tab[which(transfer_tab$from_type %in% tf_sigs$sig[[gsub('(.*)_version','\\1',use_gene_type)]]),'to_type']
     }else{
-      mart <- useMart(biomart="ensembl", dataset=dataset) ## get mart for id conversion !!!! db_info is saved in db RData
-      #filters <- listFilters(mart)
-      attributes <- listAttributes(mart)
+      mart <- biomaRt::useMart(biomart="ensembl", dataset=dataset) ## get mart for id conversion !!!! db_info is saved in db RData
+      #filters <- biomaRt::listFilters(mart)
+      attributes <- biomaRt::listAttributes(mart)
       if(!use_gene_type %in% attributes$name){
         message(sprintf('%s not in the attributes for %s, please check and re-try !',use_gene_type,dataset));return(FALSE)
       }
       transfer_tab <- get_IDtransfer(from_type=use_gene_type,to_type=n1[1],ignore_version = ignore_version)
       print(str(transfer_tab))
-      TF_list <- get_name_transfertab(use_genes=tf_sigs$tf[n1[1]][[1]],transfer_tab = transfer_tab,ignore_version = ignore_version)
-      SIG_list <- get_name_transfertab(use_genes=tf_sigs$sig[n1[1]][[1]],transfer_tab = transfer_tab,ignore_version = ignore_version)
+      TF_list <- get_name_transfertab(use_genes=tf_sigs$tf[n1[1]][[1]],transfer_tab = transfer_tab,ignore_version = ignore_version,ignore_order=TRUE,from_type=n1[1],to_type=use_gene_type)
+      SIG_list <- get_name_transfertab(use_genes=tf_sigs$sig[n1[1]][[1]],transfer_tab = transfer_tab,ignore_version = ignore_version,ignore_order=TRUE,from_type=n1[1],to_type=use_gene_type)
     }
-    #tmp1 <- getBM(attributes=c(n1[1],use_gene_type),values=tf_sigs$tf[n1[1]][[1]],mart=mart,filters=n1[1])
-    #TF_list <- tmp1[,2]
-    #tmp1 <- getBM(attributes=c(n1[1],use_gene_type),values=tf_sigs$sig[n1[1]][[1]],mart=mart,filters=n1[1])
-    #SIG_list <- tmp1[,2]
-    TF_list <- unique(intersect(use_genes,TF_list))
-    SIG_list <- unique(intersect(use_genes,SIG_list))
+    TF_list <- base::unique(base::intersect(use_genes,TF_list))
+    SIG_list <- base::unique(base::intersect(use_genes,SIG_list))
   }
-  message(sprintf('%d TFs and %s SIGs are included in the expression matrix !',length(TF_list),length(SIG_list)))
+  message(sprintf('%d TFs and %s SIGs are included in the expression matrix !',base::length(TF_list),base::length(SIG_list)))
   return(list(tf=TF_list,sig=SIG_list))
 }
 
@@ -312,7 +349,7 @@ get.TF_SIG.list <- function(use_genes=NULL,
 #'
 #' @param from_type character, the attribute name match the current ID type (the type of \code{use_genes}).
 #' Such as "ensembl_gene_id", "ensembl_gene_id_version", "ensembl_transcript_id", "ensembl_transcript_id_version" or "refseq_mrna".
-#' The "attribute" is inherited from the biomaRt package. For details, user can call \code{listAttributes()} to display all available attributes in the selected dataset.
+#' The "attribute" is inherited from the biomaRt package. For details, user can call \code{biomaRt::listAttributes()} to display all available attributes in the selected dataset.
 #' @param to_type character, the attribute name to convert into.
 #' @param add_type character, the additional attribute name to add into the conversion data frame.
 #' @param use_genes a vector of characters, the genes for ID conversion.
@@ -344,14 +381,20 @@ get.TF_SIG.list <- function(use_genes=NULL,
 #' }
 #' @export
 get_IDtransfer <- function(from_type=NULL,to_type=NULL,add_type=NULL,use_genes=NULL,dataset=NULL,ignore_version=FALSE){
+  #
+  all_input_para <- c('from_type','to_type')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  check_res <- c(check_option('ignore_version',c(TRUE,FALSE),envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
   if(is.null(dataset)==TRUE){
-    if(exists('db_info')==FALSE){
-      message('db_info not found, please run db.preload() first!');return(FALSE);
-    }
+    check_res <- check_para('db_info',envir=environment())
+    if(base::min(check_res)==0){message('Please use db.preload() to get db_info or set dataset, check and re-try!');return(FALSE)}
     dataset <- db_info[1]
   }
-  mart <- useMart(biomart="ensembl", dataset=dataset) ## get mart for id conversion !!!! db_info is saved in db RData
-  attributes <- listAttributes(mart)
+  mart <- biomaRt::useMart(biomart="ensembl", dataset=dataset) ## get mart for id conversion !!!! db_info is saved in db RData
+  attributes <- biomaRt::listAttributes(mart)
 
   if(!from_type %in% attributes$name){
     message(sprintf('%s not in the attributes for %s, please check and re-try !',from_type,dataset));return(FALSE)
@@ -370,23 +413,26 @@ get_IDtransfer <- function(from_type=NULL,to_type=NULL,add_type=NULL,use_genes=N
       if(is.null(use_genes)==FALSE) use_genes <- gsub('(.*)\\..*','\\1',use_genes)
     }
   }
-  if(is.null(use_genes)==TRUE | length(use_genes)>100){
-    tmp1 <- getBM(attributes=c(from_type,to_type,add_type),values=1,mart=mart,filters='strand')
-    tmp2 <- getBM(attributes=c(from_type,to_type,add_type),values=-1,mart=mart,filters='strand')
-    tmp1 <- rbind(tmp1,tmp2)
+  if(is.null(use_genes)==TRUE | base::length(use_genes)>100){
+    tmp1 <- biomaRt::getBM(attributes=c(from_type,to_type,add_type),values=1,mart=mart,filters='strand')
+    tmp2 <- biomaRt::getBM(attributes=c(from_type,to_type,add_type),values=-1,mart=mart,filters='strand')
+    tmp1 <- base::rbind(tmp1,tmp2)
     if(is.null(use_genes)==FALSE){
       tmp1 <- tmp1[which(tmp1[,1] %in% use_genes),]
     }
   }else{
-    tmp1 <- getBM(attributes=c(from_type,to_type,add_type),values=use_genes,mart=mart,filters=from_type)
+    tmp1 <- biomaRt::getBM(attributes=c(from_type,to_type,add_type),values=use_genes,mart=mart,filters=from_type)
   }
   if(ori_from_type %in% c('ensembl_gene_id_version','ensembl_transcript_id_version') & is.null(use_genes)==FALSE){
     tmp2 <- data.frame(ori_from_type=ori_use_genes,from_type=use_genes,stringsAsFactors=FALSE)
     names(tmp2) <- c(ori_from_type,from_type)
-    tmp1 <- merge(tmp2,tmp1,by.y=from_type,by.x=from_type)[c(from_type,to_type,ori_from_type)]
+    tmp1 <- base::merge(tmp2,tmp1,by.y=from_type,by.x=from_type)[c(from_type,to_type,ori_from_type)]
   }
-  w1 <- apply(tmp1,1,function(x)length(which(is.na(x)==TRUE | x=="")))
+  w1 <- apply(tmp1,1,function(x)base::length(which(is.na(x)==TRUE | x=="")))
   transfer_tab <- tmp1[which(w1==0),]
+  for(i in 1:ncol(transfer_tab)){
+    transfer_tab[,i] <- as.character(transfer_tab[,i])
+  }
   return(transfer_tab)
 }
 
@@ -398,7 +444,7 @@ get_IDtransfer <- function(from_type=NULL,to_type=NULL,add_type=NULL,use_genes=N
 #' @param to_spe character, name of the target species (e.g. "human", "mouse", "rat"). Default is "mouse".
 #' @param from_type character, the attribute name match the current ID type (the type of \code{use_genes}).
 #' Such as "ensembl_gene_id", "ensembl_gene_id_version", "ensembl_transcript_id", "ensembl_transcript_id_version" or "refseq_mrna".
-#' The "attribute" is inherited from the \code{biomaRt} package. For details, user can call \code{listAttributes()} function to display all available attributes in the selected dataset.
+#' The "attribute" is inherited from the \code{biomaRt} package. For details, user can call \code{biomaRt::listAttributes()} function to display all available attributes in the selected dataset.
 #' @param to_type character, the attribute name match the target ID type.
 #' @param use_genes a vector of characters, the genes for ID conversion. Must be the genes with ID type of \code{from_type}, and from species \code{from_spe}.
 #' If NULL, all the possible genes will be shown in the conversion table. Default is NULL.
@@ -430,46 +476,51 @@ get_IDtransfer <- function(from_type=NULL,to_type=NULL,add_type=NULL,use_genes=N
 get_IDtransfer_betweenSpecies <- function(from_spe='human',to_spe='mouse',
                                           from_type=NULL,to_type=NULL,
                                           use_genes=NULL){
+  #
+  all_input_para <- c('from_spe','to_spe','from_type','to_type')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
   from_spe <- toupper(from_spe)
   to_spe <- toupper(to_spe)
-  ensembl <- useMart("ensembl")
-  all_ds  <- listDatasets(ensembl)
+  ensembl <- biomaRt::useMart("ensembl")
+  all_ds  <- biomaRt::listDatasets(ensembl)
   w1 <- grep(sprintf("^%s GENES",from_spe),toupper(all_ds$description))
-  if(length(w1)==1){
+  if(base::length(w1)==1){
     from_spe_ds <- all_ds[w1,1]
-    mart1 <- useMart(biomart="ensembl", dataset=from_spe_ds) ## get id for input spe
+    mart1 <- biomaRt::useMart(biomart="ensembl", dataset=from_spe_ds) ## get id for input spe
   }
-  if(length(w1)==0){
+  if(base::length(w1)==0){
     message(sprintf('Check input from_spe parameter: %s, not included in the ensembl database',from_spe))
     return(FALSE)
   }
-  if(length(w1)>1){
-    w2 <- paste(all_ds[w1,2],collapse=';')
+  if(base::length(w1)>1){
+    w2 <- base::paste(all_ds[w1,2],collapse=';')
     message(sprintf('Check input from_spe parameter: %s, more than one species match in ensembl database : %s,
                     please check and re-try',from_spe,w2))
     return(FALSE)
   }
   w1 <- grep(sprintf("^%s GENES",to_spe),toupper(all_ds$description))
-  if(length(w1)==1){
+  if(base::length(w1)==1){
     to_spe_ds <- all_ds[w1,1]
-    mart2 <- useMart(biomart="ensembl", dataset=to_spe_ds) ## get id for input spe
+    mart2 <- biomaRt::useMart(biomart="ensembl", dataset=to_spe_ds) ## get id for input spe
   }
-  if(length(w1)==0){
+  if(base::length(w1)==0){
     message(sprintf('Check input to_spe parameter: %s, not included in the ensembl database',to_spe))
     return(FALSE)
   }
-  if(length(w1)>1){
-    w2 <- paste(all_ds[w1,2],collapse=';')
+  if(base::length(w1)>1){
+    w2 <- base::paste(all_ds[w1,2],collapse=';')
     message(sprintf('Check input to_spe parameter: %s, more than one species match in ensembl database : %s,
                     please check and re-try',to_spe,w2))
     return(FALSE)
   }
   #### mart1 mart2
-  attributes <- listAttributes(mart1)
+  attributes <- biomaRt::listAttributes(mart1)
   if(!from_type %in% attributes$name){
     message(sprintf('%s not in the attributes for %s, please check and re-try !',from_type,from_spe));return(FALSE)
   }
-  attributes <- listAttributes(mart2)
+  attributes <- biomaRt::listAttributes(mart2)
   if(!to_type %in% attributes$name){
     message(sprintf('%s not in the attributes for %s, please check and re-try !',to_type,to_spe));return(FALSE)
   }
@@ -477,20 +528,20 @@ get_IDtransfer_betweenSpecies <- function(from_spe='human',to_spe='mouse',
   cn1 <- gsub('(.*)_gene_ensembl','\\1',from_spe_ds)
   cn2 <- attributes$name ## attribute names in mart2
   cn3 <- cn2[grep(sprintf('%s_homolog_associated_gene_name',cn1),cn2)]
-  if(length(cn3)!=1){
+  if(base::length(cn3)!=1){
     message('No homolog info found in Biomart, sorry !');return(FALSE)
   }
   tmp1 <- get_IDtransfer(from_type=from_type,to_type='external_gene_name',use_genes=use_genes,dataset=from_spe_ds)
-  tmp2 <- getBM(attributes=c(cn3,'external_gene_name'),values=TRUE,
+  tmp2 <- biomaRt::getBM(attributes=c(cn3,'external_gene_name'),values=TRUE,
                 mart=mart2,filters=sprintf('with_%s_homolog',cn1))
   colnames(tmp1) <- sprintf('%s_%s',colnames(tmp1),from_spe)
   colnames(tmp2) <- sprintf('%s_%s',colnames(tmp2),to_spe)
-  tmp3 <- merge(tmp1,tmp2,by.x=sprintf('external_gene_name_%s',from_spe),by.y=sprintf('%s_%s',cn3,to_spe))
+  tmp3 <- base::merge(tmp1,tmp2,by.x=sprintf('external_gene_name_%s',from_spe),by.y=sprintf('%s_%s',cn3,to_spe))
   transfer_tab <- tmp3[,c(2,3,1)]
   if(to_type != 'external_gene_name'){
     tmp4 <- get_IDtransfer(from_type='external_gene_name',to_type=to_type,use_genes=tmp3[,3],dataset=to_spe_ds)
     colnames(tmp4) <- sprintf('%s_%s',colnames(tmp4),to_spe)
-    tmp5 <- merge(tmp3,tmp4)
+    tmp5 <- base::merge(tmp3,tmp4)
     transfer_tab <- tmp5[,c(3,4,2,1)]
   }
   return(transfer_tab)
@@ -505,7 +556,7 @@ get_IDtransfer_betweenSpecies <- function(from_spe='human',to_spe='mouse',
 #' @param from_type character, the attribute name matches the current ID type (the type of use_genes).
 #' Such as "ensembl_gene_id", "ensembl_gene_id_version", "ensembl_transcript_id", "ensembl_transcript_id_version" or "refseq_mrna".
 #' The "attribute" is inherited from the biomaRt package.
-#' For details, user can call \code{listAttributes()} function to display all available attributes in the selected dataset.
+#' For details, user can call \code{biomaRt::listAttributes()} function to display all available attributes in the selected dataset.
 #' @param use_genes a vector of characters, the genes for ID conversion.
 #' If NULL, all genes will be selected.
 #' @param dataset character, name of the dataset used for ID conversion.
@@ -536,12 +587,22 @@ get_IDtransfer_betweenSpecies <- function(from_spe='human',to_spe='mouse',
 #' }
 #' @export
 get_IDtransfer2symbol2type <- function(from_type=NULL,use_genes=NULL,dataset=NULL,use_level='gene',ignore_version=FALSE){
+  #
+  all_input_para <- c('from_type')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  check_res <- c(check_option('ignore_version',c(TRUE,FALSE),envir=environment()),
+                 check_option('use_level',c('gene','transcript'),envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
   if(is.null(dataset)==TRUE){
+    check_res <- check_para('db_info',envir=environment())
+    if(base::min(check_res)==0){message('Please use db.preload() to get db_info or set dataset, check and re-try!');return(FALSE)}
     dataset <- db_info[1]
   }
   message(sprintf('Your setting is at %s level',use_level))
-  mart <- useMart(biomart="ensembl", dataset=dataset) ## get mart for id conversion !!!! db_info is saved in db RData
-  attributes <- listAttributes(mart)
+  mart <- biomaRt::useMart(biomart="ensembl", dataset=dataset) ## get mart for id conversion !!!! db_info is saved in db RData
+  attributes <- biomaRt::listAttributes(mart)
   if(!from_type %in% attributes$name){
     message(sprintf('%s not in the attributes for %s, please check and re-try !',from_type,dataset));return(FALSE)
   }
@@ -559,11 +620,11 @@ get_IDtransfer2symbol2type <- function(from_type=NULL,use_genes=NULL,dataset=NUL
 #' @param transfer_tab data.frame, the conversion table. Users can create it by calling \code{get_IDtransfer}.
 #' @param from_type character, the attribute name match the current ID type (the type of use_genes).
 #' Such as "ensembl_gene_id", "ensembl_gene_id_version", "ensembl_transcript_id", "ensembl_transcript_id_version" or "refseq_mrna".
-#' The "attribute" is inherited from the biomaRt package. For details, user can call \code{listAttributes()} to see all available attributes in the selected dataset.
+#' The "attribute" is inherited from the biomaRt package. For details, user can call \code{biomaRt::listAttributes()} to see all available attributes in the selected dataset.
 #' If NULL, will use the first column of \code{transfer_tab}.
 #' @param to_type character, the attribute name to convert into. If NULL, will use the second column of \code{transfer_tab}.
 #' @param ignore_version logical, if TRUE and \code{from_type} is "ensembl_gene_id_version" or "ensembl_transcript_id_version", the version will be ignored. Default is FALSE.
-#'
+#' @param ignore_order logical, whether need to ignore the output order to match the input list of \code{use_genes}. Default is FALSE.
 #' @return Return a vector of converted gene IDs.
 #'
 #' @examples
@@ -581,25 +642,40 @@ get_IDtransfer2symbol2type <- function(from_type=NULL,use_genes=NULL,dataset=NUL
 #' \dontrun{
 #' }
 #' @export
-get_name_transfertab <- function(use_genes=NULL,transfer_tab=NULL,from_type=NULL,to_type=NULL,ignore_version=FALSE){
+get_name_transfertab <- function(use_genes=NULL,transfer_tab=NULL,from_type=NULL,to_type=NULL,ignore_version=FALSE,ignore_order=FALSE){
+  #
+  all_input_para <- c('use_genes','transfer_tab')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  check_res <- c(check_option('ignore_version',c(TRUE,FALSE),envir=environment()),
+                 check_option('ignore_order',c(TRUE,FALSE),envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
   if(is.null(from_type)==TRUE){from_type=colnames(transfer_tab)[1];}
   if(is.null(to_type)==TRUE){to_type=colnames(transfer_tab)[2];}
   if(ignore_version==TRUE){
+    w1 <- which(colnames(transfer_tab)==from_type)
+    transfer_tab[,w1] <- gsub('(.*)\\..*','\\1',transfer_tab[,w1])
     from_type <- gsub('(.*)_version','\\1',from_type)
+    colnames(transfer_tab)[w1] <- from_type
     use_genes <- gsub('(.*)\\..*','\\1',use_genes)
   }
-  transfer_tab <- unique(transfer_tab[,c(from_type,to_type)])
+  transfer_tab <- base::unique(transfer_tab[,c(from_type,to_type)])
   x <- use_genes;
-  t1 <- unique(transfer_tab[which(transfer_tab[,from_type] %in% x),])
-  c1 <- unique(t1[,from_type])
-  if(length(c1)<nrow(t1)){
+  t1 <- base::unique(transfer_tab[which(transfer_tab[,from_type] %in% x),])
+  c1 <- base::unique(t1[,from_type])
+  if(base::length(c1)<nrow(t1) & ignore_order==FALSE){
     message('Gene ID in from type contain multiple items!');return(FALSE)
   }
-  rownames(t1) <- t1[,from_type]
-  x1 <- t1[x,to_type]
-  w1 <- which(is.na(x1)==TRUE)
-  x1[w1] <- x[w1]
-  x1
+  if(ignore_order==TRUE){
+    x1 <- t1[,to_type]
+  }else{
+    rownames(t1) <- t1[,from_type]
+    x1 <- t1[x,to_type]
+    w1 <- which(is.na(x1)==TRUE)
+    x1[w1] <- x[w1]
+  }
+  return(x1)
 }
 
 #' Manipulation of Working Directories for NetBID2 Network Construction Step
@@ -636,10 +712,15 @@ get_name_transfertab <- function(use_genes=NULL,transfer_tab=NULL,from_type=NULL
 #' }
 #' @export
 NetBID.network.dir.create <- function(project_main_dir=NULL,project_name=NULL){
-  if(exists('network.par')==TRUE){message('network.par is occupied in the current session,please manually run: rm(network.par) and re-try, otherwise will not change !');
-    return(network.par)}
-  if(is.null(project_main_dir)==TRUE){message('project_main_dir required, please input and re-try!');return(FALSE)}
-  if(is.null(project_name)==TRUE){message('project_name required, please input and re-try!');return(FALSE)}
+  #
+  if(base::exists('network.par')==TRUE){
+    stop('network.par is occupied in the current session,please manually run: rm(network.par) and re-try, otherwise will not change !');
+  }
+  #
+  all_input_para <- c('project_main_dir','project_name')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
   network.par <- list()
   network.par$main.dir <- project_main_dir
   network.par$project.name <- project_name
@@ -713,32 +794,23 @@ NetBID.analysis.dir.create <- function(project_main_dir=NULL,project_name=NULL,
                                        network_project_name=NULL,
                                        tf.network.file=NULL,
                                        sig.network.file=NULL){
-  if(exists('analysis.par')==TRUE){message('analysis.par is occupied in the current session,please manually run: rm(analysis.par) and re-try, otherwise will not change !');
-    return(analysis.par)}
-  if(is.null(project_main_dir)==TRUE){message('project_main_dir required, please input and re-try!');return(FALSE)}
-  if(is.null(project_name)==TRUE){message('project_name required, please input and re-try!');return(FALSE)}
-  if(is.null(network_dir)==TRUE){message('network_dir required, please input and re-try!');return(FALSE)}
-  #if(is.null(network_project_name)==TRUE){message('network_project_name required, please input and re-try!');return(FALSE)}
+  #
+  if(base::exists('analysis.par')==TRUE){
+    stop('analysis.par is occupied in the current session,please manually run: rm(analysis.par) and re-try, otherwise will not change !');
+  }
+  #
+  all_input_para <- c('project_main_dir','project_name')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  if((is.null(network_dir)==TRUE | is.null(network_project_name)==TRUE) & (is.null(tf.network.file)==TRUE | is.null(sig.network.file)==TRUE)){
+    message('Either network_dir,network_project_name or tf.network.file,sig.network.file is required, please check and re-try !')
+    return(FALSE);
+  }
+  #
   analysis.par <- list()
   analysis.par$main.dir <- project_main_dir
   analysis.par$project.name <- project_name
   analysis.par$out.dir <- sprintf('%s/%s/',analysis.par$main.dir,analysis.par$project.name)
-  # create output directory
-  if (!dir.exists(analysis.par$out.dir)) {
-    dir.create(analysis.par$out.dir, recursive = TRUE)
-  }
-  analysis.par$out.dir.QC <- paste0(analysis.par$out.dir, '/QC/')
-  if (!dir.exists(analysis.par$out.dir.QC)) {
-    dir.create(analysis.par$out.dir.QC, recursive = TRUE) ## directory for QC
-  }
-  analysis.par$out.dir.DATA <- paste0(analysis.par$out.dir, '/DATA/')
-  if (!dir.exists(analysis.par$out.dir.DATA)) {
-    dir.create(analysis.par$out.dir.DATA, recursive = TRUE) ## directory for DATA
-  }
-  analysis.par$out.dir.PLOT <- paste0(analysis.par$out.dir, '/PLOT/')
-  if (!dir.exists(analysis.par$out.dir.PLOT)) {
-    dir.create(analysis.par$out.dir.PLOT, recursive = TRUE) ## directory for Result Plots
-  }
   analysis.par$tf.network.file <- ''
   analysis.par$sig.network.file <- ''
   if(is.null(tf.network.file)==FALSE){
@@ -771,52 +843,25 @@ NetBID.analysis.dir.create <- function(project_main_dir=NULL,project_name=NULL,
     message(sprintf('SIG network file not found in %s, please check and re-try ',analysis.par$sig.network.file))
     return(FALSE)
   }
+  # create output directory
+  if (!dir.exists(analysis.par$out.dir)) {
+    dir.create(analysis.par$out.dir, recursive = TRUE)
+  }
+  analysis.par$out.dir.QC <- paste0(analysis.par$out.dir, '/QC/')
+  if (!dir.exists(analysis.par$out.dir.QC)) {
+    dir.create(analysis.par$out.dir.QC, recursive = TRUE) ## directory for QC
+  }
+  analysis.par$out.dir.DATA <- paste0(analysis.par$out.dir, '/DATA/')
+  if (!dir.exists(analysis.par$out.dir.DATA)) {
+    dir.create(analysis.par$out.dir.DATA, recursive = TRUE) ## directory for DATA
+  }
+  analysis.par$out.dir.PLOT <- paste0(analysis.par$out.dir, '/PLOT/')
+  if (!dir.exists(analysis.par$out.dir.PLOT)) {
+    dir.create(analysis.par$out.dir.PLOT, recursive = TRUE) ## directory for Result Plots
+  }
+  #
   message(sprintf('Analysis space created, please check %s',analysis.par$out.dir))
   return(analysis.par)
-}
-
-###### overall functions
-## check network.par
-check_network.par <- function(network.par,step='pre-load'){
-  if(class(network.par)!='list'){message('Invalid network.par !');return(FALSE)}
-  if(step=='pre-load'){
-    n1 <- names(network.par)
-    n2 <- setdiff(c('main.dir','project.name','out.dir','out.dir.QC','out.dir.DATA','out.dir.SJAR'),n1)
-    if(length(n2)>0){
-      message(sprintf('Miss %s network.par, please check and re-try !',paste(n2,collapse=';')))
-      return(FALSE)
-    }
-  }
-  if(step %in% c('exp-load','exp-QC','exp-cluster')){
-    n1 <- names(network.par)
-    n2 <- setdiff(c('main.dir','project.name','out.dir','out.dir.QC','out.dir.DATA','out.dir.SJAR','net.eset'),n1)
-    if(length(n2)>0){
-      message(sprintf('Miss %s network.par, please check and re-try !',paste(n2,collapse=';')))
-      return(FALSE)
-    }
-  }
-  return(TRUE)
-}
-## check analysis.par
-check_analysis.par <- function(analysis.par,step='pre-load'){
-  if(class(analysis.par)!='list'){message('Invalid network.par !');return(FALSE)}
-  if(step=='pre-load'){
-    n1 <- names(analysis.par)
-    n2 <- setdiff(c('main.dir','project.name','out.dir','out.dir.QC','out.dir.DATA','out.dir.PLOT','tf.network.file','sig.network.file'),n1)
-    if(length(n2)>0){
-      message(sprintf('Miss %s analysis.par, please check and re-try !',paste(n2,collapse=';')))
-      return(FALSE)
-    }
-  }
-  if(step %in% c('exp-load','exp-QC','exp-cluster')){
-    n1 <- names(analysis.par)
-    n2 <- setdiff(c('main.dir','project.name','out.dir','out.dir.QC','out.dir.DATA','out.dir.PLOT','cal.eset','tf.network.file','sig.network.file'),n1)
-    if(length(n2)>0){
-      message(sprintf('Miss %s analysis.par, please check and re-try !',paste(n2,collapse=';')))
-      return(FALSE)
-    }
-  }
-  return(TRUE)
 }
 
 #' Save Data Produced by Corresponding NetBID2 Pipeline Step.
@@ -843,16 +888,19 @@ check_analysis.par <- function(analysis.par,step='pre-load'){
 #' }
 #' @export
 NetBID.saveRData <- function(network.par=NULL,analysis.par=NULL,step='exp-load'){
+  #
+  all_input_para <- c('step')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
   if(is.null(network.par)==FALSE & is.null(analysis.par)==FALSE){
     message('Can not save network.par and analysis.par at once, please only use one !');return(FALSE)
   }
   if(is.null(network.par)==FALSE){
-    check_network.par(network.par = network.par,step=step)
     save(network.par,file=sprintf('%s/network.par.Step.%s.RData',network.par$out.dir.DATA,step))
     message(sprintf('Successful save to %s',sprintf('%s/network.par.Step.%s.RData',network.par$out.dir.DATA,step)))
   }
   if(is.null(analysis.par)==FALSE){
-    check_analysis.par(analysis.par = analysis.par,step=step)
     save(analysis.par,file=sprintf('%s/analysis.par.Step.%s.RData',analysis.par$out.dir.DATA,step))
     message(sprintf('Successful save to %s',sprintf('%s/analysis.par.Step.%s.RData',analysis.par$out.dir.DATA,step)))
   }
@@ -874,16 +922,19 @@ NetBID.saveRData <- function(network.par=NULL,analysis.par=NULL,step='exp-load')
 #'
 #' @export
 NetBID.loadRData <- function(network.par=NULL,analysis.par=NULL,step='exp-load'){
+  #
+  all_input_para <- c('step')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
   if(is.null(network.par)==FALSE & is.null(analysis.par)==FALSE){
     message('Can not load network.par and analysis.par at once, please only use one !');return(FALSE)
   }
   if(is.null(network.par)==FALSE){
-    #check_network.par(network.par = network.par,step=step)
     load(file=sprintf('%s/network.par.Step.%s.RData',network.par$out.dir.DATA,step),.GlobalEnv)
     message(sprintf('Successful load from %s',sprintf('%s/network.par.Step.%s.RData',network.par$out.dir.DATA,step)))
   }
   if(is.null(analysis.par)==FALSE){
-    #check_analysis.par(analysis.par = analysis.par,step=step)
     load(file=sprintf('%s/analysis.par.Step.%s.RData',analysis.par$out.dir.DATA,step),.GlobalEnv)
     message(sprintf('Successful load from %s',sprintf('%s/analysis.par.Step.%s.RData',analysis.par$out.dir.DATA,step)))
   }
@@ -905,7 +956,8 @@ NetBID.loadRData <- function(network.par=NULL,analysis.par=NULL,step='exp-load')
 #' @examples
 #'
 #' \dontrun{
-#' # Download the GSE116028 which performed on GPL6480 platform from GEO and save it to the current directory
+#' # Download the GSE116028 which performed on GPL6480 platform
+#' # from GEO and save it to the current directory
 #' # Assign this ExpressionSet object to net_eset
 #' net_eset <- load.exp.GEO(out.dir='./',
 #'                          GSE='GSE116028',
@@ -915,14 +967,14 @@ NetBID.loadRData <- function(network.par=NULL,analysis.par=NULL,step='exp-load')
 #' }
 #' @export
 load.exp.GEO <- function(out.dir = NULL,GSE = NULL,GPL = NULL,getGPL=TRUE,update = FALSE){
-  if(is.null(out.dir)==TRUE){
-    message('out.dir required, please re-try')
-    return(FALSE)
-  }
-  if (is.null(GSE) | is.null(GPL)){
-    message('GSE and GPL required, please re-try')
-    return(FALSE)
-  }
+  #
+  all_input_para <- c('out.dir','GSE','GPL')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  check_res <- c(check_option('getGPL',c(TRUE,FALSE),envir=environment()),
+                 check_option('update',c(TRUE,FALSE),envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
   if(!grepl('^GSE',GSE)){
     message('Only support GSE ID')
     return(FALSE)
@@ -932,8 +984,8 @@ load.exp.GEO <- function(out.dir = NULL,GSE = NULL,GPL = NULL,getGPL=TRUE,update
     message(sprintf('RData exist in %s and update==TRUE, will directly load from RData .',expRData_dir))
     load(expRData_dir)
   } else{
-    eset <- getGEO(GSE, GSEMatrix = TRUE, getGPL = getGPL)
-    if (length(eset) > 1)
+    eset <- GEOquery::getGEO(GSE, GSEMatrix = TRUE, getGPL = getGPL)
+    if (base::length(eset) > 1)
       idx <- grep(GPL, attr(eset, "names"))
     else
       idx <- 1
@@ -959,27 +1011,37 @@ load.exp.GEO <- function(out.dir = NULL,GSE = NULL,GPL = NULL,getGPL=TRUE,update
 #' @param use_phenotype_info data.frame, the data frame contains phenotype information. It must have the columns \code{use_sample_col} and \code{use_design_col}.
 #' @param use_sample_col character, the column name, indicating which column in \code{use_phenotype_info} should be used as the sample name.
 #' @param use_design_col character, the column name, indicating which column in \code{use_phenotype_info} should be used as the design feature for samples.
-#' @param return_type character, the class of the return object. Users can choose from "txi","counts","tpm",’"eset" and "dds".
+#' @param return_type character, the class of the return object.
 #' "txi" is the output of tximport. It is a list containing three matrices, abundance, counts and length.
 #' "counts" is the matrix of raw count.
 #' "tpm" is the raw tpm.
+#' "fpm", "cpm" is the fragments/counts per million mapped fragments (fpm/cpm).
+#' "raw-dds" is the DESeqDataSet class object, which is the original one without processing.
 #' "dds" is the DESeqDataSet class object, which is processed by DESeq.
 #' "eset" is the ExpressionSet class object, which is processed by DESeq and vst.
 #' Default is "tpm".
 #' @param merge_level character, users can choose between "gene" and "transcript".
 #' "gene", the original salmon results will be mapped to the transcriptome and the expression matrix will be merged to the gene level.
-#' This only works when using e.g. "gencode.v29.transcripts.fa" from GENCODE as the reference.
+#' This only works when using e.g. "gencode.vXX.transcripts.fa" from GENCODE as the reference.
 #' @export
-load.exp.RNASeq.demoSalmon <- function(salmon_dir = "",tx2gene=NULL,
+load.exp.RNASeq.demoSalmon <- function(salmon_dir = NULL,tx2gene=NULL,
                                        use_phenotype_info = NULL,
                                        use_sample_col=NULL,
                                        use_design_col=NULL,
                                        return_type='tpm',
                                        merge_level='gene') {
+  #
+  all_input_para <- c('salmon_dir','use_phenotype_info','use_sample_col','use_design_col','return_type','merge_level')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  check_res <- c(check_option('return_type',c('txi','counts','tpm','fpm','cpm','raw-dds','dds','eset'),envir=environment()),
+                 check_option('merge_level',c('gene','transcript'),envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
   files <- file.path(salmon_dir, list.files(salmon_dir), "quant.sf")
-  sample_name <- gsub('(.*)_salmon', '\\1', list.files(salmon_dir)) ## if no _salmon is also ok
+  if(!grepl('_salmon',use_phenotype_info[1,use_sample_col])) sample_name <- gsub('(.*)_salmon', '\\1', list.files(salmon_dir)) ## if no _salmon is also ok
   names(files) <- sample_name
-  w1 <- length(files)
+  w1 <- base::length(files)
   message(sprintf('%d %s/quant.sf found !',w1,salmon_dir))
   if(is.null(tx2gene)){
     gene_info <- read.delim(file = files[1], stringsAsFactors = FALSE)[, 1]
@@ -1016,16 +1078,18 @@ load.exp.RNASeq.demoSalmon <- function(salmon_dir = "",tx2gene=NULL,
 #' @param use_phenotype_info data.frame, the data frame contains phenotype information. It must have the columns \code{use_sample_col} and \code{use_design_col}.
 #' @param use_sample_col character, the column name, indicating which column in \code{use_phenotype_info} should be used as the sample name.
 #' @param use_design_col character, the column name, indicating which column in \code{use_phenotype_info} should be used as the design feature for samples.
-#' @param return_type character, the class of the return object. Users can choose from "txi","counts","tpm",'"eset" and "dds".
+#' @param return_type character, the class of the return object.
 #' "txi" is the output of \code{tximport}. It is a list containing three matrices, abundance, counts and length.
 #' "counts" is the matrix of raw count.
 #' "tpm" is the raw tpm.
+#' "fpm", "cpm" is the fragments/counts per million mapped fragments.
+#' "raw-dds" is the DESeqDataSet class object, which is the original one without processing.
 #' "dds" is the DESeqDataSet class object, which is processed by \code{DESeq}.
 #' "eset" is the ExpressionSet class object, which is processed by \code{DESeq} and \code{vst}.
 #' Default is "tpm".
 #' @param merge_level character, users can choose between "gene" and "transcript".
 #' "gene", the original salmon results will be mapped to the transcriptome and the expression matrix will be merged to the gene level.
-#' This only works when using e.g. "gencode.v29.transcripts.fa" from GENCODE as the reference.
+#' This only works when using e.g. "gencode.vXX.transcripts.fa" from GENCODE as the reference.
 #' @export
 load.exp.RNASeq.demo <- function(files,type='salmon',
                                  tx2gene=NULL,
@@ -1034,6 +1098,14 @@ load.exp.RNASeq.demo <- function(files,type='salmon',
                                  use_design_col=NULL,
                                  return_type='tpm',
                                  merge_level='gene') {
+  #
+  all_input_para <- c('files','type','tx2gene','use_phenotype_info','use_sample_col','use_design_col','return_type','merge_level')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  check_res <- c(check_option('return_type',c('txi','counts','tpm','fpm','cpm','raw-dds','dds','eset'),envir=environment()),
+                 check_option('merge_level',c('gene','transcript'),envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
   n1 <- colnames(use_phenotype_info)
   if(!use_sample_col %in% n1){
     message(sprintf('%s not in the colnames of use_phenotype_info,
@@ -1045,15 +1117,15 @@ load.exp.RNASeq.demo <- function(files,type='salmon',
   }
   # get intersected samples
   rownames(use_phenotype_info) <- use_phenotype_info[,use_sample_col]
-  w1 <- intersect(names(files),rownames(use_phenotype_info))
+  w1 <- base::intersect(names(files),rownames(use_phenotype_info))
   files <- files[w1]; use_phenotype_info <- use_phenotype_info[w1,]
-  if(length(w1)==0){
+  if(base::length(w1)==0){
     message(sprintf('No sample could match the %s in the use_phenotype_info, please check and re-try !',use_sample_col))
     return(FALSE)
   }
-  message(sprintf('%d samples could further processed !',length(w1)))
+  message(sprintf('%d samples could further processed !',base::length(w1)))
   # import into txi
-  txi <- tximport(files, type = type, tx2gene = tx2gene) ## key step one, tximport
+  txi <- tximport::tximport(files, type = type, tx2gene = tx2gene) ## key step one, tximport
   if(return_type=='counts'){
     return(txi$counts)
   }
@@ -1064,18 +1136,21 @@ load.exp.RNASeq.demo <- function(files,type='salmon',
     return(txi)
   }
   use_phenotype_info <- use_phenotype_info[colnames(txi$abundance), ]
-  tmp_phe <- cbind(group=use_phenotype_info[,use_design_col],use_phenotype_info,stringsAsFactors=FALSE)
+  tmp_phe <- base::cbind(group=use_phenotype_info[,use_design_col],use_phenotype_info,stringsAsFactors=FALSE)
   # import into deseq2
-  dds <- DESeqDataSetFromTximport(txi, colData = tmp_phe, design =  ~ group) ## key step two, DESeqDataSetFromTximport
-  if(return_type=='tpm-dds'){
+  dds <- DESeq2::DESeqDataSetFromTximport(txi, colData = tmp_phe, design =  ~ group) ## key step two, DESeqDataSetFromTximport
+  if(return_type=='raw-dds'){
     return(dds)
   }
-  dds <- DESeq(dds)
+  if(return_type=='fpm' | return_type=='cpm'){
+    return(DESeq2::fpm(dds))
+  }
+  dds <- DESeq2::DESeq(dds)
   if(return_type=='dds'){
     return(dds)
   }else{
-    vsd <- vst(dds)
-    mat <- assay(vsd)
+    vsd <- DESeq2::vst(dds)
+    mat <- SummarizedExperiment::assay(vsd)
     eset <- generate.eset(exp_mat=mat, phenotype_info = use_phenotype_info, feature_info = NULL, annotation_info='Salmon')
     if(return_type=='eset') return(eset)
     if(return_type=='both') return(list(eset=eset,dds=dds))
@@ -1109,9 +1184,13 @@ load.exp.RNASeq.demo <- function(files,type='salmon',
 #' eset <- generate.eset(exp_mat=mat1)
 #' @export
 generate.eset <- function(exp_mat=NULL, phenotype_info=NULL, feature_info=NULL, annotation_info="") {
-  if(is.null(exp_mat)){
-    message('exp_mat required, please re-try !');
-    return(FALSE)
+  #
+  all_input_para <- c('exp_mat')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
+  if(is.null(dim(exp_mat))==TRUE){
+    exp_mat <- t(as.matrix(exp_mat));rownames(exp_mat) <- 'g1'
   }
   if (is.null(phenotype_info)) {
     phenotype_info <- data.frame(group = colnames(exp_mat), stringsAsFactors = FALSE)
@@ -1121,14 +1200,15 @@ generate.eset <- function(exp_mat=NULL, phenotype_info=NULL, feature_info=NULL, 
     feature_info <- data.frame(gene = rownames(exp_mat), stringsAsFactors = FALSE)
     rownames(feature_info) <- rownames(exp_mat)
   }
-  if(class(phenotype_info)=='character' | is.null(dim(phenotype_info))==TRUE){
+  if((class(phenotype_info)=='character' | is.null(dim(phenotype_info))==TRUE) & is.null(names(phenotype_info))==TRUE){
     phenotype_info <- data.frame(group = phenotype_info, stringsAsFactors = FALSE)
     rownames(phenotype_info) <- colnames(exp_mat)
   }
-  if(class(feature_info)=='character' | is.null(dim(feature_info))==TRUE){
+  if((class(feature_info)=='character' | is.null(dim(feature_info))==TRUE) & is.null(names(feature_info))==TRUE){
     feature_info <- data.frame(gene = feature_info, stringsAsFactors = FALSE)
     rownames(feature_info) <- rownames(exp_mat)
   }
+  #
   eset <-
     new(
       "ExpressionSet",
@@ -1175,42 +1255,51 @@ merge_eset <- function(eset1,eset2,
                        group_col_name='original_group',
                        use_col = NULL,
                        remove_batch = FALSE,std=FALSE) {
-  mat1 <- exprs(eset1)
-  mat2 <- exprs(eset2)
-  w1 <- intersect(rownames(mat1), rownames(mat2))
-  if(length(w1)==0){
+  #
+  all_input_para <- c('eset1','eset2','group_col_name')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  check_res <- c(check_option('remove_batch',c(TRUE,FALSE),envir=environment()),
+                 check_option('std',c(TRUE,FALSE),envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
+  mat1 <- Biobase::exprs(eset1)
+  mat2 <- Biobase::exprs(eset2)
+  w1 <- base::intersect(rownames(mat1), rownames(mat2))
+  if(base::length(w1)==0){
     message('No overlap genes between two eSet, please check and re-try!');return(FALSE);
   }
-  if((length(w1)<nrow(mat1) | length(w1)<nrow(mat2)) & std==FALSE){
+  if((base::length(w1)<nrow(mat1) | base::length(w1)<nrow(mat2)) & std==FALSE){
     message('Original two esets contain different gene list, strongly suggest to do z transformation (set std=TRUE) across all samples before merge!');
   }
   if(std==TRUE){
     ## z-transformation
-    mat1 <- apply(mat1,2,std) # std to samples
-    mat2 <- apply(mat2,2,std)
+    mat1 <- apply(mat1,2,do.std) # std to samples
+    mat2 <- apply(mat2,2,do.std)
   }
-  rmat <- cbind(mat1[w1, ], mat2[w1,])
+  rmat <- base::cbind(as.data.frame(mat1)[w1, ], as.data.frame(mat2)[w1,])
+  rmat <- as.matrix(rmat)
   #choose1 <- apply(rmat <= quantile(rmat, probs = 0.05), 1, sum) <= ncol(rmat) * 0.90 ## low expressed genes
   #rmat <- rmat[choose1, ]
-  phe1 <- pData(eset1)
-  phe2 <- pData(eset2)
-  if(length(use_col)==0){
-    use_col <- intersect(colnames(phe1),colnames(phe2))
+  phe1 <- Biobase::pData(eset1)
+  phe2 <- Biobase::pData(eset2)
+  if(base::length(use_col)==0){
+    use_col <- base::intersect(colnames(phe1),colnames(phe2))
   }
   rphe <- list();
-  if(length(use_col)>1)
-    rphe <- rbind(phe1[colnames(mat1), use_col], phe2[colnames(mat2), use_col])
-  if(length(use_col)==1){
+  if(base::length(use_col)>1)
+    rphe <- base::rbind(phe1[colnames(mat1), use_col], phe2[colnames(mat2), use_col])
+  if(base::length(use_col)==1){
     rphe <- c(phe1[colnames(mat1), use_col], phe2[colnames(mat2), use_col])
     rphe <- data.frame(rphe,stringsAsFactors=FALSE); colnames(rphe) <- use_col;
     rownames(rphe) <- colnames(rmat)
   }
-  if(length(use_col)==0){message('Warning: no intersected phenotype column!');}
+  if(base::length(use_col)==0){message('Warning: no intersected phenotype column!');}
   if(is.null(group1)==TRUE) group1 <- 'group1'
   if(is.null(group2)==TRUE) group2 <- 'group2'
   rphe[[group_col_name]]<- c(rep(group1, ncol(mat1)), rep(group2, ncol(mat2)))
   if (remove_batch == TRUE) {
-    rmat <- removeBatchEffect(rmat,batch=rphe[[group_col_name]])
+    rmat <- limma::removeBatchEffect(rmat,batch=rphe[[group_col_name]])
   }
   reset <- generate.eset(rmat,phenotype_info = rphe, annotation_info = 'combine')
   return(reset)
@@ -1253,21 +1342,21 @@ merge_eset <- function(eset1,eset2,
 #'                                 merge_method='median',
 #'                                 distribute_method='equal'
 #'                                 )
-#' print(exprs(eset)[test_transfer_table$Gene,])
-#' print(exprs(new_eset))
+#' print(Biobase::exprs(eset)[test_transfer_table$Gene,])
+#' print(Biobase::exprs(new_eset))
 #'
 #' @export update_eset.feature
 update_eset.feature <- function(use_eset=NULL,use_feature_info=NULL,from_feature=NULL,to_feature=NULL,
                                 merge_method='median',distribute_method='equal'){
-  if(is.null(use_eset)){
-    message('use_eset required, please re-try !');
-    return(use_eset)
-  }
-  if(is.null(from_feature) | is.null(to_feature)){
-    message('from_feature, to_feature required, please re-try !')
-    return(use_eset)
-  }
-  if(is.null(use_feature_info)) use_feature_info <- fData(use_eset)
+  #
+  all_input_para <- c('use_eset','from_feature','to_feature')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  check_res <- c(check_option('merge_method',c("median","mean","max","min"),envir=environment()),
+                 check_option('distribute_method',c('mean','equal'),envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
+  if(is.null(use_feature_info)) use_feature_info <- Biobase::fData(use_eset)
   n1 <- colnames(use_feature_info)
   if(!from_feature %in% n1){
     message(sprintf('%s not in in the colnames of use_feature_info, please re-try!',from_feature));return(use_eset)
@@ -1275,54 +1364,54 @@ update_eset.feature <- function(use_eset=NULL,use_feature_info=NULL,from_feature
   if(!to_feature %in% n1){
     message(sprintf('%s not in in the colnames of use_feature_info, please re-try!',to_feature));return(use_eset)
   }
-  mat <- exprs(use_eset)
-  use_feature_info <- unique(use_feature_info);
+  mat <- Biobase::exprs(use_eset)
+  use_feature_info <- base::unique(use_feature_info);
   w1 <- which(use_feature_info[,1]!="" & use_feature_info[,2]!="" & is.na(use_feature_info[,1])==FALSE & is.na(use_feature_info[,2])==FALSE)
   use_feature_info <- use_feature_info[w1,]
   g1 <- rownames(mat) ## rownames for the expmat
-  f1 <- as.character(use_feature_info[,from_feature]) ## from feature info
-  t1 <- as.character(use_feature_info[,to_feature]) ## to feature info
+  f1 <- clean_charVector(use_feature_info[,from_feature]) ## from feature info
+  t1 <- clean_charVector(use_feature_info[,to_feature]) ## to feature info
   w1 <- which(f1 %in% g1); f1 <- f1[w1]; t1 <- t1[w1]; ## only consider features in the rownames of expmat
-  if(length(w1)==0){
+  if(base::length(w1)==0){
     message(sprintf('Rownames of the expression matrix was not included in the %s column, please check and re-try !',from_feature))
     return(use_eset)
   }
-  message(sprintf('%d transfer pairs related with %d rows from original expression matrix will be keeped !',length(w1),length(g1)))
-  fc1 <- table(f1); tc1 <- table(t1); fw1 <- which(fc1>1); tw1 <- which(tc1>1); ## check duplicate records
-  if(length(fw1)>0){
+  message(sprintf('%d transfer pairs related with %d rows from original expression matrix will be keeped !',base::length(w1),base::length(g1)))
+  fc1 <- base::table(f1); tc1 <- base::table(t1); fw1 <- which(fc1>1); tw1 <- which(tc1>1); ## check duplicate records
+  if(base::length(fw1)>0){
     message(sprintf('Original feature %s has %d items with duplicate records, will distribute the original values equal to all related items !
-                    if do not want this, please check and retry !',from_feature,length(fw1)))
+                    if do not want this, please check and retry !',from_feature,base::length(fw1)))
     #return(use_eset)
     w2 <- which(f1 %in% names(fw1)) ## need to distribute
-    w0 <- setdiff(1:length(f1),w2) ## do not need to distribute
+    w0 <- base::setdiff(1:base::length(f1),w2) ## do not need to distribute
     if(distribute_method=='equal'){
       v1 <- mat[f1[w2],]; ## distribute equal
     }
     if(distribute_method=='mean'){
       v1 <- mat[f1[w2],]; ## distribute mean
-      tt <- as.numeric(table(f1[w2])[f1[w2]])
+      tt <- as.numeric(base::table(f1[w2])[f1[w2]])
       v1 <- v1/tt;
     }
     rownames(v1) <- paste0(f1[w2],'-',t1[w2]);
     f1[w2] <- paste0(f1[w2],'-',t1[w2]); # update transfer table
-    mat <- rbind(v1,mat[f1[w0],]) # update mat table
-    fc1 <- table(f1); tc1 <- table(t1); fw1 <- which(fc1>1); tw1 <- which(tc1>1); ## update f1, t1 and related values
+    mat <- base::rbind(v1,mat[f1[w0],]) # update mat table
+    fc1 <- base::table(f1); tc1 <- base::table(t1); fw1 <- which(fc1>1); tw1 <- which(tc1>1); ## update f1, t1 and related values
   }
-  if(length(tw1)>0){
+  if(base::length(tw1)>0){
     w2 <- which(t1 %in% names(tw1)) ## need to merge
-    w0 <- setdiff(1:length(t1),w2) ## do not need to merge
+    w0 <- base::setdiff(1:base::length(t1),w2) ## do not need to merge
     mat_new_0 <- mat[f1[w0],]; rownames(mat_new_0) <- t1[w0]  ## mat do not need to merge
-    if(merge_method=='mean') tmp1 <- aggregate(mat[f1[w2],],list(t1[w2]),function(x){mean(x,na.rm=TRUE)})
-    if(merge_method=='median') tmp1 <- aggregate(mat[f1[w2],],list(t1[w2]),function(x){median(x,na.rm=TRUE)})
-    if(merge_method=='max') tmp1 <- aggregate(mat[f1[w2],],list(t1[w2]),function(x){max(x,na.rm=TRUE)})
-    if(merge_method=='min') tmp1 <- aggregate(mat[f1[w2],],list(t1[w2]),function(x){min(x,na.rm=TRUE)})
+    if(merge_method=='mean') tmp1 <- stats::aggregate(mat[f1[w2],],list(t1[w2]),function(x){base::mean(x,na.rm=TRUE)})
+    if(merge_method=='median') tmp1 <- stats::aggregate(mat[f1[w2],],list(t1[w2]),function(x){stats::median(x,na.rm=TRUE)})
+    if(merge_method=='max') tmp1 <- stats::aggregate(mat[f1[w2],],list(t1[w2]),function(x){base::max(x,na.rm=TRUE)})
+    if(merge_method=='min') tmp1 <- stats::aggregate(mat[f1[w2],],list(t1[w2]),function(x){base::min(x,na.rm=TRUE)})
     mat_new_1 <- tmp1[,-1]; rownames(mat_new_1) <- tmp1[,1] ## mat merged
-    mat_new <- rbind(mat_new_0,mat_new_1)
+    mat_new <- base::rbind(mat_new_0,mat_new_1)
   }else{
     mat_new <- mat[f1,]
     rownames(mat_new) <- t1
   }
-  new_eset <- generate.eset(exp_mat=mat_new, phenotype_info=pData(use_eset), feature_info=NULL, annotation_info=annotation(use_eset))
+  new_eset <- generate.eset(exp_mat=mat_new, phenotype_info=Biobase::pData(use_eset), feature_info=NULL, annotation_info=annotation(use_eset))
   return(new_eset)
 }
 
@@ -1347,24 +1436,29 @@ update_eset.feature <- function(use_eset=NULL,use_feature_info=NULL,from_feature
 #'                          getGPL=TRUE,
 #'                          update=FALSE)
 #' net_eset <- update_eset.phenotype(use_eset=net_eset,
-#'                                   use_phenotype_info=pData(net_eset),
+#'                                   use_phenotype_info=Biobase::pData(net_eset),
 #'                                   use_sample_col='geo_accession',
 #'                                   use_col='GEO-auto')
 #' }
 #' @export update_eset.phenotype
 update_eset.phenotype <- function(use_eset=NULL,use_phenotype_info=NULL,use_sample_col=NULL,use_col='auto'){
+  #
+  all_input_para <- c('use_eset')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
   if(is.null(use_eset)){
     message('use_eset required, please re-try !');
     return(use_eset)
   }
-  if(is.null(use_phenotype_info)) use_phenotype_info <- pData(use_eset)
+  if(is.null(use_phenotype_info)) use_phenotype_info <- Biobase::pData(use_eset)
   if(is.null(use_sample_col)==FALSE){
     if(!use_sample_col %in% colnames(use_phenotype_info)){
       message(sprintf('%s not in the colnames of use_phenotype_info, please re-try!',use_sample_col));return(use_eset)
     }
   }
   if(is.null(use_col)) use_col <- colnames(use_phenotype_info)
-  mat <- exprs(use_eset)
+  mat <- Biobase::exprs(use_eset)
   s1 <- colnames(mat) ## all samples
   if(is.null(use_sample_col)==TRUE){
     p1 <- rownames(use_phenotype_info)
@@ -1372,7 +1466,7 @@ update_eset.phenotype <- function(use_eset=NULL,use_phenotype_info=NULL,use_samp
     p1 <- use_phenotype_info[,use_sample_col] ## sample in the phenotype info
   }
   w1 <- which(p1 %in% s1); p1 <- p1[w1]; ## only consider samples in the colnames of expmat
-  if(length(w1)==0){
+  if(base::length(w1)==0){
     if(is.null(use_sample_col)==TRUE){
       message('Colnames of the expression matrix was not included in the rownames of use_phenotype_info, please check and re-try !')
     }else{
@@ -1380,7 +1474,7 @@ update_eset.phenotype <- function(use_eset=NULL,use_phenotype_info=NULL,use_samp
     }
     return(use_eset)
   }
-  message(sprintf('%d out of %d samples from the expression matrix will be keeped !',length(w1),length(s1)))
+  message(sprintf('%d out of %d samples from the expression matrix will be keeped !',base::length(w1),base::length(s1)))
   mat_new <- mat[,p1]
   use_phenotype_info <- use_phenotype_info[w1,]
   n1 <- colnames(use_phenotype_info)
@@ -1390,27 +1484,34 @@ update_eset.phenotype <- function(use_eset=NULL,use_phenotype_info=NULL,use_samp
     colnames(p1)[4:ncol(p1)] <- gsub('(.*):ch1','\\1',colnames(p1)[4:ncol(p1)])
     colnames(p1)[3] <- gsub('(.*)_ch1','\\1',colnames(p1)[3])
     rownames(p1) <- use_phenotype_info[,use_sample_col]
-    p1 <- as.data.frame(apply(p1,2,function(x){if(class(x)=='factor'){as.character(x)}else{x}}),stringsAsFactors=FALSE)
-    new_phenotype_info <- p1
+    if(base::length(w1)>1) p1 <- as.data.frame(apply(p1,2,clean_charVector),stringsAsFactors=FALSE)
+    if(base::length(w1)==1) p1 <- as.data.frame(clean_charVector(p1),stringsAsFactors=FALSE)
+    new_phenotype_info <- p1;
   }else{
     if(use_col[1] == 'auto'){
-      u1 <- apply(use_phenotype_info,2,function(x)length(unique(x)))
+      u1 <- apply(use_phenotype_info,2,function(x)base::length(base::unique(x)))
       w1 <- which(u1>=2 & u1<=nrow(use_phenotype_info)-1)
-      if(length(w1)==0){
+      if(base::length(w1)==0){
         message('No column could match the auto criteria, please check and re-try!');return(FALSE)
       }
-      new_phenotype_info <- use_phenotype_info[,w1]
+      p1 <- use_phenotype_info[,w1]
+      if(base::length(w1)>1) p1 <- as.data.frame(apply(p1,2,clean_charVector),stringsAsFactors=FALSE)
+      if(base::length(w1)==1) p1 <- as.data.frame(clean_charVector(p1),stringsAsFactors=FALSE)
+      new_phenotype_info <- use_phenotype_info[,w1];names(new_phenotype_info) <- names(use_phenotype_info)[w1];
     }else{
-      if(length(setdiff(use_col,n1))>0){
-        message(sprintf('%s not in use_phenotype_info, please re-try!',paste(setdiff(use_col,n1),collapse=';')));return(FALSE)
+      if(base::length(base::setdiff(use_col,n1))>0){
+        message(sprintf('%s not in use_phenotype_info, please re-try!',base::paste(base::setdiff(use_col,n1),collapse=';')));return(FALSE)
       }
       p1 <- use_phenotype_info[,use_col]
-      if(length(use_col)>1) p1 <- as.data.frame(apply(p1,2,function(x){if(class(x)=='factor'){as.character(x)}else{x}}),stringsAsFactors=FALSE)
-      new_phenotype_info <- p1
+      if(base::length(use_col)>1) p1 <- as.data.frame(apply(p1,2,clean_charVector),stringsAsFactors=FALSE)
+      if(base::length(use_col)==1) p1 <- as.data.frame(clean_charVector(p1),stringsAsFactors=FALSE)
+      new_phenotype_info <- p1; names(new_phenotype_info) <- use_col;
     }
   }
+  rownames(new_phenotype_info) <- rownames(use_phenotype_info)
   #print(new_phenotype_info)
-  new_eset <- generate.eset(exp_mat=mat_new, phenotype_info=new_phenotype_info, feature_info=fData(use_eset), annotation_info=annotation(use_eset))
+  message(sprintf('%d out of %d sample features will be keeped !',ncol(new_phenotype_info),ncol(use_phenotype_info)))
+  new_eset <- generate.eset(exp_mat=mat_new, phenotype_info=new_phenotype_info, feature_info=Biobase::fData(use_eset), annotation_info=annotation(use_eset))
   return(new_eset)
 }
 
@@ -1436,16 +1537,21 @@ update_eset.phenotype <- function(use_eset=NULL,use_phenotype_info=NULL,use_samp
 #'                      loose_gene=paste0('Gene',1:100))
 #' @export
 IQR.filter <- function(exp_mat,use_genes=rownames(exp_mat),thre = 0.5,loose_gene=NULL,loose_thre=0.1) {
-  use_genes <- intersect(use_genes,rownames(exp_mat))
-  use_genes <- setdiff(use_genes,"")
+  #
+  all_input_para <- c('exp_mat','use_genes','thre')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
+  use_genes <- base::intersect(use_genes,rownames(exp_mat))
+  use_genes <- base::setdiff(use_genes,"")
   exp_mat <- exp_mat[use_genes,]
-  iqr <- apply(exp_mat, 1, IQR) ## calculate IQR for each gene
+  iqr <- apply(exp_mat, 1, stats::IQR) ## calculate IQR for each gene
   choose0 <- use_genes[iqr > quantile(iqr, loose_thre)] ## for loose_gene
   choose1 <- use_genes[iqr > quantile(iqr, thre)] ## for all genes
-  choose2 <- unique(c(intersect(loose_gene, choose0), choose1)) ## union set
-  use_vec <- rep(FALSE,length.out=length(use_genes));names(use_vec) <- use_genes
+  choose2 <- base::unique(c(base::intersect(loose_gene, choose0), choose1)) ## union set
+  use_vec <- rep(FALSE,length.out=base::length(use_genes));names(use_vec) <- use_genes
   use_vec[choose2] <- TRUE
-  print(table(use_vec))
+  print(base::table(use_vec))
   return(use_vec)
 }
 
@@ -1471,6 +1577,11 @@ IQR.filter <- function(exp_mat,use_genes=rownames(exp_mat),thre = 0.5,loose_gene
 RNASeqCount.normalize.scale <- function(mat,
                                         total = NULL,
                                         pseudoCount = 1) {
+  #
+  all_input_para <- c('mat','pseudoCount')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
   d <- mat
   if (!is.data.frame(d))
     d <- data.frame(d)
@@ -1478,10 +1589,10 @@ RNASeqCount.normalize.scale <- function(mat,
     d <- d + pseudoCount
   s <- apply(d, 2, sum)
   m <-
-    ifelse(is.null(total), as.integer(mean(s)), as.integer(total)) ## total or mean sum
+    ifelse(is.null(total), as.integer(base::mean(s)), as.integer(total)) ## total or mean sum
   options(digits = 2 + nchar(m))
   fac <- m / s
-  for (i in 1:length(s)) {
+  for (i in 1:base::length(s)) {
     d[, i] <- round(d[, i] * fac[i], 0)
   }
   if (!all(d > 0))
@@ -1489,13 +1600,14 @@ RNASeqCount.normalize.scale <- function(mat,
   d
 }
 
-dist2.mod <- function (x, fun = function(a, b) mean(abs(a - b), na.rm = TRUE),
+## inner function for dist2
+dist2.mod <- function (x, fun = function(a, b) base::mean(abs(a - b), na.rm = TRUE),
                        diagonal = 0)
 {
-  if (!(is.numeric(diagonal) && (length(diagonal) == 1)))
+  if (!(is.numeric(diagonal) && (base::length(diagonal) == 1)))
     stop("'diagonal' must be a numeric scalar.")
   if (missing(fun)) {
-    res = apply(x, 2, function(w) colMeans(abs(x - w), na.rm = TRUE))
+    res = apply(x, 2, function(w) base::colMeans(abs(x - w), na.rm = TRUE))
   }
   else {
     res = matrix(diagonal, ncol = ncol(x), nrow = ncol(x))
@@ -1511,7 +1623,7 @@ dist2.mod <- function (x, fun = function(a, b) mean(abs(a - b), na.rm = TRUE),
 ## functions for activity score calculation, mean, absmean, maxmean, weighted mean ?
 es <- function(z, es.method = "mean") {
   if (es.method == "maxmean") {
-    n <- length(z)
+    n <- base::length(z)
     m1 <- ifelse(sum(z > 0) > 0, sum(z[z > 0]) / n, 0)
     m2 <- ifelse(sum(z < 0) > 0, sum(z[z < 0]) / n, 0)
     if (m1 > -m2)
@@ -1520,25 +1632,25 @@ es <- function(z, es.method = "mean") {
       es <- m2
   }
   else if (es.method == 'absmean') {
-    es <- mean(abs(z),na.rm=TRUE)
+    es <- base::mean(abs(z),na.rm=TRUE)
   }
   else if (es.method == 'mean') {
-    es <- mean(z,na.rm=TRUE)
+    es <- base::mean(z,na.rm=TRUE)
   }
   else if (es.method == 'median') {
-    es <- median(z,na.rm=TRUE)
+    es <- stats::median(z,na.rm=TRUE)
   }
   else if (es.method == 'max') {
-    es <- max(z,na.rm=TRUE)
+    es <- base::max(z,na.rm=TRUE)
   }
   else if (es.method == 'min') {
-    es <- min(z,na.rm=TRUE)
+    es <- base::min(z,na.rm=TRUE)
   }
   return(es)
 }
-std <- function(x) {
+do.std <- function(x) {
   x <- x[!is.na(x)]
-  (x - mean(x,na.rm=TRUE)) / sd(x,na.rm=TRUE)
+  (x - base::mean(x,na.rm=TRUE)) / sd(x,na.rm=TRUE)
 }
 
 #' Calculate Activity Value for Each Driver
@@ -1546,41 +1658,138 @@ std <- function(x) {
 #' \code{cal.Activity} calculates the activity value for each driver.
 #' This function requires two inputs, the driver-to-target list object \code{target_list} and the expression matrix.
 #'
-#' @param target_list list, the driver-to-target list object. The names of the list elements are drivers.
-#' Each element is a data frame, usually contains at least three columns. "target", target gene names;
-#' "MI", mutual information; "spearman", spearman correlation coefficient. Users can call \code{get_net2target_list} to create this list from the network file generated by SJAracne.
+#' @param target_list list, the driver-to-target list object. Either igraph_obj or target_list is necessary for this function.
+#' The names of the list elements are drivers.
+#' Each element is a data frame, usually contains at least three columns.
+#' "target", target gene names;
+#' "MI", mutual information;
+#' "spearman", spearman correlation coefficient.
+#' "MI" and "spearman" is necessary if es.method="weightedmean".
+#' Users can call \code{get.SJAracne.network} to get this list from the network file generated by SJAracne (the second element of the return list)
+#' or prepare the list object by hand but should match the data format described above.
+#' @param igraph_obj igraph object, optional. Either igraph_obj or target_list is necessary for this function.
+#' Users can call \code{get.SJAracne.network} to get this object from the network file generated by SJAracne (the third element of the return list),
+#' or prepare the igraph network object by hand (Directed network and the edge attributes should include "weight" and "sign" if es.method="weightedmean").
 #' @param cal_mat numeric matrix, the expression matrix of genes/transcripts.
 #' @param es.method character, method applied to calculate the activity value. User can choose from "mean", "weightedmean", "maxmean" and "absmean".
-#' The "weightedmean" requires "MI" and "spearman" columns included in the \code{target_list} data.
-#' Default is 'weightedmean'.
+#' Default is "weightedmean".
 #' @param std logical, if TRUE, the expression matrix will be normalized by column. Default is TRUE.
+#' @param memory_constrain logical, if TRUE, the calculation strategy will not use Matrix Cross Products, which is memory consuming.
+#' Default is FALSE.
 #' @return Return a matrix of activity values. Rows are drivers, columns are samples.
 #' @examples
 #' analysis.par <- list()
 #' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
 #' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
-#' ac_mat <- cal.Activity(target_list=analysis.par$tf.network$target_list,
-#'                        cal_mat=exprs(analysis.par$cal.eset),
+#' ac_mat <- cal.Activity(target_list=analysis.par$merge.network$target_list,
+#'                        cal_mat=Biobase::exprs(analysis.par$cal.eset),
 #'                        es.method='weightedmean')
+#' ac_mat <- cal.Activity(igraph_obj=analysis.par$merge.network$igraph_obj,
+#'                        cal_mat=Biobase::exprs(analysis.par$cal.eset),
+#'                        es.method='maxmean')
 #' @export
-cal.Activity <- function(target_list=NULL, cal_mat=NULL, es.method = 'weightedmean',std=TRUE) {
+cal.Activity <- function(target_list=NULL, igraph_obj = NULL, cal_mat=NULL, es.method = 'weightedmean',std=TRUE,memory_constrain=FALSE) {
+  #
+  all_input_para <- c('cal_mat','es.method','std','memory_constrain')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  check_res <- c(check_option('memory_constrain',c(TRUE,FALSE),envir=environment()),
+                 check_option('std',c(TRUE,FALSE),envir=environment()),
+                 check_option('es.method',c('mean','weightedmean','maxmean','absmean'),envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
+  if(is.null(target_list)==TRUE & is.null(igraph_obj)==TRUE){
+    message('Either target_list or igraph_obj is required, please check and re-try!');return(FALSE);
+  }
+  if(is.null(target_list)==FALSE & memory_constrain==TRUE){
+    ac.mat <- cal.Activity.old(target_list=target_list, cal_mat=cal_mat, es.method = es.method,std=std)
+    return(ac.mat)
+  }
+  if(is.null(target_list)==TRUE & memory_constrain==TRUE){
+    message('Only accepts target_list input when memory_constrain=TRUE, please check and re-try!');return(FALSE);
+  }
+  if(nrow(cal_mat)==0){
+    message('No genes in the cal_mat, please check and re-try!');return(FALSE);
+  }
+  if(std==TRUE) cal_mat <- apply(cal_mat, 2, do.std)
+  if(is.null(igraph_obj)==FALSE){
+    gr <- igraph_obj
+    mat1 <- get_igraph2matrix(gr,es.method=es.method)
+    mat2 <- get_igraph2matrix(gr,es.method='mean')
+    all_source <- get_gr2driver(gr)
+  }else{
+    if(is.null(target_list)==FALSE){
+      mat1 <- get_target_list2matrix(target_list,es.method=es.method)
+      mat2 <- get_target_list2matrix(target_list,es.method='mean')
+      all_source <- names(target_list)
+    }
+  }
+  ##
+  mat1_source <- mat1[all_source,]
+  w1 <- base::intersect(rownames(cal_mat),colnames(mat1_source))
+  if(base::length(w1)==0){
+    message('No intersected genes cound for the cal_mat and target in the network, please check and re-try!');
+    return(FALSE)
+  }
+  use_mat1_source <- mat1_source[,w1] ## network info
+  use_mat2_source <- mat2[all_source,w1] ## network binary info
+
+  ## weighted mean + mean
+  if(es.method %in% c('weightedmean','mean')){
+    use_cal_mat <- cal_mat[w1,] ## expression info
+    out_mat <- use_mat1_source %*% use_cal_mat
+    out_mat <- out_mat/Matrix::rowSums(use_mat2_source) ## get mean
+  }
+  ## absmean
+  if(es.method == 'absmean'){
+    use_cal_mat <- cal_mat[w1,] ## expression info
+    out_mat <- use_mat1_source %*% abs(use_cal_mat)
+    out_mat <- out_mat/Matrix::rowSums(use_mat2_source) ## get mean
+  }
+  ## maxmean
+  if(es.method == 'maxmean'){
+    use_cal_mat <- cal_mat[w1,] ## expression info
+    use_cal_mat_pos <- use_cal_mat;use_cal_mat_pos[which(use_cal_mat_pos<0)] <- 0;
+    use_cal_mat_neg <- use_cal_mat;use_cal_mat_neg[which(use_cal_mat_neg>0)] <- 0;
+    out_mat_pos  <- use_mat1_source %*% use_cal_mat_pos
+    out_mat_pos  <- out_mat_pos/Matrix::rowSums(use_mat2_source) ## get mean
+    out_mat_neg  <- use_mat1_source %*% use_cal_mat_neg
+    out_mat_neg  <- out_mat_neg/Matrix::rowSums(use_mat2_source) ## get mean
+    out_mat_sign <- sign(abs(out_mat_pos)-abs(out_mat_neg))
+    out_mat_sign_pos <- out_mat_sign; out_mat_sign_pos[out_mat_sign_pos!=1] <-0;
+    out_mat_sign_neg <- out_mat_sign; out_mat_sign_neg[out_mat_sign_neg!= -1] <-0;
+    out_mat <- out_mat_pos*out_mat_sign_pos-out_mat_neg*out_mat_sign_neg
+  }
+  ## median, min, max , not supported
+  # output
+  ac.mat <- as.matrix(out_mat)
+  w1 <- which(is.na(ac.mat[,1])==FALSE)
+  if(base::length(w1)==0){
+    message('Fail in calculating activity, please check the ID type in cal_mat and target_list and try again !')
+  }
+  ac.mat <- ac.mat[w1,]
+  return(ac.mat)
+}
+
+## inner functions
+cal.Activity.old <- function(target_list=NULL, cal_mat=NULL, es.method = 'weightedmean',std=TRUE) {
   ## mean, absmean, maxmean, weightedmean
   use_genes <- row.names(cal_mat)
-  if(length(use_genes)==0){
+  if(base::length(use_genes)==0){
     message('No genes in the cal_mat, please check and re-try!');return(FALSE);
   }
   all_target <- target_list
-  #all_target <- all_target[intersect(use_genes, names(all_target))] ## if the driver is not included in cal_mat but its target genes are included, will also calculate activity
+  #all_target <- all_target[base::intersect(use_genes, names(all_target))] ## if the driver is not included in cal_mat but its target genes are included, will also calculate activity
   ac.mat <-
-    matrix(NA, ncol = ncol(cal_mat), nrow = length(all_target)) ## generate activity matrix, each col for sample, each row for source target
+    matrix(NA, ncol = ncol(cal_mat), nrow = base::length(all_target)) ## generate activity matrix, each col for sample, each row for source target
   #z-normalize each sample
-  if(std==TRUE) cal_mat <- apply(cal_mat, 2, std)
-  for (i in 1:length(all_target)) {
+  if(std==TRUE) cal_mat <- apply(cal_mat, 2, do.std)
+  for (i in 1:base::length(all_target)) {
     x <- names(all_target)[i]
     x1 <- all_target[[x]]
-    x2 <- unique(intersect(rownames(x1), use_genes)) ## filter target by cal genes
+    x2 <- base::unique(base::intersect(rownames(x1), use_genes)) ## filter target by cal genes
     x1 <- x1[x2, ] ## target info
-    target_num <- length(x2)
+    target_num <- base::length(x2)
     if (target_num == 0)
       next
     if (target_num == 1){
@@ -1598,8 +1807,42 @@ cal.Activity <- function(target_list=NULL, cal_mat=NULL, es.method = 'weightedme
   rownames(ac.mat) <- names(all_target)
   colnames(ac.mat) <- colnames(cal_mat)
   w1 <- which(is.na(ac.mat[,1])==FALSE)
+  if(base::length(w1)==0){
+    message('Fail in calculating activity, please check the ID type in cal_mat and target_list and try again !')
+  }
   ac.mat <- ac.mat[w1,]
   return(ac.mat)
+}
+get_target_list2matrix <- function(target_list=NULL,es.method = 'weightedmean') {
+  all_source <- names(target_list)
+  all_target <- base::unique(unlist(lapply(target_list,function(x)rownames(x))))
+  mat1 <- matrix(0,nrow=base::length(all_source),ncol=base::length(all_target))
+  rownames(mat1) <- all_source;
+  colnames(mat1) <- all_target;
+  for(i in all_source){
+    if(es.method!='weightedmean') mat1[i,rownames(target_list[[i]])] <- 1;
+    if(es.method=='weightedmean') mat1[i,rownames(target_list[[i]])] <- target_list[[i]]$MI*sign(target_list[[i]]$spearman);
+  }
+  return(mat1)
+}
+get_igraph2matrix <- function(gr=NULL,es.method = 'weightedmean'){
+  if(es.method=='weightedmean'){
+    if('weight' %in% igraph::edge_attr_names(gr) & 'sign' %in% igraph::edge_attr_names(gr)){
+      mat1 <- igraph::as_adjacency_matrix(gr,type='both',attr = 'weight')
+      mat2 <- igraph::as_adjacency_matrix(gr,type='both',attr = 'sign')
+      mat1 <- mat1*mat2
+    }else{
+      message('weight, sign attributes are not included in the input igraph object, weightedmean can not be used !')
+      return(FALSE)
+    }
+  }else{
+    mat1 <- igraph::as_adjacency_matrix(gr,type='both')
+  }
+  return(mat1)
+}
+get_gr2driver <- function(gr){
+  d1 <- igraph::degree(gr,mode='out')
+  names(d1[which(d1>0)])
 }
 
 #' Calculate Activity Value for Gene Sets
@@ -1621,12 +1864,20 @@ cal.Activity <- function(target_list=NULL, cal_mat=NULL, es.method = 'weightedme
 #' gs.preload(use_spe='Homo sapiens',update=FALSE)
 #' use_gs2gene <- merge_gs(all_gs2gene=all_gs2gene,
 #'                         use_gs=c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG','C5'))
-#' exp_mat_gene <- exprs(analysis.par$cal.eset)
+#' exp_mat_gene <- Biobase::exprs(analysis.par$cal.eset)
 #' ## each row is a gene symbol, if not, must convert ID first
 #' ac_gs <- cal.Activity.GS(use_gs2gene = use_gs2gene,
 #'                         cal_mat = exp_mat_gene)
 #' @export
 cal.Activity.GS <- function(use_gs2gene=all_gs2gene[c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG')], cal_mat=NULL, es.method = 'mean',std=TRUE) {
+  #
+  all_input_para <- c('use_gs2gene','cal_mat','es.method','std')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  check_res <- c(check_option('std',c(TRUE,FALSE),envir=environment()),
+                 check_option('es.method',c("mean","absmean","maxmean","gsva","ssgsea","zscore","plage"),envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
   while(class(use_gs2gene[[1]])=='list'){
     nn <- unlist(lapply(use_gs2gene,names))
     use_gs2gene <- unlist(use_gs2gene,recursive = FALSE)
@@ -1634,19 +1885,19 @@ cal.Activity.GS <- function(use_gs2gene=all_gs2gene[c('H','CP:BIOCARTA','CP:REAC
   }
   use_genes <- row.names(cal_mat)
   if(es.method %in% c('gsva','ssgsea','zscore','plage')){
-    ac.mat <- gsva(generate.eset(cal_mat),use_gs2gene,method=es.method)
-    ac.mat <- exprs(ac.mat)
+    ac.mat <- GSVA::gsva(generate.eset(cal_mat),use_gs2gene,method=es.method)
+    ac.mat <- Biobase::exprs(ac.mat)
     return(ac.mat)
   }
   ac.mat <-
-    matrix(NA, ncol = ncol(cal_mat), nrow = length(use_gs2gene)) ## generate activity matrix, each col for sample, each row for source target
+    matrix(NA, ncol = ncol(cal_mat), nrow = base::length(use_gs2gene)) ## generate activity matrix, each col for sample, each row for source target
   #z-normalize each sample
-  if(std==TRUE) cal_mat <- apply(cal_mat, 2, std)
-  for (i in 1:length(use_gs2gene)) {
+  if(std==TRUE) cal_mat <- apply(cal_mat, 2, do.std)
+  for (i in 1:base::length(use_gs2gene)) {
     x <- names(use_gs2gene)[i]
     x1 <- use_gs2gene[[x]]
-    x2 <- unique(intersect(x1, use_genes)) ## filter target by cal genes
-    target_num <- length(x2)
+    x2 <- base::unique(base::intersect(x1, use_genes)) ## filter target by cal genes
+    target_num <- base::length(x2)
     if (target_num == 0)
       next
     if (target_num == 1){
@@ -1657,7 +1908,7 @@ cal.Activity.GS <- function(use_gs2gene=all_gs2gene[c('H','CP:BIOCARTA','CP:REAC
   }
   rownames(ac.mat) <- names(use_gs2gene)
   colnames(ac.mat) <- colnames(cal_mat)
-  w1 <- apply(ac.mat,1,function(x)length(which(is.na(x)==TRUE)))
+  w1 <- apply(ac.mat,1,function(x)base::length(which(is.na(x)==TRUE)))
   ac.mat <- ac.mat[which(w1==0),]
   return(ac.mat)
 }
@@ -1668,9 +1919,9 @@ cal.Activity.GS <- function(use_gs2gene=all_gs2gene[c('H','CP:BIOCARTA','CP:REAC
 #' control group (parameter G0) and experimental group (parameter G1).
 #'
 #' @param eset ExpressionSet class object, contains gene expression data or driver activity data.
-#' @param output_id_column character, the column names of fData(eset).
+#' @param output_id_column character, the column names of Biobase::fData(eset).
 #' This option is useful when the \code{eset} expression matrix is at transcript-level, and user is expecting to see the gene-level comparison statistics.
-#' If NULL, rownames of the fData(eset) will be used.
+#' If NULL, rownames of the Biobase::fData(eset) will be used.
 #' Default is NULL.
 #' @param G1 a vector of characters, the sample names of experimental group.
 #' @param G0 a vecotr of characters, the sample names of control group.
@@ -1724,7 +1975,7 @@ cal.Activity.GS <- function(use_gs2gene=all_gs2gene[c('H','CP:BIOCARTA','CP:REAC
 #' analysis.par <- list()
 #' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
 #' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
-#' phe_info <- pData(analysis.par$cal.eset)
+#' phe_info <- Biobase::pData(analysis.par$cal.eset)
 #' each_subtype <- 'G4'
 #' G0  <- rownames(phe_info)[which(phe_info$`subgroup`!=each_subtype)] # get sample list for G0
 #' G1  <- rownames(phe_info)[which(phe_info$`subgroup`==each_subtype)] # get sample list for G1
@@ -1739,26 +1990,42 @@ cal.Activity.GS <- function(use_gs2gene=all_gs2gene[c('H','CP:BIOCARTA','CP:REAC
 #' }
 #' @export
 getDE.BID.2G <-function(eset,output_id_column=NULL,G1=NULL, G0=NULL,G1_name=NULL,G0_name=NULL,method='Bayesian',family=gaussian,pooling='full',logTransformed=TRUE,verbose=TRUE){
+  #
+  all_input_para <- c('eset','G1','G0','method','family','pooling','logTransformed','verbose')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  check_res <- c(check_option('logTransformed',c(TRUE,FALSE),envir=environment()),
+                 check_option('verbose',c(TRUE,FALSE),envir=environment()),
+                 check_option('method',c('Bayesian','MLE'),envir=environment()),
+                 check_option('pooling',c('full','no','partial'),envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
+  exp_mat <- Biobase::exprs(eset)
+  G1 <- base::intersect(G1,colnames(exp_mat))
+  G0 <- base::intersect(G0,colnames(exp_mat))
   if(verbose==TRUE){
-    print(sprintf('G1:%s', paste(G1, collapse = ';')))
-    print(sprintf('G0:%s', paste(G0, collapse = ';')))
+    print(sprintf('G1:%s', base::paste(G1, collapse = ';')))
+    print(sprintf('G0:%s', base::paste(G0, collapse = ';')))
   }
-  exp_mat <- exprs(eset)
-  G1 <- intersect(G1,colnames(exp_mat))
-  G0 <- intersect(G0,colnames(exp_mat))
+  if(base::length(G1)==0 | base::length(G0)==0){
+    message('Too few samples, please check the sample name of G1, G0 and samples in eset !');return(FALSE);
+  }
+  #
+  rn <- rownames(exp_mat)
   exp_mat <- exp_mat[,c(G1,G0)]
-  if(is.null(output_id_column)==TRUE) use_id <- rownames(fData(eset)) else use_id <- fData(eset)[,output_id_column]
-  comp <- c(rep(1,length.out=length(G1)),rep(0,length.out=length(G0)))
-  all_id <- unique(use_id)
+  if(is.null(dim(exp_mat))==TRUE){exp_mat <- t(as.matrix(exp_mat));rownames(exp_mat)<-rn}
+  if(is.null(output_id_column)==TRUE) use_id <- rownames(Biobase::fData(eset)) else use_id <- Biobase::fData(eset)[,output_id_column]
+  comp <- c(rep(1,length.out=base::length(G1)),rep(0,length.out=base::length(G0)))
+  all_id <- base::unique(use_id)
   de <- lapply(all_id,function(x){
     w1 <- which(use_id==x)
     x1 <- exp_mat[w1,]
-    if(length(w1)==1) x1 <- t(as.matrix(x1)) else x1 <- as.matrix(x1)
+    if(base::length(w1)==1) x1 <- t(as.matrix(x1)) else x1 <- as.matrix(x1)
     bid(mat=x1,use_obs_class=comp,class_order=c(0,1),family=family,method=method,
         nitt=13000,burnin=3000,thin=1,pooling=pooling,class_ordered=FALSE,
         logTransformed=logTransformed,std=FALSE,average.method=c('geometric'),verbose=FALSE)
   })
-  de <- as.data.frame(do.call(rbind,de))
+  de <- as.data.frame(do.call(base::rbind,de))
   de$adj.P.Val<-p.adjust(de$P.Value,'fdr')
   de$logFC<-sign(de$FC)*log2(abs(de$FC))
   de$ID <- all_id
@@ -1766,11 +2033,16 @@ getDE.BID.2G <-function(eset,output_id_column=NULL,G1=NULL, G0=NULL,G1_name=NULL
   rownames(de) <- de$ID
   de <- de[order(de$P.Value),]
   tT <- de
-  new_mat <- aggregate(exp_mat,list(use_id),mean)[,-1]
+  new_mat <- stats::aggregate(exp_mat,list(use_id),mean)[,-1]
   tT <- tT[all_id,]
-  exp_G1 <- rowMeans(new_mat[,G1])
-  exp_G0 <- rowMeans(new_mat[,G0])
-  tT <- cbind(tT,'Ave.G0'=exp_G0,'Ave.G1'=exp_G1)
+  if(nrow(tT)==1){
+    exp_G1 <- base::mean(exp_mat[,G1]);
+    exp_G0 <- base::mean(exp_mat[,G0]);
+  }else{
+    exp_G1 <- base::rowMeans(new_mat[,G1]);
+    exp_G0 <- base::rowMeans(new_mat[,G0]);
+  }
+  tT <- base::cbind(tT,'Ave.G0'=exp_G0,'Ave.G1'=exp_G1)
   if(is.null(G0_name)==FALSE) colnames(tT) <- gsub('Ave.G0',paste0('Ave.',G0_name),colnames(tT))
   if(is.null(G1_name)==FALSE) colnames(tT) <- gsub('Ave.G1',paste0('Ave.',G1_name),colnames(tT))
   tT <- tT[order(tT$P.Value),]
@@ -1810,7 +2082,7 @@ getDE.BID.2G <-function(eset,output_id_column=NULL,G1=NULL, G0=NULL,G1_name=NULL
 #' analysis.par <- list()
 #' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
 #' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
-#' phe_info <- pData(analysis.par$cal.eset)
+#' phe_info <- Biobase::pData(analysis.par$cal.eset)
 #' each_subtype <- 'G4'
 #' G0  <- rownames(phe_info)[which(phe_info$`subgroup`!=each_subtype)] # get sample list for G0
 #' G1  <- rownames(phe_info)[which(phe_info$`subgroup`==each_subtype)] # get sample list for G1
@@ -1847,7 +2119,16 @@ getDE.BID.2G <-function(eset,output_id_column=NULL,G1=NULL, G0=NULL,G1_name=NULL
 #' }
 #' @export
 combineDE<-function(DE_list,DE_name=NULL,transfer_tab=NULL,main_id=NULL,method='Stouffer',twosided=TRUE,signed=TRUE){
-  nDE<-length(DE_list)
+  #
+  all_input_para <- c('DE_list','method','twosided','signed')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  check_res <- c(check_option('twosided',c(TRUE,FALSE),envir=environment()),
+                 check_option('signed',c(TRUE,FALSE),envir=environment()),
+                 check_option('method',c('Stouffer','Fisher'),envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
+  nDE<-base::length(DE_list)
   if(nDE<2) stop('At least two DE outputs are required for combineDE analysis!\n')
   if(is.null(DE_name)==TRUE){
     DE_name <- names(DE_list)
@@ -1855,21 +2136,25 @@ combineDE<-function(DE_list,DE_name=NULL,transfer_tab=NULL,main_id=NULL,method='
   if(is.null(transfer_tab)==TRUE){
     transfer_tab <- lapply(DE_list,function(x)x$ID)
     names(transfer_tab) <- DE_name
-    w1 <- names(which(table(unlist(transfer_tab))==nDE))
-    if(length(w1)==0){message('No intersected IDs found between DE list, please check and re-try!');return(FALSE);}
-    transfer_tab <- do.call(cbind,lapply(transfer_tab,function(x)w1))
+    w1 <- names(which(base::table(unlist(transfer_tab))==nDE))
+    if(base::length(w1)==0){message('No intersected IDs found between DE list, please check and re-try!');return(FALSE);}
+    transfer_tab <- do.call(base::cbind,lapply(transfer_tab,function(x)w1))
     transfer_tab <- as.data.frame(transfer_tab,stringsAsFactors=FALSE)
   }
   w1 <- lapply(DE_name,function(x){
     which(transfer_tab[[x]] %in% DE_list[[x]]$ID)
   })
-  w2 <- as.numeric(names(which(table(unlist(w1))==nDE)))
+  w11 <- which(base::table(unlist(w1))==nDE)
+  if(base::length(w11)==0){
+    message('No intersected IDs found between DE list, please check and re-try!');return(FALSE);
+  }
+  w2 <- as.numeric(names(w11))
   transfer_tab <- transfer_tab[w2,]
   combine_info <- lapply(DE_name,function(x1){
     DE_list[[x1]][transfer_tab[[x1]],]
   })
   names(combine_info) <- DE_name
-  dd <- do.call(cbind,lapply(combine_info,function(x1){
+  dd <- do.call(base::cbind,lapply(combine_info,function(x1){
     x1$P.Value*sign(x1$logFC)
   }))
   res1 <- t(apply(dd,1,function(x){
@@ -1878,9 +2163,9 @@ combineDE<-function(DE_list,DE_name=NULL,transfer_tab=NULL,main_id=NULL,method='
   res1 <- as.data.frame(res1)
   if(is.null(main_id)==TRUE) main_id <- DE_name[1]
   res1$adj.P.Val <- p.adjust(res1$P.Value,'fdr')
-  res1$logFC <- rowMeans(do.call(cbind,lapply(combine_info,function(x)x$logFC)))
-  res1$AveExpr <- rowMeans(do.call(cbind,lapply(combine_info,function(x)x$AveExpr)))
-  res1 <- cbind(ID=transfer_tab[,main_id],transfer_tab,res1,stringsAsFactors=FALSE)
+  res1$logFC <- base::rowMeans(do.call(base::cbind,lapply(combine_info,function(x)x$logFC)))
+  res1$AveExpr <- base::rowMeans(do.call(base::cbind,lapply(combine_info,function(x)x$AveExpr)))
+  res1 <- base::cbind(ID=transfer_tab[,main_id],transfer_tab,res1,stringsAsFactors=FALSE)
   rownames(res1) <- res1$ID
   combine_info$combine <- res1
   return(combine_info)
@@ -1889,13 +2174,13 @@ combineDE<-function(DE_list,DE_name=NULL,transfer_tab=NULL,main_id=NULL,method='
 
 # inner function: class_label can be obtained by get_class
 get_class2design <- function(class_label){
-  design <- model.matrix(~0+class_label);colnames(design) <- unique(class_label);
+  design <- model.matrix(~0+class_label);colnames(design) <- base::unique(class_label);
   rownames(design) <- names(class_label)
   return(design)
-  #design.mat <-as.data.frame(matrix(0, nrow = length(class_label), ncol = length(unique(class_label))))
+  #design.mat <-as.data.frame(matrix(0, nrow = base::length(class_label), ncol = base::length(base::unique(class_label))))
   #rownames(design.mat) <- names(class_label) ## sample
-  #colnames(design.mat) <- unique(class_label)
-  #for(i in 1:length(class_label)){design.mat[names(class_label)[i],class_label[i]]<-1;}
+  #colnames(design.mat) <- base::unique(class_label)
+  #for(i in 1:base::length(class_label)){design.mat[names(class_label)[i],class_label[i]]<-1;}
   #return(design.mat)
 }
 
@@ -1922,7 +2207,7 @@ get_class2design <- function(class_label){
 #' analysis.par <- list()
 #' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
 #' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
-#' phe_info <- pData(analysis.par$cal.eset)
+#' phe_info <- Biobase::pData(analysis.par$cal.eset)
 #' each_subtype <- 'G4'
 #' G0  <- rownames(phe_info)[which(phe_info$`subgroup`!=each_subtype)] # get sample list for G0
 #' G1  <- rownames(phe_info)[which(phe_info$`subgroup`==each_subtype)] # get sample list for G1
@@ -1936,51 +2221,73 @@ get_class2design <- function(class_label){
 #'                                 G0_name='other')
 #' @export
 getDE.limma.2G <- function(eset=NULL, G1=NULL, G0=NULL,G1_name=NULL,G0_name=NULL,verbose=TRUE,random_effect=NULL) {
+  #
+  all_input_para <- c('eset','G1','G0','verbose')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  check_res <- c(check_option('verbose',c(TRUE,FALSE),envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
+  exp_mat <- Biobase::exprs(eset)
+  G1 <- base::intersect(G1,colnames(exp_mat))
+  G0 <- base::intersect(G0,colnames(exp_mat))
   if(verbose==TRUE){
-    print(sprintf('G1:%s', paste(G1, collapse = ';')))
-    print(sprintf('G0:%s', paste(G0, collapse = ';')))
+    print(sprintf('G1:%s', base::paste(G1, collapse = ';')))
+    print(sprintf('G0:%s', base::paste(G0, collapse = ';')))
   }
-  all_samples <- colnames(exprs(eset))
-  use_samples <- intersect(c(G0, G1), all_samples)
-  phe <- as.data.frame(pData(eset)[use_samples, ]);
+  if(base::length(G1)==0 | base::length(G0)==0){
+    message('Too few samples, please check the sample name of G1, G0 and samples in eset !');return(FALSE);
+  }
+  #
+  all_samples <- colnames(Biobase::exprs(eset))
+  use_samples <- c(G0, G1)
+  phe <- as.data.frame(Biobase::pData(eset)[use_samples, ]);
   rownames(phe) <- use_samples
-  new_eset <- generate.eset(exp_mat=exprs(eset)[, use_samples],phenotype_info=phe, feature_info=fData(eset), 'test')
-  new_mat  <- exprs(new_eset)
+  new_eset <- generate.eset(exp_mat=Biobase::exprs(eset)[, use_samples],phenotype_info=phe, feature_info=Biobase::fData(eset))
+  new_mat  <- Biobase::exprs(new_eset)
   ##
-  design.mat <-as.data.frame(matrix(NA, nrow = length(use_samples), ncol = 1))
+  design.mat <-as.data.frame(matrix(NA, nrow = base::length(use_samples), ncol = 1))
   rownames(design.mat) <-use_samples
   colnames(design.mat) <- 'group'
-  design.mat[intersect(G0, use_samples), 'group'] <- 'G0'
-  design.mat[intersect(G1, use_samples), 'group'] <- 'G1'
+  design.mat[base::intersect(G0, use_samples), 'group'] <- 'G0'
+  design.mat[base::intersect(G1, use_samples), 'group'] <- 'G1'
   #  design <- model.matrix( ~ group + 0, design.mat)
   group <- factor(design.mat$group)
   design <- model.matrix(~0+group);
   colnames(design) <- levels(group); rownames(design) <- colnames(new_mat)
 
   if(is.null(random_effect)==TRUE){
-    fit <- lmFit(new_mat,design)
+    fit <- limma::lmFit(new_mat,design)
   }else{
-    random_effect <- random_effect[colnames(exprs(new_eset))]
-    corfit <- duplicateCorrelation(new_eset,design,block=random_effect)
-    fit <- lmFit(new_mat,design,block=random_effect,correlation=corfit$consensus)
+    random_effect <- random_effect[colnames(Biobase::exprs(new_eset))]
+    corfit <- limma::duplicateCorrelation(new_eset,design,block=random_effect)
+    fit <- limma::lmFit(new_mat,design,block=random_effect,correlation=corfit$consensus)
   }
-  contrasts <- makeContrasts(G1-G0,levels=design)
-  fit2 <- contrasts.fit(fit,contrasts=contrasts)
-  fit2 <- eBayes(fit2,trend=TRUE)
+  contrasts <- limma::makeContrasts(G1-G0,levels=design)
+  fit2 <- limma::contrasts.fit(fit,contrasts=contrasts)
+  fit2 <- limma::eBayes(fit2,trend=TRUE)
   #summary(decideTests(fit2, method="global"))
   ##
-  tT <- topTable(fit2, adjust.method = "fdr", number = Inf,coef=1)
-  tT <- cbind(ID=rownames(tT),tT,stringsAsFactors=FALSE)
+  tT <- limma::topTable(fit2, adjust.method = "fdr", number = Inf,coef=1)
+  if(nrow(tT)==1){
+    rownames(tT) <- rownames(new_mat)
+  }
+  tT <- base::cbind(ID=rownames(tT),tT,stringsAsFactors=FALSE)
   tT <- tT[rownames(new_mat),]
-  exp_G1 <- rowMeans(new_mat[,G1])
-  exp_G0 <- rowMeans(new_mat[,G0])
+  if(nrow(tT)==1){
+    exp_G1 <- base::mean(new_mat[,G1]);
+    exp_G0 <- base::mean(new_mat[,G0]);
+  }else{
+    exp_G1 <- base::rowMeans(new_mat[,G1]);
+    exp_G0 <- base::rowMeans(new_mat[,G0]);
+  }
   w1 <- which(tT$P.Value<=0);
-  if(length(w1)>0) tT$P.Value[w1] <- .Machine$double.xmin;
+  if(base::length(w1)>0) tT$P.Value[w1] <- .Machine$double.xmin;
   z_val <- sapply(tT$P.Value*sign(tT$logFC),function(x)combinePvalVector(x,twosided = TRUE)[1])
   if(is.null(random_effect)==TRUE){
-    tT <- cbind(tT,'Z-statistics'=z_val,'Ave.G0'=exp_G0,'Ave.G1'=exp_G1)
+    tT <- base::cbind(tT,'Z-statistics'=z_val,'Ave.G0'=exp_G0,'Ave.G1'=exp_G1)
   }else{
-    tT <- cbind(tT,'Z-statistics'=z_val,'Ave.G0'=exp_G0,'Ave.G1'=exp_G1,
+    tT <- base::cbind(tT,'Z-statistics'=z_val,'Ave.G0'=exp_G0,'Ave.G1'=exp_G1,
                 'Ave.G0_RemoveRandomEffect'=fit@.Data[[1]][rownames(tT),'G0'],
                 'Ave.G1_RemoveRandomEffect'=fit@.Data[[1]][rownames(tT),'G1'])
   }
@@ -2008,9 +2315,18 @@ getDE.limma.2G <- function(eset=NULL, G1=NULL, G0=NULL,G1_name=NULL,G0_name=NULL
 #' @export
 combinePvalVector <-
   function(pvals,
-           method = c('Stouffer', 'Fisher'),
+           method = 'Stouffer',
            signed = TRUE,
            twosided = TRUE) {
+    #
+    all_input_para <- c('pvals','method','signed','twosided')
+    check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+    if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+    check_res <- c(check_option('signed',c(TRUE,FALSE),envir=environment()),
+                   check_option('twosided',c(TRUE,FALSE),envir=environment()),
+                   check_option('method',c('Stouffer','Fisher'),envir=environment()))
+    if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+    #
     #remove NA pvalues
     pvals <- pvals[!is.na(pvals) & !is.null(pvals)]
     pvals[which(abs(pvals)<=0)] <- .Machine$double.xmin
@@ -2022,9 +2338,6 @@ combinePvalVector <-
         stop('pvalues must between 0 and 1!\n')
       if (!twosided & (sum(pvals > 0.5 | pvals < -0.5) >= 1))
         stop('One-sided pvalues must between 0 and 0.5!\n')
-
-      if (missing(method))
-        method <- 'Stouffer'
 
       if (!signed) {
         pvals <- abs(pvals)
@@ -2045,16 +2358,16 @@ combinePvalVector <-
           c(1, -1) * c(
             pchisq(
               -2 * sum(log(as.numeric(pos.pvals))),
-              df = 2 * length(pvals),
+              df = 2 * base::length(pvals),
               lower.tail = FALSE
             ) / 2,
             pchisq(
               -2 * sum(log(as.numeric(neg.pvals))),
-              df = 2 * length(pvals),
+              df = 2 * base::length(pvals),
               lower.tail = FALSE
             ) / 2
           )
-        pval <- min(abs(pvals))[1]
+        pval <- base::min(abs(pvals))[1]
         #if two pvals are equal, pick up the first one
         stat <-
           sign(pvals[abs(pvals) == pval])[1] * qnorm(pval, lower.tail = F)[1]
@@ -2063,12 +2376,12 @@ combinePvalVector <-
       else if (grepl('Stou', method, ignore.case = TRUE)) {
         if (twosided) {
           zs <- signs * qnorm(abs(pvals) / 2, lower.tail = FALSE)
-          stat <- sum(zs) / sqrt(length(zs))
+          stat <- sum(zs) / sqrt(base::length(zs))
           pval <- 2 * pnorm(abs(stat), lower.tail = FALSE)
         }
         else{
           zs <- signs * qnorm(abs(pvals), lower.tail = FALSE)
-          stat <- sum(zs) / sqrt(length(zs))
+          stat <- sum(zs) / sqrt(base::length(zs))
           pval <- pnorm(abs(stat), lower.tail = FALSE)
         }
       }
@@ -2091,31 +2404,49 @@ combinePvalVector <-
 #'
 #' @return Return an ExpressionSet object.
 #' @examples
-#' analysis.par <- list()
-#' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
-#' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' if(exists('analysis.par')==TRUE) rm(analysis.par)
+#' network.dir <- sprintf('%s/demo1/network/',system.file(package = "NetBID2")) # use demo
+#' network.project.name <- 'project_2019-02-14' # demo project name
+#' project_main_dir <- 'test/'
+#' project_name <- 'test_driver'
+#' analysis.par  <- NetBID.analysis.dir.create(project_main_dir=project_main_dir,
+#'                                             project_name=project_name,
+#'                                             network_dir=network.dir,
+#'                                             network_project_name=network.project.name)
+#' analysis.par$tf.network  <- get.SJAracne.network(network_file=analysis.par$tf.network.file)
+#' analysis.par$sig.network <- get.SJAracne.network(network_file=analysis.par$sig.network.file)
+#' ## get eset (here for demo, use network.par$net.eset)
+#' network.par <- list()
+#' network.par$out.dir.DATA <- system.file('demo1','network/DATA/',package = "NetBID2")
+#' NetBID.loadRData(network.par=network.par,step='exp-QC')
+#' analysis.par$cal.eset <- network.par$net.eset
 #' ac_mat_TF <- cal.Activity(target_list=analysis.par$tf.network$target_list,
-#'                        cal_mat=exprs(analysis.par$cal.eset),
+#'                        cal_mat=Biobase::exprs(analysis.par$cal.eset),
 #'                        es.method='weightedmean')
 #' ac_mat_SIG <- cal.Activity(target_list=analysis.par$tf.network$target_list,
-#'                        cal_mat=exprs(analysis.par$cal.eset),
+#'                        cal_mat=Biobase::exprs(analysis.par$cal.eset),
 #'                        es.method='weightedmean')
 #' analysis.par$ac.tf.eset  <- generate.eset(exp_mat=ac_mat_TF,
-#'                                           phenotype_info=pData(analysis.par$cal.eset))
+#'                                           phenotype_info=Biobase::pData(analysis.par$cal.eset))
 #' analysis.par$ac.sig.eset <- generate.eset(exp_mat=ac_mat_SIG,
-#'                                           phenotype_info=pData(analysis.par$cal.eset))
+#'                                           phenotype_info=Biobase::pData(analysis.par$cal.eset))
 #' analysis.par$merge.ac.eset <- merge_TF_SIG.AC(TF_AC=analysis.par$ac.tf.eset,
 #'                                           SIG_AC=analysis.par$ac.sig.eset)
 #' @export
 merge_TF_SIG.AC <- function(TF_AC=NULL,SIG_AC=NULL){
-  mat_TF <- exprs(TF_AC)
-  mat_SIG <- exprs(SIG_AC)
+  #
+  all_input_para <- c('TF_AC','SIG_AC')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
+  mat_TF <- Biobase::exprs(TF_AC)
+  mat_SIG <- Biobase::exprs(SIG_AC)
   funcType <- c(rep('TF',nrow(mat_TF)),rep('SIG',nrow(mat_SIG)))
   rn <- c(rownames(mat_TF),rownames(mat_SIG))
-  rn_label <- paste(rn,funcType,sep='_')
-  mat_combine <- rbind(mat_TF,mat_SIG[,colnames(mat_TF)])
+  rn_label <- base::paste(rn,funcType,sep='_')
+  mat_combine <- base::rbind(mat_TF,mat_SIG[,colnames(mat_TF)])
   rownames(mat_combine) <- rn_label
-  eset_combine <- generate.eset(exp_mat=mat_combine,phenotype_info=pData(TF_AC)[colnames(mat_combine),],
+  eset_combine <- generate.eset(exp_mat=mat_combine,phenotype_info=Biobase::pData(TF_AC)[colnames(mat_combine),],
                                 feature_info=NULL,annotation_info='activity in dataset')
   return(eset_combine)
 }
@@ -2146,19 +2477,26 @@ merge_TF_SIG.AC <- function(TF_AC=NULL,SIG_AC=NULL){
 #'                                                    SIG_network=analysis.par$sig.network)
 #' @export
 merge_TF_SIG.network <- function(TF_network=NULL,SIG_network=NULL){
+  #
+  all_input_para <- c('TF_network','SIG_network')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
   s_TF  <- names(TF_network$target_list)
   s_SIG <- names(SIG_network$target_list)
-  funcType <- c(rep('TF',length(s_TF)),rep('SIG',length(s_SIG)))
+  funcType <- c(rep('TF',base::length(s_TF)),rep('SIG',base::length(s_SIG)))
   rn <- c(s_TF,s_SIG)
-  rn_label <- paste(rn,funcType,sep='_')
+  rn_label <- base::paste(rn,funcType,sep='_')
   target_list_combine <- c(TF_network$target_list,SIG_network$target_list)
   names(target_list_combine) <- rn_label
   n_TF <- TF_network$network_dat
-  n_TF$source <- paste(n_TF$source,'TF',sep='_')
+  n_TF$source <- base::paste(n_TF$source,'TF',sep='_')
   n_SIG <- SIG_network$network_dat
-  n_SIG$source <- paste(n_SIG$source,'SIG',sep='_')
-  net_dat <- rbind(n_TF,n_SIG)
+  n_SIG$source <- base::paste(n_SIG$source,'SIG',sep='_')
+  net_dat <- base::rbind(n_TF,n_SIG)
   igraph_obj <- graph_from_data_frame(net_dat[,c('source','target','MI')],directed=TRUE)
+  igraph_obj <- set_edge_attr(igraph_obj,'weight',index=E(igraph_obj),value=net_dat[,'MI'])
+  igraph_obj <- set_edge_attr(igraph_obj,'sign',index=E(igraph_obj),value=sign(net_dat[,'spearman']))
   return(list(network_dat=net_dat,target_list=target_list_combine,igraph_obj=igraph_obj))
 }
 
@@ -2173,12 +2511,12 @@ merge_TF_SIG.network <- function(TF_network=NULL,SIG_network=NULL){
 #' @param use_comp a vector of characters, the name of multiple comparisons. It will be used to name the columns of master table.
 #' @param DE list, a list of DE comparisons, each comparison is a data.frame. The element name in the list must contain the name in \code{use_comp}.
 #' @param DA list, a list of DA comparisons, each comparison is a data.frame. The element name in the list must contain the name in \code{use_comp}.
-#' @param network list, a driver-to-target list. The names of the list elements are drivers. Each element is a data frame, usually contains three columns.
+#' @param target_list list, a driver-to-target list. The names of the list elements are drivers. Each element is a data frame, usually contains three columns.
 #' "target", target gene names; "MI", mutual information; "spearman", spearman correlation coefficient.
 #' It is highly suggested to follow the NetBID2 pipeline, and the \code{TF_network} could be generated by \code{get_net2target_list} and \code{get.SJAracne.network}.
 #' @param main_id_type character, the type of driver's ID. It comes from the attribute name in biomaRt package.
 #' Such as "ensembl_gene_id", "ensembl_gene_id_version", "ensembl_transcript_id", "ensembl_transcript_id_version" or "refseq_mrna".
-#' For details, user can call \code{listAttributes()} to display all available attributes in the selected dataset.
+#' For details, user can call \code{biomaRt::listAttributes()} to display all available attributes in the selected dataset.
 #' @param transfer_tab data.frame, the data frame for ID conversion. This can be obtained by calling \code{get_IDtransfer}.
 #' If NULL and \code{main_id_type} is not in the column names of \code{tf_sigs}, it will use the conversion table within the function.
 #' Default is NULL.
@@ -2186,6 +2524,7 @@ merge_TF_SIG.network <- function(TF_network=NULL,SIG_network=NULL){
 #' @param z_col character, name of the column in \code{DE} and \code{DA} contains the Z statistics. Default is "Z-statistics".
 #' @param display_col character, name of the column in \code{DE} and \code{DA} need to be kept in the master table. Default is c("logFC","P.Value").
 #' @param column_order_stratey character, users can choose between "type" and "comp". Default is "type".
+#' If set as type, the columns will be ordered by column type; If set as comp, the columns will be ordered by comparison.
 #' @return Return a data frame contains the mega information of all tested drivers.
 #' The column "originalID" and "originalID_label" is the same ID as from the original dataset.
 #' @examples
@@ -2194,11 +2533,11 @@ merge_TF_SIG.network <- function(TF_network=NULL,SIG_network=NULL){
 #' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' #analysis.par$final_ms_tab ## this is master table generated before
 #' ac_mat <- cal.Activity(target_list=analysis.par$merge.network$target_list,
-#'                        cal_mat=exprs(analysis.par$cal.eset),es.method='weightedmean')
+#'                        cal_mat=Biobase::exprs(analysis.par$cal.eset),es.method='weightedmean')
 #' analysis.par$ac.merge.eset  <- generate.eset(exp_mat=ac_mat,
-#'                                              phenotype_info=pData(analysis.par$cal.eset))
-#' phe_info <- pData(analysis.par$cal.eset)
-#' all_subgroup <- unique(phe_info$subgroup) ##
+#'                                              phenotype_info=Biobase::pData(analysis.par$cal.eset))
+#' phe_info <- Biobase::pData(analysis.par$cal.eset)
+#' all_subgroup <- base::unique(phe_info$subgroup) ##
 #' for(each_subtype in all_subgroup){
 #'  comp_name <- sprintf('%s.Vs.others',each_subtype) ## each comparison must give a name !!!
 #'  G0  <- rownames(phe_info)[which(phe_info$`subgroup`!=each_subtype)] # get sample list for G0
@@ -2215,65 +2554,65 @@ merge_TF_SIG.network <- function(TF_network=NULL,SIG_network=NULL){
 #' test_ms_tab <- generate.masterTable(use_comp=all_comp,
 #'                                            DE=analysis.par$DE,
 #'                                            DA=analysis.par$DA,
-#'                                            network=analysis.par$merge.network$target_list,
+#'                                            target_list=analysis.par$merge.network$target_list,
 #'                                            tf_sigs=tf_sigs,
 #'                                            z_col='Z-statistics',
 #'                                            display_col=c('logFC','P.Value'),
 #'                                            main_id_type='external_gene_name')
 #' @export
 generate.masterTable <- function(use_comp=NULL,DE=NULL,DA=NULL,
-                                 network=NULL,main_id_type=NULL,transfer_tab=NULL,
+                                 target_list=NULL,main_id_type=NULL,transfer_tab=NULL,
                                  tf_sigs=tf_sigs,
                                  z_col='Z-statistics',display_col=c('logFC','P.Value'),column_order_stratey='type'){
-  if(is.null(use_comp)){message('No input for use_comp, please check and re-try!');return(FALSE)}
-  if(is.null(main_id_type)){message('No input for main_id_type, please check and re-try!');return(FALSE)}
-  if(is.null(DE)){message('No input for DE, please check and re-try!');return(FALSE)}
-  if(is.null(DA)){message('No input for DA, please check and re-try!');return(FALSE)}
-  if(is.null(network)){message('No input for network, please check and re-try!');return(FALSE)}
-  if(is.null(tf_sigs)){message('tf_sigs not loaded, please check and re-try!');return(FALSE)}
-  if(is.null(z_col)){message('No input for z_col, please check and re-try!');return(FALSE)}
-  if(length(setdiff(use_comp,names(DE)))>0){message('%s not calculated, please check and re-try!',setdiff(use_comp,names(DE)));return(FALSE)}
-  if(length(setdiff(use_comp,names(DA)))>0){message('%s not calculated, please check and re-try!',setdiff(use_comp,names(DA)));return(FALSE)}
+  #
+  all_input_para <- c('use_comp','DE','DA','target_list','main_id_type','tf_sigs','z_col','display_col','column_order_stratey')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  check_res <- c(check_option('column_order_stratey',c('type','comp'),envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
+  if(base::length(base::setdiff(use_comp,names(DE)))>0){message(sprintf('%s not included in DE, please check and re-try!',base::setdiff(use_comp,names(DE))));return(FALSE)}
+  if(base::length(base::setdiff(use_comp,names(DA)))>0){message(sprintf('%s not included in DA, please check and re-try!',base::setdiff(use_comp,names(DA))));return(FALSE)}
   # get original ID
   ori_rn <- rownames(DA[[1]]) ## with label
   w1 <- grep('(.*)_TF',ori_rn); w2 <- grep('(.*)_SIG',ori_rn)
-  funcType <- rep(NA,length.out=length(ori_rn));rn <- funcType
+  funcType <- rep(NA,length.out=base::length(ori_rn));rn <- funcType
   funcType[w1] <- 'TF'; funcType[w2] <- 'SIG';
   rn[w1] <- gsub('(.*)_TF',"\\1",ori_rn[w1]);rn[w2] <- gsub('(.*)_SIG',"\\1",ori_rn[w2]);
   rn_label <- ori_rn
-  use_size <- unlist(lapply(network[rownames(DA[[1]])],nrow))
+  use_size <- unlist(lapply(target_list[rownames(DA[[1]])],nrow))
   # id issue
   current_id <- names(tf_sigs$tf)[-1]
-  use_info <- unique(rbind(tf_sigs$tf$info,tf_sigs$sig$info))
+  use_info <- base::unique(base::rbind(tf_sigs$tf$info,tf_sigs$sig$info))
   if(main_id_type %in% current_id){
     use_info <- use_info[which(use_info[,main_id_type] %in% rn),]
   }else{
     if(is.null(transfer_tab)==TRUE){
       transfer_tab <- get_IDtransfer(from_type=main_id_type,to_type=current_id[1],use_genes=rn,ignore_version = TRUE)
-      use_info <- merge(use_info,transfer_tab,by.x=current_id[1],by.y=current_id[1])
+      use_info <- base::merge(use_info,transfer_tab,by.x=current_id[1],by.y=current_id[1])
     }else{
       transfer_tab <- transfer_tab[which(transfer_tab[,main_id_type] %in% rn),]
-      uid <- intersect(colnames(transfer_tab),colnames(use_unfo))
-      if(length(uid)==0){message('No ID type in the transfer_tab could match ID type in tf_sigs, please check and re-try!');return(FALSE);}
+      uid <- base::intersect(colnames(transfer_tab),colnames(use_info))
+      if(base::length(uid)==0){message('No ID type in the transfer_tab could match ID type in tf_sigs, please check and re-try!');return(FALSE);}
       uid <- uid[1]
-      use_info <- merge(use_info,transfer_tab,by.x=uid,by.y=uid)
+      use_info <- base::merge(use_info,transfer_tab,by.x=uid,by.y=uid)
     }
     use_info <- use_info[which(use_info[,main_id_type] %in% rn),]
   }
-  use_info <- unique(use_info)
+  use_info <- base::unique(use_info)
   if(nrow(use_info)==0){message('ID issue error, please check main_id_type setting!');return(FALSE);}
   # merge info
-  tmp1 <- aggregate(use_info,list(use_info[,main_id_type]),function(x){
+  tmp1 <- stats::aggregate(use_info,list(use_info[,main_id_type]),function(x){
     x1 <- x[which(x!="")]
     x1 <- x1[which(is.na(x1)==FALSE)]
-    paste(sort(unique(x1)),collapse=';')
+    base::paste(sort(base::unique(x1)),collapse=';')
   })
   tmp1 <- tmp1[,-1]; rownames(tmp1) <- tmp1[,main_id_type]
   geneSymbol <- tmp1[rn,'external_gene_name'] ## this column for function enrichment
   if('external_transcript_name' %in% colnames(tmp1)){ ## this column for display
-    gene_label <- paste(tmp1[rn,'external_transcript_name'],funcType,sep = '_')
+    gene_label <- base::paste(tmp1[rn,'external_transcript_name'],funcType,sep = '_')
   }else{
-    gene_label <-paste(tmp1[rn,'external_gene_name'],funcType,sep = '_')
+    gene_label <-base::paste(tmp1[rn,'external_gene_name'],funcType,sep = '_')
   }
   #
   label_info <- data.frame('gene_label'=gene_label,'geneSymbol'=geneSymbol,
@@ -2284,35 +2623,35 @@ generate.masterTable <- function(use_comp=NULL,DE=NULL,DA=NULL,
     DA[[x]] <- DA[[x]][rn_label,]
     DE[[x]] <- as.data.frame(DE[[x]])[rn,]
     avg_col <- colnames(DA[[x]])[grep('^Ave',colnames(DA[[x]]))]
-    uc <- c(z_col,avg_col,setdiff(display_col,c(z_col,avg_col))); uc <- intersect(uc,colnames(DA[[x]]))
+    uc <- c(z_col,avg_col,base::setdiff(display_col,c(z_col,avg_col))); uc <- base::intersect(uc,colnames(DA[[x]]))
     DA_info <- DA[[x]][rn_label,uc]
     avg_col <- colnames(DE[[x]])[grep('^Ave',colnames(DE[[x]]))]
-    uc <- c(z_col,avg_col,setdiff(display_col,c(z_col,avg_col))); uc <- intersect(uc,colnames(DE[[x]]))
+    uc <- c(z_col,avg_col,base::setdiff(display_col,c(z_col,avg_col))); uc <- base::intersect(uc,colnames(DE[[x]]))
     DE_info <- as.data.frame(DE[[x]])[rn,uc]
     colnames(DA_info) <- paste0(colnames(DA_info),'.',x,'_DA')
     colnames(DE_info) <- paste0(colnames(DE_info),'.',x,'_DE')
     colnames(DA_info)[1] <- paste0('Z.',x,'_DA')
     colnames(DE_info)[1] <- paste0('Z.',x,'_DE')
-    out <- cbind(DA_info,DE_info,stringsAsFactors=FALSE)
+    out <- base::cbind(DA_info,DE_info,stringsAsFactors=FALSE)
     rownames(out) <- rn_label
     out
   })
-  combine_info_DA <- do.call(cbind,lapply(combine_info,function(x)x[rn_label,grep('_DA$',colnames(x))]))
-  combine_info_DE <- do.call(cbind,lapply(combine_info,function(x)x[rn_label,grep('_DE$',colnames(x))]))
+  combine_info_DA <- do.call(base::cbind,lapply(combine_info,function(x)x[rn_label,grep('_DA$',colnames(x))]))
+  combine_info_DE <- do.call(base::cbind,lapply(combine_info,function(x)x[rn_label,grep('_DE$',colnames(x))]))
   # re-organize the columns for combine info
-  if(column_order_stratey=='type'){
+  if(column_order_stratey=='type' & length(use_comp)>1){
     col_ord <- c('Z','AveExpr',display_col)
     tmp1 <- lapply(col_ord,function(x){
       combine_info_DA[,grep(sprintf('^%s\\.',x),colnames(combine_info_DA))]
     })
-    combine_info_DA <- do.call(cbind,combine_info_DA)
+    combine_info_DA <- do.call(base::cbind,tmp1)
     tmp1 <- lapply(col_ord,function(x){
       combine_info_DE[,grep(sprintf('^%s\\.',x),colnames(combine_info_DA))]
     })
-    combine_info_DE <- do.call(cbind,combine_info_DE)
+    combine_info_DE <- do.call(base::cbind,tmp1)
   }
   # put them together
-  ms_tab <- cbind(label_info,combine_info_DA,combine_info_DE,add_info)
+  ms_tab <- base::cbind(label_info,combine_info_DA,combine_info_DE,add_info)
   rownames(ms_tab) <- ms_tab$originalID_label
   return(ms_tab)
 }
@@ -2349,9 +2688,11 @@ generate.masterTable <- function(use_comp=NULL,DE=NULL,DA=NULL,
 #'                  SHH=c('PDLIM3','EYA1','HHIP','ATOH1','SFRP1'),
 #'                  Group3=c('IMPG2','GABRA5','EGFL11','NRL','MAB21L2','NPR3','MYC'),
 #'                  Group4=c('KCNA1','EOMES','KHDRBS2','RBM24','UNC5D'))
-#' mark_col <- get.class.color(names(mark_gene))
+#' mark_col <- get.class.color(names(mark_gene),
+#'             pre_define=c('WNT'='blue','SHH'='red',
+#'             'Group3'='yellow','Group4'='green'))
 #' outfile <- 'test_out.xlsx'
-#' out2excel(ms_tab,out.xlsx = out_file,mark_gene,mark_col)
+#' out2excel(ms_tab,out.xlsx = outfile,mark_gene,mark_col)
 #' }
 #' @export
 out2excel <- function(all_ms_tab,out.xlsx,
@@ -2361,10 +2702,15 @@ out2excel <- function(all_ms_tab,out.xlsx,
                       workbook_name='ms_tab',
                       only_z_sheet=FALSE,
                       z_column=NULL,sig_thre=1.64){
-  wb <- createWorkbook(workbook_name)
-  if(!mark_strategy %in% c('color','add_column')){
-    message('mark_strategy must be color or add_column, please check and re-try!');return(FALSE);
-  }
+  #
+  all_input_para <- c('all_ms_tab','out.xlsx','mark_strategy','workbook_name','only_z_sheet','sig_thre')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  check_res <- c(check_option('only_z_sheet',c(TRUE,FALSE),envir=environment()),
+                 check_option('mark_strategy',c('color','add_column'),envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
+  wb <- openxlsx::createWorkbook(workbook_name)
   if(!'list' %in% class(all_ms_tab)){
     all_ms_tab <- list('Sheet1'=as.data.frame(all_ms_tab))
   }
@@ -2372,8 +2718,8 @@ out2excel <- function(all_ms_tab,out.xlsx,
     nn <- names(all_ms_tab)
     all_ms_tab <- lapply(all_ms_tab,function(x){
       w1 <- grep('.*_[DE|DA]',colnames(x))
-      w2 <- setdiff(colnames(x)[w1],colnames(x)[w1][grep('^Z.*',colnames(x)[w1])])
-      w3 <- setdiff(colnames(x),w2)
+      w2 <- base::setdiff(colnames(x)[w1],colnames(x)[w1][grep('^Z.*',colnames(x)[w1])])
+      w3 <- base::setdiff(colnames(x),w2)
       list(x[,w3],x)
     })
     all_ms_tab <- unlist(all_ms_tab,recursive = FALSE)
@@ -2401,10 +2747,10 @@ out2excel <- function(all_ms_tab,out.xlsx,
       new_col_name <- paste0('is',names(mark_gene))
       all_ms_tab <- lapply(all_ms_tab,function(x){
         g1 <- x$geneSymbol
-        r1 <- do.call(cbind,lapply(mark_gene,function(x1){
+        r1 <- do.call(base::cbind,lapply(mark_gene,function(x1){
           ifelse(g1 %in% x1,'TRUE','FALSE')
         }))
-        new_x <- cbind(x,r1)
+        new_x <- base::cbind(x,r1)
         colnames(new_x) <- c(colnames(x),new_col_name)
         new_x
       })
@@ -2413,22 +2759,23 @@ out2excel <- function(all_ms_tab,out.xlsx,
   z_column_index <- 'defined'
   if(is.null(z_column)==TRUE) z_column_index <- 'auto'
   i <- 0
-  headerStyle <- createStyle(fontSize = 14, fontColour = "#FFFFFF", halign = "center",fgFill = "#4F81BD", border="TopBottom", borderColour = "#4F81BD",wrapText=TRUE) ## style for header line
+  headerStyle <- openxlsx::createStyle(fontSize = 14, fontColour = "#FFFFFF", halign = "center",fgFill = "#4F81BD",
+                             border="TopBottom", borderColour = "#4F81BD",wrapText=TRUE) ## style for header line
   for(sheetname in names(all_ms_tab)){ ## list, each item create one sheet
     i <- i +1
     d <- as.data.frame(all_ms_tab[[sheetname]])
-    if(z_column_index=='auto') use_z_column <- colnames(d)[grep('^Z\\.',colnames(d),ignore.case = TRUE)] else use_z_column <- intersect(colnames(d),z_column)
-    addWorksheet(wb,sheetName=sheetname)
-    writeData(wb,sheet = i,d)
-    addStyle(wb, sheet = i, headerStyle, rows = 1, cols = 1:ncol(d), gridExpand = TRUE) ## add header style
+    if(z_column_index=='auto') use_z_column <- colnames(d)[grep('^Z\\.',colnames(d),ignore.case = TRUE)] else use_z_column <- base::intersect(colnames(d),z_column)
+    openxlsx::addWorksheet(wb,sheetName=sheetname)
+    openxlsx::writeData(wb,sheet = i,d)
+    openxlsx::addStyle(wb, sheet = i, headerStyle, rows = 1, cols = 1:ncol(d), gridExpand = TRUE) ## add header style
     all_c <- list()
     for(z_col in use_z_column){ ## find colnames with z. (only applied to pipeline excel)
       j <- which(colnames(d)==z_col)
       z1 <- d[,j]; c1 <- z2col(z1,sig_thre=sig_thre)
       all_c[[as.character(j)]] <- c1
     }
-    mat_c <- do.call(cbind,all_c)
-    uni_c <- unique(unlist(all_c))
+    mat_c <- do.call(base::cbind,all_c)
+    uni_c <- base::unique(unlist(all_c))
     for(r in uni_c){
       w1 <- which(mat_c==r)
       nn <- nrow(mat_c)
@@ -2436,11 +2783,12 @@ out2excel <- function(all_ms_tab,out.xlsx,
       cc <- w1%/%nn+1
       cc[which(rr==1)] <- cc[which(rr==1)]-1
       rr[which(rr==1)] <- nn+1
-      addStyle(wb, sheet = i, createStyle(fgFill=r), rows =rr, cols = as.numeric(names(all_c)[cc]))
+      openxlsx::addStyle(wb, sheet = i, createStyle(fgFill=r), rows =rr, cols = as.numeric(names(all_c)[cc]))
     }
     if(is.null(mark_gene)==FALSE){
       for(k in names(mark_gene)){
-        addStyle(wb, sheet = i, createStyle(fgFill=mark_col[k]), rows =which(toupper(d[,which(colnames(d)=='geneSymbol')]) %in% toupper(mark_gene[[k]]))+1,
+        openxlsx::addStyle(wb, sheet = i, openxlsx::createStyle(fgFill=mark_col[k]),
+                           rows =which(toupper(d[,which(colnames(d)=='geneSymbol')]) %in% toupper(mark_gene[[k]]))+1,
                  cols = which(colnames(d)=='geneSymbol')) ## find column with geneSymbol and mark color
       }
     }
@@ -2450,9 +2798,9 @@ out2excel <- function(all_ms_tab,out.xlsx,
     cc <- w1%/%nn+1
     cc[which(rr==1)] <- cc[which(rr==1)]-1
     rr[which(rr==1)] <- nn+1
-    addStyle(wb, sheet = i, createStyle(fontColour='#FF0000'), rows =rr, cols = as.numeric(cc)) ## find column with TRUE/FALSE and mark with color
+    openxlsx::addStyle(wb, sheet = i, openxlsx::createStyle(fontColour='#FF0000'), rows =rr, cols = as.numeric(cc)) ## find column with TRUE/FALSE and mark with color
   }
-  saveWorkbook(wb, out.xlsx, overwrite = TRUE)
+  openxlsx::saveWorkbook(wb, out.xlsx, overwrite = TRUE)
   return(TRUE)
   ##
 }
@@ -2493,6 +2841,15 @@ out2excel <- function(all_ms_tab,out.xlsx,
 gs.preload <- function(use_spe='Homo sapiens',update=FALSE,
                        main.dir=NULL,
                        db.dir=sprintf("%s/db/",main.dir)){
+  #
+  all_input_para <- c('use_spe','update')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  all_spe <- msigdbr::msigdbr_show_species()
+  check_res <- c(check_option('update',c(TRUE,FALSE),envir=environment()),
+                 check_option('use_spe',all_spe,envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
   ## only support geneSymbol (because pipeline-generated master table will contain geneSymbol column)
   if(is.null(main.dir)==TRUE){
     main.dir <- system.file(package = "NetBID2")
@@ -2502,33 +2859,28 @@ gs.preload <- function(use_spe='Homo sapiens',update=FALSE,
     db.dir <- sprintf("%s/db/",main.dir)
   }
   message(sprintf('Will use directory %s as the db.dir',db.dir))
-  all_spe <- msigdbr_show_species()
-  if(!use_spe %in% all_spe){
-    message(sprintf('%s not in %s, please check and re-try !',use_spe,paste(all_spe,collapse=';')))
-    return(FALSE)
-  }
   use_spe1 <- gsub(' ','_',use_spe)
   out_file <- sprintf('%s/%s_gs2gene.RData',db.dir,use_spe1)
   if(file.exists(out_file)==FALSE | update==TRUE){
     message('Begin generating all_gs2gene !')
-    all_gs_info <-  msigdbr(species = use_spe) ## use msigdbr_show_species() to check possible available species
+    all_gs_info <-  msigdbr::msigdbr(species = use_spe) ## use msigdbr_show_species() to check possible available species
     # for gs_cat
-    all_gs_cat <- unique(all_gs_info$gs_cat)
+    all_gs_cat <- base::unique(all_gs_info$gs_cat)
     all_gs2gene_1 <- lapply(all_gs_cat,function(x){
       x1 <- all_gs_info[which(all_gs_info$gs_cat==x),]
-      all_gs <- unique(x1$gs_name)
+      all_gs <- base::unique(x1$gs_name)
       x2 <- lapply(all_gs, function(y){
-        unique(x1$gene_symbol[which(x1$gs_name==y)])
+        base::unique(x1$gene_symbol[which(x1$gs_name==y)])
       })
       names(x2) <- all_gs;x2
     })
     names(all_gs2gene_1) <- all_gs_cat
-    all_gs_subcat <- setdiff(unique(all_gs_info$gs_subcat),"")
+    all_gs_subcat <- base::setdiff(base::unique(all_gs_info$gs_subcat),"")
     all_gs2gene_2 <- lapply(all_gs_subcat,function(x){
       x1 <- all_gs_info[which(all_gs_info$gs_subcat==x),]
-      all_gs <- unique(x1$gs_name)
+      all_gs <- base::unique(x1$gs_name)
       x2 <- lapply(all_gs, function(y){
-        unique(x1$gene_symbol[which(x1$gs_name==y)])
+        base::unique(x1$gene_symbol[which(x1$gs_name==y)])
       })
       names(x2) <- all_gs;x2
     })
@@ -2542,7 +2894,7 @@ gs.preload <- function(use_spe='Homo sapiens',update=FALSE,
     info_subcat <- c('CGP'='chemical and genetic perturbations','CP'='Canonical pathways','CP:BIOCARTA'='BioCarta gene sets','CP:KEGG'='KEGG gene sets',
                      'CP:REACTOME'='Reactome gene sets','MIR'='microRNA targets','TFT'='transcription factor targets','CGN'='cancer gene neighborhoods','CM'='cancer modules',
                      'BP'='Biological Process','MF'='Molecular Function','CC'='Cellular Component')
-    cat_rel <- unique(as.data.frame(all_gs_info[,c('gs_cat','gs_subcat')]))
+    cat_rel <- base::unique(as.data.frame(all_gs_info[,c('gs_cat','gs_subcat')]))
     all_gs2gene_info <- data.frame(cat_rel[,1],info_cat[cat_rel[,1]],gs_size[cat_rel[,1]],cat_rel[,2],info_subcat[cat_rel[,2]],gs_size[cat_rel[,2]],stringsAsFactors = FALSE)
     colnames(all_gs2gene_info) <- c('Category','Category_Info','Category_Size','Sub-Category','Sub-Category_Info','Sub-Category_Size')
     all_gs2gene_info <- all_gs2gene_info[order(all_gs2gene_info[,1]),]
@@ -2577,16 +2929,25 @@ gs.preload <- function(use_spe='Homo sapiens',update=FALSE,
 #' analysis.par <- list()
 #' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
 #' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
-#' phe_info <- pData(analysis.par$cal.eset)
+#' phe_info <- Biobase::pData(analysis.par$cal.eset)
 #' use_obs_class <- get_obs_label(phe_info = phe_info,'subgroup')
 #' print(use_obs_class)
 #' \dontrun{
 #'}
 #' @export
 get_obs_label <- function(phe_info,use_col,collapse='|'){
+  #
+  all_input_para <- c('phe_info','use_col','collapse')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
+  w1 <- base::setdiff(use_col,colnames(phe_info))
+  if(length(w1)>0){
+    message(sprintf('%s not in the colnames(phe_info),please check and re-try!',paste(w1,collapse=';')));return(FALSE);
+  }
   obs_label<-phe_info[,use_col];
-  if(length(use_col)>1){
-    obs_label<-apply(obs_label,1,function(x)paste(x,collapse=collapse))
+  if(base::length(use_col)>1){
+    obs_label<-apply(obs_label,1,function(x)base::paste(x,collapse=collapse))
   }
   names(obs_label) <- rownames(phe_info);
   obs_label
@@ -2607,8 +2968,11 @@ get_obs_label <- function(phe_info,use_col,collapse='|'){
 #' intgroups <- get_int_group(network.par$net.eset)
 #' @export
 get_int_group <- function(eset){
-  phe <- pData(eset)
-  feature_len <- apply(phe,2,function(x)length(unique(x)))
+  all_input_para <- c('eset')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  phe <- Biobase::pData(eset)
+  feature_len <- apply(phe,2,function(x)base::length(base::unique(x)))
   intgroup <- colnames(phe)[which(feature_len>1 & feature_len<nrow(phe))]
   return(intgroup)
 }
@@ -2629,6 +2993,13 @@ get_int_group <- function(eset){
 #' get_clustComp(pred_label,obs_label)
 #' @export
 get_clustComp <- function(pred_label, obs_label,strategy='ARI') {
+  #
+  all_input_para <- c('pred_label','obs_label','strategy')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  check_res <- c(check_option('strategy',c('ARI','NMI','Jaccard'),envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
   if(is.null(names(pred_label))==TRUE & is.null(names(obs_label))==FALSE){
     message('The names of pred_label will use the order of obs_label')
     names(pred_label) <- names(obs_label)
@@ -2639,11 +3010,8 @@ get_clustComp <- function(pred_label, obs_label,strategy='ARI') {
   }
   if(is.null(names(obs_label))==TRUE & is.null(names(pred_label))==TRUE){
     message('Assume pred_label and obs_label have the same order!')
-    names(obs_label) <- as.character(1:length(obs_label))
+    names(obs_label) <- as.character(1:base::length(obs_label))
     names(pred_label) <- names(obs_label)
-  }
-  if(!strategy %in% c('ARI','NMI','Jaccard')){
-    message('Only support RI,ARI,NMI and Jaccard!');return(FALSE);
   }
   if(strategy=='Jaccard') res1 <- get_jac(pred_label, obs_label) else res1 <- clustComp(pred_label, obs_label)[[strategy]]
   return(res1)
@@ -2652,17 +3020,17 @@ get_clustComp <- function(pred_label, obs_label,strategy='ARI') {
 # get jaccard accuracy
 get_jac <- function(pred_label, obs_label) {
   jac1 <- c()
-  for (i in unique(pred_label)) {
+  for (i in base::unique(pred_label)) {
     jac_index <- c()
     x1 <- names(pred_label)[which(pred_label == i)]
-    for (j in unique(obs_label)) {
+    for (j in base::unique(obs_label)) {
       x2 <- names(obs_label)[which(obs_label == j)]
       jac_index <-
-        c(jac_index, length(intersect(x1, x2)) / length(union(x1, x2)))
+        c(jac_index, base::length(base::intersect(x1, x2)) / base::length(union(x1, x2)))
     }
-    jac1 <- c(jac1, max(jac_index) * length(x1))
+    jac1 <- c(jac1, base::max(jac_index) * base::length(x1))
   }
-  jac1 <- sum(jac1) / length(pred_label)
+  jac1 <- sum(jac1) / base::length(pred_label)
   return(jac1)
 }
 
@@ -2697,8 +3065,8 @@ get_jac <- function(pred_label, obs_label) {
 #' network.par <- list()
 #' network.par$out.dir.DATA <- system.file('demo1','network/DATA/',package = "NetBID2")
 #' NetBID.loadRData(network.par=network.par,step='exp-QC')
-#' mat <- exprs(network.par$net.eset)
-#' phe <- pData(network.par$net.eset)
+#' mat <- Biobase::exprs(network.par$net.eset)
+#' phe <- Biobase::pData(network.par$net.eset)
 #' intgroup <- 'subgroup'
 #' pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,
 #'                              obs_label=get_obs_label(phe,intgroup),
@@ -2710,6 +3078,14 @@ draw.clustComp <- function(pred_label, obs_label,strategy='ARI',
                            use_col=TRUE,low_K=5,
                            highlight_clust=NULL,
                            main=NULL,clust_cex=1,outlier_cex=0.3) {
+  #
+  all_input_para <- c('pred_label','obs_label','strategy','use_col','low_K','clust_cex','outlier_cex')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  check_res <- c(check_option('use_col',c(TRUE,FALSE),envir=environment()),
+                 check_option('strategy',c('ARI','NMI','Jaccard'),envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
   if(is.null(names(pred_label))==TRUE & is.null(names(obs_label))==FALSE){
     message('The names of pred_label will use the order of obs_label')
     names(pred_label) <- names(obs_label)
@@ -2720,7 +3096,7 @@ draw.clustComp <- function(pred_label, obs_label,strategy='ARI',
   }
   if(is.null(names(obs_label))==TRUE & is.null(names(pred_label))==TRUE){
     message('Assume pred_label and obs_label have the same order!')
-    names(obs_label) <- as.character(1:length(obs_label))
+    names(obs_label) <- as.character(1:base::length(obs_label))
     names(pred_label) <- names(obs_label)
   }
   nn <- names(pred_label)
@@ -2731,28 +3107,28 @@ draw.clustComp <- function(pred_label, obs_label,strategy='ARI',
   }else{
     mm <- main
   }
-  t1 <- table(list(pred_label[nn],obs_label[nn]))
-  layout(1)
-  textWidth <- max(strwidthMod(colnames(t1),units='inch',cex=clust_cex))+par.char2inch()[1]*1.5
+  t1 <- base::table(list(pred_label[nn],obs_label[nn]))
+  graphics::layout(1)
+  textWidth <- base::max(strwidthMod(colnames(t1),units='inch',cex=clust_cex))+par.char2inch()[1]*1.5
   par(mai=c(0.5,textWidth,1,1))
   if(use_col==TRUE){
-    image(t1,col=c('white',colorRampPalette(brewer.pal(8,'Reds'))(length(unique(as.numeric(t1)))-1)),bty='n',xaxt='n',yaxt='n',
+    graphics::image(t1,col=c('white',grDevices::colorRampPalette(brewer.pal(8,'Reds'))(base::length(base::unique(as.numeric(t1)))-1)),bty='n',xaxt='n',yaxt='n',
           main=mm)
   }else{
-    image(t1,bty='n',xaxt='n',yaxt='n',
+    graphics::image(t1,bty='n',xaxt='n',yaxt='n',
           main=mm,col='white')
   }
 
   pp <- par()$usr
-  rect(xleft=pp[1],xright=pp[2],ybottom=pp[3],ytop=pp[4])
-  xx <- seq(pp[1],pp[2],length.out = nrow(t1)+1)
-  yy <- seq(pp[3],pp[4],length.out = ncol(t1)+1)
-  xxx <- (xx[1:(length(xx)-1)]+xx[2:length(xx)])/2
-  yyy <- (yy[1:(length(yy)-1)]+yy[2:length(yy)])/2
+  graphics::rect(xleft=pp[1],xright=pp[2],ybottom=pp[3],ytop=pp[4])
+  xx <- base::seq(pp[1],pp[2],length.out = nrow(t1)+1)
+  yy <- base::seq(pp[3],pp[4],length.out = ncol(t1)+1)
+  xxx <- (xx[1:(base::length(xx)-1)]+xx[2:base::length(xx)])/2
+  yyy <- (yy[1:(base::length(yy)-1)]+yy[2:base::length(yy)])/2
 
-  abline(h=yy);abline(v=xx)
-  text(pp[1]-par.char2pos()[1],yyy,colnames(t1),adj=1,xpd=TRUE,col=ifelse(colnames(t1) %in% highlight_clust,2,1),cex=clust_cex)
-  text(xxx,pp[4],rownames(t1),srt=0,xpd=TRUE,
+  graphics::abline(h=yy);graphics::abline(v=xx)
+  graphics::text(pp[1]-par.char2pos()[1],yyy,colnames(t1),adj=1,xpd=TRUE,col=ifelse(colnames(t1) %in% highlight_clust,2,1),cex=clust_cex)
+  graphics::text(xxx,pp[4],rownames(t1),srt=0,xpd=TRUE,
        col=ifelse(rownames(t1) %in% highlight_clust,2,1),cex=clust_cex,pos=3)
 
   for(i in 1:nrow(t1)){
@@ -2760,11 +3136,11 @@ draw.clustComp <- function(pred_label, obs_label,strategy='ARI',
       v1 <- t1[i,j]
       if(v1==0) next
       if(v1>low_K){
-        text(xxx[i],yyy[j],v1,cex=clust_cex)
+        graphics::text(xxx[i],yyy[j],v1,cex=clust_cex)
       }else{
         v2 <- names(obs_label)[which(pred_label==rownames(t1)[i] & obs_label==colnames(t1)[j])]
-        v2 <- paste(v2,collapse='\n')
-        text(xxx[i],yyy[j],v2,cex=outlier_cex)
+        v2 <- base::paste(v2,collapse='\n')
+        graphics::text(xxx[i],yyy[j],v2,cex=outlier_cex)
       }
     }
   }
@@ -2786,21 +3162,24 @@ draw.clustComp <- function(pred_label, obs_label,strategy='ARI',
 #' @return Return a vector of color codes.
 #' @examples
 #' t1 <- sort(rnorm(mean=0,sd=2,n=100))
-#' image(as.matrix(t1),col=z2col(t1))
+#' graphics::image(as.matrix(t1),col=z2col(t1))
 #' @export
 z2col <- function(x,n_len=60,sig_thre=0.01,col_min_thre=0.01,col_max_thre=3,
                   blue_col=brewer.pal(9,'Set1')[2],
                   red_col=brewer.pal(9,'Set1')[1]){
+  #
+  all_input_para <- c('x','n_len','sig_thre','col_min_thre','col_max_thre','blue_col','red_col')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
   ## create vector for z-score, can change sig threshold
   x[which(is.na(x)==TRUE)] <- 0
-  #if(length(x!=Inf & x!= -Inf)==0) x <- 35*sign(x)
-  x[which(x==Inf)]<-  max(x[which(x!=Inf)])+1
-  x[which(x==-Inf)]<- min(x[which(x!=-Inf)])-1
+  x[which(x==Inf)]<-  base::max(x[which(x!=Inf)])+1
+  x[which(x==-Inf)]<- base::min(x[which(x!=-Inf)])-1
   if(col_min_thre<0) col_min_thre<-0.01
   if(col_max_thre<0) col_max_thre<-3
-  #c1 <- brewer.pal(9,'Set1')
-  c2 <- colorRampPalette(c(blue_col,'white',red_col))(n_len)
-  r1 <- 1.05*max(abs(x)) ## -r1~r1
+  c2 <- grDevices::colorRampPalette(c(blue_col,'white',red_col))(n_len)
+  r1 <- 1.05*base::max(abs(x)) ## -r1~r1
   if(r1 < col_max_thre){
     r1 <- col_max_thre
   }
@@ -2808,7 +3187,7 @@ z2col <- function(x,n_len=60,sig_thre=0.01,col_min_thre=0.01,col_max_thre=3,
     r2 <- seq(-r1,r1,length.out=n_len+1)
   }else{
     r21 <- seq(-r1,-col_min_thre,length.out=n_len/2)
-    r22 <- seq(col_min_thre,r1,length.out=n_len/2)
+    r22 <- base::seq(col_min_thre,r1,length.out=n_len/2)
     r2 <- c(r21,r22)
   }
   x1 <- cut(x,r2)
@@ -2823,54 +3202,62 @@ z2col <- function(x,n_len=60,sig_thre=0.01,col_min_thre=0.01,col_max_thre=3,
 #' \code{get.class.color} creates a vector of color codes for the input character vector. This is a helper function to assign nice looking colors for better visualization.
 #'
 #' @param x a vector of characters, names or labels.
-#' @param use_color a vector of color codes, colors to be assigned to each member of \code{x}. Default is brewer.pal(12, 'Set3').
-#' @param pre_define a vector of characters, pre-defined color codes for a certain input (e.g. c("blue", "blue", "red") with names c("A", "A", "B")). Default is NULL.
-#' @param use_inner logical, if TRUE, the \code{pre_define} color codes will be used. Default is TRUE.
+#' @param use_color a vector of color codes, colors to be assigned to each member of \code{x}. Default is brewer.pal(9, 'Set1').
+#' @param pre_define a vector of characters, pre-defined color codes for a certain input (e.g. c("blue", "red") with names c("A", "B")). Default is NULL.
 #'
 #' @return Return a vector of color codes, with input character vector as names.
 
 #' @examples
 #' get.class.color(c('ClassA','ClassB','ClassC','ClassA','ClassC','ClassC'))
+#' get.class.color(c('ClassA','ClassB','ClassC','SHH','WNT','Group3','Group4'))
 #' get.class.color(c('ClassA','ClassB','ClassC','SHH','WNT','Group3','Group4'),
-#'                 use_inner=FALSE)
-#' get.class.color(c('ClassA','ClassB','ClassC','SHH','WNT','Group3','Group4'),
-#'                 use_inner=FALSE,use_color=brewer.pal(8, 'Set1'))
+#'                  use_color=brewer.pal(8, 'Set1'))
 #'
 #' pre_define <- c('blue', 'red', 'yellow', 'green','yellow', 'green')
 #'                 ## pre-defined colors for MB
 #' names(pre_define) <- c('WNT', 'SHH', 'Group3', 'Group4','GroupC', 'GroupD')
 #'                 ##pre-defined color name for MB
 #' get.class.color(c('ClassA','ClassB','ClassC','SHH','WNT','Group3','Group4'),
-#'                 pre_define=pre_define,use_inner=FALSE)
+#'                 pre_define=pre_define)
 #'
 #' \dontrun{
 #'}
 #' @export
-get.class.color <- function(x,use_color=NULL,pre_define=NULL,use_inner=TRUE) {
+get.class.color <- function(x,use_color=NULL,pre_define=NULL) {
+  #
+  all_input_para <- c('x')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
+  x <- clean_charVector(x);
+  #
   if(is.null(pre_define)==FALSE & is.null(names(pre_define))==TRUE){
     message('No class name for the color vector, please check and re-try !');return(FALSE);
   }
-  if(use_inner==TRUE){ ## use inner pre_defined !!!
-    pre_define <- c('blue', 'red', 'yellow', 'green','yellow', 'green') ## pre-defined colors for MB
-    names(pre_define) <- c('WNT', 'SHH', 'Group3', 'Group4','GroupC', 'GroupD') ##pre-defined color name for MB
-  }
+  x <- clean_charVector(x);
   if(is.null(use_color)==TRUE){
-    if (length(intersect(x, names(pre_define))) == 0){
-      use_color <- brewer.pal(12, 'Set3')
-    }else{
-      use_color <- brewer.pal(12, 'Set3')[c(1,3,5,7,9,10,11)]
-    }
+    use_color <- brewer.pal(9, 'Set1')
   }
-  if (length(intersect(x, names(pre_define))) == 0) {
-    cc2 <- colorRampPalette(use_color)(length(unique(x)))
-    names(cc2) <- unique(x)
+  if (base::length(base::intersect(x, names(pre_define))) == 0) {
+    w1 <- base::length(base::unique(x))
+    if(w1 < length(use_color)){
+      cc2 <- use_color[1:w1]
+    }else{
+      cc2 <- grDevices::colorRampPalette(use_color)(base::length(base::unique(x)))
+    }
+    names(cc2) <- base::unique(x)
     cc2 <- cc2[x]
   } else{
-    x1 <- unique(x)
-    x2 <- setdiff(x1, names(pre_define))
+    x1 <- base::unique(x)
+    x2 <- base::setdiff(x1, names(pre_define))
     cc1 <- NULL
-    if (length(x2) > 0) {
-      cc1 <- colorRampPalette(use_color)(length(x2))
+    w1 <- base::length(x2)
+    if (w1 > 0) {
+      if(w1 < length(use_color)){
+        cc1 <- use_color[1:w1]
+      }else{
+        cc1 <- grDevices::colorRampPalette(use_color)(w1)
+      }
       names(cc1) <- x2
     }
     cc2 <- c(pre_define, cc1)
@@ -2879,7 +3266,7 @@ get.class.color <- function(x,use_color=NULL,pre_define=NULL,use_inner=TRUE) {
   return(cc2)
 }
 
-## get color box text ## refer from web
+## get color box text,inner function ## refer from web
 # https://stackoverflow.com/questions/45366243/text-labels-with-background-colour-in-r
 boxtext <- function(x, y, labels = NA, col.text = NULL, col.bg = NA,
                     border.bg = NA, adj = NULL, pos = NULL, offset = 0.5,
@@ -2890,9 +3277,9 @@ boxtext <- function(x, y, labels = NA, col.text = NULL, col.bg = NA,
   ## Is y provided:
   if (missing(y)) y <- x
   ## Recycle coords if necessary:
-  if (length(x) != length(y)){
-    lx <- length(x)
-    ly <- length(y)
+  if (base::length(x) != base::length(y)){
+    lx <- base::length(x)
+    ly <- base::length(y)
     if (lx > ly){
       y <- rep(y, ceiling(lx/ly))[1:lx]
     } else {
@@ -2906,7 +3293,7 @@ boxtext <- function(x, y, labels = NA, col.text = NULL, col.bg = NA,
   charWidth <- graphics::strwidth("e", cex = theCex, font = font)
   ## Is 'adj' of length 1 or 2?
   if (!is.null(adj)){
-    if (length(adj == 1)){
+    if (base::length(adj == 1)){
       adj <- c(adj[1], 0.5)
     }
   } else {
@@ -2934,7 +3321,7 @@ boxtext <- function(x, y, labels = NA, col.text = NULL, col.bg = NA,
     offsetVec <- c(0, 0)
   }
   ## Padding for boxes:
-  if (length(padding) == 1){
+  if (base::length(padding) == 1){
     padding <- c(padding[1], padding[1])
   }
   ## Midpoints for text:
@@ -2950,10 +3337,10 @@ boxtext <- function(x, y, labels = NA, col.text = NULL, col.bg = NA,
   ## Place the text:
   graphics::text(xMid, yMid, labels, col = col.text, cex = theCex, font = font,adj = c(0.5, 0.5),xpd=TRUE)
   ## Return value:
-  if (length(xMid) == 1){
+  if (base::length(xMid) == 1){
     invisible(c(xMid - rectWidth/2, xMid + rectWidth/2, yMid - rectHeight/2,yMid + rectHeight/2))
   } else {
-    invisible(cbind(xMid - rectWidth/2, xMid + rectWidth/2, yMid - rectHeight/2,yMid + rectHeight/2))
+    invisible(base::cbind(xMid - rectWidth/2, xMid + rectWidth/2, yMid - rectHeight/2,yMid + rectHeight/2))
   }
 }
 
@@ -2969,35 +3356,155 @@ boxtext <- function(x, y, labels = NA, col.text = NULL, col.bg = NA,
 #' @param legend_cex numeric, giving the amount by which the text of legend should be magnified relative to the default. Default is 0.8.
 #' @param main character, an overall title for the plot. Default is "".
 #' @param point_cex numeric, giving the amount by which the size of the data points should be magnified relative to the default. Default is 1.
+#' @param use_color a vector of color codes, colors to be assigned to each member of display label. Default is brewer.pal(9, 'Set1').
+#' @param pre_define a vector of characters, pre-defined color codes for a certain input (e.g. c("blue", "red") with names c("A", "B")). Default is NULL.
 #'
 #' @return Return a logical value. If TRUE, the plot has been created successfully.
 #' @examples
 #' mat1 <- matrix(rnorm(2000,mean=0,sd=1),nrow=100,ncol=20)
 #' rownames(mat1) <- paste0('Gene',1:nrow(mat1))
 #' colnames(mat1) <- paste0('Sample',1:ncol(mat1))
-#' pc <- prcomp(t(mat1))$x
+#' pc <- stats::prcomp(t(mat1))$x
 #' pred_label <- kmeans(pc,centers=4)$cluster ## this can use other cluster results
 #' draw.2D(X=pc[,1],Y=pc[,2],class_label=pred_label)
 #' @export
-draw.2D <- function(X,Y,class_label,xlab='PC1',ylab='PC2',legend_cex=0.8,main="",point_cex=1){
-  if(is.null(class_label)==TRUE){
-    message('No class_label, please check and re-try !');return(FALSE);
-  }
-  if(length(X)!=length(Y)){
+draw.2D <- function(X,Y,class_label,xlab='PC1',ylab='PC2',legend_cex=0.8,main="",point_cex=1,use_color=NULL,pre_define=NULL){
+  #
+  all_input_para <- c('X','Y','class_label','xlab','ylab','legend_cex','main','point_cex')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  class_label <- clean_charVector(class_label)
+  #
+  if(base::length(X)!=base::length(Y)){
     message('Input two dimension vector with different length, please check and re-try !');return(FALSE);
   }
-  if(length(X)!=length(class_label)){
+  if(base::length(X)!=base::length(class_label)){
     message('Input dimension vector has different length with the class_label, please check and re-try !');return(FALSE);
   }
-  #par(mar = c(4, 4, 4, 4+max(nchar(unique(class_label)))/2))
-  par(mai = c(1, 1, 1, 0.5+max(strwidthMod(class_label,units='inch',cex=legend_cex,ori=FALSE,mod=FALSE))))
-  class_label <- as.character(class_label)
-  cls_cc <- get.class.color(class_label) ## get color for each label
-  plot(Y ~ X,pch = 16,cex = point_cex,col = cls_cc,main=main,xlab=xlab,ylab=ylab)
-  legend(par()$usr[2],par()$usr[4],sort(unique(class_label)),fill = cls_cc[sort(unique(class_label))],
+  par(mai = c(1, 1, 1, 0.5+base::max(strwidthMod(class_label,units='inch',cex=legend_cex,ori=FALSE,mod=FALSE))))
+  cls_cc <- get.class.color(class_label,use_color=use_color,pre_define=pre_define) ## get color for each label
+  graphics::plot(Y ~ X,pch = 16,cex = point_cex,col = cls_cc,main=main,xlab=xlab,ylab=ylab)
+  graphics::legend(par()$usr[2],par()$usr[4],sort(base::unique(class_label)),fill = cls_cc[sort(base::unique(class_label))],
          horiz = FALSE,xpd = TRUE,border = NA,bty = 'n',cex=legend_cex)
   return(TRUE)
 }
+
+#' Visualize Sample Clustering Result in 2D Plot with interactive mode
+#'
+#' \code{draw.2D.interactive} creats a 2D plot to visualize the sample clustering result with interactive mode realized by plotly.
+#'
+#' @param X a vector of numerics, the x coordinates of points in the plot. If user would like to create a PCA biplot, this parameter should be the first component.
+#' @param Y a vector of numerics, the y coordinates of points in the plot. If user would like to create a PCA biplot, this parameter should be the second component.
+#' @param sample_label a vector of characters, name of samples to be displayed on the figure.
+#' @param color_label a vector of characters, labels used to define the point color.
+#' @param shape_label a vector of characters, labels used to define the point shape.
+#' @param xlab character, the label for x-axis. Default is "PC1".
+#' @param ylab character, the label for y-axis. Default is "PC2".
+#' @param main character, an overall title for the plot. Default is "".
+#' @param point_cex numeric, giving the amount by which the size of the data points should be magnified relative to the default. Default is 1.
+#' @param use_color a vector of color codes, colors to be assigned to each member of display label. Default is brewer.pal(9, 'Set1').
+#' @param pre_define a vector of characters, pre-defined color codes for a certain input (e.g. c("blue", "red") with names c("A", "B")). Default is NULL.
+#'
+#' @return Return the plotly class object for interactive visualization.
+#' @examples
+#' mat1 <- matrix(rnorm(2000,mean=0,sd=1),nrow=100,ncol=20)
+#' rownames(mat1) <- paste0('Gene',1:nrow(mat1))
+#' colnames(mat1) <- paste0('Sample',1:ncol(mat1))
+#' pc <- stats::prcomp(t(mat1))$x
+#' pred_label <- kmeans(pc,centers=4)$cluster ## this can use other cluster results
+#' draw.2D.interactive(X=pc[,1],Y=pc[,2],
+#'                     sample_label=rownames(pc),
+#'                     color_label=pred_label,
+#'                     pre_define = c('1'='blue','2'='red','3'='yellow','4'='green'))
+#' draw.2D.interactive(X=pc[,1],Y=pc[,2],
+#'                     sample_label=rownames(pc),
+#'                     shape_label=pred_label)
+#' @export
+draw.2D.interactive <- function(X,Y,sample_label=NULL,color_label=NULL,shape_label=NULL,
+                                xlab='PC1',ylab='PC2',main="",point_cex=1,
+                                use_color=NULL,pre_define=NULL){
+  if(!'plotly' %in% rownames(installed.packages())){
+    message('plotly not installed!');return(FALSE);
+  }
+  #
+  all_input_para <- c('X','Y','sample_label','xlab','ylab','main','point_cex')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  sample_label <- clean_charVector(sample_label)
+  if(is.null(color_label)==FALSE){
+    color_label <- clean_charVector(color_label)
+  }
+  if(is.null(shape_label)==FALSE){
+    shape_label <- clean_charVector(shape_label)
+  }
+  #
+  if(base::length(X)!=base::length(Y)){
+    message('Input two dimension vector with different length, please check and re-try !');return(FALSE);
+  }
+  if(base::length(X)!=base::length(sample_label)){
+    message('Input dimension vector has different length with the sample_label, please check and re-try !');return(FALSE);
+  }
+  if(is.null(shape_label)==TRUE & is.null(color_label)==TRUE){
+    message('Either color_label or shape_label is required!');return(FALSE);
+  }
+  if(is.null(shape_label)==FALSE & is.null(color_label)==FALSE){
+
+    if(base::length(X)!=base::length(color_label)){
+      message('Input dimension vector has different length with the color_label, please check and re-try !');return(FALSE);
+    }
+    color_label.factor <- as.factor(color_label)
+    cls_cc <- get.class.color(levels(color_label.factor),use_color=use_color,pre_define=pre_define) ## get color for each label
+    if(base::length(X)!=base::length(shape_label)){
+      message('Input dimension vector has different length with the shape_label, please check and re-try !');return(FALSE);
+    }
+    shape_label.factor <- as.factor(shape_label)
+    data <- data.frame(X=X,Y=Y,color_label=color_label.factor,shape_label=shape_label.factor);
+    display_text <- paste0(sample_label,':',color_label,':',shape_label)
+    p <- plotly::plot_ly(data = data, x = ~X, y = ~Y,
+                         marker = list(size = point_cex*12),type='scatter',color=~color_label,colors=cls_cc,
+                         hoverinfo='text',text=display_text,
+                         mode='markers',symbol=~shape_label) %>%
+      plotly::layout(title = main,
+                     yaxis = list(zeroline = FALSE,title=list(text=xlab)),
+                     xaxis = list(zeroline = FALSE,title=list(text=ylab),showlegend=TRUE)
+      )
+  }
+  if(is.null(shape_label)==TRUE & is.null(color_label)==FALSE){
+    if(base::length(X)!=base::length(color_label)){
+      message('Input dimension vector has different length with the color_label, please check and re-try !');return(FALSE);
+    }
+    color_label.factor <- as.factor(color_label)
+    cls_cc <- get.class.color(levels(color_label.factor),use_color=use_color,pre_define=pre_define) ## get color for each label
+    data <- data.frame(X=X,Y=Y,color_label=color_label.factor);
+    display_text <- paste0(sample_label,':',color_label)
+    p <- plotly::plot_ly(data = data, x = ~X, y = ~Y,
+                         marker = list(size = point_cex*12),type='scatter',color=~color_label,colors=cls_cc,
+                         hoverinfo='text',text=display_text,
+                         mode='markers') %>%
+      plotly::layout(title = main,
+                     yaxis = list(zeroline = FALSE,title=list(text=xlab)),
+                     xaxis = list(zeroline = FALSE,title=list(text=ylab),showlegend=TRUE)
+      )
+  }
+  if(is.null(shape_label)==FALSE & is.null(color_label)==TRUE){
+    if(base::length(X)!=base::length(shape_label)){
+      message('Input dimension vector has different length with the shape_label, please check and re-try !');return(FALSE);
+    }
+    shape_label.factor <- as.factor(shape_label)
+    data <- data.frame(X=X,Y=Y,shape_label=shape_label.factor);
+    display_text <- paste0(sample_label,':',shape_label)
+    p <- plotly::plot_ly(data = data, x = ~X, y = ~Y,
+                         marker = list(size = point_cex*12),type='scatter',color = I('black'),
+                         hoverinfo='text',text=display_text,
+                         mode='markers',symbol=~shape_label) %>%
+      plotly::layout(title = main,
+                     yaxis = list(zeroline = FALSE,title=list(text=xlab)),
+                     xaxis = list(zeroline = FALSE,title=list(text=ylab))
+      )
+  }
+  return(p)
+}
+
 
 #' Visualize Sample Clustering Result in 2D Plot with Sample Names
 #'
@@ -3014,42 +3521,46 @@ draw.2D <- function(X,Y,class_label,xlab='PC1',ylab='PC2',legend_cex=0.8,main=""
 #' @param class_text a vector of characters, the user-defined sample names to label each data points in the plot.
 #' If NULL, will use the names of \code{class_label}. Default is NULL.
 #' @param text_cex numeric, giving the amount by which the text of \code{class_text} should be magnified relative to the default. Default is NULL.
+#' @param use_color a vector of color codes, colors to be assigned to each member of display label. Default is brewer.pal(9, 'Set1').
+#' @param pre_define a vector of characters, pre-defined color codes for a certain input (e.g. c("blue", "red") with names c("A", "B")). Default is NULL.
 #'
 #' @return Return a logical value. If TRUE, the plot has been created successfully.
 #' @examples
 #' mat1 <- matrix(rnorm(2000,mean=0,sd=1),nrow=100,ncol=20)
 #' rownames(mat1) <- paste0('Gene',1:nrow(mat1))
 #' colnames(mat1) <- paste0('Sample',1:ncol(mat1))
-#' pc <- prcomp(t(mat1))$x
+#' pc <- stats::prcomp(t(mat1))$x
 #' pred_label <- kmeans(pc,centers=4)$cluster ## this can use other cluster results
 #' draw.2D.text(X=pc[,1],Y=pc[,2],class_label=pred_label,
 #'              point_cex=5,text_cex=0.5)
 #' @export
 draw.2D.text <- function(X,Y,class_label,class_text=NULL,xlab='PC1',ylab='PC2',legend_cex=0.8,main="",
-                         point_cex=1,text_cex=NULL){
-  if(is.null(class_label)==TRUE){
-    message('No class_label, please check and re-try !');return(FALSE);
-  }
-  if(length(X)!=length(Y)){
+                         point_cex=1,text_cex=NULL,use_color=NULL,pre_define=NULL){
+  #
+  all_input_para <- c('X','Y','class_label','xlab','ylab','legend_cex','main','point_cex')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  class_label <- clean_charVector(class_label)
+  #
+  if(base::length(X)!=base::length(Y)){
     message('Input two dimension vector with different length, please check and re-try !');return(FALSE);
   }
-  if(length(X)!=length(class_label)){
+  if(base::length(X)!=base::length(class_label)){
     message('Input dimension vector has different length with the class_label, please check and re-try !');return(FALSE);
   }
-  par(mai = c(1, 1, 1, 0.5+max(strwidthMod(class_label,units='inch',cex=legend_cex,ori=FALSE,mod=FALSE))))
+  par(mai = c(1, 1, 1, 0.5+base::max(strwidthMod(class_label,units='inch',cex=legend_cex,ori=FALSE,mod=FALSE))))
   if(is.null(class_text)==TRUE){
     class_text <- names(class_label)
   }
-  cc <- 10/length(class_label)
+  cc <- 10/base::length(class_label)
   if(cc<0.05) cc<-0.05
   if(cc>1) cc<-1
   if(is.null(text_cex)==FALSE) cc <- text_cex
-  class_label <- as.character(class_label)
-  cls_cc <- get.class.color(class_label) ## get color for each label
-  plot(Y ~ X,pch = 16,cex = point_cex,col = cls_cc,main=main,xlab=xlab,ylab=ylab)
-  text(x=X,y=Y,labels=class_text,cex=cc,xpd=TRUE,adj=0.5)
+  cls_cc <- get.class.color(class_label,use_color=use_color,pre_define=pre_define) ## get color for each label
+  graphics::plot(Y ~ X,pch = 16,cex = point_cex,col = cls_cc,main=main,xlab=xlab,ylab=ylab)
+  graphics::text(x=X,y=Y,labels=class_text,cex=cc,xpd=TRUE,adj=0.5)
   #print(cc);print(str(nn))
-  legend(par()$usr[2],par()$usr[4],sort(unique(class_label)),fill = cls_cc[sort(unique(class_label))],
+  graphics::legend(par()$usr[2],par()$usr[4],sort(base::unique(class_label)),fill = cls_cc[sort(base::unique(class_label))],
          horiz = FALSE,xpd = TRUE,border = NA,bty = 'n',cex=legend_cex)
   return(TRUE)
 }
@@ -3070,6 +3581,8 @@ draw.2D.text <- function(X,Y,class_label,class_text=NULL,xlab='PC1',ylab='PC2',l
 #' @param point_cex numeric, giving the amount by which the size of the data points should be magnified relative to the default. Default is 1.
 #' @param legend_pos character, the position of legend. Default is "topright".
 #' @param legend_ncol integer, number of columns of legend. Default is 1.
+#' @param use_color a vector of color codes, colors to be assigned to each member of display label. Default is brewer.pal(9, 'Set1').
+#' @param pre_define a vector of characters, pre-defined color codes for a certain input (e.g. c("blue", "red") with names c("A", "B")). Default is NULL.
 #' @param ... other paramters used in \code{scatter3D}.
 #'
 #' @return Return a logical value. If TRUE, the plot has been created successfully.
@@ -3077,32 +3590,35 @@ draw.2D.text <- function(X,Y,class_label,class_text=NULL,xlab='PC1',ylab='PC2',l
 #' mat1 <- matrix(rnorm(2000,mean=0,sd=1),nrow=100,ncol=20)
 #' rownames(mat1) <- paste0('Gene',1:nrow(mat1))
 #' colnames(mat1) <- paste0('Sample',1:ncol(mat1))
-#' pc <- prcomp(t(mat1))$x
+#' pc <- stats::prcomp(t(mat1))$x
 #' pred_label <- kmeans(pc,centers=4)$cluster ## this can use other cluster results
 #' draw.3D(X=pc[,1],Y=pc[,2],Z=pc[,3],class_label=pred_label)
 #' @export
 draw.3D <- function(X,Y,Z,class_label,xlab='PC1',ylab='PC2',zlab='PC3',
-                    legend_cex=0.8,main="",point_cex=1,legend_pos='topright',legend_ncol=1,...){
-  if(is.null(class_label)==TRUE){
-    message('No class_label, please check and re-try !');return(FALSE);
+                    legend_cex=0.8,main="",point_cex=1,legend_pos='topright',legend_ncol=1,use_color=NULL,pre_define=NULL,...){
+
+  #
+  all_input_para <- c('X','Y','Z','class_label','xlab','ylab','zlab','legend_cex','main','point_cex','legend_pos','legend_ncol')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  class_label <- clean_charVector(class_label)
+  #
+  if(base::length(X)!=base::length(Y) | base::length(X)!=base::length(Z) | base::length(Z)!=base::length(Y)){
+    message('Input three dimension vectors with different length, please check and re-try !');return(FALSE);
   }
-  if(length(X)!=length(Y)){
-    message('Input two dimension vector with different length, please check and re-try !');return(FALSE);
-  }
-  if(length(X)!=length(class_label)){
+  if(base::length(X)!=base::length(class_label)){
     message('Input dimension vector has different length with the class_label, please check and re-try !');return(FALSE);
   }
-  class_label <- as.character(class_label)
-  c1 <- factor(class_label,levels=sort(unique(class_label)))
-  cls_cc <- get.class.color(class_label) ## get color for each label
+  c1 <- factor(class_label,levels=sort(base::unique(class_label)))
+  cls_cc <- get.class.color(class_label,use_color=use_color,pre_define=pre_define) ## get color for each label
   #print(str(class_label))
-  #print(str(sort(unique(class_label))))
+  #print(str(sort(base::unique(class_label))))
   #print(str(cls_cc))
-  #print(cls_cc[sort(unique(class_label))])
-  scatter3D(X,Y,Z,pch = 16,xlab = xlab,ylab = ylab,zlab=zlab,bty='g',
-            colvar=1:length(c1),
+  #print(cls_cc[sort(base::unique(class_label))])
+  plot3D::scatter3D(X,Y,Z,pch = 16,xlab = xlab,ylab = ylab,zlab=zlab,bty='g',
+            colvar=1:base::length(c1),
             col=cls_cc,colkey = FALSE,cex=point_cex,main=main,...)
-  legend(legend_pos,sort(unique(class_label)),fill = cls_cc[sort(unique(class_label))],
+  graphics::legend(legend_pos,sort(base::unique(class_label)),fill = cls_cc[sort(base::unique(class_label))],
          border = NA,bty = 'n',ncol = legend_ncol,cex = legend_cex)
   return(TRUE)
 }
@@ -3119,54 +3635,64 @@ draw.3D <- function(X,Y,Z,class_label,xlab='PC1',ylab='PC2',zlab='PC3',
 #' @param legend_cex numeric, giving the amount by which the text of legend should be magnified relative to the default. Default is 0.8.
 #' @param main character, an overall title for the plot. Default is "".
 #' @param point_cex numeric, giving the amount by which the size of the data points should be magnified relative to the default. Default is 1.
+#' @param use_color a vector of color codes, colors to be assigned to each member of display label. Default is brewer.pal(9, 'Set1').
+#' @param pre_define a vector of characters, pre-defined color codes for a certain input (e.g. c("blue", "red") with names c("A", "B")). Default is NULL.
 #'
 #' @return Return a logical value. If TRUE, the plot has been created successfully.
 #' @examples
 #' mat1 <- matrix(rnorm(2000,mean=0,sd=1),nrow=100,ncol=20)
 #' rownames(mat1) <- paste0('Gene',1:nrow(mat1))
 #' colnames(mat1) <- paste0('Sample',1:ncol(mat1))
-#' pc <- prcomp(t(mat1))$x
-#' pred_label <- kmeans(pc,centers=4)$cluster ## this can use other cluster results
+#' pc <- stats::prcomp(t(mat1))$x
+#' pred_label <- stats::kmeans(pc,centers=4)$cluster ## this can use other cluster results
 #' draw.2D.ellipse(X=pc[,1],Y=pc[,2],class_label=pred_label)
 #' @export
-draw.2D.ellipse <- function(X,Y,class_label,xlab='PC1',ylab='PC2',legend_cex=0.8,main="",point_cex=1){
-  if(is.null(class_label)==TRUE){
-    message('No class_label, please check and re-try !');return(FALSE);
-  }
-  if(length(X)!=length(Y)){
+draw.2D.ellipse <- function(X,Y,class_label,xlab='PC1',ylab='PC2',legend_cex=0.8,main="",point_cex=1,use_color=NULL,pre_define=NULL){
+  #
+  all_input_para <- c('X','Y','class_label','xlab','ylab','legend_cex','main','point_cex')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  class_label <- clean_charVector(class_label)
+  #
+  if(base::length(X)!=base::length(Y)){
     message('Input two dimension vector with different length, please check and re-try !');return(FALSE);
   }
-  if(length(X)!=length(class_label)){
+  if(base::length(X)!=base::length(class_label)){
     message('Input dimension vector has different length with the class_label, please check and re-try !');return(FALSE);
   }
   par(mar=c(5,5,5,5))
   get_transparent <- function(x,alpha=0.1){
-    rgb(t(col2rgb(x)/255),alpha=alpha)
+    grDevices::rgb(t(grDevices::col2rgb(x)/255),alpha=alpha)
   }
-  class_label <- as.character(class_label)
-  cls_cc <- get.class.color(class_label) ## get color for each color
+  if(is.null(names(class_label))==TRUE) names(class_label) <- paste0('S_',1:base::length(class_label))
+  if(is.null(names(X))==TRUE) names(X) <- names(class_label)
+  if(is.null(names(Y))==TRUE) names(Y) <- names(class_label)
+  X <- X[names(class_label)]
+  Y <- Y[names(class_label)]
+  cls_cc <- get.class.color(class_label,use_color=use_color,pre_define=pre_define) ## get color for each label
   par(mar=c(5,8,5,8))
-  plot(Y~X,pch = 19,cex = point_cex,xlim=c(min(X)-IQR(X)/3,IQR(X)/3+max(X)),
+  graphics::plot(Y~X,pch = 19,cex = point_cex,xlim=c(base::min(X)-IQR(X)/3,IQR(X)/3+base::max(X)),
        col = cls_cc,bty='n',bg='white',xlab=xlab,ylab=ylab,main=main)
+  S_dist <- stats::dist(base::cbind(X,Y)); S_dist<-as.matrix(S_dist);#print(str(S_dist))
   ## add ellipse
-  for(i in unique(class_label)){
-    w0 <- which(class_label==i)
-    w1 <- cbind(X[w0],Y[w0])
+  for(i in base::unique(class_label)){
+    w0 <- which(class_label==i);w00 <- which(class_label!=i);
+    w1 <- base::cbind(X[w0],Y[w0])
     if(is.null(dim(w1))){
       w1 <- t(as.matrix(w1))
     }
     c1 <- get_transparent(cls_cc[which(class_label==i)][1])
-    m1 <- colMeans(w1)
+    m1 <- base::colMeans(w1)
     d1 <- unlist(lapply(1:nrow(w1),function(x)sqrt(sum((w1[x,]-m1)^2))))
-    if(length(d1)==1){
-      draw.ellipse(m1[1],m1[2],a=(par()$usr[2]-par()$usr[1])/30,b=(par()$usr[2]-par()$usr[1])/30,col=c1,border=NA,xpd=TRUE)
-      text(m1[1],m1[2],i,xpd=TRUE,adj=0,cex=legend_cex)
+    if(base::length(d1)==1){
+      plotrix::draw.ellipse(m1[1],m1[2],a=(par()$usr[2]-par()$usr[1])/30,b=(par()$usr[2]-par()$usr[1])/30,col=c1,border=NA,xpd=TRUE)
+      graphics::text(m1[1],m1[2],i,xpd=TRUE,adj=0,cex=legend_cex)
     }
-    if(length(d1)==2){
-      draw.ellipse(m1[1],m1[2],a=d1[1],b=d1[1],col=c1,border=NA,xpd=TRUE)
-      text(m1[1],m1[2],i,xpd=TRUE,adj=0,cex=legend_cex)
+    if(base::length(d1)==2){
+      plotrix::draw.ellipse(m1[1],m1[2],a=d1[1],b=d1[1],col=c1,border=NA,xpd=TRUE)
+      graphics::text(m1[1],m1[2],i,xpd=TRUE,adj=0,cex=legend_cex)
     }
-    if(length(d1)>=3){
+    if(base::length(d1)>=3){
       w2 <- order(d1,decreasing=TRUE)
       d1 <- d1[w2]
       w1 <- w1[w2,]
@@ -3178,18 +3704,20 @@ draw.2D.ellipse <- function(X,Y,class_label,xlab='PC1',ylab='PC2',legend_cex=0.8
       dy <- d1*sin(2*pi*(beta-angle)/360)
       #
       b <- sqrt((dy^2)/(1-dx^2/a^2))
-      b <- max(b[-1])
-      draw.ellipse(m1[1],m1[2],a=a*1.05,b=b*1.05,col=c1,border=NA,angle=360/(2*pi)*atan(d3[1,2]/d3[1,1]),xpd=TRUE)
+      b <- base::max(b[-1])
+      plotrix::draw.ellipse(m1[1],m1[2],a=a*1.05,b=b*1.05,col=c1,border=NA,angle=360/(2*pi)*atan(d3[1,2]/d3[1,1]),xpd=TRUE)
       #
-      s1 <- sample(1:nrow(w1),1)
+      #s1 <- sample(1:nrow(w1),1) ## random select one to mark label
+      s1 <- S_dist[names(class_label)[w0],names(class_label)[w00]] ## select one point with largest distance to nodes outside the cluster
+      s1 <- names(class_label)[w0][base::which.max(apply(s1,1,min))];
       d1 <- (par()$usr[2]-par()$usr[1])/30
       m2 <- w1[s1,]
       if(m2[1]>m1[1]){
         boxtext(m2[1]+d1,m2[2],labels=i,adj=0,cex=legend_cex,col.bg=c1)
-        segments(x0=w1[s1,1],y0=w1[s1,2],x1=m2[1]+d1,y1=m2[2],col='dark grey')
+        graphics::segments(x0=w1[s1,1],y0=w1[s1,2],x1=m2[1]+d1,y1=m2[2],col='dark grey')
       } else{
         boxtext(m2[1]-d1,m2[2],labels=i,adj=1,cex=legend_cex,col.bg=c1)
-        segments(x0=w1[s1,1],y0=w1[s1,2],x1=m2[1]-d1,y1=m2[2],col='dark grey')
+        graphics::segments(x0=w1[s1,1],y0=w1[s1,2],x1=m2[1]-d1,y1=m2[2],col='dark grey')
       }
     }
   }
@@ -3209,11 +3737,18 @@ draw.2D.ellipse <- function(X,Y,class_label,xlab='PC1',ylab='PC2',legend_cex=0.8
 #' Default is NULL.
 #' @param prefix character, the prefix for the QC figures' name. Default is "".
 #' @param choose_plot a vector of characters,
-#' choose one or many from 'heatmap', 'pca', 'density' and 'meansd' plots.
+#' choose one or many from 'heatmap', 'pca', 'density','correlation' and 'meansd' plots.
 #' Only useful when generate_html=FALSE.
-#' Default is all.
+#' Default is 'heatmap', 'pca', 'density' and 'correlation'
 #' @param generate_html logical, if TRUE, it will generate a html file by R Markdown. Otherwise, it will generate separate PDF files.
 #' Default is TRUE.
+#' @param correlation_strategy character, the strategy to calculate the sample correlation,
+#' choose from 'pearson' and 'spearman'. Default is 'pearson'.
+#' @param plot_all_point logical, if TRUE, the scatterplot will plot all points in the correlation,
+#' otherwise will plot the main trend for reducing the figure size. Default is FALSE.
+#' @param pca_plot_type character, plot type for pca. Users can choose from "2D","2D.interactive", "2D.ellipse", "2D.text" and "3D". Default is "2D.ellipse".
+#' @param use_color a vector of color codes, colors to be assigned to each member of display label. Default is brewer.pal(9, 'Set1').
+#' @param pre_define a vector of characters, pre-defined color codes for a certain input (e.g. c("blue", "red") with names c("A", "B")). Default is NULL.
 #' @examples
 #' \dontrun{
 #' network.par <- list()
@@ -3221,11 +3756,34 @@ draw.2D.ellipse <- function(X,Y,class_label,xlab='PC1',ylab='PC2',legend_cex=0.8
 #' NetBID.loadRData(network.par=network.par,step='exp-QC')
 #' intgroups <- get_int_group(network.par$net.eset)
 #' network.par$out.dir.QC <- getwd() ## set the output directory
-#' draw.eset.QC(network.par$net.eset,outdir=network.par$out.dir.QC,intgroup=intgroups)
+#' draw.eset.QC(network.par$net.eset,outdir=network.par$out.dir.QC,intgroup=intgroups,
+#'              pre_define=c('WNT'='blue','SHH'='red','G4'='green'))
+#' draw.eset.QC(network.par$net.eset,outdir=network.par$out.dir.QC,intgroup=intgroups,
+#'              pre_define=c('WNT'='blue','SHH'='red','G4'='green'),
+#'              pca_plot_type = '2D.interactive',choose_plot = 'pca')
 #' }
 #' @export
 draw.eset.QC <- function(eset,outdir = '.',do.logtransform = FALSE,intgroup=NULL,prefix = '',
-                         choose_plot=c('heatmap','pca','density','meansd'),generate_html=TRUE) {
+                         choose_plot=c('heatmap','pca','density','correlation'),generate_html=TRUE,
+                         correlation_strategy='pearson',plot_all_point=FALSE,
+                         pca_plot_type='2D.ellipse',
+                         use_color=NULL,pre_define=NULL) {
+  #
+  all_input_para <- c('eset','outdir','do.logtransform','prefix','choose_plot','generate_html','correlation_strategy','plot_all_point')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  check_res <- c(check_option('do.logtransform',c(TRUE,FALSE),envir=environment()),
+                 check_option('plot_all_point',c(TRUE,FALSE),envir=environment()),
+                 check_option('correlation_strategy',c('pearson','spearman'),envir=environment()),
+                 check_option('pca_plot_type',c('2D','2D.ellipse','3D','2D.text','2D.interactive'),envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  w1 <- base::setdiff(choose_plot,c('heatmap','pca','density','correlation','meansd'))
+  if(base::length(w1)>0){
+    message(sprintf('Wrong input for choose_plot, %s not included (Only accept "heatmap","pca","density","correlation","meansd").
+                    Please check and re-try!',
+                    w1));return(FALSE)
+  }
+  #
   if (!file.exists(outdir)) {
     dir.create(outdir, recursive = TRUE)
     message(paste0("The output directory: \"", outdir, "\" is created!"))
@@ -3233,41 +3791,42 @@ draw.eset.QC <- function(eset,outdir = '.',do.logtransform = FALSE,intgroup=NULL
     message(paste0("The output will overwrite the files in directory: \"",outdir,"\""))
   if(is.null(intgroup)){
     intgroup <- get_int_group(eset)
+    if(base::length(intgroup)>6){
+      intgroup <- intgroup[1:6]
+      message('Warning, too many meaningful sample phenotype columns, will use the first 6 columns for visualization !')
+    }
   }
-  if(length(intgroup)==0){
+  if(base::length(intgroup)==0){
     message('No intgroup, please check and re-try!');return(FALSE)
   }
   message('Preparing the data...')
   #x  <- prepdata(eset, do.logtransform = do.logtransform, intgroup = intgroup)
-  use_mat  <- exprs(eset)
+  use_mat  <- Biobase::exprs(eset)
   if(do.logtransform==TRUE){
-    if(min(as.numeric(use_mat))<=0){
+    if(base::min(as.numeric(use_mat))<=0){
       message('Warning, the original expression matrix has values not larger than 0, the log-transformation may introduce NA, please manually modifiy and re-try !')
     }
     use_mat <- log2(use_mat)
   }
   if(generate_html==TRUE){
+    if(pandoc_available()==FALSE){
+      stop('pandoc not available, please set Sys.setenv(RSTUDIO_PANDOC=$pandoc_installed_path), or set generate_html=FALSE')
+    }
     output_rmd_file <- sprintf('%s/%sQC.Rmd',outdir,prefix)
     file.copy(from=system.file('Rmd/eset_QC.Rmd',package = "NetBID2"),to=output_rmd_file)
-    render(output_rmd_file, html_document(toc = TRUE))
+    rmarkdown::render(output_rmd_file, html_document(toc = TRUE))
     return(TRUE)
   }
   ## pca
   if('pca' %in% choose_plot){
-    pca <- prcomp(t(na.omit(use_mat)))
     fp <- file.path(outdir, sprintf("%s%s.pdf", prefix, 'pca'))
-    pdf(fp, width = 14, height = 9)
-    for (i in 1:length(intgroup)) {
-      class_label <- pData(eset)[,intgroup[i]]
-      class_label[which(is.na(class_label)==TRUE)] <- 'NA'
-      draw.2D(as.data.frame(pca$x)$PC1,as.data.frame(pca$x)$PC2,class_label=class_label,
-              xlab=sprintf('PC1(%s%s variance)',format(summary(pca)$importance[2,'PC1']*100,digits=3),'%'),
-              ylab=sprintf('PC2(%s%s variance)',format(summary(pca)$importance[2,'PC2']*100,digits=3),'%'),
-              legend_cex=0.8,main=sprintf('PCA/Kmeans plot for %s',intgroup[i]))
-      draw.2D.ellipse(as.data.frame(pca$x)$PC1,as.data.frame(pca$x)$PC2,class_label=class_label,
-                      xlab=sprintf('PC1(%s%s variance)',format(summary(pca)$importance[2,'PC1']*100,digits=3),'%'),
-                      ylab=sprintf('PC2(%s%s variance)',format(summary(pca)$importance[2,'PC2']*100,digits=3),'%'),
-                      legend_cex=0.8,main=sprintf('PCA/Kmeans plot for %s',intgroup[i]))
+    pdf(fp, width = 12, height = 6)
+    pp <- 0.3+0.7-(ncol(use_mat)-10)*(0.7/900)
+    if(ncol(use_mat)<=10) pp <- 1
+    if(ncol(use_mat)>1000) pp <- 0.3
+    for (i in 1:base::length(intgroup)){
+      tmp1 <- draw.pca.kmeans(use_mat,obs_label=get_obs_label(Biobase::pData(eset),intgroup[i]),verbose=FALSE,point_cex=pp,main=intgroup[i],
+                              use_color=use_color,pre_define=pre_define,plot_type = pca_plot_type)
     }
     dev.off()
     message('Finish PCA plot !')
@@ -3282,61 +3841,11 @@ draw.eset.QC <- function(eset,outdir = '.',do.logtransform = FALSE,intgroup=NULL
     dend <- as.dendrogram(hclust(as.dist(m), method = "single"))
     ord <- order.dendrogram(dend)
     m <- m[ord, ord]
-    draw.heatmap(mat=m,phenotype_info = pData(eset),use_phe=intgroup)
+    draw.heatmap(mat=m,phenotype_info = Biobase::pData(eset),use_phe=intgroup,use_color=use_color,pre_define=pre_define)
     dev.off()
     message('Finish Heatmap plot !')
   }
 
-  draw.meanSdPlot <- function(eset){
-    exp_mat <- exprs(eset)
-    mean_g <- apply(exp_mat,1,mean)
-    mean_g <- rank(mean_g)
-    sd_g <- apply(exp_mat,1,sd)
-    n <- 50
-    mean_g_c <- cut(mean_g,breaks = n)
-    sd_g_c <- cut(sd_g,breaks = n)
-    mat <- table(cbind(list(mean_g_c,sd_g_c)))
-    tmp1 <- aggregate(sd_g,list(mean_g_c),mean); rownames(tmp1) <- tmp1$Group.1
-    sd_g_v <- tmp1[levels(mean_g_c),'x']
-    #
-    mean_g_l <- t(sapply(levels(mean_g_c),function(x)as.numeric(strsplit(gsub('\\(|\\]','\\1',x),',')[[1]])))
-    sd_g_l <- t(sapply(levels(sd_g_c),function(x)as.numeric(strsplit(gsub('\\(|\\]','\\1',x),',')[[1]])))
-    mean_g_l_m <- rowMeans(mean_g_l)
-    sd_g_l_m <- rowMeans(sd_g_l)
-    # col=get_transparent(brewer.pal(8,'Set1')[2],alpha=0.1)
-    par(mai=c(1,1,1,2))
-    dat <- spline(x=mean_g_l_m,y=sd_g_v,n=n*10)
-    plot(y~x,data=dat,type='l',col=brewer.pal(8,'Set1')[1],lwd=2,xlab='rank(mean)',ylab='sd',
-         ylim=c(0,max(sd_g)),xlim=c(0,max(mean_g)),cex.lab=1.2)
-    pp <- par()$usr
-    ag <- 30
-    r <- max(mean_g)/(2*nrow(mat))
-    rx <- r/cos(ag*pi/180)*par.pos2inch()[1] # x-inch
-    ry <- rx
-    x1 <- c(rx*cos(ag*pi/180),rx*cos(ag*pi/180),0,-rx*cos(ag*pi/180),-rx*cos(ag*pi/180),0,rx*cos(ag*pi/180))
-    y1 <- c(ry*sin(ag*pi/180),-ry*sin(ag*pi/180),-ry,-ry*sin(ag*pi/180),+ry*sin(ag*pi/180),ry,ry*sin(ag*pi/180))
-    #print(x1/par.pos2inch()[1]);print(y1/par.pos2inch()[2])
-    simplehexbin <- function(x,y,r,col){
-      polygon(x=x+x1/par.pos2inch()[1],y=y+y1/par.pos2inch()[2],col=col,border = 'white',lwd=0.1)
-    }
-    mm <- max(as.numeric(mat))
-    cc <- colorRampPalette(brewer.pal(9,'Blues')[c(2:9)])(mm)
-    cc <- rev(cc)
-    for(i in 1:nrow(mat)){
-      for(j in 1:ncol(mat)){
-        if(mat[i,j]>0){
-          if(j%%2==0) simplehexbin(x=mean_g_l_m[i],y=sd_g_l_m[j],col=cc[mat[i,j]])
-          if(j%%2==1) simplehexbin(x=mean_g_l_m[i]-r,y=sd_g_l_m[j],col=cc[mat[i,j]])
-        }
-      }
-    }
-    lines(y~x,data=dat,col=brewer.pal(8,'Set1')[1],lwd=2)
-    ypos <- seq(pp[4]-par.char2pos()[2]*2,pp[3]+(pp[4]-pp[3])/2,length.out=length(cc)+1)
-    text(x=pp[2]+par.char2pos()[1]*1.15,y=pp[4]-par.char2pos()[2],pos=4,'Count',xpd=TRUE)
-    rect(xleft=pp[2]+par.char2pos()[1],xright=pp[2]+par.char2pos()[1]*1.5,ybottom=ypos[1:(length(ypos)-1)],ytop=ypos[2:length(ypos)],col=rev(cc),border=NA,xpd=TRUE)
-    text(x=pp[2]+par.char2pos()[1]*1.5,y=quantile(ypos,probs=c(0,0.5,1)),c(1,round(mm/2),mm),xpd=TRUE,pos=4)
-    return(TRUE)
-  }
   ## meansd
   if('meansd' %in% choose_plot){
     fp <- file.path(outdir, sprintf("%s%s.pdf", prefix, 'meansd'))
@@ -3350,28 +3859,166 @@ draw.eset.QC <- function(eset,outdir = '.',do.logtransform = FALSE,intgroup=NULL
   if('density' %in% choose_plot){
     fp <- file.path(outdir, sprintf("%s%s.pdf", prefix, 'density'))
     pdf(fp, width = 12, height = 9)
-    for(i in 1:length(intgroup)){
+    for(i in 1:base::length(intgroup)){
       all_dens <- list()
       for (j in 1:ncol(use_mat)) {
-        all_dens[[j]] <- density(use_mat[,j],na.rm=TRUE)
+        all_dens[[j]] <- stats::density(use_mat[,j],na.rm=TRUE)
       }
-      plot(1,col = 'white',xlim=c(min(unlist(lapply(all_dens,function(x)min(x$x)))),max(unlist(lapply(all_dens,function(x)max(x$x))))),
+      graphics::plot(1,col = 'white',xlim=c(base::min(unlist(lapply(all_dens,function(x)base::min(x$x)))),base::max(unlist(lapply(all_dens,function(x)base::max(x$x))))),
            type = 'l',xlab = "",ylab='Density',main = sprintf('Density plot for %s',intgroup[i]),
-           ylim=c(min(unlist(lapply(all_dens,function(x)min(x$y)))),max(unlist(lapply(all_dens,function(x)max(x$y))))))
-      class_label <- pData(eset)[,intgroup[i]]
-      cls_cc <- get.class.color(class_label)
+           ylim=c(base::min(unlist(lapply(all_dens,function(x)base::min(x$y)))),base::max(unlist(lapply(all_dens,function(x)base::max(x$y))))))
+      class_label <- get_obs_label(Biobase::pData(eset),intgroup[i])
+      cls_cc <- get.class.color(class_label,use_color=use_color,pre_define=pre_define) ## get color for each label
       for (j in 1:ncol(use_mat)) {
         lines(all_dens[[j]], col = cls_cc[j])
       }
-      legend('topright',legend=unique(class_label),
-             fill = cls_cc[unique(class_label)],
+      legend('topright',legend=base::unique(class_label),
+             fill = cls_cc[base::unique(class_label)],
              xpd = TRUE,border = NA,bty = 'n',horiz = FALSE)
     }
     dev.off()
     message('Finish Density plot !')
   }
 
+  ## correlation
+  if('correlation' %in% choose_plot){
+    fp <- file.path(outdir, sprintf("%s%s.pdf", prefix, 'correlation'))
+    pdf(fp, width = 12, height = 12);
+    par(mar=c(3,3,3,3))
+    for(i in 1:base::length(intgroup)){
+      class_label <- get_obs_label(Biobase::pData(eset),intgroup[i])
+      draw.correlation(use_mat,class_label,main=intgroup[i],correlation_strategy=correlation_strategy,plot_all_point=plot_all_point,
+                       use_color=use_color,pre_define=pre_define)
+    }
+    dev.off()
+    message('Finish Density plot !')
+  }
   return(TRUE)
+}
+# two inner functions
+draw.meanSdPlot <- function(eset){
+  exp_mat <- Biobase::exprs(eset)
+  mean_g <- apply(exp_mat,1,mean)
+  mean_g <- rank(mean_g)
+  sd_g <- apply(exp_mat,1,sd)
+  n <- 50
+  mean_g_c <- cut(mean_g,breaks = n)
+  sd_g_c <- cut(sd_g,breaks = n)
+  mat <- base::table(base::cbind(list(mean_g_c,sd_g_c)))
+  tmp1 <- stats::aggregate(sd_g,list(mean_g_c),mean); rownames(tmp1) <- tmp1$Group.1
+  sd_g_v <- tmp1[levels(mean_g_c),'x']
+  #
+  mean_g_l <- t(sapply(levels(mean_g_c),function(x)as.numeric(strsplit(gsub('\\(|\\]','\\1',x),',')[[1]])))
+  sd_g_l <- t(sapply(levels(sd_g_c),function(x)as.numeric(strsplit(gsub('\\(|\\]','\\1',x),',')[[1]])))
+  mean_g_l_m <- base::rowMeans(mean_g_l)
+  sd_g_l_m <- base::rowMeans(sd_g_l)
+  # col=get_transparent(brewer.pal(8,'Set1')[2],alpha=0.1)
+  par(mai=c(1,1,1,2))
+  dat <- spline(x=mean_g_l_m,y=sd_g_v,n=n*10)
+  graphics::plot(y~x,data=dat,type='l',col=brewer.pal(8,'Set1')[1],lwd=2,xlab='rank(mean)',ylab='sd',
+       ylim=c(0,base::max(sd_g)),xlim=c(0,base::max(mean_g)),cex.lab=1.2)
+  pp <- par()$usr
+  ag <- 30
+  r <- base::max(mean_g)/(2*nrow(mat))
+  rx <- r/cos(ag*pi/180)*par.pos2inch()[1] # x-inch
+  ry <- rx
+  x1 <- c(rx*cos(ag*pi/180),rx*cos(ag*pi/180),0,-rx*cos(ag*pi/180),-rx*cos(ag*pi/180),0,rx*cos(ag*pi/180))
+  y1 <- c(ry*sin(ag*pi/180),-ry*sin(ag*pi/180),-ry,-ry*sin(ag*pi/180),+ry*sin(ag*pi/180),ry,ry*sin(ag*pi/180))
+  #print(x1/par.pos2inch()[1]);print(y1/par.pos2inch()[2])
+  simplehexbin <- function(x,y,r,col){
+    graphics::polygon(x=x+x1/par.pos2inch()[1],y=y+y1/par.pos2inch()[2],col=col,border = 'white',lwd=0.1)
+  }
+  mm <- base::max(as.numeric(mat))
+  cc <- grDevices::colorRampPalette(brewer.pal(9,'Blues')[c(2:9)])(mm)
+  cc <- rev(cc)
+  for(i in 1:nrow(mat)){
+    for(j in 1:ncol(mat)){
+      if(mat[i,j]>0){
+        if(j%%2==0) simplehexbin(x=mean_g_l_m[i],y=sd_g_l_m[j],col=cc[mat[i,j]])
+        if(j%%2==1) simplehexbin(x=mean_g_l_m[i]-r,y=sd_g_l_m[j],col=cc[mat[i,j]])
+      }
+    }
+  }
+  lines(y~x,data=dat,col=brewer.pal(8,'Set1')[1],lwd=2)
+  ypos <- base::seq(pp[4]-par.char2pos()[2]*2,pp[3]+(pp[4]-pp[3])/2,length.out=base::length(cc)+1)
+  graphics::text(x=pp[2]+par.char2pos()[1]*1.15,y=pp[4]-par.char2pos()[2],pos=4,'Count',xpd=TRUE)
+  graphics::rect(xleft=pp[2]+par.char2pos()[1],xright=pp[2]+par.char2pos()[1]*1.5,ybottom=ypos[1:(base::length(ypos)-1)],ytop=ypos[2:base::length(ypos)],col=rev(cc),border=NA,xpd=TRUE)
+  graphics::text(x=pp[2]+par.char2pos()[1]*1.5,y=quantile(ypos,probs=c(0,0.5,1)),c(1,round(mm/2),mm),xpd=TRUE,pos=4)
+  return()
+}
+draw.correlation <- function(use_mat,class_label,main='',correlation_strategy='pearson',plot_all_point=FALSE,use_color=NULL,pre_define=NULL){
+  # plot part
+  n_sample <- ncol(use_mat);
+  if(n_sample>30){
+    message('Too many samples for drawing the correlation plot, will select the first 30 samples !
+            If want to specify the sample list, please choose the subset of eset as input !')
+    use_mat <- use_mat[,1:30]
+    class_label <- class_label[1:30]
+    n_sample <- 30
+    #return(FALSE)
+  }
+  all_s <- colnames(use_mat)
+  uni_class <- base::unique(class_label)
+  class_label <- class_label[order(factor(class_label,levels=uni_class))]
+  use_mat <- use_mat[,names(class_label)]
+  cor_res <- cor(use_mat,method=correlation_strategy)
+  cc1 <- get.class.color(class_label,use_color=use_color,pre_define=pre_define);
+  cc1 <- get_transparent(cc1,0.5);
+  p1 <- cumsum(base::table(class_label)[uni_class]); p1 <- c(0,p1)
+  p2 <- p1[1:(base::length(p1)-1)]/2+p1[2:base::length(p1)]/2
+   ####
+  graphics::plot(1,xlim=c(-2,n_sample+1),ylim=c(-2,n_sample+1),xaxt='n',yaxt='n',xlab='',ylab='',col='white',bty='n',xaxs='i',yaxs='i',main=main)
+  pp <- 15/n_sample
+  if(pp>1) pp <- 1
+  if(pp<0.2) pp <- 0.2
+  graphics::abline(v=1:n_sample,lwd=0.5,col='grey'); graphics::abline(h=1:n_sample,lwd=0.5,col='grey');
+  graphics::rect(xleft=0:(n_sample-1),xright=1:n_sample,ybottom=n_sample,ytop=n_sample+1,col=cc1,border=NA,xpd=TRUE)
+  graphics::rect(ybottom=0:(n_sample-1),ytop=1:n_sample,xleft=n_sample,xright=n_sample+1,col=cc1,border=NA,xpd=TRUE)
+  graphics::abline(v=p1);graphics::abline(h=p1);
+  graphics::text(p2,n_sample+1/2,uni_class,adj=0.5,cex=pp,xpd=TRUE);
+  graphics::text(n_sample+1/2,p2,uni_class,adj=0.5,srt=270,cex=pp,xpd=TRUE);
+  graphics::text(x=1:n_sample-0.5,y=0,all_s,adj=1,xpd=TRUE,srt=90,cex=pp,xpd=TRUE)
+  graphics::text(y=1:n_sample-0.5,x=0,all_s,pos=2,xpd=TRUE,srt=0,cex=pp,xpd=TRUE)
+  for(i in 1:(n_sample-1)){
+    for(j in (i+1):n_sample){
+      graphics::text(y=i-0.5,x=j-0.5,format(cor_res[i,j],digits=2),cex=pp,xpd=TRUE)
+    }
+  }
+  n_box <- round(500/n_sample)
+  bb <- base::seq(0,1,length.out=n_box)
+  bb1 <- cut(bb,breaks=bb)
+  for(j in 1:(n_sample-1)){
+    for(i in (j+1):n_sample){
+      #graphics::text(y=i-0.5,x=j-0.5,format(cor_res[i,j],digits=2),cex=pp,col=2)
+       ei <- use_mat[,i]; ej <- use_mat[,j]
+       mmin <- base::min(c(ei,ej)); mmax <- base::max(c(ei,ej))
+       ei_m <- (ei-mmin)/(mmax-mmin)
+       ej_m <- (ej-mmin)/(mmax-mmin)
+       if(plot_all_point==TRUE){
+         graphics::points(y=ei_m+i-1,x=ej_m+j-1,cex=0.1,pch=16,col=get_transparent('dark grey',0.4)) ## memory consuming !!!
+       }else{
+         ei_mc <- cut(ei_m,breaks = bb)
+         ej_mc <- cut(ej_m,breaks = bb)
+         tt <- base::table(list(ei_mc,ej_mc))
+         mm_t <- quantile(tt,probs=0.99)
+         tt_thre <- mm_t/100
+         for(ii in 1:(n_box-1)){
+           for(jj in 1:(n_box-1)){
+             ap <- (tt[ii,jj]/mm_t)^(1/4); if(ap>0.9) ap <- 0.9
+             if(tt[ii,jj]>tt_thre) graphics::points(y=bb[ii]+i-1,x=bb[jj]+j-1,col=get_transparent('black',ap),pch=16,cex=5/n_box)
+           }
+         }
+       }
+    }
+  }
+  for(i in 1:n_sample){
+    ei <- use_mat[,i]
+    dei <- stats::density(ei)
+    dei$x <- (dei$x-base::min(dei$x))/(base::max(dei$x)-base::min(dei$x))
+    dei$y <- (dei$y-base::min(dei$y))/(base::max(dei$y)-base::min(dei$y))
+    lines(x=dei$x+i-1,y=dei$y+i-1,col='black',lwd=1)
+  }
+##
 }
 
 #' Visualize the K-means Clustering Result by PCA Biplot
@@ -3394,7 +4041,7 @@ draw.eset.QC <- function(eset,outdir = '.',do.logtransform = FALSE,intgroup=NULL
 #' using sample name as vector name. Can be obtained by calling \code{get_obs_label}.
 #' @param legend_pos character, position of the plot legend. Default is 'topleft'.
 #' @param legend_cex numeric, text size of the plot legend. Default is 0.8.
-#' @param plot_type character, plot type. Users can choose from "2D", "2D.ellipse", "2D.text" and "3D". Default is "2D.ellipse".
+#' @param plot_type character, plot type. Users can choose from "2D", "2D.ellipse", "2D.interactive","2D.text" and "3D". Default is "2D.ellipse".
 #' @param point_cex numeric, size of the point in the plot. Default is 1.
 #' @param kmeans_strategy character, K-means clustering algorithm.
 #' Users can choose "basic" or "consensus". "consensus" is performed by \code{ConsensusClusterPlus}.
@@ -3406,41 +4053,62 @@ draw.eset.QC <- function(eset,outdir = '.',do.logtransform = FALSE,intgroup=NULL
 #' Users can choose "optimal" or "all". "all", all the K-values in \code{all_k} will be returned.
 #' "optimal", only the K-value yielding the optimal classification result will be returned.
 #' Default is "optimal".
+#' @param main character, title for the plot.
+#' @param verbose logical, if TRUE, print out detailed information during calculation. Default is TRUE.
+#' @param use_color a vector of color codes, colors to be assigned to each member of display label. Default is brewer.pal(9, 'Set1').
+#' @param pre_define a vector of characters, pre-defined color codes for a certain input (e.g. c("blue", "red") with names c("A", "B")). Default is NULL.
+#'
 #' @return Return a vector of predicted labels, if \code{return_type} is set to "optimal".
 #' Or a list of all possible K-values, if \code{return_type} is set to be "all".
+#' If plot_type='2D.interactive', will return a plotly class object for interactive display.
 #' @examples
 #' network.par <- list()
 #' network.par$out.dir.DATA <- system.file('demo1','network/DATA/',package = "NetBID2")
 #' NetBID.loadRData(network.par=network.par,step='exp-QC')
-#' mat <- exprs(network.par$net.eset)
-#' phe <- pData(network.par$net.eset)
+#' mat <- Biobase::exprs(network.par$net.eset)
+#' phe <- Biobase::pData(network.par$net.eset)
 #' intgroup <- get_int_group(network.par$net.eset)
-#' for(i in 1:length(intgroup)){
+#' for(i in 1:base::length(intgroup)){
 #'  print(intgroup[i])
 #'  pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,intgroup[i]))
-#'  print(table(list(pred_label=pred_label,obs_label=get_obs_label(phe,intgroup[i]))))
+#'  print(base::table(list(pred_label=pred_label,obs_label=get_obs_label(phe,intgroup[i]))))
 #' }
 #' pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,
-#'                              obs_label=get_obs_label(phe,intgroup[i]),
+#'                              obs_label=get_obs_label(phe,'subgroup'),
 #'                              kmeans_strategy='consensus')
+#' ## interactive display
+#' draw.pca.kmeans(mat=mat,all_k = NULL,
+#'                obs_label=get_obs_label(phe,'subgroup'),
+#'                plot_type='2D.interactive',
+#'                pre_define=c('WNT'='blue','SHH'='red','G4'='green'))
 #' @export
 draw.pca.kmeans <- function(mat=NULL,all_k=NULL,obs_label=NULL,legend_pos = 'topleft',legend_cex = 0.8,
                             plot_type='2D.ellipse',point_cex=1,
                             kmeans_strategy='basic',choose_k_strategy='ARI',
-                            return_type='optimal'){
-  if(is.null(mat)==TRUE){
-    message('Please input mat, check and re-try !');return(FALSE)
-  }
-  if(is.null(obs_label)==TRUE){
-    message('Please input obs_label, check and re-try !');return(FALSE)
-  }
+                            return_type='optimal',main='',verbose=TRUE,
+                            use_color=NULL,pre_define=NULL){
+  #
+  all_input_para <- c('mat','obs_label','legend_pos','legend_cex','plot_type','point_cex','kmeans_strategy','choose_k_strategy',
+                      'return_type','main','verbose')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  check_res <- c(check_option('verbose',c(TRUE,FALSE),envir=environment()),
+                 check_option('plot_type',c("2D","2D.interactive", "2D.ellipse","2D.text","3D"),envir=environment()),
+                 check_option('kmeans_strategy',c('basic','consensus'),envir=environment()),
+                 check_option('choose_k_strategy',c('ARI','NMI','Jaccard'),envir=environment()),
+                 check_option('return_type',c('optimal','all'),envir=environment()),
+                 check_option('legend_pos',c("bottomright", "bottom", "bottomleft", "left", "topleft", "top", "topright", "right","center"),envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  obs_label <- clean_charVector(obs_label)
+  #
   if(is.null(all_k)==TRUE){
-    all_k <- 2:min(length(obs_label)-1,2*length(unique(obs_label)))
+    all_k <- 2:base::min(base::length(obs_label)-1,2*base::length(base::unique(obs_label)))
   }
-  if(length(setdiff(all_k,2:length(obs_label)))>0){
+  if(base::length(base::setdiff(all_k,2:base::length(obs_label)))>0){
     message('some value in all_k exceed the maximum sample size, check and re-try !');return(FALSE);
   }
-  pca <- prcomp(t(mat))
+  pca <- stats::prcomp(t(mat))
+  #pca <- stats::prcomp(na.exclude(t(mat)))
   cluster_mat <- pca$x
   all_jac <- list()
   all_k_res <- list()
@@ -3448,11 +4116,11 @@ draw.pca.kmeans <- function(mat=NULL,all_k=NULL,obs_label=NULL,legend_pos = 'top
     for(k in all_k){
       tmp_k <- list()
       for(i in 1:10){
-        tmp_k[[i]] <- kmeans(cluster_mat,centers=as.numeric(k))$cluster
+        tmp_k[[i]] <- stats::kmeans(cluster_mat,centers=as.numeric(k))$cluster
       }
       pred_label <- tmp_k
       jac <- unlist(lapply(pred_label,function(x){get_clustComp(x, obs_label,strategy=choose_k_strategy)}))
-      top_i <- which.max(jac)
+      top_i <- base::which.max(jac)
       all_k_res[[as.character(k)]] <- tmp_k[[top_i]]
     }
   }else{
@@ -3463,61 +4131,83 @@ draw.pca.kmeans <- function(mat=NULL,all_k=NULL,obs_label=NULL,legend_pos = 'top
     jac <- get_clustComp(pred_label, obs_label,strategy = choose_k_strategy)
     all_jac[[as.character(k)]] <- signif(jac,4)
   }
-  message('Optimal k is chosen byScore between predicted and observed label')
-  print(all_jac)
-  use_k <- all_k[which.max(all_jac)]
+  if(verbose==TRUE) message('Optimal k is chosen by Score between predicted and observed label')
+  if(verbose==TRUE) print(all_jac)
+  use_k <- all_k[base::which.max(all_jac)]
   pred_label <- all_k_res[[as.character(use_k)]]
-  message(sprintf('Best Score occurs when k=%s, with value=%s',use_k,all_jac[as.character(use_k)]))
+  if(verbose==TRUE) message(sprintf('Best Score occurs when k=%s, with value=%s',use_k,all_jac[as.character(use_k)]))
   ##
   d1 <- data.frame(id=colnames(mat),X=cluster_mat[,1],Y=cluster_mat[,2],Z=cluster_mat[,3],label=pred_label,stringsAsFactors=FALSE)
-  layout(t(matrix(1:2)))
+  if(plot_type=='2D.interactive'){
+    p <- draw.2D.interactive(d1$X,d1$Y,
+                             sample_label=names(obs_label),
+                             color_label=obs_label[d1$id],
+                             shape_label=d1$label,
+                             xlab=sprintf('PC1(%s%s variance)',format(summary(pca)$importance[2,'PC1']*100,digits=3),'%'),
+                             ylab=sprintf('PC2(%s%s variance)',format(summary(pca)$importance[2,'PC2']*100,digits=3),'%'),
+                             point_cex=point_cex,main=main,
+                             use_color=use_color,pre_define=pre_define)
+    return(p)
+    #if(return_type=='optimal') return(pred_label)
+    #if(return_type=='all') return(all_k_res)
+  }
+  graphics::layout(t(matrix(1:2)))
   if(plot_type=='2D.ellipse'){
     draw.2D.ellipse(d1$X,d1$Y,class_label=obs_label[d1$id],
                     xlab=sprintf('PC1(%s%s variance)',format(summary(pca)$importance[2,'PC1']*100,digits=3),'%'),
                     ylab=sprintf('PC2(%s%s variance)',format(summary(pca)$importance[2,'PC2']*100,digits=3),'%'),
-                    legend_cex=legend_cex,point_cex=point_cex)
+                    legend_cex=legend_cex,point_cex=point_cex,main=main,
+                    use_color=use_color,pre_define=pre_define)
     draw.2D.ellipse(d1$X,d1$Y,class_label=d1$label,
                     xlab=sprintf('PC1(%s%s variance)',format(summary(pca)$importance[2,'PC1']*100,digits=3),'%'),
                     ylab=sprintf('PC2(%s%s variance)',format(summary(pca)$importance[2,'PC2']*100,digits=3),'%'),
                     legend_cex=legend_cex,point_cex=point_cex,
-                    main=sprintf('%s:%s',choose_k_strategy,format(all_jac[as.character(use_k)],digits=4)))
+                    main=sprintf('%s:%s',choose_k_strategy,format(all_jac[as.character(use_k)],digits=4)),
+                    use_color=use_color,pre_define=pre_define)
   }
   if(plot_type=='2D'){
     draw.2D(d1$X,d1$Y,class_label=obs_label[d1$id],
             xlab=sprintf('PC1(%s%s variance)',format(summary(pca)$importance[2,'PC1']*100,digits=3),'%'),
             ylab=sprintf('PC2(%s%s variance)',format(summary(pca)$importance[2,'PC2']*100,digits=3),'%'),
-            legend_cex=legend_cex,point_cex=point_cex)
+            legend_cex=legend_cex,point_cex=point_cex,main=main,
+            use_color=use_color,pre_define=pre_define)
     draw.2D(d1$X,d1$Y,class_label=d1$label,
             xlab=sprintf('PC1(%s%s variance)',format(summary(pca)$importance[2,'PC1']*100,digits=3),'%'),
             ylab=sprintf('PC2(%s%s variance)',format(summary(pca)$importance[2,'PC2']*100,digits=3),'%'),
             legend_cex=legend_cex,point_cex=point_cex,
-            main=sprintf('%s:%s',choose_k_strategy,format(all_jac[as.character(use_k)],digits=4)))
+            main=sprintf('%s:%s',choose_k_strategy,format(all_jac[as.character(use_k)],digits=4)),
+            use_color=use_color,pre_define=pre_define)
   }
+
   if(plot_type=='2D.text'){
     draw.2D.text(d1$X,d1$Y,class_label=obs_label[d1$id],class_text=d1$id,
                  xlab=sprintf('PC1(%s%s variance)',format(summary(pca)$importance[2,'PC1']*100,digits=3),'%'),
                  ylab=sprintf('PC2(%s%s variance)',format(summary(pca)$importance[2,'PC2']*100,digits=3),'%'),
-                 legend_cex=legend_cex,point_cex=point_cex)
+                 legend_cex=legend_cex,point_cex=point_cex,main=main,
+                 use_color=use_color,pre_define=pre_define)
     draw.2D.text(d1$X,d1$Y,class_label=d1$label,class_text=d1$id,
                  xlab=sprintf('PC1(%s%s variance)',format(summary(pca)$importance[2,'PC1']*100,digits=3),'%'),
                  ylab=sprintf('PC2(%s%s variance)',format(summary(pca)$importance[2,'PC2']*100,digits=3),'%'),
                  legend_cex=legend_cex,point_cex=point_cex,
-                 main=sprintf('%s:%s',choose_k_strategy,format(all_jac[as.character(use_k)],digits=4)))
+                 main=sprintf('%s:%s',choose_k_strategy,format(all_jac[as.character(use_k)],digits=4)),
+                 use_color=use_color,pre_define=pre_define)
   }
   if(plot_type=='3D'){
     draw.3D(d1$X,d1$Y,d1$Z,class_label=obs_label[d1$id],
             xlab=sprintf('PC1(%s%s variance)',format(summary(pca)$importance[2,'PC1']*100,digits=3),'%'),
             ylab=sprintf('PC2(%s%s variance)',format(summary(pca)$importance[2,'PC2']*100,digits=3),'%'),
             zlab=sprintf('PC3(%s%s variance)',format(summary(pca)$importance[2,'PC3']*100,digits=3),'%'),
-            legend_cex=legend_cex,point_cex=point_cex,legend_pos=legend_pos)
+            legend_cex=legend_cex,point_cex=point_cex,legend_pos=legend_pos,main=main,
+            use_color=use_color,pre_define=pre_define)
     draw.3D(d1$X,d1$Y,d1$Z,class_label=d1$label,
             xlab=sprintf('PC1(%s%s variance)',format(summary(pca)$importance[2,'PC1']*100,digits=3),'%'),
             ylab=sprintf('PC2(%s%s variance)',format(summary(pca)$importance[2,'PC2']*100,digits=3),'%'),
             zlab=sprintf('PC3(%s%s variance)',format(summary(pca)$importance[2,'PC3']*100,digits=3),'%'),
             legend_cex=legend_cex,point_cex=point_cex,legend_pos=legend_pos,
-            main=sprintf('%s:%s',choose_k_strategy,format(all_jac[as.character(use_k)],digits=4)))
+            main=sprintf('%s:%s',choose_k_strategy,format(all_jac[as.character(use_k)],digits=4)),
+            use_color=use_color,pre_define=pre_define)
   }
-  layout(1);
+  graphics::layout(1);
   if(return_type=='optimal') return(pred_label)
   if(return_type=='all') return(all_k_res)
 }
@@ -3532,7 +4222,8 @@ draw.pca.kmeans <- function(mat=NULL,all_k=NULL,obs_label=NULL,legend_pos = 'top
 #' @param obs_label a vector of characters, the observed sample labels or categories, name of the vector is sample names.
 #' @param legend_pos character, the legend position. Default is "topleft".
 #' @param legend_cex numeric, giving the amount by which the text of legend should be magnified relative to the default. Default is 0.8.
-#' @param plot_type character, type of the plot. Users can choose from "2D", "2D.ellipse", "2D.text" and "3D". Default is "2D.ellipse".
+#' @param plot_type character, type of the plot.
+#' Users can choose from "2D","2D.interactive", "2D.ellipse", "2D.text" and "3D". Default is "2D.ellipse".
 #' @param point_cex numeric, giving the amount by which the size of the data points should be magnified relative to the default. Default is 1.
 #' @param kmeans_strategy character, K-means clustering algorithm. Users can choose "basic" or "consensus".
 #' "consensus" is performed by \code{ConsensusClusterPlus}. Default is "basic".
@@ -3542,44 +4233,64 @@ draw.pca.kmeans <- function(mat=NULL,all_k=NULL,obs_label=NULL,legend_pos = 'top
 #' "all", all the K-values in all_k will be returned.
 #' "optimal", only the K-value yielding the optimal classification result will be returned.
 #' Default is "optimal".
+#' @param main character, title for the plot.
+#' @param verbose logical, if TRUE, print out detailed information during calculation. Default is TRUE.
+#' @param use_color a vector of color codes, colors to be assigned to each member of display label. Default is brewer.pal(9, 'Set1').
+#' @param pre_define a vector of characters, pre-defined color codes for a certain input (e.g. c("blue", "red") with names c("A", "B")). Default is NULL.
+#'
 #' @return Return a vector of the predicted label (if \code{return_type} is "optimal") and a list of all possible K-values (if \code{return_type} is "all").
+#' If plot_type='2D.interactive', will return a plotly class object for interactive display.
 #' @examples
 #' network.par <- list()
 #' network.par$out.dir.DATA <- system.file('demo1','network/DATA/',package = "NetBID2")
 #' NetBID.loadRData(network.par=network.par,step='exp-QC')
-#' mat <- exprs(network.par$net.eset)
-#' phe <- pData(network.par$net.eset)
+#' mat <- Biobase::exprs(network.par$net.eset)
+#' phe <- Biobase::pData(network.par$net.eset)
 #' intgroup <- get_int_group(network.par$net.eset)
-#' for(i in 1:length(intgroup)){
+#' for(i in 1:base::length(intgroup)){
 #'  print(intgroup[i])
 #'  pred_label <- draw.umap.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,intgroup[i]))
-#'  print(table(list(pred_label=pred_label,obs_label=get_obs_label(phe,intgroup[i]))))
+#'  print(base::table(list(pred_label=pred_label,obs_label=get_obs_label(phe,intgroup[i]))))
 #' }
 #' pred_label <- draw.umap.kmeans(mat=mat,all_k = NULL,
 #'                              obs_label=get_obs_label(phe,intgroup[i]),
 #'                              kmeans_strategy='consensus')
+#' ## interactive display
+#' draw.umap.kmeans(mat=mat,all_k = NULL,
+#'                obs_label=get_obs_label(phe,'subgroup'),
+#'                plot_type='2D.interactive',
+#'                pre_define=c('WNT'='blue','SHH'='red','G4'='green'))
 #' @export
 draw.umap.kmeans <- function(mat=NULL,all_k=NULL,obs_label=NULL,
                              legend_pos = 'topleft',legend_cex = 0.8,
                              kmeans_strategy='basic',choose_k_strategy='ARI',
-                             plot_type='2D.ellipse',point_cex=1,return_type='optimal'){
-  if(is.null(mat)==TRUE){
-    message('Please input mat, check and re-try !');return(FALSE)
-  }
-  if(is.null(obs_label)==TRUE){
-    message('Please input obs_label, check and re-try !');return(FALSE)
-  }
+                             plot_type='2D.ellipse',point_cex=1,return_type='optimal',main='',verbose=TRUE,
+                             use_color=NULL,pre_define=NULL){
+  #
+  all_input_para <- c('mat','obs_label','legend_pos','legend_cex','plot_type','point_cex','kmeans_strategy','choose_k_strategy',
+                      'return_type','main','verbose')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  check_res <- c(check_option('verbose',c(TRUE,FALSE),envir=environment()),
+                 check_option('plot_type',c("2D",'2D.interactive', "2D.ellipse","2D.text","3D"),envir=environment()),
+                 check_option('kmeans_strategy',c('basic','consensus'),envir=environment()),
+                 check_option('choose_k_strategy',c('ARI','NMI','Jaccard'),envir=environment()),
+                 check_option('return_type',c('optimal','all'),envir=environment()),
+                 check_option('legend_pos',c("bottomright", "bottom", "bottomleft", "left", "topleft", "top", "topright", "right","center"),envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  obs_label <- clean_charVector(obs_label)
+  #
   if(is.null(all_k)==TRUE){
-    all_k <- 2:min(length(obs_label)-1,2*length(unique(obs_label)))
+    all_k <- 2:base::min(base::length(obs_label)-1,2*base::length(base::unique(obs_label)))
   }
-  if(length(setdiff(all_k,2:length(obs_label)))>0){
+  if(base::length(base::setdiff(all_k,2:base::length(obs_label)))>0){
     message('some value in all_k exceed the maximum sample size, check and re-try !');return(FALSE);
   }
   ori_cc <- umap.defaults;
   ori_cc$n_epochs <- 2000;
-  ori_cc$n_neighbors <- min(15,round(ncol(mat)/2));
+  ori_cc$n_neighbors <- base::min(15,round(ncol(mat)/2));
   if(plot_type=='3D') ori_cc$n_components <- 3
-  cluster_mat <- umap(as.matrix(t(mat)),config=ori_cc)
+  cluster_mat <- umap::umap(as.matrix(t(mat)),config=ori_cc)
   #
   all_jac <- list()
   all_k_res <- list()
@@ -3587,11 +4298,11 @@ draw.umap.kmeans <- function(mat=NULL,all_k=NULL,obs_label=NULL,
     for(k in all_k){
       tmp_k <- list()
       for(i in 1:10){
-        tmp_k[[i]] <- kmeans(cluster_mat$layout,centers=as.numeric(k))$cluster
+        tmp_k[[i]] <- stats::kmeans(cluster_mat$layout,centers=as.numeric(k))$cluster
       }
       pred_label <- tmp_k
       jac <- unlist(lapply(pred_label,function(x){get_clustComp(x, obs_label,strategy = choose_k_strategy)}))
-      top_i <- which.max(jac)
+      top_i <- base::which.max(jac)
       all_k_res[[as.character(k)]] <- tmp_k[[top_i]]
     }
   }else{
@@ -3602,35 +4313,56 @@ draw.umap.kmeans <- function(mat=NULL,all_k=NULL,obs_label=NULL,
     jac <- get_clustComp(pred_label, obs_label,strategy = choose_k_strategy)
     all_jac[[as.character(k)]] <- signif(jac,4)
   }
-  print(all_jac)
-  use_k <- all_k[which.max(all_jac)]
-  message(sprintf('Best Score occurs when k=%s, with value=%s',use_k,all_jac[as.character(use_k)]))
+  if(verbose==TRUE) message('Optimal k is chosen by Score between predicted and observed label')
+  if(verbose==TRUE) print(all_jac)
+  use_k <- all_k[base::which.max(all_jac)]
+  if(verbose==TRUE) message(sprintf('Best Score occurs when k=%s, with value=%s',use_k,all_jac[as.character(use_k)]))
   pred_label <- all_k_res[[as.character(use_k)]]
 
   d1 <- data.frame(id=colnames(mat),X=cluster_mat$layout[,1],Y=cluster_mat$layout[,2],label=pred_label,stringsAsFactors=FALSE)
-  if(plot_type=='3D')   d1 <- data.frame(id=colnames(mat),X=cluster_mat$layout[,1],Y=cluster_mat$layout[,2],Y=cluster_mat$layout[,3],label=pred_label,stringsAsFactors=FALSE)
-  layout(t(matrix(1:2)))
+  if(plot_type=='3D')   d1 <- data.frame(id=colnames(mat),X=cluster_mat$layout[,1],Y=cluster_mat$layout[,2],Z=cluster_mat$layout[,3],label=pred_label,stringsAsFactors=FALSE)
+  if(plot_type=='2D.interactive'){
+    p <- draw.2D.interactive(d1$X,d1$Y,
+                             sample_label=names(obs_label),
+                             color_label=obs_label[d1$id],
+                             shape_label=d1$label,
+                             xlab="",ylab="",
+                             point_cex=point_cex,main=main,
+                             use_color=use_color,pre_define=pre_define)
+    return(p)
+    #if(return_type=='optimal') return(pred_label)
+    #if(return_type=='all') return(all_k_res)
+  }
+  graphics::layout(t(matrix(1:2)))
   if(plot_type=='2D.ellipse'){
-    draw.2D.ellipse(d1$X,d1$Y,class_label=obs_label[d1$id],xlab="",ylab="",legend_cex=legend_cex,point_cex=point_cex)
+    draw.2D.ellipse(d1$X,d1$Y,class_label=obs_label[d1$id],xlab="",ylab="",legend_cex=legend_cex,point_cex=point_cex,
+                    use_color=use_color,pre_define=pre_define,main=main)
     draw.2D.ellipse(d1$X,d1$Y,class_label=d1$label,xlab="",ylab="",legend_cex=legend_cex,point_cex=point_cex,
-                    main=sprintf('%s:%s',choose_k_strategy,format(all_jac[as.character(use_k)],digits=4)))
+                    main=sprintf('%s:%s',choose_k_strategy,format(all_jac[as.character(use_k)],digits=4)),
+                    use_color=use_color,pre_define=pre_define)
   }
   if(plot_type=='2D'){
-    draw.2D(d1$X,d1$Y,class_label=obs_label[d1$id],xlab="",ylab="",legend_cex=legend_cex,point_cex=point_cex)
+    draw.2D(d1$X,d1$Y,class_label=obs_label[d1$id],xlab="",ylab="",legend_cex=legend_cex,point_cex=point_cex,
+            use_color=use_color,pre_define=pre_define,main=main)
     draw.2D(d1$X,d1$Y,class_label=d1$label,xlab="",ylab="",legend_cex=legend_cex,point_cex=point_cex,
-            main=sprintf('%s:%s',choose_k_strategy,format(all_jac[as.character(use_k)],digits=4)))
+            main=sprintf('%s:%s',choose_k_strategy,format(all_jac[as.character(use_k)],digits=4)),
+            use_color=use_color,pre_define=pre_define)
   }
   if(plot_type=='2D.text'){
-    draw.2D.text(d1$X,d1$Y,class_label=obs_label[d1$id],class_text=d1$id,xlab='',ylab='',legend_cex=legend_cex,point_cex=point_cex)
+    draw.2D.text(d1$X,d1$Y,class_label=obs_label[d1$id],class_text=d1$id,xlab='',ylab='',legend_cex=legend_cex,point_cex=point_cex,
+                 use_color=use_color,pre_define=pre_define,main=main)
     draw.2D.text(d1$X,d1$Y,class_label=d1$label,class_text=d1$id,xlab='',ylab='',legend_cex=legend_cex,point_cex=point_cex,
-                 main=sprintf('%s:%s',choose_k_strategy,format(all_jac[as.character(use_k)],digits=4)))
+                 main=sprintf('%s:%s',choose_k_strategy,format(all_jac[as.character(use_k)],digits=4)),
+                 use_color=use_color,pre_define=pre_define)
   }
   if(plot_type=='3D'){
-    draw.3D(d1$X,d1$Y,d1$Z,class_label=obs_label[d1$id],xlab='',ylab='',zlab='',legend_cex=legend_cex,point_cex=point_cex,legend_pos=legend_pos)
+    draw.3D(d1$X,d1$Y,d1$Z,class_label=obs_label[d1$id],xlab='',ylab='',zlab='',legend_cex=legend_cex,point_cex=point_cex,legend_pos=legend_pos,
+            use_color=use_color,pre_define=pre_define,main=main)
     draw.3D(d1$X,d1$Y,d1$Z,class_label=d1$label,xlab='',ylab='',zlab='',legend_cex=legend_cex,point_cex=point_cex,legend_pos=legend_pos,
-            main=sprintf('%s:%s',choose_k_strategy,format(all_jac[as.character(use_k)],digits=4)))
+            main=sprintf('%s:%s',choose_k_strategy,format(all_jac[as.character(use_k)],digits=4)),
+            use_color=use_color,pre_define=pre_define)
   }
-  layout(1);
+  graphics::layout(1);
   if(return_type=='optimal') return(pred_label)
   if(return_type=='all') return(all_k_res)
 }
@@ -3642,8 +4374,8 @@ draw.umap.kmeans <- function(mat=NULL,all_k=NULL,obs_label=NULL,
 # get_consensus_cluster
 get_consensus_cluster <-function(mat,all_k=2:12,clusterAlg="km",plot='png',...)
 {
-  maxK <- max(all_k)
-  res1 <- ConsensusClusterPlus(mat,maxK=maxK,clusterAlg=clusterAlg,plot=plot,...)
+  maxK <- base::max(all_k)
+  res1 <- ConsensusClusterPlus::ConsensusClusterPlus(mat,maxK=maxK,clusterAlg=clusterAlg,plot=plot,...)
   cls_res <- lapply(all_k,function(x){
     x1 <- res1[[x]]$consensusClass
     x1
@@ -3660,6 +4392,7 @@ get_consensus_cluster <-function(mat,all_k=2:12,clusterAlg="km",plot='png',...)
 #' Users need to give the MICA project information (directory and name), and the samples real labels.
 #' MICA returns the K-value that yields the best clustering performance. Users can pick one comparison score to show in the plot, "ARI", "NMI" or "Jaccard".
 #' MICA is not suggested, when sample size is small.
+#' This function may not work well for the updated version of MICA.
 #'
 #' @param outdir character, the output directory for running MICA.
 #' @param prjname charater, the project name for running MICA.
@@ -3676,13 +4409,33 @@ get_consensus_cluster <-function(mat,all_k=2:12,clusterAlg="km",plot='png',...)
 #' @param return_type character, the type of result returned. Users can choose "optimal" or "all".
 #' "all", all the K-values in all_k will be returned.
 #' "optimal", only the K-value yielding the optimal classification result will be returned. Default is "optimal".
+#' @param main character, title for the plot.
+#' @param verbose logical, if TRUE, print out detailed information during calculation. Default is TRUE.
+#' @param use_color a vector of color codes, colors to be assigned to each member of display label. Default is brewer.pal(9, 'Set1').
+#' @param pre_define a vector of characters, pre-defined color codes for a certain input (e.g. c("blue", "red") with names c("A", "B")). Default is NULL.
+#'
 #' @return Return a vector of the predicted label (if return_type is "optimal") and a list of all possible K- values (if return_type is "all").
 #' @export
 draw.MICA <- function(outdir=NULL,prjname=NULL,all_k=NULL,obs_label=NULL,
                       legend_pos = 'topleft',legend_cex = 0.8,
                       point_cex=1,plot_type='2D.ellipse',
                       choose_k_strategy='ARI',
-                      visualization_type='tsne',return_type='optimal') {
+                      visualization_type='tsne',return_type='optimal',
+                      main='',verbose=TRUE,
+                      use_color=NULL,pre_define=NULL) {
+  #
+  all_input_para <- c('outdir','prjname','obs_label','legend_pos','legend_cex','plot_type','point_cex','choose_k_strategy','visualization_type',
+                      'return_type','main','verbose')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  check_res <- c(check_option('verbose',c(TRUE,FALSE),envir=environment()),
+                 check_option('plot_type',c("2D", "2D.ellipse","2D.text","3D"),envir=environment()),
+                 check_option('kmeans_strategy',c('basic','consensus'),envir=environment()),
+                 check_option('visualization_type',c('tsne','umap','mds'),envir=environment()),
+                 check_option('return_type',c('optimal','all'),envir=environment()),
+                 check_option('legend_pos',c("bottomright", "bottom", "bottomleft", "left", "topleft", "top", "topright", "right","center"),envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
   if(plot_type=='3D' & visualization_type=='tsne'){
     message('Current tsne not support for 3D');return(FALSE)
   }
@@ -3690,16 +4443,16 @@ draw.MICA <- function(outdir=NULL,prjname=NULL,all_k=NULL,obs_label=NULL,
   res1 <- get_clustComp_MICA(outdir=outdir, all_k=all_k, obs_label=obs_label, prjname = prjname,strategy = choose_k_strategy)
   all_k_res <- res1$all_k_res
   all_jac <- res1$all_jac
-  use_k <- all_k[which.max(all_jac)]
+  use_k <- all_k[base::which.max(all_jac)]
   message(sprintf('Best Score occurs when k=%s, with value=%s',use_k,all_jac[as.character(use_k)]))
   #
-  use_file <- sprintf('%s/scMINER_%s/scMINER_%s_MDS_%s/scMINER_MICA_out/%s.ggplot.txt',
-                      outdir,prjname,prjname,use_k,prjname)
+  use_file <- sprintf('%s/%s_k%s_ClusterMem.txt',
+                      outdir,prjname,use_k,prjname)
   d1 <- read.delim(use_file, stringsAsFactors = FALSE) ## get cluster results
   if(visualization_type=='umap' | visualization_type=='mds'){
-    use_file <- sprintf('%s/scMINER_%s/scMINER_%s_MDS_%s/scMINER_MICA_out/%s_clust.h5',
-                        outdir,prjname,prjname,use_k,prjname)
-    fid <- H5Fopen(use_file)
+    use_file <- sprintf('%s/%s_reduced.h5',
+                        outdir,prjname)
+    fid <- rhdf5::H5Fopen(use_file)
     dist_mat <- fid$`mds`$block0_values[1:19,] ###
     if(visualization_type=='mds'){
       X <- fid$mds$block0_values[1,];
@@ -3713,37 +4466,45 @@ draw.MICA <- function(outdir=NULL,prjname=NULL,all_k=NULL,obs_label=NULL,
       ori_cc$min_dist <- 0.01 # 0.1
       if(plot_type=='3D'){
         ori_cc$n_components <- 3
-        use_mat_umap <- umap(t(dist_mat),config=ori_cc)
+        use_mat_umap <- umap::umap(t(dist_mat),config=ori_cc)
         X <- use_mat_umap$layout[,1];Y <- use_mat_umap$layout[,2]; Z <- use_mat_umap$layout[,3];
         d1$X <- X; d1$Y <- Y;d1$Z <- Z
       }else{
-        use_mat_umap <- umap(t(dist_mat),config=ori_cc)
+        use_mat_umap <- umap::umap(t(dist_mat),config=ori_cc)
         X <- use_mat_umap$layout[,1];Y <- use_mat_umap$layout[,2]
         d1$X <- X; d1$Y <- Y;
       }
     }
-    H5Fclose(fid)
+    rhdf5::H5Fclose(fid)
   }
-  layout(t(matrix(1:2)))
+  graphics::layout(t(matrix(1:2)))
   if(plot_type=='2D.ellipse'){
-    draw.2D.ellipse(d1$X,d1$Y,class_label=obs_label[d1$id],xlab='MICA-1',ylab='MICA-2',legend_cex=legend_cex,point_cex=point_cex)
+    draw.2D.ellipse(d1$X,d1$Y,class_label=obs_label[d1$id],xlab='MICA-1',ylab='MICA-2',legend_cex=legend_cex,point_cex=point_cex,
+                    use_color=use_color,pre_define=pre_define,main=main)
     draw.2D.ellipse(d1$X,d1$Y,class_label=d1$label,xlab='MICA-1',ylab='MICA-2',legend_cex=legend_cex,point_cex=point_cex,
-                    main=sprintf('%s:%s',choose_k_strategy,format(all_jac[as.character(use_k)],digits=4)))
+                    main=sprintf('%s:%s',choose_k_strategy,format(all_jac[as.character(use_k)],digits=4)),
+                    use_color=use_color,pre_define=pre_define)
   }
   if(plot_type=='2D'){
-    draw.2D(d1$X,d1$Y,class_label=obs_label[d1$id],xlab='MICA-1',ylab='MICA-2',legend_cex=legend_cex,point_cex=point_cex)
+    draw.2D(d1$X,d1$Y,class_label=obs_label[d1$id],xlab='MICA-1',ylab='MICA-2',legend_cex=legend_cex,point_cex=point_cex,
+            use_color=use_color,pre_define=pre_define,main=main)
     draw.2D(d1$X,d1$Y,class_label=d1$label,xlab='MICA-1',ylab='MICA-2',legend_cex=legend_cex,point_cex=point_cex,
-            main=sprintf('%s:%s',choose_k_strategy,format(all_jac[as.character(use_k)],digits=4)))
+            main=sprintf('%s:%s',choose_k_strategy,format(all_jac[as.character(use_k)],digits=4)),
+            use_color=use_color,pre_define=pre_define)
   }
   if(plot_type=='2D.text'){
-    draw.2D.text(d1$X,d1$Y,class_label=obs_label[d1$id],class_text=d1$id,xlab='MICA-1',ylab='MICA-2',legend_cex=legend_cex,point_cex=point_cex)
+    draw.2D.text(d1$X,d1$Y,class_label=obs_label[d1$id],class_text=d1$id,xlab='MICA-1',ylab='MICA-2',legend_cex=legend_cex,point_cex=point_cex,
+                 use_color=use_color,pre_define=pre_define,main=main)
     draw.2D.text(d1$X,d1$Y,class_label=d1$label,class_text=d1$id,xlab='MICA-1',ylab='MICA-2',legend_cex=legend_cex,point_cex=point_cex,
-                 main=sprintf('%s:%s',choose_k_strategy,format(all_jac[as.character(use_k)],digits=4)))
+                 main=sprintf('%s:%s',choose_k_strategy,format(all_jac[as.character(use_k)],digits=4)),
+                 use_color=use_color,pre_define=pre_define)
   }
   if(plot_type=='3D'){
-    draw.3D(d1$X,d1$Y,d1$Z,class_label=obs_label[d1$id],xlab='MICA-1',ylab='MICA-2',zlab='MICA-3',legend_cex=legend_cex,point_cex=point_cex,legend_pos=legend_pos)
+    draw.3D(d1$X,d1$Y,d1$Z,class_label=obs_label[d1$id],xlab='MICA-1',ylab='MICA-2',zlab='MICA-3',legend_cex=legend_cex,point_cex=point_cex,legend_pos=legend_pos,
+            use_color=use_color,pre_define=pre_define,main=main)
     draw.3D(d1$X,d1$Y,d1$Z,class_label=d1$label,xlab='MICA-1',ylab='MICA-2',zlab='MICA-3',legend_cex=legend_cex,point_cex=point_cex,legend_pos=legend_pos,
-            main=sprintf('%s:%s',choose_k_strategy,format(all_jac[as.character(use_k)],digits=4)))
+            main=sprintf('%s:%s',choose_k_strategy,format(all_jac[as.character(use_k)],digits=4)),
+            use_color=use_color,pre_define=pre_define)
   }
   ##Score
   rownames(d1) <- d1$id
@@ -3761,11 +4522,8 @@ get_clustComp_MICA <- function(outdir, all_k, obs_label, prjname = NULL,strategy
   all_jac <- list()
   all_k_res <- list()
   for (k in all_k) {
-    use_file <-
-      sprintf(
-        '%s/scMINER_%s/scMINER_%s_MDS_%s/scMINER_MICA_out/%s.ggplot.txt',
-        outdir,prjname,prjname,k,prjname
-      )
+    use_file <- sprintf('%s/%s_k%s_ClusterMem.txt',
+                        outdir,prjname,use_k,prjname)
     d1 <- read.delim(use_file, stringsAsFactors = FALSE)
     ##Score
     rownames(d1) <- d1$id
@@ -3793,7 +4551,7 @@ get_clustComp_MICA <- function(outdir, all_k, obs_label, prjname = NULL,strategy
 #' @param logFC_col character, the name of the column in \code{dat} contains logFC values.
 #' @param Pv_col character, the name of the column in \code{dat} contains P-values.
 #' @param logFC_thre numeric, the threshold of logFC. Genes or drivers with absolute logFC value higher than the threshold will be kept.
-#' Default is 1.5.
+#' Default is 0.1.
 #' @param Pv_thre numeric, the threshold of P-values. Genes or drivers with P-values lower than the threshold will be kept.
 #' Default is 0.01.
 #' @param show_plot logical, if TRUE, the plot will be shown in the plot pane. Default is TRUE.
@@ -3849,11 +4607,21 @@ get_clustComp_MICA <- function(outdir, all_k, obs_label, prjname = NULL,strategy
 #'                                analysis.par$out.dir.PLOT))
 #'}
 #' @export
-draw.volcanoPlot <- function(dat=NULL,label_col=NULL,logFC_col=NULL,Pv_col=NULL,logFC_thre=1.5, Pv_thre=0.01,
+draw.volcanoPlot <- function(dat=NULL,label_col=NULL,logFC_col=NULL,Pv_col=NULL,logFC_thre=0.1, Pv_thre=0.01,
                              show_plot=TRUE,
                              xlab='log2 Fold Change',ylab='P-value',show_label=FALSE,label_cex=0.5,legend_cex=0.8,
                              label_type='distribute',main="",pdf_file=NULL){
-  dat <- unique(dat[,c(label_col,logFC_col,Pv_col)])
+  #
+  all_input_para <- c('dat','label_col','logFC_col','Pv_col','logFC_thre','Pv_thre','show_plot','xlab','ylab',
+                      'show_label','label_cex','legend_cex','label_type','main')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  check_res <- c(check_option('show_plot',c(TRUE,FALSE),envir=environment()),
+                 check_option('show_label',c(TRUE,FALSE),envir=environment()),
+                 check_option('label_type',c("origin", "distribute"),envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
+  dat <- base::unique(dat[,c(label_col,logFC_col,Pv_col)])
   dat <- dat[order(dat[,3],decreasing=FALSE),]
   dat <- dat[which(is.na(dat[,2])==FALSE),]
   x <- as.numeric(dat[,logFC_col])
@@ -3867,45 +4635,44 @@ draw.volcanoPlot <- function(dat=NULL,label_col=NULL,logFC_col=NULL,Pv_col=NULL,
   plot_part <- function(ori=FALSE,before_off=FALSE){
     geneWidth <- 0
     geneHeight <- 0
-    if(length(s1)>0){
+    if(base::length(s1)>0){
       s11 <- s1[which(x[s1]>=0)]
       s12 <- s1[which(x[s1]<0)]
-      geneWidth  <- max(strwidthMod(dat[s1,label_col],'inches',cex=label_cex,ori=ori))*1.05
-      geneHeight <- max(strheightMod(dat[s1,label_col],'inches',cex=label_cex))*max(length(s11),length(s12))*1.25+par.char2inch()[2]
+      geneWidth  <- base::max(strwidthMod(dat[s1,label_col],'inches',cex=label_cex,ori=ori))*1.05
+      geneHeight <- base::max(strheightMod(dat[s1,label_col],'inches',cex=label_cex))*base::max(base::length(s11),base::length(s12))*1.25+par.char2inch()[2]
     }
 
     if(before_off==TRUE) dev.off()
     # width: 2|genewidth|5|genewidth|1
     # height: 1.5|geneHeight|1.5
     if(is.null(pdf_file)==FALSE){
-      if(show_label==TRUE & label_type=='distribute' & length(s1)>0){
-        pdf(pdf_file,width=8+geneWidth*2,height=3+max(5,geneHeight))
+      if(show_label==TRUE & label_type=='distribute' & base::length(s1)>0){
+        pdf(pdf_file,width=8+geneWidth*2,height=3+base::max(5,geneHeight))
       }else{
         pdf(pdf_file,width=8,height=8)
       }
     }
-
     par(mai=c(1.5,2,1.5,1))
-    mm <- max(abs(x))
+    mm <- base::max(abs(x))
     xr <- 1.15*mm/2.5*(2.5+geneWidth) ## not not consider 4% overflow by setting xaxs='i'
     if(show_label==TRUE & label_type=='distribute'){
-      plot(y~x,pch=16,col=get_transparent('grey',0.7),xlab=xlab,ylab="",
-           xlim=c(-xr,xr),ylim=c(0,max(y)*1.5),yaxt='n',main=main,cex.lab=1.2,cex.main=1.6,xaxs='i')
+      graphics::plot(y~x,pch=16,col=get_transparent('grey',0.7),xlab=xlab,ylab="",
+           xlim=c(-xr,xr),ylim=c(0,base::max(y)*1.5),yaxt='n',main=main,cex.lab=1.2,cex.main=1.6,xaxs='i')
     }else{
-      plot(y~x,pch=16,col=get_transparent('grey',0.7),xlab=xlab,ylab="",
-           xlim=c(-mm*1.5,mm*1.5),ylim=c(0,max(y)*1.5),yaxt='n',main=main,cex.lab=1.2,cex.main=1.6,xaxs='i')
+      graphics::plot(y~x,pch=16,col=get_transparent('grey',0.7),xlab=xlab,ylab="",
+           xlim=c(-mm*1.5,mm*1.5),ylim=c(0,base::max(y)*1.5),yaxt='n',main=main,cex.lab=1.2,cex.main=1.6,xaxs='i')
     }
-    yyy <- c(1,round(seq(1,max(y)*1.5,length.out=min(length(y),5)))) ## max:5
-    axis(side=2,at=c(0,yyy),labels=c(1,format(10^-yyy,scientific = TRUE)),las=2)
-    mtext(side=2,line = 4,ylab,cex=1.2)
+    yyy <- c(1,round(base::seq(1,base::max(y)*1.5,length.out=base::min(base::length(y),5)))) ## max:5
+    graphics::axis(side=2,at=c(0,yyy),labels=c(1,format(10^-yyy,scientific = TRUE)),las=2)
+    graphics::mtext(side=2,line = 4,ylab,cex=1.2)
     z_val <- sapply(dat[,Pv_col]*sign(x),combinePvalVector)[1,]
-    if(logFC_thre>0){abline(v=logFC_thre,lty=2,lwd=0.5);abline(v=-logFC_thre,lty=2,lwd=0.5)}
-    if(Pv_thre<1) abline(h=-log10(Pv_thre),lty=2,lwd=0.5);
-    points(y~x,pch=16,col=get_transparent('grey',0.7))
+    if(logFC_thre>0){graphics::abline(v=logFC_thre,lty=2,lwd=0.5);graphics::abline(v=-logFC_thre,lty=2,lwd=0.5)}
+    if(Pv_thre<1) graphics::abline(h=-log10(Pv_thre),lty=2,lwd=0.5);
+    graphics::points(y~x,pch=16,col=get_transparent('grey',0.7))
     #s1 <- which(abs(x)>=logFC_thre & y>= -log10(Pv_thre))
     s_col <- z2col(c(10,-10),sig_thre=0); names(s_col) <- as.character(c(1,-1))
-    points(y[s1]~x[s1],pch=16,col=s_col[as.character(sign(x[s1]))])
-    legend(0,par()$usr[4],c('Down-regulated','Not-Significant','Up-regulated'),
+    graphics::points(y[s1]~x[s1],pch=16,col=s_col[as.character(sign(x[s1]))])
+    graphics::legend(0,par()$usr[4],c('Down-regulated','Not-Significant','Up-regulated'),
            fill=c(s_col[2],get_transparent('grey',0.7),s_col[1]),border=NA,bty='o',
            bg='white',box.col='white',horiz=TRUE,xjust=0.5,cex=legend_cex)
     if(show_label==TRUE){
@@ -3913,30 +4680,30 @@ draw.volcanoPlot <- function(dat=NULL,label_col=NULL,logFC_col=NULL,Pv_col=NULL,
       s12 <- s1[which(x[s1]<0)]
       dd <- (par()$usr[2]-par()$usr[1])/100
       if(label_type == 'origin'){
-        if(length(s11)>0) text(x[s11]+dd,y[s11],dat[s11,label_col],cex=label_cex,adj=0)
-        if(length(s12)>0) text(x[s12]-dd,y[s12],dat[s12,label_col],cex=label_cex,adj=1)
+        if(base::length(s11)>0) graphics::text(x[s11]+dd,y[s11],dat[s11,label_col],cex=label_cex,adj=0)
+        if(base::length(s12)>0) graphics::text(x[s12]-dd,y[s12],dat[s12,label_col],cex=label_cex,adj=1)
       }else{
-        if(length(s11)>0){
-          dd <- (par()$usr[4]-par()$usr[3]-par.char2pos()[2])/(length(s11)+1)
-          rect(xright=par()$usr[2],ybottom=par()$usr[3],xleft=max(abs(x))*1.1,ytop=par()$usr[4],col='white',border='white')
-          ypos <- seq(from=par()$usr[3],by=dd,length.out=length(s11))+dd; ypos <- rev(ypos);
-          text(max(abs(x))*1.15,ypos,dat[s11,label_col],cex=label_cex,adj=0)
-          segments(x0=max(abs(x))*1.1,x1=x[s11],y0=ypos,y1=y[s11],lwd=0.4,col=get_transparent(s_col[1],alpha=0.5))
-          segments(x0=max(abs(x))*1.1,x1=max(abs(x))*1.14,y0=ypos,y1=ypos,lwd=0.4,col=get_transparent(s_col[1],alpha=0.5))
+        if(base::length(s11)>0){
+          dd <- (par()$usr[4]-par()$usr[3]-par.char2pos()[2])/(base::length(s11)+1)
+          graphics::rect(xright=par()$usr[2],ybottom=par()$usr[3],xleft=base::max(abs(x))*1.1,ytop=par()$usr[4],col='white',border='white')
+          ypos <- base::seq(from=par()$usr[3],by=dd,length.out=base::length(s11))+dd; ypos <- rev(ypos);
+          graphics::text(base::max(abs(x))*1.15,ypos,dat[s11,label_col],cex=label_cex,adj=0)
+          graphics::segments(x0=base::max(abs(x))*1.1,x1=x[s11],y0=ypos,y1=y[s11],lwd=0.4,col=get_transparent(s_col[1],alpha=0.5))
+          graphics::segments(x0=base::max(abs(x))*1.1,x1=base::max(abs(x))*1.14,y0=ypos,y1=ypos,lwd=0.4,col=get_transparent(s_col[1],alpha=0.5))
         }
-        if(length(s12)>0){
-          dd <- (par()$usr[4]-par()$usr[3]-par.char2pos()[2])/(length(s12)+1)
-          rect(xleft=par()$usr[1],ybottom=par()$usr[3],xright=-max(abs(x))*1.1,ytop=par()$usr[4],col='white',border='white')
-          ypos <- seq(from=par()$usr[3],by=dd,length.out=length(s12))+dd; ypos <- rev(ypos);
-          text(-max(abs(x))*1.15,ypos,dat[s12,label_col],cex=label_cex,adj=1)
-          segments(x0= -max(abs(x))*1.1,x1=x[s12],y0=ypos,y1=y[s12],lwd=0.4,col=get_transparent(s_col[2],alpha=0.5))
-          segments(x0= -max(abs(x))*1.1,x1=-max(abs(x))*1.14,y0=ypos,y1=ypos,lwd=0.4,col=get_transparent(s_col[2],alpha=0.5))
+        if(base::length(s12)>0){
+          dd <- (par()$usr[4]-par()$usr[3]-par.char2pos()[2])/(base::length(s12)+1)
+          graphics::rect(xleft=par()$usr[1],ybottom=par()$usr[3],xright=-base::max(abs(x))*1.1,ytop=par()$usr[4],col='white',border='white')
+          ypos <- base::seq(from=par()$usr[3],by=dd,length.out=base::length(s12))+dd; ypos <- rev(ypos);
+          text(-base::max(abs(x))*1.15,ypos,dat[s12,label_col],cex=label_cex,adj=1)
+          graphics::segments(x0= -base::max(abs(x))*1.1,x1=x[s12],y0=ypos,y1=y[s12],lwd=0.4,col=get_transparent(s_col[2],alpha=0.5))
+          graphics::segments(x0= -base::max(abs(x))*1.1,x1=-base::max(abs(x))*1.14,y0=ypos,y1=ypos,lwd=0.4,col=get_transparent(s_col[2],alpha=0.5))
         }
       }
     }
-    rect(xleft=par()$usr[1],xright=par()$usr[2],ybottom=par()$usr[3],ytop=par()$usr[4])
+    graphics::rect(xleft=par()$usr[1],xright=par()$usr[2],ybottom=par()$usr[3],ytop=par()$usr[4])
   }
-  if(is.null(pdf_file)==FALSE){plot_part(ori=TRUE);plot_part(ori=TRUE,before_off=TRUE);dev.off();dev.off()} else {plot_part()}
+  if(is.null(pdf_file)==FALSE){plot_part(ori=TRUE);plot_part(ori=TRUE,before_off=TRUE);while (!is.null(dev.list()))  dev.off()} else {plot_part()}
   sig_info <- dat[s1,]
   return(sig_info)
   #return(TRUE)
@@ -3969,7 +4736,7 @@ draw.volcanoPlot <- function(dat=NULL,label_col=NULL,logFC_col=NULL,Pv_col=NULL,
 #' analysis.par <- list()
 #' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
 #' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
-#' phe_info <- pData(analysis.par$cal.eset)
+#' phe_info <- Biobase::pData(analysis.par$cal.eset)
 #' each_subtype <- 'G4'
 #' G0  <- rownames(phe_info)[which(phe_info$`subgroup`!=each_subtype)] # get sample list for G0
 #' G1  <- rownames(phe_info)[which(phe_info$`subgroup`==each_subtype)] # get sample list for G1
@@ -3988,17 +4755,25 @@ draw.volcanoPlot <- function(dat=NULL,label_col=NULL,logFC_col=NULL,Pv_col=NULL,
 #' res2 <- combineDE(DE_list,transfer_tab=NULL)
 #' draw.combineDE(res2)
 #' @export
-draw.combineDE <- function(DE_list=NULL,main_id=NULL,top_number=30,display_col='P.Value',z_col='Z-statistics',digit_num=2,row_cex=1,column_cex=1,text_cex=1,pdf_file=NULL){
-  DE_name <- setdiff(names(DE_list),'combine')
+draw.combineDE <- function(DE_list=NULL,main_id=NULL,top_number=30,
+                           display_col='P.Value',z_col='Z-statistics',
+                           digit_num=2,row_cex=1,column_cex=1,text_cex=1,pdf_file=NULL){
+  #
+  all_input_para <- c('DE_list','top_number','display_col','z_col',
+                      'digit_num','row_cex','column_cex','text_cex')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
+  DE_name <- base::setdiff(names(DE_list),'combine')
   if(top_number > nrow(DE_list$combine)) top_number <- nrow(DE_list$combine)
   w1 <- DE_list$combine[order(DE_list$combine$P.Value)[1:top_number],]
-  dd_Z <- do.call(cbind,lapply(DE_name,function(x){
+  dd_Z <- do.call(base::cbind,lapply(DE_name,function(x){
     x1 <- DE_list[[x]]
     x2 <- x1[w1[,x],]
     x2[,z_col]
   }))
   colnames(dd_Z) <- DE_name
-  dd <- do.call(cbind,lapply(DE_name,function(x){
+  dd <- do.call(base::cbind,lapply(DE_name,function(x){
     x1 <- DE_list[[x]]
     x2 <- x1[w1[,x],]
     x2[,display_col]
@@ -4008,26 +4783,26 @@ draw.combineDE <- function(DE_list=NULL,main_id=NULL,top_number=30,display_col='
   dat <- data.frame(main_id=w1[,main_id],dd_Z,combine=w1[,z_col],stringsAsFactors=FALSE)
   mat <- as.matrix(dat[,-1])
   rownames(mat) <- dat$main_id
-  dd <- cbind(dd,combine=w1[,display_col])
+  dd <- base::cbind(dd,combine=w1[,display_col])
   mat1 <- signif(dd,digits=digit_num)
   plot_part <- function(ori=FALSE,before_off=FALSE){
-    geneWidth <- max(strwidthMod(rownames(mat),units='inch',cex=row_cex,ori=ori))*1.05+par.char2inch()[1]
-    textWidth <- max(strwidthMod(as.character(mat1),units='inch',cex=text_cex,ori=ori))*ncol(mat1)*1.5
-    geneHeight <- max(strheightMod(rownames(mat),units='inch',cex=row_cex,ori=ori))*nrow(mat)*1.75
-    textHeight <- max(strheightMod(as.character(mat1),units='inch',cex=text_cex,ori=ori))*nrow(mat)*1.75
-    geneHeight <- max(geneHeight,textHeight)
+    geneWidth <- base::max(strwidthMod(rownames(mat),units='inch',cex=row_cex,ori=ori))*1.05+par.char2inch()[1]
+    textWidth <- base::max(strwidthMod(as.character(mat1),units='inch',cex=text_cex,ori=ori))*ncol(mat1)*1.5
+    geneHeight <- base::max(strheightMod(rownames(mat),units='inch',cex=row_cex,ori=ori))*nrow(mat)*1.75
+    textHeight <- base::max(strheightMod(as.character(mat1),units='inch',cex=text_cex,ori=ori))*nrow(mat)*1.75
+    geneHeight <- base::max(geneHeight,textHeight)
     if(before_off==TRUE) dev.off()
     # geneWidth|textWidth|par.char2inch()[1]*8
     if(is.null(pdf_file)==FALSE) pdf(pdf_file,width=geneWidth+textWidth+par.char2inch()[1]*8,height=1.5+geneHeight)
-    par(mai=c(0.5,geneWidth,1,par.char2inch()[1]*8));layout(1)
+    par(mai=c(0.5,geneWidth,1,par.char2inch()[1]*8));graphics::layout(1)
     draw.heatmap.local(mat,inner_line=TRUE,out_line=TRUE,col_srt=0,display_text_mat=mat1,row_cex=row_cex,column_cex=column_cex,text_cex=text_cex,inner_col='white')
     #legend
     pp <- par()$usr
-    cc1 <- colorRampPalette(c(brewer.pal(9,'Blues')[8],'white',brewer.pal(9,'Reds')[7]))(5)
-    draw.colorbar(col=rev(cc1),min_val=-max(abs(mat)),max_val=max(abs(mat)),n=5,xleft=pp[2]+par.char2pos()[1]*2,
+    cc1 <- grDevices::colorRampPalette(c(brewer.pal(9,'Blues')[8],'white',brewer.pal(9,'Reds')[7]))(5)
+    draw.colorbar(col=rev(cc1),min_val=-base::max(abs(mat)),max_val=base::max(abs(mat)),n=5,xleft=pp[2]+par.char2pos()[1]*2,
                   xright=pp[2]+par.char2pos()[1]*3,ytop=pp[3]+(pp[4]-pp[3])/2,ybottom=pp[3]+(pp[4]-pp[3])/2-par.char2pos()[2]*5*text_cex*0.8,cex=text_cex*0.8)
   }
-  if(is.null(pdf_file)==FALSE){plot_part(ori=TRUE);plot_part(ori=TRUE,before_off=TRUE);dev.off();dev.off()} else {plot_part()}
+  if(is.null(pdf_file)==FALSE){plot_part(ori=TRUE);plot_part(ori=TRUE,before_off=TRUE);while (!is.null(dev.list()))  dev.off()} else {plot_part()}
   return(TRUE)
 }
 
@@ -4072,23 +4847,27 @@ draw.combineDE <- function(DE_list=NULL,main_id=NULL,top_number=30,display_col='
 draw.NetBID <- function(DA_list=NULL,DE_list=NULL,main_id=NULL,top_number=30,
                         DA_display_col='P.Value',DE_display_col='logFC',z_col='Z-statistics',digit_num=2,
                         row_cex=1,column_cex=1,text_cex=1,col_srt=60,pdf_file=NULL){
-  if(is.list(DA_list)==FALSE){message('Please input DA list!');return(FALSE)}
-  if(is.list(DE_list)==FALSE){message('Please input DE list!');return(FALSE)}
+  #
+  all_input_para <- c('DA_list','DE_list','top_number','DA_display_col','DE_display_col','z_col',
+                      'digit_num','row_cex','column_cex','text_cex','col_srt')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
   if(top_number<1){message('top_number must be larger than 1!');return(FALSE)}
   DA_name <- names(DA_list)
   DE_name <- names(DE_list)
   if(is.null(main_id)==TRUE) main_id <- DA_name[1]
-  if(!main_id %in% names(DA_list)){message('main id not in DA list!');return(FALSE)}
+  if(!main_id %in% DA_name){message('main id not in DA list!');return(FALSE)}
   if(top_number > nrow(DA_list[[main_id]])) top_number <- nrow(DA_list[[main_id]])
-  w1 <- rownames(DA_list[[main_id]][order(DE_list[[main_id]]$P.Value)[1:top_number],]) ## display ID
+  w1 <- rownames(DA_list[[main_id]][order(DA_list[[main_id]]$P.Value)[1:top_number],]) ## display ID
   w2 <- gsub('_TF','',w1);  w2 <- gsub('_SIG','',w2)
   # get display
-  dd_DA <- do.call(cbind,lapply(DA_name,function(x){
+  dd_DA <- do.call(base::cbind,lapply(DA_name,function(x){
     x1 <- DA_list[[x]]
     x2 <- x1[w1,]
     x2[,DA_display_col]
   }))
-  dd_DE <- do.call(cbind,lapply(DE_name,function(x){
+  dd_DE <- do.call(base::cbind,lapply(DE_name,function(x){
     x1 <- DE_list[[x]]
     x2 <- x1[w2,]
     x2[,DE_display_col]
@@ -4096,12 +4875,12 @@ draw.NetBID <- function(DA_list=NULL,DE_list=NULL,main_id=NULL,top_number=30,
   colnames(dd_DA) <- DA_name; rownames(dd_DA) <- w1;
   colnames(dd_DE) <- DE_name; rownames(dd_DE) <- w1;
   # get Z
-  dd_DA_Z <- do.call(cbind,lapply(DA_name,function(x){
+  dd_DA_Z <- do.call(base::cbind,lapply(DA_name,function(x){
     x1 <- DA_list[[x]]
     x2 <- x1[w1,]
     x2[,z_col]
   }))
-  dd_DE_Z <- do.call(cbind,lapply(DE_name,function(x){
+  dd_DE_Z <- do.call(base::cbind,lapply(DE_name,function(x){
     x1 <- DE_list[[x]]
     x2 <- x1[w2,]
     x2[,z_col]
@@ -4110,42 +4889,42 @@ draw.NetBID <- function(DA_list=NULL,DE_list=NULL,main_id=NULL,top_number=30,
   colnames(dd_DE_Z) <- DE_name; #rownames(dd_DE_Z) <- w1;
   #
   mat1 <- signif(dd_DA,digits=digit_num); mat2 <- signif(dd_DE,digits=digit_num);
-  if(length(DA_list)==1) {mat1 <- as.matrix(mat1); dd_DA_Z<-as.matrix(dd_DA_Z);}
-  if(length(DE_list)==1) {mat2 <- as.matrix(mat2); dd_DE_Z<-as.matrix(dd_DE_Z);}
+  if(base::length(DA_list)==1) {mat1 <- as.matrix(mat1); dd_DA_Z<-as.matrix(dd_DA_Z);}
+  if(base::length(DE_list)==1) {mat2 <- as.matrix(mat2); dd_DE_Z<-as.matrix(dd_DE_Z);}
   plot_part <- function(ori=FALSE,before_off=FALSE){
-    geneWidth <- max(strwidthMod(rownames(dd_DA_Z),units='inch',cex=row_cex,ori=ori))*1.05+par.char2inch()[1]
-    textWidth1 <- max(strwidthMod(as.character(mat1),units='inch',cex=text_cex,ori=ori))*ncol(mat1)*1.5
-    geneHeight1 <- max(strheightMod(rownames(dd_DA_Z),units='inch',cex=row_cex,ori=ori))*nrow(mat1)*1.75
-    textHeight1 <- max(strheightMod(as.character(mat1),units='inch',cex=text_cex,ori=ori))*nrow(mat1)*1.75
+    geneWidth <- base::max(strwidthMod(rownames(dd_DA_Z),units='inch',cex=row_cex,ori=ori))*1.05+par.char2inch()[1]
+    textWidth1 <- base::max(strwidthMod(as.character(mat1),units='inch',cex=text_cex,ori=ori))*ncol(mat1)*1.5
+    geneHeight1 <- base::max(strheightMod(rownames(dd_DA_Z),units='inch',cex=row_cex,ori=ori))*nrow(mat1)*1.75
+    textHeight1 <- base::max(strheightMod(as.character(mat1),units='inch',cex=text_cex,ori=ori))*nrow(mat1)*1.75
 
-    textWidth2 <- max(strwidthMod(as.character(mat2),units='inch',cex=text_cex,ori=ori))*ncol(mat2)*1.5
-    textHeight2 <- max(strheightMod(as.character(mat2),units='inch',cex=text_cex,ori=ori))*nrow(mat2)*1.75
+    textWidth2 <- base::max(strwidthMod(as.character(mat2),units='inch',cex=text_cex,ori=ori))*ncol(mat2)*1.5
+    textHeight2 <- base::max(strheightMod(as.character(mat2),units='inch',cex=text_cex,ori=ori))*nrow(mat2)*1.75
 
-    geneHeight <- max(c(geneHeight1,textHeight1,textHeight2))
+    geneHeight <- base::max(c(geneHeight1,textHeight1,textHeight2))
 
 
     if(before_off==TRUE) dev.off()
     # geneWidth|textWidth1|0.3|textWidth2|par.char2inch()[1]*8
     # 1|geneHeight|0.5
-    if(is.null(pdf_file)==FALSE) pdf(pdf_file,width=geneWidth+textWidth1+0.3+textWidth2+par.char2inch()[1]*8,height=1.5+geneHeight)
-    layout(t(as.matrix(c(rep(1,ncol(mat1)),rep(2,ncol(mat2))))))
-    par(mai=c(1,geneWidth,0.5,0))
+    if(is.null(pdf_file)==FALSE) pdf(pdf_file,width=geneWidth+textWidth1+0.3+textWidth2+par.char2inch()[1]*8,height=2+geneHeight)
+    graphics::layout(t(as.matrix(c(rep(1,ncol(mat1)),rep(2,ncol(mat2))))))
+    par(mai=c(1,geneWidth,1,0))
 
     draw.heatmap.local(dd_DA_Z,inner_line=TRUE,out_line=TRUE,col_srt=col_srt,display_text_mat=mat1,row_cex=row_cex,column_cex=column_cex,text_cex=text_cex,text_col='down',inner_col='white')
-    pp <- par()$usr; rect(xleft=pp[1],xright=pp[2],ybottom=pp[4],ytop=pp[4]+(pp[4]-pp[3])/nrow(mat1),border='black',col='light grey',xpd=TRUE);
-    text(x=pp[1]/2+pp[2]/2,y=pp[4]+0.5*(pp[4]-pp[3])/nrow(mat1),labels='NetBID',xpd=TRUE,cex=column_cex)
+    pp <- par()$usr; graphics::rect(xleft=pp[1],xright=pp[2],ybottom=pp[4],ytop=pp[4]+2*(pp[4]-pp[3])/nrow(mat1),border='black',col='light grey',xpd=TRUE);
+    graphics::text(x=pp[1]/2+pp[2]/2,y=pp[4]+1*(pp[4]-pp[3])/nrow(mat1),labels=sprintf('NetBID\n(Differential activity:%s)',DA_display_col),xpd=TRUE,cex=column_cex)
 
-    par(mai=c(1,0.3,0.5,par.char2inch()[1]*8))
+    par(mai=c(1,0.3,1,par.char2inch()[1]*8))
     draw.heatmap.local(dd_DE_Z,inner_line=TRUE,out_line=TRUE,col_srt=col_srt,display_text_mat=mat2,row_cex=row_cex,column_cex=column_cex,text_cex=text_cex,text_col='down',inner_col='white')
-    pp <- par()$usr; rect(xleft=pp[1],xright=pp[2],ybottom=pp[4],ytop=pp[4]+(pp[4]-pp[3])/nrow(mat1),border='black',col='light grey',xpd=TRUE);
-    text(x=pp[1]/2+pp[2]/2,y=pp[4]+0.5*(pp[4]-pp[3])/nrow(mat1),labels='Differential expression',xpd=TRUE,cex=column_cex)
+    pp <- par()$usr; graphics::rect(xleft=pp[1],xright=pp[2],ybottom=pp[4],ytop=pp[4]+2*(pp[4]-pp[3])/nrow(mat1),border='black',col='light grey',xpd=TRUE);
+    graphics::text(x=pp[1]/2+pp[2]/2,y=pp[4]+1*(pp[4]-pp[3])/nrow(mat1),labels=sprintf('Differential expression:%s',DE_display_col),xpd=TRUE,cex=column_cex)
 
     #legend
-    cc1 <- colorRampPalette(c(brewer.pal(9,'Blues')[8],'white',brewer.pal(9,'Reds')[7]))(5)
-    draw.colorbar(col=rev(cc1),min_val=-max(abs(dd_DE_Z)),max_val=max(abs(dd_DE_Z)),n=5,xleft=pp[2]+par.char2pos()[1]*2,
+    cc1 <- grDevices::colorRampPalette(c(brewer.pal(9,'Blues')[8],'white',brewer.pal(9,'Reds')[7]))(5)
+    draw.colorbar(col=rev(cc1),min_val=-base::max(abs(dd_DE_Z),na.rm=TRUE),max_val=base::max(abs(dd_DE_Z),na.rm=TRUE),n=5,xleft=pp[2]+par.char2pos()[1]*2,
                   xright=pp[2]+par.char2pos()[1]*3,ytop=pp[3]+(pp[4]-pp[3])/2,ybottom=pp[3]+(pp[4]-pp[3])/2-par.char2pos()[2]*5*text_cex*0.8,cex=text_cex*0.8)
   }
-  if(is.null(pdf_file)==FALSE){plot_part(ori=TRUE);plot_part(ori=TRUE,before_off=TRUE);dev.off();dev.off()} else {plot_part()}
+  if(is.null(pdf_file)==FALSE){plot_part(ori=TRUE);plot_part(ori=TRUE,before_off=TRUE);while (!is.null(dev.list()))  dev.off()} else {plot_part()}
   return(TRUE)
 }
 
@@ -4157,49 +4936,50 @@ draw.heatmap.local <- function(mat,inner_line=FALSE,out_line=TRUE,inner_col='bla
     if(ncol(display_text_mat)>1) display_text_mat <- display_text_mat[nrow(display_text_mat):1,] else display_text_mat <- as.matrix(display_text_mat[nrow(display_text_mat):1,])
   }
   colnames(mat1) <- colnames(mat)
-  cc1 <- colorRampPalette(c(brewer.pal(9,'Blues')[8],'white',brewer.pal(9,'Reds')[7]))(n*2)
-  bb1 <- seq(0,max(abs(mat1)),length.out=n)
-  if(out_line==TRUE) image(t(mat1),col=cc1,breaks=sort(c(-bb1,0,bb1)),xaxt='n',yaxt='n')
-  if(out_line==FALSE) image(t(mat1),col=cc1,breaks=sort(c(-bb1,0,bb1)),xaxt='n',yaxt='n',bty='n')
+  cc1 <- grDevices::colorRampPalette(c(brewer.pal(9,'Blues')[8],'white',brewer.pal(9,'Reds')[7]))(n*2)
+  bb1 <- base::seq(0,base::max(abs(mat1),na.rm=TRUE),length.out=n)
+  #mat1[which(is.na(mat1)==TRUE)] <- 0;
+  if(out_line==TRUE) graphics::image(t(mat1),col=cc1,breaks=sort(c(-bb1,0,bb1)),xaxt='n',yaxt='n')
+  if(out_line==FALSE) graphics::image(t(mat1),col=cc1,breaks=sort(c(-bb1,0,bb1)),xaxt='n',yaxt='n',bty='n')
   pp <- par()$usr
-  xx <- seq(pp[1],pp[2],length.out=1+ncol(mat1))
-  yy <- seq(pp[3],pp[4],length.out=1+nrow(mat1))
-  xxx <- xx[1:(length(xx)-1)]/2+xx[2:length(xx)]/2
-  yyy <- yy[1:(length(yy)-1)]/2+yy[2:length(yy)]/2
+  xx <- base::seq(pp[1],pp[2],length.out=1+ncol(mat1))
+  yy <- base::seq(pp[3],pp[4],length.out=1+nrow(mat1))
+  xxx <- xx[1:(base::length(xx)-1)]/2+xx[2:base::length(xx)]/2
+  yyy <- yy[1:(base::length(yy)-1)]/2+yy[2:base::length(yy)]/2
   if(inner_line==TRUE){
-    abline(v=xx,col=inner_col)
-    abline(h=yy,col=inner_col)
+    graphics::abline(v=xx,col=inner_col)
+    graphics::abline(h=yy,col=inner_col)
   }
-  text(pp[1]-par.char2pos()[1],yyy,rownames(mat1),adj=1,xpd=TRUE,cex=row_cex) ## distance for one character
+  graphics::text(pp[1]-par.char2pos()[1],yyy,rownames(mat1),adj=1,xpd=TRUE,cex=row_cex) ## distance for one character
   if(text_col=='up'){
     if(col_srt==0){
-      text(xxx,pp[4],colnames(mat1),pos=3,xpd=TRUE,srt=col_srt,cex=column_cex) ## do not use pos, for srt?
+      graphics::text(xxx,pp[4],colnames(mat1),pos=3,xpd=TRUE,srt=col_srt,cex=column_cex) ## do not use pos, for srt?
     }else{
-      text(xxx,pp[4]+max(strheightMod(colnames(mat1))/2)+max(strheightMod(colnames(mat1))/10),colnames(mat1),adj=0.5-col_srt/90,xpd=TRUE,srt=col_srt,cex=column_cex) ## do not use pos, for srt?
+      graphics::text(xxx,pp[4]+base::max(strheightMod(colnames(mat1))/2)+base::max(strheightMod(colnames(mat1))/10),colnames(mat1),adj=0.5-col_srt/90,xpd=TRUE,srt=col_srt,cex=column_cex) ## do not use pos, for srt?
     }
   }
   if(text_col=='down'){
-    if(col_srt!=0) text(xxx,pp[3]-0.1*(pp[4]-pp[3])/nrow(mat1),colnames(mat1),adj=1,xpd=TRUE,srt=col_srt,cex=column_cex)
-    if(col_srt==0) text(xxx,pp[3]-0.1*(pp[4]-pp[3])/nrow(mat1),colnames(mat1),adj=0.5,xpd=TRUE,srt=col_srt,cex=column_cex)
+    if(col_srt!=0) graphics::text(xxx,pp[3]-0.1*(pp[4]-pp[3])/nrow(mat1),colnames(mat1),adj=1,xpd=TRUE,srt=col_srt,cex=column_cex)
+    if(col_srt==0) graphics::text(xxx,pp[3]-0.1*(pp[4]-pp[3])/nrow(mat1),colnames(mat1),adj=0.5,xpd=TRUE,srt=col_srt,cex=column_cex)
   }
   if(is.null(display_text_mat)==FALSE){
     for(i in 1:nrow(display_text_mat)){
       for(j in 1:ncol(display_text_mat)){
-        text(xxx[j],yyy[i],display_text_mat[i,j],cex=text_cex)
+        graphics::text(xxx[j],yyy[i],display_text_mat[i,j],cex=text_cex)
       }
     }
   }
   return(TRUE)
 }
 draw.colorbar <- function(col=NULL,min_val=NULL,max_val=NULL,n=5,digit_num=2,direction='vertical',xleft=0,xright=1,ytop=1,ybottom=0,cex=1){
-  val_bar<-seq(max_val,min_val,length.out = n)
+  val_bar<-base::seq(max_val,min_val,length.out = n)
   if(is.null(col)==TRUE) col <- z2col(val_bar)
   if(direction=='vertical'){
-    y_pos <- seq(ytop,ybottom,length.out=n+1)
-    yy <- y_pos[2:length(y_pos)]/2+y_pos[1:(length(y_pos)-1)]/2
-    rect(xleft=xleft,xright=xright,ytop=y_pos[2:length(y_pos)],ybottom=y_pos[1:(length(y_pos)-1)],col=col,border='light grey',xpd=TRUE)
-    text(xright,yy,signif(val_bar,digits = digit_num),xpd=TRUE,cex=cex,pos=4)
-    text(xleft/2+xright/2,ytop,'Z value',cex=cex,xpd=TRUE,pos=3)
+    y_pos <- base::seq(ytop,ybottom,length.out=n+1)
+    yy <- y_pos[2:base::length(y_pos)]/2+y_pos[1:(base::length(y_pos)-1)]/2
+    graphics::rect(xleft=xleft,xright=xright,ytop=y_pos[2:base::length(y_pos)],ybottom=y_pos[1:(base::length(y_pos)-1)],col=col,border='light grey',xpd=TRUE)
+    graphics::text(xright,yy,signif(val_bar,digits = digit_num),xpd=TRUE,cex=cex,pos=4)
+    graphics::text(xleft/2+xright/2,ytop,'Z value',cex=cex,xpd=TRUE,pos=3)
   }
 }
 
@@ -4212,7 +4992,7 @@ draw.colorbar <- function(col=NULL,min_val=NULL,max_val=NULL,n=5,digit_num=2,dir
 #' @param use_gene_label a vector of characters, a vector of labels for \code{use_genes} (e.g. "geneSymbol" or "gene_label"). Default is \code{use_genes}.
 #' @param use_samples a vector of characters, selected samples. Default is column names of \code{mat}.
 #' @param use_sample_label a vector of characters, a vector of labels for \code{use_samples}. Default is \code{use_samples}.
-#' @param phenotype_info data.frame, phenotype of samples. Users can call \code{pData(eset)} to create.
+#' @param phenotype_info data.frame, phenotype of samples. Users can call \code{Biobase::pData(eset)} to create.
 #' The row names should match the column names in \code{mat}. Default is NULL.
 #' @param use_phe a list of characters, selected phenotype of samples. A subset of columns from \code{phenotype_info}.
 #' Default is NULL.
@@ -4226,6 +5006,8 @@ draw.colorbar <- function(col=NULL,min_val=NULL,max_val=NULL,n=5,digit_num=2,dir
 #' Please check \code{?Heatmap} for more details. Default is "pearson".
 #' @param show_row_names,show_column_names logical, the same parameters used in \code{Heatmap}.
 #' Please check \code{?Heatmap} for more details. Default is TRUE.
+#' @param use_color a vector of color codes, colors to be assigned to each member of display label. Default is brewer.pal(9, 'Set1').
+#' @param pre_define a vector of characters, pre-defined color codes for a certain input (e.g. c("blue", "red") with names c("A", "B")). Default is NULL.
 #' @param ..., for more options, please check \code{?Heatmap} for more details.
 #'
 #' @return Return a logical value. If TRUE, the plot has been created successfully.
@@ -4235,9 +5017,9 @@ draw.colorbar <- function(col=NULL,min_val=NULL,max_val=NULL,n=5,digit_num=2,dir
 #' analysis.par$out.dir.DATA <- system.file('demo1/driver/DATA/',package = "NetBID2")
 #' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
-#' exp_mat <- exprs(analysis.par$cal.eset) ## expression,the rownames matches originalID in ms_tab
-#' ac_mat <- exprs(analysis.par$merge.ac.eset) ## ac,the rownames matches originalID_label in ms_tab
-#' phe_info <- pData(analysis.par$cal.eset) ## phenotype information
+#' exp_mat <- Biobase::exprs(analysis.par$cal.eset) ## rownames matches originalID
+#' ac_mat <- Biobase::exprs(analysis.par$merge.ac.eset) ## rownames matches originalID_label
+#' phe_info <- Biobase::pData(analysis.par$cal.eset) ## phenotype information
 #' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
 #'                                logFC_col='logFC.G4.Vs.others_DA',
 #'                                Pv_col='P.Value.G4.Vs.others_DA',
@@ -4257,7 +5039,8 @@ draw.colorbar <- function(col=NULL,min_val=NULL,max_val=NULL,n=5,digit_num=2,dir
 #'             cluster_rows=TRUE,cluster_columns=TRUE,
 #'             clustering_distance_rows='pearson',
 #'             clustering_distance_columns='pearson',
-#'             row_names_gp = gpar(fontsize = 12))
+#'             row_names_gp = gpar(fontsize = 12),
+#'             pre_define=c('WNT'='blue','SHH'='red','G4'='green'))
 #' draw.heatmap(mat=ac_mat,use_genes=ms_tab[rownames(sig_driver),'originalID_label'],
 #'              use_gene_label=ms_tab[rownames(sig_driver),'gene_label'],
 #'              use_samples=colnames(ac_mat),
@@ -4267,16 +5050,17 @@ draw.colorbar <- function(col=NULL,min_val=NULL,max_val=NULL,n=5,digit_num=2,dir
 #'              cluster_rows=TRUE,cluster_columns=TRUE,
 #'              clustering_distance_rows='pearson',
 #'              clustering_distance_columns='pearson',
-#'              row_names_gp = gpar(fontsize = 6))
+#'              row_names_gp = gpar(fontsize = 6),
+#'              pre_define=c('WNT'='blue','SHH'='red','G4'='green'))
 #'
 #' \dontrun{
 #' analysis.par <- list()
 #' analysis.par$out.dir.DATA <- system.file('demo1/driver/DATA/',package = "NetBID2")
 #' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
-#' exp_mat <- exprs(analysis.par$cal.eset) ## expression,the rownames matches originalID in ms_tab
-#' ac_mat <- exprs(analysis.par$merge.ac.eset) ## ac,the rownames matches originalID_label in ms_tab
-#' phe_info <- pData(analysis.par$cal.eset) ## phenotype information
+#' exp_mat <- Biobase::exprs(analysis.par$cal.eset) ## rownames matches originalID
+#' ac_mat <- Biobase::exprs(analysis.par$merge.ac.eset) ## rownames matches originalID_label
+#' phe_info <- Biobase::pData(analysis.par$cal.eset) ## phenotype information
 #' analysis.par$out.dir.PLOT <- getwd() ## directory for saving the pdf files
 #' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
 #'                                logFC_col='logFC.G4.Vs.others_DA',
@@ -4299,7 +5083,8 @@ draw.colorbar <- function(col=NULL,min_val=NULL,max_val=NULL,n=5,digit_num=2,dir
 #'             clustering_distance_columns='pearson',
 #'             row_names_gp = gpar(fontsize = 12),
 #'             pdf_file=sprintf('%s/heatmap_demo1.pdf',
-#'             analysis.par$out.dir.PLOT))
+#'             analysis.par$out.dir.PLOT),
+#'             pre_define=c('WNT'='blue','SHH'='red','G4'='green'))
 #' draw.heatmap(mat=ac_mat,use_genes=ms_tab[rownames(sig_driver),'originalID_label'],
 #'              use_gene_label=ms_tab[rownames(sig_driver),'gene_label'],
 #'              use_samples=colnames(ac_mat),
@@ -4312,7 +5097,8 @@ draw.colorbar <- function(col=NULL,min_val=NULL,max_val=NULL,n=5,digit_num=2,dir
 #'              clustering_distance_columns='pearson',
 #'              row_names_gp = gpar(fontsize = 6),
 #'              pdf_file=sprintf('%s/heatmap_demo2.pdf',
-#'              analysis.par$out.dir.PLOT))
+#'              analysis.par$out.dir.PLOT),
+#'              pre_define=c('WNT'='blue','SHH'='red','G4'='green'))
 #'}
 #' @export
 draw.heatmap <- function(mat=NULL,use_genes=rownames(mat),use_gene_label=use_genes,use_samples=colnames(mat),use_sample_label=use_samples,
@@ -4320,7 +5106,20 @@ draw.heatmap <- function(mat=NULL,use_genes=rownames(mat),use_gene_label=use_gen
                          cluster_rows=TRUE,cluster_columns=TRUE,
                          show_row_names=TRUE,show_column_names=TRUE,
                          clustering_distance_rows='pearson',clustering_distance_columns='pearson',
+                         use_color=NULL,pre_define=NULL,
                          ...){
+  #
+  all_input_para <- c('mat','use_genes','use_gene_label','use_samples','use_sample_label','phenotype_info','use_phe','main','scale',
+                      'cluster_rows','cluster_columns','show_row_names','show_column_names','clustering_distance_rows','clustering_distance_columns')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  check_res <- c(check_option('cluster_rows',c(TRUE,FALSE),envir=environment()),
+                 check_option('cluster_columns',c(TRUE,FALSE),envir=environment()),
+                 check_option('show_row_names',c(TRUE,FALSE),envir=environment()),
+                 check_option('show_column_names',c(TRUE,FALSE),envir=environment()),
+                 check_option('scale',c("none", "row",'column'),envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
   names(use_gene_label) <- use_genes
   names(use_sample_label) <- use_samples
   if(is.null(rownames(phenotype_info))==FALSE){
@@ -4329,38 +5128,38 @@ draw.heatmap <- function(mat=NULL,use_genes=rownames(mat),use_gene_label=use_gen
     colnames(phenotype_info) <- colnames(ori_phenotype_info)
   }
   for(i in colnames(phenotype_info)){
-    phenotype_info[,i] <- as.character(phenotype_info[,i])
+    phenotype_info[,i] <- clean_charVector(phenotype_info[,i])
   }
   if(exists('row_names_gp')==FALSE) row_names_gp <- gpar(fontsize = 12)
   if(exists('column_names_gp')==FALSE) column_names_gp <- gpar(fontsize = 12)
-  use_genes <- intersect(use_genes,rownames(mat))
-  use_samples <- intersect(use_samples,colnames(mat))
+  use_genes <- base::intersect(use_genes,rownames(mat))
+  use_samples <- base::intersect(use_samples,colnames(mat))
   use_mat <- mat[use_genes,use_samples]
   rownames(use_mat) <- use_gene_label[rownames(use_mat)]
   colnames(use_mat) <- use_sample_label[colnames(use_mat)]
-  row_names_max_width <- max(strwidthMod(rownames(use_mat),'inches',cex=row_names_gp[[1]]/7))
+  row_names_max_width <- base::max(strwidthMod(rownames(use_mat),'inches',cex=row_names_gp[[1]]/7))
   row_names_max_width <- unit(row_names_max_width,'inches')
-  column_names_max_height <- max(strwidthMod(colnames(use_mat),'inches',cex=column_names_gp[[1]]/7))
+  column_names_max_height <- base::max(strwidthMod(colnames(use_mat),'inches',cex=column_names_gp[[1]]/7))
   column_names_max_height <- unit(column_names_max_height,'inches')
-  if(scale=='row'){use_mat <- t(apply(use_mat,1,std))}
-  if(scale=='column'){use_mat <- apply(use_mat,2,std)}
-  if(length(use_phe)==0){
+  if(scale=='row'){use_mat <- t(apply(use_mat,1,do.std))}
+  if(scale=='column'){use_mat <- apply(use_mat,2,do.std)}
+  if(base::length(use_phe)==0){
     if(scale=='none'){
-      ht1 <- Heatmap(use_mat, column_title = main,name='Raw value',
+      ht1 <- ComplexHeatmap::Heatmap(use_mat, column_title = main,name='Raw value',
                      cluster_rows=cluster_rows,cluster_columns=cluster_columns,
                      clustering_distance_rows=clustering_distance_rows,clustering_distance_columns=clustering_distance_columns,
                      show_row_names=show_row_names,show_column_names=show_column_names,
                      row_names_max_width=row_names_max_width,column_names_max_height=column_names_max_height,...)
     }
     if(scale!='none'){
-      ht1 <- Heatmap(use_mat, column_title = main, name='Z value',
+      ht1 <- ComplexHeatmap::Heatmap(use_mat, column_title = main, name='Z value',
                      cluster_rows=cluster_rows,cluster_columns=cluster_columns,
                      clustering_distance_rows=clustering_distance_rows,clustering_distance_columns=clustering_distance_columns,
                      show_row_names=show_row_names,show_column_names=show_column_names,
                      row_names_max_width=row_names_max_width,column_names_max_height=column_names_max_height,...)
     }
   }else{
-    if(length(use_phe)==1){
+    if(base::length(use_phe)==1){
       use_phe_info <- as.data.frame(phenotype_info[,use_phe],stringsAsFactors=FALSE)
       rownames(use_phe_info) <- rownames(phenotype_info)
       colnames(use_phe_info) <- gsub(' ','.',use_phe)
@@ -4369,19 +5168,19 @@ draw.heatmap <- function(mat=NULL,use_genes=rownames(mat),use_gene_label=use_gen
       colnames(use_phe_info) <- gsub(' ','.',use_phe)
     }
     use_phe <- colnames(use_phe_info)
-    l2c <- get.class.color(unique(as.character(as.matrix(use_phe_info))),use_color=brewer.pal(12, 'Paired'))
-    use_col <- lapply(use_phe,function(x)l2c[unique(use_phe_info[,x])])
+    l2c <- get.class.color(base::unique(as.character(as.matrix(use_phe_info))),use_color=use_color,pre_define=pre_define)
+    use_col <- lapply(use_phe,function(x)l2c[base::unique(use_phe_info[,x])])
     names(use_col) <- use_phe
-    ha_column <- HeatmapAnnotation(df = data.frame(use_phe_info),col = use_col)
+    ha_column <- ComplexHeatmap::HeatmapAnnotation(df = data.frame(use_phe_info),col = use_col)
     if(scale=='none'){
-      ht1 <- Heatmap(use_mat, column_title = main, top_annotation = ha_column,name='Raw value',
+      ht1 <- ComplexHeatmap::Heatmap(use_mat, column_title = main, top_annotation = ha_column,name='Raw value',
                      cluster_rows=cluster_rows,cluster_columns=cluster_columns,
                      show_row_names=show_row_names,show_column_names=show_column_names,
                      clustering_distance_rows=clustering_distance_rows,clustering_distance_columns=clustering_distance_columns,
                      row_names_max_width=row_names_max_width,column_names_max_height=column_names_max_height,...)
     }
     if(scale!='none'){
-      ht1 <- Heatmap(use_mat, column_title = main, top_annotation = ha_column,name='Z value',
+      ht1 <- ComplexHeatmap::Heatmap(use_mat, column_title = main, top_annotation = ha_column,name='Z value',
                      cluster_rows=cluster_rows,cluster_columns=cluster_columns,
                      clustering_distance_rows=clustering_distance_rows,clustering_distance_columns=clustering_distance_columns,
                      show_row_names=show_row_names,show_column_names=show_column_names,
@@ -4390,12 +5189,12 @@ draw.heatmap <- function(mat=NULL,use_genes=rownames(mat),use_gene_label=use_gen
   }
   ht_list <- ht1
   if(is.null(pdf_file)==FALSE){
-    ww <- 1.25*column_names_gp[[1]]/72*ncol(use_mat)+max(strwidthMod(rownames(use_mat),'inches',ori=TRUE))+5
-    hh <- 1.25*row_names_gp[[1]]/72*nrow(use_mat)+max(strwidthMod(colnames(use_mat),'inches',ori=TRUE))+3
+    ww <- 1.25*column_names_gp[[1]]/72*ncol(use_mat)+base::max(strwidthMod(rownames(use_mat),'inches',ori=TRUE))+5
+    hh <- 1.25*row_names_gp[[1]]/72*nrow(use_mat)+base::max(strwidthMod(colnames(use_mat),'inches',ori=TRUE))+3
     pdf(pdf_file,width=ww,height=hh)
   }
-  draw(ht_list,heatmap_legend_side='left',annotation_legend_side='right')
-  if(is.null(pdf_file)==FALSE) {dev.off();dev.off();}
+  ComplexHeatmap::draw(ht_list,heatmap_legend_side='left',annotation_legend_side='right')
+  if(is.null(pdf_file)==FALSE) {while (!is.null(dev.list()))  dev.off();}
   return(TRUE)
 }
 
@@ -4418,19 +5217,30 @@ draw.heatmap <- function(mat=NULL,use_genes=rownames(mat),use_gene_label=use_gen
 #'
 #' @export
 merge_gs <- function(all_gs2gene=all_gs2gene,use_gs=c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG','C5')){
-  if(is.null(use_gs)==TRUE | 'all' %in% use_gs){
-    use_gs <- unique(all_gs2gene_info$Category)
+  #
+  all_input_para <- c('all_gs2gene')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
+  if(is.null(use_gs)==TRUE | 'all' %in% use_gs){ ## all gene sets
+    use_gs <- base::unique(all_gs2gene_info$Category)
   }
-  use_gs <- unique(use_gs)
+  #
+  use_gs <- base::unique(use_gs)
+  use_gs <- base::intersect(use_gs,names(all_gs2gene))
+  if(base::length(use_gs)==0){
+    message('Wrong setting for use_gs, no intersection with names(all_gs2gene), please check and re-try!');return(FALSE);
+  }
+  message(sprintf('%s will be merged !',paste(use_gs,collapse=';')))
   nn <- unlist(lapply(all_gs2gene[use_gs],names))
   use_gs2gene <- unlist(all_gs2gene[use_gs],recursive = FALSE)
   names(use_gs2gene)<-nn
-  if(length(unique(nn))<length(nn)){
+  if(base::length(base::unique(nn))<base::length(nn)){
     message('duplicate names observed, will merge by name!')
-    nn1 <- unique(nn)
+    nn1 <- base::unique(nn)
     mod_use_gs2gene <- list()
     for(i in nn1){
-      mod_use_gs2gene[[i]] <- unique(unlist(use_gs2gene[which(nn==i)]))
+      mod_use_gs2gene[[i]] <- base::unique(unlist(use_gs2gene[which(nn==i)]))
     }
     names(mod_use_gs2gene) <- nn1
     use_gs2gene <- mod_use_gs2gene
@@ -4440,9 +5250,9 @@ merge_gs <- function(all_gs2gene=all_gs2gene,use_gs=c('H','CP:BIOCARTA','CP:REAC
 
 # simple functions
 list2mat <- function(input_list){
-  all_x <- unique(unlist(input_list))
-  all_y <- unique(names(input_list))
-  mat1 <- matrix(0,nrow=length(all_x),ncol=length(all_y))
+  all_x <- base::unique(unlist(input_list))
+  all_y <- base::unique(names(input_list))
+  mat1 <- matrix(0,nrow=base::length(all_x),ncol=base::length(all_y))
   rownames(mat1) <- all_x; colnames(mat1) <- all_y;
   for(i in names(input_list)){
     mat1[input_list[[i]],i] <- 1
@@ -4453,8 +5263,8 @@ vec2list <- function(input_v,sep=NULL){
   if(is.null(sep)==TRUE){
     tmp2 <- list()
     input_vn <- names(input_v)
-    input_v <- as.character(input_v); names(input_v) <- input_vn
-    for(i in 1:length(input_v)){
+    input_v <- clean_charVector(input_v); names(input_v) <- input_vn
+    for(i in 1:base::length(input_v)){
       if(input_v[i] %in% names(tmp2)){
         tmp2[[input_v[i]]] <- c(tmp2[[input_v[i]]],names(input_v)[i])
       }else{
@@ -4462,7 +5272,7 @@ vec2list <- function(input_v,sep=NULL){
       }
     }
   }else{
-    tmp1 <- aggregate(names(input_v),list(input_v),function(x)paste(x,collapse=sep))
+    tmp1 <- stats::aggregate(names(input_v),list(input_v),function(x)base::paste(x,collapse=sep))
     tmp2 <- tmp1$x; names(tmp2) <- tmp1$Group.1
   }
   tmp2
@@ -4529,6 +5339,13 @@ funcEnrich.Fisher <- function(input_list=NULL,bg_list=NULL,
                               use_gs=NULL,
                               gs2gene=NULL,
                               min_gs_size=5,max_gs_size=500,Pv_adj='fdr',Pv_thre=0.1){
+  #
+  all_input_para <- c('input_list','min_gs_size','max_gs_size','Pv_adj','Pv_thre')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  check_res <- c(check_option('Pv_adj',c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY","fdr", "none"),envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
   if(is.null(gs2gene)==TRUE){ ## use inner gs2gene
     if(is.null(use_gs)==TRUE){
       use_gs <- c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG')
@@ -4537,12 +5354,12 @@ funcEnrich.Fisher <- function(input_list=NULL,bg_list=NULL,
         use_gs <- c(all_gs2gene_info$Category,all_gs2gene_info$`Sub-Category`)
       }
     }
-    if(length(setdiff(use_gs,c(all_gs2gene_info$Category,all_gs2gene_info$`Sub-Category`)))>0){
+    if(base::length(base::setdiff(use_gs,c(all_gs2gene_info$Category,all_gs2gene_info$`Sub-Category`)))>0){
       message(sprintf('Input %s not in all_gs2gene, please check all_gs2gene_info (items in Category or Sub-Category) and re-try!',
-                      paste(setdiff(use_gs,c(all_gs2gene_info$Category,all_gs2gene_info$`Sub-Category`)),collapse=';')));
+                      base::paste(base::setdiff(use_gs,c(all_gs2gene_info$Category,all_gs2gene_info$`Sub-Category`)),collapse=';')));
       return(FALSE)
     }
-    if(length(use_gs)>1){
+    if(base::length(use_gs)>1){
       gs2gene <- merge_gs(all_gs2gene,use_gs = use_gs)
     }else{
       gs2gene <- all_gs2gene[[use_gs]]
@@ -4551,7 +5368,7 @@ funcEnrich.Fisher <- function(input_list=NULL,bg_list=NULL,
     if(is.null(use_gs)==TRUE){
       use_gs <- 'all'
     }
-    if(length(use_gs)>1){
+    if(base::length(use_gs)>1){
       if(class(gs2gene[[1]])=='list') gs2gene <- merge_gs(gs2gene,use_gs = use_gs)
     }else{
       if(use_gs == 'all'){
@@ -4562,45 +5379,45 @@ funcEnrich.Fisher <- function(input_list=NULL,bg_list=NULL,
     }
   }
   all_gs <- names(gs2gene)
-  input_list <- unique(input_list)
-  bg_list <- unique(bg_list)
+  input_list <- base::unique(input_list)
+  bg_list <- base::unique(bg_list)
   if(!is.null(bg_list)){
-    use_gs2gene <- lapply(gs2gene,function(x){intersect(x,bg_list)})
+    use_gs2gene <- lapply(gs2gene,function(x){base::intersect(x,bg_list)})
     names(use_gs2gene) <- names(gs2gene)
   }else{
     use_gs2gene <- gs2gene
   }
-  bg_list <- unique(unlist(use_gs2gene))
+  bg_list <- base::unique(unlist(use_gs2gene))
   ## size selection
   s1 <- unlist(lapply(use_gs2gene,length))
   w1 <- which(s1>=min_gs_size & s1<=max_gs_size)
   use_gs2gene <- use_gs2gene[w1]
   all_gs <- names(use_gs2gene) ## all tested gene set number
   ## input filter
-  input_list <- intersect(input_list,bg_list)
-  bg_or <- length(input_list)/length(bg_list)
+  input_list <- base::intersect(input_list,bg_list)
+  bg_or <- base::length(input_list)/base::length(bg_list)
   s1 <- unlist(lapply(use_gs2gene,function(x){
-    length(intersect(input_list,x))/length(x)
+    base::length(base::intersect(input_list,x))/base::length(x)
   }))
   w1 <- which(s1>bg_or)
   use_gs2gene <- use_gs2gene[w1]
   empty_vec <- as.data.frame(matrix(NA,ncol=9));colnames(empty_vec) <- c('#Name','Total_item','Num_item','Num_list','Num_list_item','Ori_P','Adj_P','Odds_Ratio','Intersected_items')
-  if(length(w1)==0) return(empty_vec)
+  if(base::length(w1)==0) return(empty_vec)
   ## fisher~
   pv <- lapply(use_gs2gene,function(x){
-    n11 <- length(intersect(input_list,x))
-    n12 <- length(intersect(input_list,setdiff(bg_list,x)))
-    n21 <- length(setdiff(x,input_list))
-    n22 <- length(setdiff(bg_list,unique(c(input_list,x))))
-    ft <- fisher.test(cbind(c(n11,n12),c(n21,n22)))$p.value
+    n11 <- base::length(base::intersect(input_list,x))
+    n12 <- base::length(base::intersect(input_list,base::setdiff(bg_list,x)))
+    n21 <- base::length(base::setdiff(x,input_list))
+    n22 <- base::length(base::setdiff(bg_list,base::unique(c(input_list,x))))
+    ft <- fisher.test(base::cbind(c(n11,n12),c(n21,n22)))$p.value
     or <- n11/n12/(n21/n22)
-    c(length(bg_list),length(x),length(input_list),n11,ft,or,paste(intersect(input_list,x),collapse=';'))
+    c(base::length(bg_list),base::length(x),base::length(input_list),n11,ft,or,base::paste(base::intersect(input_list,x),collapse=';'))
   })
   pv <- do.call(rbind,pv)
   pv <- as.data.frame(pv,stringsAsFactors=FALSE)
   colnames(pv) <- c('Total_item','Num_item','Num_list','Num_list_item','Ori_P','Odds_Ratio','Intersected_items')
   pv[1:6] <- lapply(pv[1:6],as.numeric)
-  pv$Adj_p <- p.adjust(pv$Ori_P,method=Pv_adj,n=length(all_gs))
+  pv$Adj_p <- p.adjust(pv$Ori_P,method=Pv_adj,n=base::length(all_gs))
   pv$`#Name` <- rownames(pv)
   pv <- pv[,c(9,1:5,8,6:7)]
   pv <- pv[order(pv$Ori_P),]
@@ -4693,6 +5510,14 @@ draw.funcEnrich.bar <- function(funcEnrich_res=NULL,top_number=30,
                                 Pv_thre=0.1,display_genes=FALSE,name_col='#Name',
                                 gs_cex=0.5,gene_cex=0.5,main="",bar_col=brewer.pal(8,'RdBu')[7],eg_num=5,
                                 pdf_file=NULL){
+  #
+  all_input_para <- c('funcEnrich_res','Pv_col','item_col','Pv_thre','display_genes','name_col',
+                      'gs_cex','gene_cex','main','bar_col','eg_num')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  check_res <- c(check_option('display_genes',c(TRUE,FALSE),envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
   if(is.null(top_number)==TRUE) top_number <- nrow(funcEnrich_res)
   funcEnrich_res <- funcEnrich_res[which(funcEnrich_res[,Pv_col]<=Pv_thre),]
   if(nrow(funcEnrich_res)>top_number) funcEnrich_res <- funcEnrich_res[1:top_number,]
@@ -4700,7 +5525,7 @@ draw.funcEnrich.bar <- function(funcEnrich_res=NULL,top_number=30,
   s1 <- funcEnrich_res[[item_col]]
   s1 <- sapply(s1,function(x){
     x1 <- unlist(strsplit(x,';'))
-    if(length(x1)>eg_num){x2 <- sprintf('Total %d items, e.g: %s',length(x1),paste(x1[1:5],collapse=';'));x<-x2;}
+    if(base::length(x1)>eg_num){x2 <- sprintf('Total %d items, e.g: %s',base::length(x1),base::paste(x1[1:5],collapse=';'));x<-x2;}
     return(x)
   })
   ## plot design (inch)
@@ -4708,10 +5533,10 @@ draw.funcEnrich.bar <- function(funcEnrich_res=NULL,top_number=30,
   # H: |1|textHeight|1
   plot_part <- function(ori=FALSE,before_off=FALSE){
     #print(strwidth('W',units = 'inch'))
-    textWidth   <- max(strwidthMod(funcEnrich_res[,name_col],units='inch',cex=gs_cex,ori=ori))+par.char2inch()[1]
-    textWidth1  <- max(strwidthMod(s1,units='inch',cex=gene_cex,ori=ori))+par.char2inch()[1]
-    each_textHeight <- max(strheightMod(funcEnrich_res[,name_col],units='inch',cex=gs_cex))
-    if(display_genes==TRUE) each_textHeight <- max(each_textHeight,max(strheightMod(s1,units='inch',cex=gene_cex)))
+    textWidth   <- base::max(strwidthMod(funcEnrich_res[,name_col],units='inch',cex=gs_cex,ori=ori))+par.char2inch()[1]
+    textWidth1  <- base::max(strwidthMod(s1,units='inch',cex=gene_cex,ori=ori))+par.char2inch()[1]
+    each_textHeight <- base::max(strheightMod(funcEnrich_res[,name_col],units='inch',cex=gs_cex))
+    if(display_genes==TRUE) each_textHeight <- base::max(each_textHeight,base::max(strheightMod(s1,units='inch',cex=gene_cex)))
     textHeight <- nrow(funcEnrich_res)*1.5*each_textHeight*1.04 # default space=0.2, set 0.5 here
     if(before_off==TRUE) dev.off()
     if(is.null(pdf_file)==FALSE){
@@ -4724,14 +5549,14 @@ draw.funcEnrich.bar <- function(funcEnrich_res=NULL,top_number=30,
       pdf(pdf_file,width=ww,height=hh)
     }
     if(display_genes==TRUE) par(mai=c(1,textWidth,1,textWidth1)) else par(mai=c(1,textWidth,1,1))
-    a<-barplot(rev(-log10(pv_val)),horiz=TRUE,border = NA,col=bar_col,main=main,xaxt='n',
+    a<-graphics::barplot(rev(-log10(pv_val)),horiz=TRUE,border = NA,col=bar_col,main=main,xaxt='n',
                xlim=c(0,max(-log10(pv_val))),space=0.5,width=each_textHeight*par.inch2pos()[2])
-    mtext(side=1,'P-value',line=0.5/par.lineHeight2inch(),xpd=TRUE) ## middle position
-    axis(side=1,at=0:round(par()$usr[2]),labels=10^-(0:round(par()$usr[2])),xpd=TRUE)
-    text(par()$usr[1]-0.5*par.char2pos()[1],a,rev(funcEnrich_res[,name_col]),adj=1,xpd=TRUE,cex=gs_cex);
-    if(display_genes==TRUE) text(rev(-log10(pv_val))+0.5*par.char2pos()[1],a,rev(s1),adj=0,xpd=TRUE,cex=gene_cex)
+    graphics::mtext(side=1,'P-value',line=0.5/par.lineHeight2inch(),xpd=TRUE) ## middle position
+    graphics::axis(side=1,at=0:round(par()$usr[2]),labels=10^-(0:round(par()$usr[2])),xpd=TRUE)
+    graphics::text(par()$usr[1]-0.5*par.char2pos()[1],a,rev(funcEnrich_res[,name_col]),adj=1,xpd=TRUE,cex=gs_cex);
+    if(display_genes==TRUE) graphics::text(rev(-log10(pv_val))+0.5*par.char2pos()[1],a,rev(s1),adj=0,xpd=TRUE,cex=gene_cex)
   }
-  if(is.null(pdf_file)==FALSE){plot_part(ori=TRUE);plot_part(ori=TRUE,before_off=TRUE);dev.off();dev.off()} else {plot_part()}
+  if(is.null(pdf_file)==FALSE){plot_part(ori=TRUE);plot_part(ori=TRUE,before_off=TRUE);while (!is.null(dev.list()))  dev.off()} else {plot_part()}
   return(TRUE)
 }
 
@@ -4844,6 +5669,16 @@ draw.funcEnrich.bar <- function(funcEnrich_res=NULL,top_number=30,
 draw.funcEnrich.cluster <- function(funcEnrich_res=NULL,top_number=30,Pv_col='Ori_P',name_col='#Name',item_col='Intersected_items',Pv_thre=0.1,
                                     gs_cex=0.7,gene_cex=0.8,pv_cex=0.7,main="",h=0.95,cluster_gs=TRUE,cluster_gene=TRUE,
                                     pdf_file=NULL,use_genes=NULL,return_mat=FALSE){
+  #
+  all_input_para <- c('funcEnrich_res','Pv_col','item_col','Pv_thre','name_col',
+                      'gs_cex','gene_cex','pv_cex','main','h','cluster_gs','cluster_gene','return_mat')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  check_res <- c(check_option('cluster_gs',c(TRUE,FALSE),envir=environment()),
+                 check_option('cluster_gene',c(TRUE,FALSE),envir=environment()),
+                 check_option('return_mat',c(TRUE,FALSE),envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
   if(is.null(top_number)==TRUE) top_number <- nrow(funcEnrich_res)
   funcEnrich_res <- funcEnrich_res[which(funcEnrich_res[,Pv_col]<=Pv_thre),]
   if(nrow(funcEnrich_res)>top_number) funcEnrich_res <- funcEnrich_res[1:top_number,]
@@ -4852,7 +5687,7 @@ draw.funcEnrich.cluster <- function(funcEnrich_res=NULL,top_number=30,Pv_col='Or
   names(all_g2s) <- funcEnrich_res[,name_col]
   mat1 <- t(list2mat(all_g2s))
   mat1 <- mat1[rev(funcEnrich_res[,name_col]),]
-  if(is.null(use_genes)==FALSE) mat1 <- mat1[,intersect(colnames(mat1),use_genes)]
+  if(is.null(use_genes)==FALSE) mat1 <- mat1[,base::intersect(colnames(mat1),use_genes)]
   if(ncol(mat1)==0){message('No genes left, please check and re-try!');return(FALSE)}
   #mat1 <- mat1[,order(colnames(mat1))]
   h_gs <- hclust(dist(mat1,method='binary'))
@@ -4861,13 +5696,13 @@ draw.funcEnrich.cluster <- function(funcEnrich_res=NULL,top_number=30,Pv_col='Or
   gene_cluster <- cutree(h_gene,h=h)
   if(cluster_gs==FALSE){gs_cluster <- rep(1,length.out=nrow(mat1));names(gs_cluster)<-rownames(mat1);}
   if(cluster_gene==FALSE){gene_cluster <- rep(1,length.out=ncol(mat1));names(gene_cluster)<-colnames(mat1);}
-  cc1 <- colorRampPalette(brewer.pal(8,'Dark2'))(length(unique(gs_cluster)))
-  cc2 <- colorRampPalette(brewer.pal(9,'Pastel1'))(length(unique(gene_cluster)))
-  cc3 <- colorRampPalette(brewer.pal(9,'Reds')[3:9])(100)
+  cc1 <- grDevices::colorRampPalette(brewer.pal(8,'Dark2'))(base::length(base::unique(gs_cluster)))
+  cc2 <- grDevices::colorRampPalette(brewer.pal(9,'Pastel1'))(base::length(base::unique(gene_cluster)))
+  cc3 <- grDevices::colorRampPalette(brewer.pal(9,'Reds')[3:9])(100)
   # get gs order
   if(cluster_gs==TRUE) gs_cluster <- gs_cluster[h_gs$order]
   tmp2 <- vec2list(gs_cluster,sep=NULL)
-  tmp2 <- tmp2[rev(order(unlist(lapply(tmp2,function(x)min(funcEnrich_res[x,Pv_col])))))]
+  tmp2 <- tmp2[rev(order(unlist(lapply(tmp2,function(x)base::min(funcEnrich_res[x,Pv_col])))))]
   mat1 <- mat1[unlist(tmp2),]
   if(cluster_gene==TRUE) mat1 <- mat1[,h_gene$order]
   gs_cluster <- gs_cluster[rownames(mat1)]
@@ -4877,79 +5712,83 @@ draw.funcEnrich.cluster <- function(funcEnrich_res=NULL,top_number=30,Pv_col='Or
   pv <- pv_val[rownames(mat1)]
   pv1 <- format(pv,scientific = TRUE,digits = 3)
   plot_part <- function(ori=TRUE,before_off=FALSE){
-    gsWidth <- max(strwidthMod(rownames(mat1),units='inch',cex=gs_cex,ori=ori))+par.char2inch()[1]
-    gsHeight <- max(strheightMod(rownames(mat1),units='inch',cex=gs_cex))*nrow(mat1)*1.75
-    geneWidth <- max(strheightMod(colnames(mat1),units='inch',cex=gene_cex))*ncol(mat1)*1.5
-    geneHeight <- max(strwidthMod(colnames(mat1),units='inch',cex=gene_cex,ori=ori))*1.05+par.char2inch()[2]*1.1 ## add bar height
-    pvWidth   <- max(strwidthMod(pv1,units='inch',cex=pv_cex,ori=ori))+par.char2inch()[1]
-    pvHeight   <- max(strheightMod(pv1,units='inch',cex=pv_cex,ori=ori))*nrow(mat1)*1.75
-    gsHeight <- max(gsHeight,pvHeight)
-
-    ww <- gsWidth+pvWidth+geneWidth+0.5
+    gsWidth <- base::max(strwidthMod(rownames(mat1),units='inch',cex=gs_cex,ori=ori))+par.char2inch()[1]
+    gsHeight <- base::max(strheightMod(rownames(mat1),units='inch',cex=gs_cex))*nrow(mat1)*1.75
+    geneWidth <- base::max(strheightMod(colnames(mat1),units='inch',cex=gene_cex))*ncol(mat1)*1.5
+    geneHeight <- base::max(strwidthMod(colnames(mat1),units='inch',cex=gene_cex,ori=ori))*1.05+par.char2inch()[2]*1.1 ## add bar height
+    pvWidth   <- base::max(strwidthMod(pv1,units='inch',cex=pv_cex,ori=ori))+par.char2inch()[1]
+    pvHeight   <- base::max(strheightMod(pv1,units='inch',cex=pv_cex,ori=ori))*nrow(mat1)*1.75
+    gsHeight <- base::max(gsHeight,pvHeight)
+    ##
+    ##
+    mr <- 1/pvWidth
+    geneWidth1 <- ceiling((geneWidth+0.5)*mr)
+    pvWidth1 <- 1
+    gsWidth1 <- ceiling((gsWidth+0.5)*mr)
+    if(geneWidth1+pvWidth1+gsWidth1>200){ ## avoid too many graphics::layout values
+      mr <- 180/(geneWidth1+pvWidth1+gsWidth1)
+      geneWidth1 <- round(geneWidth1*mr)
+      pvWidth1 <- round(pvWidth1*mr)
+      gsWidth1 <- ceiling(gsWidth1*mr)
+    }
+    #####
+    ww <- (gsWidth+pvWidth+geneWidth)+1
     hh <- geneHeight+gsHeight+0.5
+    #print(c(ww,hh))
     ## pdf
     if(before_off==TRUE) dev.off()
     if(is.null(pdf_file)==FALSE) pdf(file=pdf_file,width=ww,height=hh)
-    #####
+    ## graphics::layout: 1|2|3
+    graphics::layout(t(matrix(c(rep(1,geneWidth1),rep(2,pvWidth1),rep(3,gsWidth1)),byrow=TRUE)))
+    #print(t(matrix(c(rep(1,geneWidth1),rep(2,pvWidth1),rep(3,gsWidth1)),byrow=TRUE)))
+    #print(ww);print(hh)
     par(mai=c(0.5,0.5,geneHeight,0));
-    mr <- 1/pvWidth
-    geneWidth <- floor(geneWidth*mr)
-    pvWidth <- round(pvWidth*mr)
-    gsWidth <- ceiling(gsWidth*mr)
-    if(geneWidth+pvWidth+gsWidth>200){ ## avoid too many layout values
-      mr <- 180/(geneWidth+pvWidth+gsWidth)
-      geneWidth <- floor(geneWidth*mr)
-      pvWidth <- round(pvWidth*mr)
-      gsWidth <- ceiling(gsWidth*mr)
-    }
-    ## layout: 1|2|3
-    layout(t(matrix(c(rep(1,geneWidth),rep(2,pvWidth),rep(3,gsWidth)),byrow=TRUE)))
-    image(t(mat1),col=c('white',cc3[1]),xaxt='n',yaxt='n',bty='n')
+    graphics::image(t(mat1),col=c('white',cc3[1]),xaxt='n',yaxt='n',bty='n')
     pp <- par()$usr;
-    gs_cs <- cumsum(table(gs_cluster)[unique(gs_cluster)])
-    gene_cs <- cumsum(table(gene_cluster)[unique(gene_cluster)])
-    xx <- (pp[2]-pp[1])/length(gene_cluster);
-    yy <- (pp[4]-pp[3])/length(gs_cluster)
-    abline(h=gs_cs*yy+pp[3],col='black',lwd=0.25)
-    abline(v=gene_cs*xx+pp[1],col='black',lwd=0.25)
-    abline(v=pp[1:2],col='black',lwd=0.5);
-    abline(h=pp[3:4],col='black',lwd=0.5)
+    gs_cs <- cumsum(base::table(gs_cluster)[base::unique(gs_cluster)])
+    gene_cs <- cumsum(base::table(gene_cluster)[base::unique(gene_cluster)])
+    xx <- (pp[2]-pp[1])/base::length(gene_cluster);
+    yy <- (pp[4]-pp[3])/base::length(gs_cluster)
+    graphics::abline(h=gs_cs*yy+pp[3],col='black',lwd=0.25)
+    graphics::abline(v=gene_cs*xx+pp[1],col='black',lwd=0.25)
+    graphics::abline(v=pp[1:2],col='black',lwd=0.5);
+    graphics::abline(h=pp[3:4],col='black',lwd=0.5)
     ## draw gene name
     yy <- par.char2pos()[2]*0.9
     if(cluster_gene==TRUE){
-      text(c(1:length(gene_cluster))*xx+pp[1]-xx/2,pp[4]+yy,colnames(mat1),xpd=TRUE,adj=0,cex=gene_cex,srt=90)
-      rect(xleft=c(1:length(gene_cluster))*xx+pp[1]-xx,xright=c(1:length(gene_cluster))*xx+pp[1],ybottom=pp[4],ytop=pp[4]+yy*0.8,
+      graphics::text(c(1:base::length(gene_cluster))*xx+pp[1]-xx/2,pp[4]+yy,colnames(mat1),xpd=TRUE,adj=0,cex=gene_cex,srt=90)
+      graphics::rect(xleft=c(1:base::length(gene_cluster))*xx+pp[1]-xx,xright=c(1:base::length(gene_cluster))*xx+pp[1],ybottom=pp[4],ytop=pp[4]+yy*0.8,
            col=cc2[gene_cluster[colnames(mat1)]],xpd=TRUE,border=NA)
     }else{
-      text(c(1:length(gene_cluster))*xx+pp[1]-xx/2,pp[4]+0.5*yy,colnames(mat1),xpd=TRUE,adj=0,cex=gene_cex,srt=90)
+      graphics::text(c(1:base::length(gene_cluster))*xx+pp[1]-xx/2,pp[4]+0.5*yy,colnames(mat1),xpd=TRUE,adj=0,cex=gene_cex,srt=90)
     }
     # draw p-value
     #pp <- par()$usr;
     par(mai=c(0.5,0,geneHeight,0));
-    plot(1,xaxt='n',yaxt='n',bty='n',xlim=c(pp[1],pp[2]),ylim=c(pp[3],pp[4]),col='white',xlab="",ylab="")
+    graphics::plot(1,xaxt='n',yaxt='n',bty='n',xlim=c(pp[1],pp[2]),ylim=c(pp[3],pp[4]),col='white',xlab="",ylab="")
     pp <- par()$usr;
-    yy <- (pp[4]-pp[3])/length(gs_cluster)
+    yy <- (pp[4]-pp[3])/base::length(gs_cluster)
     pv_c <- z2col(qnorm(1-pv))
-    rect(xleft=pp[1],xright=pp[2],ybottom=c(1:length(gs_cluster))*yy+pp[3]-yy,
-         ytop=c(1:length(gs_cluster))*yy+pp[3],
+    graphics::rect(xleft=pp[1],xright=pp[2],ybottom=c(1:base::length(gs_cluster))*yy+pp[3]-yy,
+         ytop=c(1:base::length(gs_cluster))*yy+pp[3],
          col=pv_c,border = NA)
-    text(0.5,c(1:length(gs_cluster))*yy+pp[3]-yy/2,pv1,xpd=TRUE,adj=0.5,cex=pv_cex)
-    abline(v=pp[1],col='black',lwd=2);
+    graphics::text(0.5,c(1:base::length(gs_cluster))*yy+pp[3]-yy/2,pv1,xpd=TRUE,adj=0.5,cex=pv_cex)
+    graphics::abline(v=pp[1],col='black',lwd=2);
     # draw gs name
     par(mai=c(0.5,0,geneHeight,0.5));
-    zz <- min(c(xx,yy))
-    plot(1,xaxt='n',yaxt='n',bty='n',xlim=c(pp[1],pp[2]),ylim=c(pp[3],pp[4]),col='white',xlab="",ylab="")
+    zz <- base::min(c(xx,yy))
+    graphics::plot(1,xaxt='n',yaxt='n',bty='n',xlim=c(pp[1],pp[2]),ylim=c(pp[3],pp[4]),col='white',xlab="",ylab="")
     pp <- par()$usr;
-    yy <- (pp[4]-pp[3])/length(gs_cluster)
-    text(pp[1]+zz*0.2,c(1:length(gs_cluster))*yy+pp[3]-yy/2,rownames(mat1),xpd=TRUE,adj=0,cex=gs_cex)
+    yy <- (pp[4]-pp[3])/base::length(gs_cluster)
+    graphics::text(pp[1]+zz*0.2,c(1:base::length(gs_cluster))*yy+pp[3]-yy/2,rownames(mat1),xpd=TRUE,adj=0,cex=gs_cex)
     # get region for p-value
-    #abline(v=pp[1:2],col='black',lwd=0.5);
-    abline(h=pp[3:4],col='black',lwd=0.5);
-    abline(v=pp[1],col='black',lwd=0.5);
-    abline(h=gs_cs*yy+pp[3],col='black',lwd=0.25)
+    #graphics::abline(v=pp[1:2],col='black',lwd=0.5);
+    graphics::abline(h=pp[3:4],col='black',lwd=0.5);
+    graphics::abline(v=pp[1],col='black',lwd=0.5);
+    graphics::abline(h=gs_cs*yy+pp[3],col='black',lwd=0.25)
     ##
   }
-  if(is.null(pdf_file)==FALSE){plot_part(ori=TRUE);plot_part(ori=TRUE,before_off=TRUE);dev.off();dev.off()} else {plot_part()}
+  if(is.null(pdf_file)==FALSE){plot_part(ori=TRUE);plot_part(ori=TRUE,before_off=TRUE);while (!is.null(dev.list()))  dev.off()} else {plot_part()}
   if(return_mat==TRUE){
     return(mat1)
   }else{
@@ -5017,7 +5856,7 @@ draw.funcEnrich.cluster <- function(funcEnrich_res=NULL,top_number=30,Pv_col='Or
 #'                                label_cex = 0.5)
 #' gs.preload(use_spe='Homo sapiens',update=FALSE)
 #' db.preload(use_level='gene',use_spe='human',update=FALSE)
-#' use_genes <- unique(analysis.par$merge.network$network_dat$target.symbol)
+#' use_genes <- base::unique(analysis.par$merge.network$network_dat$target.symbol)
 #' transfer_tab <- get_IDtransfer2symbol2type(from_type = 'external_gene_name',
 #'                                            use_genes=use_genes,
 #'                                            dataset='hsapiens_gene_ensembl')
@@ -5050,7 +5889,7 @@ draw.funcEnrich.cluster <- function(funcEnrich_res=NULL,top_number=30,Pv_col='Or
 #'                                label_type = 'origin',
 #'                                label_cex = 0.5)
 #' gs.preload(use_spe='Homo sapiens',update=FALSE)
-#' use_genes <- unique(analysis.par$merge.network$network_dat$target.symbol)
+#' use_genes <- base::unique(analysis.par$merge.network$network_dat$target.symbol)
 #' transfer_tab <- get_IDtransfer2symbol2type(from_type = 'external_gene_name',
 #'                                            use_genes=use_genes,
 #'                                            dataset='hsapiens_gene_ensembl')
@@ -5081,28 +5920,38 @@ draw.bubblePlot <- function(driver_list=NULL,show_label=driver_list,Z_val=NULL,d
                             Pv_adj='none',Pv_thre=0.1,
                             top_geneset_number=30,top_driver_number=30,
                             pdf_file=NULL,main="",mark_gene=NULL,driver_cex=1,gs_cex=1,only_return_mat=FALSE){
-  ## check NULL
-
+  #
+  all_input_para <- c('driver_list','show_label','Z_val','target_list','transfer2symbol2type',
+                      'min_gs_size','max_gs_size','Pv_adj','Pv_thre','top_geneset_number','top_driver_number',
+                      'driver_cex','gs_cex','only_return_mat')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  check_res <- c(check_option('only_return_mat',c(TRUE,FALSE),envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
   if(is.null(names(show_label))==TRUE){names(show_label) <- driver_list}
   if(is.null(names(Z_val))==TRUE){names(Z_val) <- driver_list}
   if(is.null(driver_type)==FALSE){
     if(is.null(names(driver_type))==TRUE){names(driver_type) <- driver_list}
   }
   driver_list <- driver_list[order(abs(Z_val),decreasing = TRUE)]
-  if(length(driver_list)>top_driver_number){
+  if(base::length(driver_list)>top_driver_number){
     driver_list <- driver_list[1:top_driver_number]
   }
   driver_list <- driver_list[order(Z_val[driver_list],decreasing=TRUE)]
   ## get target gene for driver_list
   transfer_tab <- transfer2symbol2type
+  if(base::length(base::intersect(c('gene_biotype'),colnames(transfer_tab)))==0 & base::length(base::intersect(c('transcript_biotype'),colnames(transfer_tab)))==0){
+    message('Input transfer table must contain the biotype information, please use get_IDtransfer2symbol2type() function to generate it!');return(FALSE);
+  }
   #rownames(transfer_tab) <- transfer_tab[,1]
   target_gene <- lapply(driver_list,function(x){
     x1 <- target_list[[x]]$target
     x1 <- x1[which(x1 %in% transfer_tab[,1])]
     x2 <- transfer_tab[which(transfer_tab[,1] %in% x1),]
     x3 <- x2[which(x2[,3]=='protein_coding'),]
-    target <- unique(x2[,2])
-    target_pc <- unique(x3[,2])
+    target <- base::unique(x2[,2])
+    target_pc <- base::unique(x3[,2])
     return(list(target,target_pc))
   })
   names(target_gene) <- driver_list
@@ -5114,11 +5963,11 @@ draw.bubblePlot <- function(driver_list=NULL,show_label=driver_list,Z_val=NULL,d
   })
   names(f_res) <- names(target_gene)
   ## get display matrix
-  all_path <- unique(unlist(lapply(f_res,function(x){x[[1]]})))
+  all_path <- base::unique(unlist(lapply(f_res,function(x){x[[1]]})))
   all_path <- all_path[which(is.na(all_path)==FALSE)] ## get all sig path
   if(is.null(display_gs_list)==FALSE){
-    all_path <- intersect(display_gs_list,all_path)
-    if(length(all_path)<3){
+    all_path <- base::intersect(display_gs_list,all_path)
+    if(base::length(all_path)<3){
       message('The number for passed gene sets is smaller than 3, please check the display_gs_list and re-try!')
       return(FALSE)
     }
@@ -5134,19 +5983,19 @@ draw.bubblePlot <- function(driver_list=NULL,show_label=driver_list,Z_val=NULL,d
   colnames(f_mat2) <- all_path
   f_mat3 <- t(apply(f_mat2,1,function(x){
     o1 <- order(abs(x),decreasing = TRUE)[1:3];
-    x1<-x;x1[setdiff(1:length(x1),o1)] <- 0;x1
+    x1<-x;x1[base::setdiff(1:base::length(x1),o1)] <- 0;x1
   }))
   ## use top
   min_path_num <- 5
   max_path_num <- top_geneset_number
   all_path_order <- apply(f_mat3,2,max)
   all_path_order <- sort(all_path_order,decreasing = TRUE)
-  if(length(all_path_order) > max_path_num){
-    w1 <- 1:length(all_path_order)
-    if(length(w1)>=min_path_num & length(w1)<=max_path_num){
+  if(base::length(all_path_order) > max_path_num){
+    w1 <- 1:base::length(all_path_order)
+    if(base::length(w1)>=min_path_num & base::length(w1)<=max_path_num){
       all_path <- names(sort(all_path_order[w1],decreasing=TRUE))
     }else{
-      if(length(w1)<min_path_num){
+      if(base::length(w1)<min_path_num){
         all_path <- names(sort(all_path_order,decreasing=TRUE)[1:min_path_num])
       }else{
         all_path <- names(sort(all_path_order,decreasing=TRUE)[1:max_path_num])
@@ -5160,18 +6009,18 @@ draw.bubblePlot <- function(driver_list=NULL,show_label=driver_list,Z_val=NULL,d
   }
   nr <- ncol(f_mat1)
   nc <- nrow(f_mat1)
-  if(only_return_mat==TRUE) return(f_mat2)
+  if(only_return_mat==TRUE) return(f_mat2) ####
   plot_part <- function(ori=FALSE,before_off=FALSE){
-    gsWidth  <- max(strwidthMod(colnames(f_mat1),'inches',cex=gs_cex,ori=ori))+par.char2inch()[1]
-    gsHeight <- max(strheightMod(colnames(f_mat1),'inches',cex=gs_cex)*nrow(f_mat1))
-    driverWidth  <- max(strwidthMod(show_label[rownames(f_mat1)],'inches',cex=driver_cex,ori=ori))+par.char2inch()[2]
-    driverHeight <- max(strheightMod(show_label[rownames(f_mat1)],'inches',cex=driver_cex)*ncol(f_mat1))
+    gsWidth  <- base::max(strwidthMod(colnames(f_mat1),'inches',cex=gs_cex,ori=ori))+par.char2inch()[1]
+    gsHeight <- base::max(strheightMod(colnames(f_mat1),'inches',cex=gs_cex)*nrow(f_mat1))
+    driverWidth  <- base::max(strwidthMod(show_label[rownames(f_mat1)],'inches',cex=driver_cex,ori=ori))+par.char2inch()[2]
+    driverHeight <- base::max(strheightMod(show_label[rownames(f_mat1)],'inches',cex=driver_cex)*ncol(f_mat1))
     if(is.null(driver_type)==FALSE){
-      rw <- max(strwidthMod(driver_type[driver_list],'inches',cex=gs_cex,ori=ori))+6*par.char2inch()[1]
+      rw <- base::max(strwidthMod(driver_type[driver_list],'inches',cex=gs_cex,ori=ori))+6*par.char2inch()[1]
     }else{
       rw <- 15*par.char2inch()[1]
     }
-    gsWidth <- max(gsWidth,+par.char2inch()[1]*10+strwidthMod('target_size\n(protein_coding)','inches',cex=0.8,ori=ori))
+    gsWidth <- base::max(gsWidth,+par.char2inch()[1]*10+strwidthMod('target_size\n(protein_coding)','inches',cex=0.8,ori=ori))
     ## output to pdf
     # width:gsWidth|nc*0.5|rw
     # height:driverWidth|2*0.5|(nr)*0.5|0.5|1
@@ -5179,24 +6028,24 @@ draw.bubblePlot <- function(driver_list=NULL,show_label=driver_list,Z_val=NULL,d
     hh <- driverWidth + 2*0.5 + nr*0.5 +0.5*1.5+1
     if(before_off==TRUE) dev.off()
     if(is.null(pdf_file)==FALSE) pdf(pdf_file,width=ww,height=hh)
-    layout(1);par(mai=c(driverWidth,gsWidth,1,rw))
-    plot(1,bty='n',col='white',xlim=c(0,nc),ylim=c(-2,nr+1.5),xaxt='n',yaxt='n',xlab="",ylab="",main=main,xaxs='i',yaxs='i')
-    segments(x0=0,x1=nc,y0=0:nr,y1=0:nr,col='dark grey',xpd=TRUE)
-    segments(x0=0:nc,x1=0:nc,y0=0,y1=nr,col='dark grey',xpd=TRUE)
-    segments(x0=0:nc,x1=0:nc,y0=0,y1=-2,col='grey',xpd=TRUE)
+    graphics::layout(1);par(mai=c(driverWidth,gsWidth,1,rw))
+    graphics::plot(1,bty='n',col='white',xlim=c(0,nc),ylim=c(-2,nr+1.5),xaxt='n',yaxt='n',xlab="",ylab="",main=main,xaxs='i',yaxs='i')
+    graphics::segments(x0=0,x1=nc,y0=0:nr,y1=0:nr,col='dark grey',xpd=TRUE)
+    graphics::segments(x0=0:nc,x1=0:nc,y0=0,y1=nr,col='dark grey',xpd=TRUE)
+    graphics::segments(x0=0:nc,x1=0:nc,y0=0,y1=-2,col='grey',xpd=TRUE)
     #
     pp <- par()$usr
-    text(pp[1]-par.char2pos()[1],1:nr-0.5,colnames(f_mat1),xpd=TRUE,srt=0,adj=1,cex=gs_cex) ## sig pathways
+    graphics::text(pp[1]-par.char2pos()[1],1:nr-0.5,colnames(f_mat1),xpd=TRUE,srt=0,adj=1,cex=gs_cex) ## sig pathways
     if(is.null(mark_gene)==TRUE){
-      text(1:nc-0.5,-2-par.char2pos()[2],show_label[rownames(f_mat1)],xpd=TRUE,srt=90,adj=1,cex=driver_cex) ## sig regulators
+      graphics::text(1:nc-0.5,-2-par.char2pos()[2],show_label[rownames(f_mat1)],xpd=TRUE,srt=90,adj=1,cex=driver_cex) ## sig regulators
     }else{
-      bc <- rep('black',length.out=length(rownames(f_mat1)))
+      bc <- rep('black',length.out=base::length(rownames(f_mat1)))
       bc[which(rownames(f_mat1) %in% mark_gene)] <- 'red'
-      print(table(bc))
-      text(1:nc-0.5,-2-par.char2pos()[2],show_label[rownames(f_mat1)],xpd=TRUE,srt=90,adj=1,col=bc,cex=driver_cex) ## sig regulators
+      print(base::table(bc))
+      graphics::text(1:nc-0.5,-2-par.char2pos()[2],show_label[rownames(f_mat1)],xpd=TRUE,srt=90,adj=1,col=bc,cex=driver_cex) ## sig regulators
     }
     ## draw circle
-    max_size <- max(f_mat1,na.rm=TRUE)
+    max_size <- base::max(f_mat1,na.rm=TRUE)
     f_mat1 <- f_mat1/max_size
     cc_r <- matrix(z2col(f_mat2,n_len=30,sig_thre=qnorm(1-0.1)),ncol=ncol(f_mat2),byrow = FALSE)
     for(i in 1:nrow(f_mat1)){
@@ -5205,12 +6054,12 @@ draw.bubblePlot <- function(driver_list=NULL,show_label=driver_list,Z_val=NULL,d
       }
     }
     ## draw circle legend
-    legend_size <- unique(round(seq(1,max_size,length.out=min(5,-1+nrow(f_mat1)))))
-    for(i in 1:length(legend_size)){
-      draw.circle(length(legend_size)-i+1.5,nr+0.5,radius=0.5*legend_size[i]/max_size)
-      text(length(legend_size)-i+1.5,nr+1,legend_size[i],xpd=TRUE,pos=3)
+    legend_size <- base::unique(round(base::seq(1,max_size,length.out=base::min(5,-1+nrow(f_mat1)))))
+    for(i in 1:base::length(legend_size)){
+      draw.circle(base::length(legend_size)-i+1.5,nr+0.5,radius=0.5*legend_size[i]/max_size)
+      graphics::text(base::length(legend_size)-i+1.5,nr+1,legend_size[i],xpd=TRUE,pos=3)
     }
-    text(0.5,nr+0.5,'Size ')
+    graphics::text(0.5,nr+0.5,'Size ')
     ## draw p-value legend
     pp <- par()$usr
     p_label <- c(1,0.1,0.05,0.01,0.001,1e-4,1e-10)
@@ -5218,43 +6067,43 @@ draw.bubblePlot <- function(driver_list=NULL,show_label=driver_list,Z_val=NULL,d
     p_col  <- z2col(p_thre,n_len=30,sig_thre=qnorm(1-0.1))
     p_col_m  <- z2col(-p_thre,n_len=30,sig_thre=qnorm(1-0.1))
     dd <- par.char2pos()[2]*1.5
-    ybottom <- seq(nr-6*dd,nr-dd,length.out=1+length(p_thre))[1:length(p_thre)]
-    ytop <- seq(nr-6*dd,nr-dd,length.out=1+length(p_thre))[2:(length(p_thre)+1)]
-    for(i in 1:length(p_thre)){
-      rect(pp[2]+par.char2pos()[1]*1,ybottom[i],pp[2]+par.char2pos()[1]*3,ytop[i],col=p_col[i],xpd=TRUE)
-      text(pp[2]+par.char2pos()[1]*3.5,(ybottom[i]+ytop[i])/2,pos=4,p_label[i],xpd=TRUE)
+    ybottom <- base::seq(nr-6*dd,nr-dd,length.out=1+base::length(p_thre))[1:base::length(p_thre)]
+    ytop <- base::seq(nr-6*dd,nr-dd,length.out=1+base::length(p_thre))[2:(base::length(p_thre)+1)]
+    for(i in 1:base::length(p_thre)){
+      graphics::rect(pp[2]+par.char2pos()[1]*1,ybottom[i],pp[2]+par.char2pos()[1]*3,ytop[i],col=p_col[i],xpd=TRUE)
+      graphics::text(pp[2]+par.char2pos()[1]*3.5,(ybottom[i]+ytop[i])/2,pos=4,p_label[i],xpd=TRUE)
     }
-    ybottom <- seq(nr-11*dd,nr-6*dd,length.out=1+length(p_thre))[1:length(p_thre)]
-    ytop <- seq(nr-11*dd,nr-6*dd,length.out=1+length(p_thre))[2:(length(p_thre)+1)]
-    for(i in 2:length(p_thre)){
-      rect(pp[2]+par.char2pos()[1]*1,ybottom[i],pp[2]+par.char2pos()[1]*3,ytop[i],col=rev(p_col_m)[i-1],xpd=TRUE)
-      text(pp[2]+par.char2pos()[1]*3.5,(ybottom[i]+ytop[i])/2,pos=4,rev(p_label)[i-1],xpd=TRUE)
+    ybottom <- base::seq(nr-11*dd,nr-6*dd,length.out=1+base::length(p_thre))[1:base::length(p_thre)]
+    ytop <- base::seq(nr-11*dd,nr-6*dd,length.out=1+base::length(p_thre))[2:(base::length(p_thre)+1)]
+    for(i in 2:base::length(p_thre)){
+      graphics::rect(pp[2]+par.char2pos()[1]*1,ybottom[i],pp[2]+par.char2pos()[1]*3,ytop[i],col=rev(p_col_m)[i-1],xpd=TRUE)
+      graphics::text(pp[2]+par.char2pos()[1]*3.5,(ybottom[i]+ytop[i])/2,pos=4,rev(p_label)[i-1],xpd=TRUE)
     }
-    text(pp[2]+par.char2pos()[1]*2,nr-0.5*dd,'P-Value',xpd=TRUE,adj=0)
+    graphics::text(pp[2]+par.char2pos()[1]*2,nr-0.5*dd,'P-Value',xpd=TRUE,adj=0)
     # target size
-    max_target_size <- max(unlist(lapply(target_gene,function(x)max(unlist(lapply(x,length))))))
-    ori_size <- unlist(lapply(target_gene,function(x)length(x[[1]])))
-    pro_size <- unlist(lapply(target_gene,function(x)length(x[[2]])))
-    rect(0:(nc-1)+0.15,-2,0:(nc-1)+0.45,1.5*ori_size/max_target_size-2,col='blue')
-    rect(0:(nc-1)+0.55,-2,0:(nc-1)+0.85,1.5*pro_size/max_target_size-2,col='green')
-    segments(y0=-2,y1=-0.5,x0=0,x1=0,xpd=TRUE)
-    segments(y0=seq(-2,-0.5,length.out=3),y1=seq(-2,-0.5,length.out=3),x0=-0.25,x1=0,xpd=TRUE)
-    text(-0.3,seq(-2,-0.5,length.out=3),round(seq(0,max_target_size,length.out=3)),adj=1,xpd=TRUE)
+    max_target_size <- base::max(unlist(lapply(target_gene,function(x)base::max(unlist(lapply(x,length))))))
+    ori_size <- unlist(lapply(target_gene,function(x)base::length(x[[1]])))
+    pro_size <- unlist(lapply(target_gene,function(x)base::length(x[[2]])))
+    graphics::rect(0:(nc-1)+0.15,-2,0:(nc-1)+0.45,1.5*ori_size/max_target_size-2,col='blue')
+    graphics::rect(0:(nc-1)+0.55,-2,0:(nc-1)+0.85,1.5*pro_size/max_target_size-2,col='green')
+    graphics::segments(y0=-2,y1=-0.5,x0=0,x1=0,xpd=TRUE)
+    graphics::segments(y0=seq(-2,-0.5,length.out=3),y1=seq(-2,-0.5,length.out=3),x0=-0.25,x1=0,xpd=TRUE)
+    text(-0.3,seq(-2,-0.5,length.out=3),round(base::seq(0,max_target_size,length.out=3)),adj=1,xpd=TRUE)
     legend(-5,-0.5,c('target_size','target_size\n(protein_coding)'),fill=c('blue','green'),border=NA,bty='n',cex=0.8,xpd=TRUE)
     # add sig color
     sig_col <- z2col(Z_val[driver_list],n_len=30)
-    rect(0:(nc-1)+0.35,-0.4,0:(nc-1)+0.65,-0.1,col=sig_col)
+    graphics::rect(0:(nc-1)+0.35,-0.4,0:(nc-1)+0.65,-0.1,col=sig_col)
     # add driver type !!!
     if(is.null(driver_type)==FALSE){
-      cc_tmp <- get.class.color(unique(driver_type[driver_list]))
-      points(x=0:(nc-1)+0.5,y=rep(-2-0.75*par.char2pos()[1],length.out=nc),col=cc_tmp[driver_type[driver_list]],pch=16,cex=2,xpd=TRUE)
-      #legend(pp[2],0.5,names(cc_tmp),fill=cc_tmp,border=NA,bty='n',cex=0.8,xpd=TRUE)
-      #print(seq(from=0.5,by= -par.char2pos()[2]*1.5,length.out=length(cc_tmp)))
-      points(x=pp[2]+par.char2pos()[1],y=seq(from=-2,by= par.char2pos()[2]*1.5,length.out=length(cc_tmp)),col=cc_tmp,cex=1.5,xpd=TRUE,pch=16)
-      text(x=pp[2]+par.char2pos()[1]*2,y=seq(from=-2,by= par.char2pos()[2]*1.5,length.out=length(cc_tmp)),names(cc_tmp),pos=4,xpd=TRUE)
+      cc_tmp <- get.class.color(base::unique(driver_type[driver_list]))
+      graphics::points(x=0:(nc-1)+0.5,y=rep(-2-0.75*par.char2pos()[1],length.out=nc),col=cc_tmp[driver_type[driver_list]],pch=16,cex=2,xpd=TRUE)
+      #graphics::legend(pp[2],0.5,names(cc_tmp),fill=cc_tmp,border=NA,bty='n',cex=0.8,xpd=TRUE)
+      #print(base::seq(from=0.5,by= -par.char2pos()[2]*1.5,length.out=base::length(cc_tmp)))
+      graphics::points(x=pp[2]+par.char2pos()[1],y=base::seq(from=-2,by= par.char2pos()[2]*1.5,length.out=base::length(cc_tmp)),col=cc_tmp,cex=1.5,xpd=TRUE,pch=16)
+      graphics::text(x=pp[2]+par.char2pos()[1]*2,y=base::seq(from=-2,by= par.char2pos()[2]*1.5,length.out=base::length(cc_tmp)),names(cc_tmp),pos=4,xpd=TRUE)
     }
   }
-  if(is.null(pdf_file)==FALSE){plot_part(ori=TRUE);plot_part(ori=TRUE,before_off=TRUE);dev.off();dev.off()} else {plot_part()}
+  if(is.null(pdf_file)==FALSE){plot_part(ori=TRUE);plot_part(ori=TRUE,before_off=TRUE);while (!is.null(dev.list()))  dev.off()} else {plot_part()}
   return(TRUE)
 }
 
@@ -5373,124 +6222,129 @@ draw.bubblePlot <- function(driver_list=NULL,show_label=driver_list,Z_val=NULL,d
 #' @export
 draw.GSEA <- function(rank_profile=NULL,use_genes=NULL,use_direction=NULL,main="",pdf_file=NULL,
                       annotation=NULL,annotation_cex=1.2,left_annotation=NULL,right_annotation=NULL){
+  #
+  all_input_para <- c('rank_profile','use_genes','main','annotation_cex')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
   #### start plot
   pos_col <- brewer.pal(12,'Paired')[8]
   neg_col <- brewer.pal(12,'Paired')[4]
   if(is.null(use_direction)==FALSE){
     new_rank_profile <- c(rank_profile,-rank_profile)
     names(new_rank_profile) <- c(paste0('POS_',names(rank_profile)),paste0('NEG_',names(rank_profile)))
-    rank_profile <- new_rank_profile
-    use_genes[which(use_direction==1)] <- paste0('POS_',use_genes[which(use_direction==1)])
-    use_genes[which(use_direction==-1)] <- paste0('NEG_',use_genes[which(use_direction==-1)])
+    new_use_genes <- use_genes
+    pos_genes <- new_use_genes[which(use_direction==1)]
+    neg_genes <- new_use_genes[which(use_direction==-1)]
+    new_use_genes[which(use_direction==1)] <- paste0('POS_',new_use_genes[which(use_direction==1)])
+    new_use_genes[which(use_direction==-1)] <- paste0('NEG_',new_use_genes[which(use_direction==-1)])
   }
   rank_profile <- sort(rank_profile,decreasing = TRUE)
-  r_len <- length(rank_profile)
+  r_len <- base::length(rank_profile)
   use_pos <- which(names(rank_profile) %in% use_genes)
-
   plot_part <- function(ori=FALSE,before_off=FALSE){
     if(before_off==TRUE) dev.off()
     if(is.null(pdf_file)==FALSE){
       pdf(pdf_file,width=10,height=10)
     }
     # height: 4|3|2|1
-    layout(matrix(c(rep(4,10),3,2,rep(1,10)),ncol=1))
+    graphics::layout(matrix(c(rep(4,10),3,2,rep(1,10)),ncol=1))
     # plot
     ## rank for all, 1
     par(mar=c(10,6,0.5,2))
-    mm <- max(abs(rank_profile))
+    mm <- base::max(abs(rank_profile))
     y1 <- seq(-mm,mm,length.out=7); y1 <- round(y1,1)
     unit <- r_len/10; unit <- round(unit/100)*100
-    x1 <- seq(0,r_len,by=unit);x1 <- unique(x1); x1 <- c(x1,max(x1)+unit)
-    par(usr=c(0,max(x1),-mm,mm))
-    plot(rank_profile,col='grey',pch=16,xaxt='n',xlab="",ylab="",bty='l',type='n',ylim=c(-mm,mm),xaxs='i',las=1,yaxs='i')
-    polygon(x=c(0,1:r_len,r_len),y=c(0,rank_profile,0),col='grey',border=NA)
-    if(is.null(left_annotation)==FALSE) text(0,mm-par.char2pos()[2],pos=4,left_annotation,col='red',xpd=TRUE)
-    if(is.null(right_annotation)==FALSE) text(r_len,-mm+par.char2pos()[2],pos=2,right_annotation,col='blue',xpd=TRUE)
+    x1 <- base::seq(0,r_len,by=unit);x1 <- base::unique(x1); x1 <- c(x1,base::max(x1)+unit)
+    par(usr=c(0,base::max(x1),-mm,mm))
+    graphics::plot(rank_profile,col='grey',pch=16,xaxt='n',xlab="",ylab="",bty='l',type='n',ylim=c(-mm,mm),xaxs='i',las=1,yaxs='i')
+    graphics::polygon(x=c(0,1:r_len,r_len),y=c(0,rank_profile,0),col='grey',border=NA)
+    if(is.null(left_annotation)==FALSE) graphics::text(0,mm-par.char2pos()[2],pos=4,left_annotation,col='red',xpd=TRUE,cex=annotation_cex)
+    if(is.null(right_annotation)==FALSE) graphics::text(r_len,-mm+par.char2pos()[2],pos=2,right_annotation,col='blue',xpd=TRUE,cex=annotation_cex)
     pp <- par()$usr
-    mtext(side=2,line = 3,'Ranked list metric (PreRanked)',cex=1.2)
-    mtext(side=1,line = 3.5,'Rank in Ordered Dataset',cex=1.2)
-    if(is.null(use_direction)==FALSE){
-      x1 <- x1[which(x1<length(rank_profile))];
-      x1[length(x1)] <- length(rank_profile)
-      segments(x0=x1,x1=x1,y0=pp[3]-par.char2pos()[2]/5,y1=pp[3],xpd=TRUE)
-      text(x1,pp[3]-par.char2pos()[2]/2,get_label_manual(x1/2),adj=1,xpd=TRUE)
-    }else{
-      x1 <- x1[which(x1<length(rank_profile))]
-      x1[length(x1)] <- length(rank_profile)
-      segments(x0=x1,x1=x1,y0=pp[3]-par.char2pos()[2]/5,y1=pp[3],xpd=TRUE)
-      text(x1,pp[3]-par.char2pos()[2]/2,get_label_manual(x1),adj=1,xpd=TRUE)
-    }
+    graphics::mtext(side=2,line = 3,'Ranked list metric (PreRanked)',cex=annotation_cex)
+    graphics::mtext(side=1,line = 3.5,'Rank in Ordered Dataset',cex=annotation_cex)
+    x1 <- x1[which(x1<base::length(rank_profile))]
+    x1[base::length(x1)] <- base::length(rank_profile)
+    graphics::segments(x0=x1,x1=x1,y0=pp[3]-par.char2pos()[2]/5,y1=pp[3],xpd=TRUE)
+    graphics::text(x1,pp[3]-par.char2pos()[2]/2,get_label_manual(x1),adj=1,xpd=TRUE)
     # get zero cross
-    w1 <- which.min(abs(rank_profile))
-    abline(v=w1,lty=2,col='grey')
+    w1 <- base::which.min(abs(rank_profile))
+    graphics::abline(v=w1,lty=2,col='grey')
+    graphics::text(w1,-mm/4,sprintf('Zero cross at %d',w1),adj=0.5)
     if(is.null(use_direction)==FALSE){
-      text(w1,-mm/4,sprintf('Zero cross at %s',round(w1/2)),adj=0.5)
+      graphics::legend(w1,pp[3]-(pp[4]-pp[3])/4,lty=1,lwd=2,c('Enrichment profile/Hits (positive)','Enrichment profile/Hits (negative)','Ranking metric scores'),
+             col=c(pos_col,neg_col,'grey'),xpd=TRUE,horiz=TRUE,xjust=0.5,cex=annotation_cex,bty='n')
     }else{
-      text(w1,-mm/4,sprintf('Zero cross at %d',w1),adj=0.5)
-    }
-    if(is.null(use_direction)==FALSE){
-      legend(w1,pp[3]-(pp[4]-pp[3])/4,lty=1,lwd=2,c('Enrichment profile','Hits_positive_direction','Hits_negative_direction','Ranking metric scores'),
-             col=c('green',pos_col,neg_col,'grey'),xpd=TRUE,horiz=TRUE,xjust=0.5,cex=1.2,bty='n')
-    }else{
-      legend(w1,pp[3]-(pp[4]-pp[3])/4,lty=1,lwd=2,c('Enrichment profile','Hits','Ranking metric scores'),
-             col=c('green','black','grey'),xpd=TRUE,horiz=TRUE,xjust=0.5,cex=1.2,bty='n')
+      graphics::legend(w1,pp[3]-(pp[4]-pp[3])/4,lty=1,lwd=2,c('Enrichment profile','Hits','Ranking metric scores'),
+             col=c('green','black','grey'),xpd=TRUE,horiz=TRUE,xjust=0.5,cex=annotation_cex,bty='n')
     }
     pm <- par()$usr
     ## get image bar, 2
     par(mar=c(0,6,0,2))
     use_col <- z2col(rank_profile,sig_thre = 0,n_len = 100,blue_col='blue',red_col='red')
-    image(x=as.matrix(1:r_len),col=use_col,bty='n',xaxt='n',yaxt='n',xlim=c(pm[1],pm[2])/r_len)
-    abline(v=use_pos/r_len,col='grey')
-    #if(is.null(use_direction)==FALSE){
-    #  use_pos_P <- which(names(rank_profile) %in% use_genes[grep('POS',use_genes)])
-    #  use_pos_N <- length(rank_profile)-which(names(rank_profile) %in% use_genes[grep('NEG',use_genes)])
-    #  abline(v=use_pos_P/r_len,col='grey')
-    #  abline(v=use_pos_N/r_len,col='grey')
-    #}else{
-    #  abline(v=use_pos/r_len,col='grey')
-    #}
+    graphics::image(x=as.matrix(1:r_len),col=use_col,bty='n',xaxt='n',yaxt='n',xlim=c(pm[1],pm[2])/r_len)
+    graphics::abline(v=use_pos/r_len,col='grey')
+    graphics::text(0,0.5,pos=2,sprintf('Size:%s',base::length(use_pos)),xpd=TRUE)
     ## mark gene position; 3
     par(mar=c(0,6,0,2))
-    plot(1,col='white',xlab="",ylab="",bty='n',xlim=c(1,r_len),ylim=c(0,1),xaxt='n',yaxt='n',xaxs='i')
+    graphics::plot(1,col='white',xlab="",ylab="",bty='n',xlim=c(1,r_len),ylim=c(0,1),xaxt='n',yaxt='n',xaxs='i')
     if(is.null(use_direction)==FALSE){
-      use_pos_P <- which(names(rank_profile) %in% use_genes[grep('POS',use_genes)])
-      use_pos_N <- length(rank_profile)-which(names(rank_profile) %in% use_genes[grep('NEG',use_genes)])
-      segments(y0=1,y1=0.5,x0=use_pos_P,x1=use_pos_P,col=pos_col)
-      segments(y0=0,y1=0.5,x0=use_pos_N,x1=use_pos_N,col=neg_col)
-      abline(h=0.5,col='light grey')
+      use_pos_P <- which(names(rank_profile) %in% pos_genes)
+      use_pos_N <- which(names(rank_profile) %in% neg_genes)
+      graphics::segments(y0=1,y1=0.5,x0=use_pos_P,x1=use_pos_P,col=pos_col)
+      graphics::segments(y0=0,y1=0.5,x0=use_pos_N,x1=use_pos_N,col=neg_col)
+      graphics::abline(h=0.5,col='light grey')
     }else{
-      abline(v=use_pos)
+      graphics::abline(v=use_pos)
     }
     ## GSEA ES, 4
     par(mar=c(0,6,5,2))
     # get ES score
-    es_res <- get_ES(rank_profile,use_genes)
-    y2 <- seq(min(es_res$RES),max(es_res$RES),length.out=7); y2 <- round(y2,1)
+    es <- ''
     if(is.null(use_direction)==FALSE){
-      plot(es_res$RES,col='green',xaxt='n',xlab="",ylab="",bty='n',
-           xlim=c(1,r_len),type='l',lwd=3,ylim=c(min(es_res$RES),max(y2)),main=main,xpd=TRUE,xaxs='i',las=1)
+      es_res_pos <- get_ES(rank_profile,pos_genes)
+      es_res_neg <- get_ES(rank_profile,neg_genes)
+      es_res <- es_res_pos
+      y2 <- base::seq(base::min(c(es_res_pos$RES,es_res_neg$RES)),base::max(c(es_res_pos$RES,es_res_neg$RES)),length.out=7); y2 <- round(y2,1)
+      graphics::plot(es_res_pos$RES,col=pos_col,xaxt='n',xlab="",ylab="",bty='n',
+           xlim=c(1,r_len),type='l',lwd=3,ylim=c(base::min(c(es_res_pos$RES,es_res_neg$RES)),base::max(y2)),main=main,xpd=TRUE,xaxs='i',las=1,cex.main=annotation_cex)
+      lines(es_res_neg$RES,col=neg_col,lwd=3,xpd=TRUE)
+      w1 <- base::which.max(abs(es_res_pos$RES));
+      graphics::segments(x0=w1,x1=w1,y0=0,y1=es_res_pos$RES[w1],lty=2,col='grey')
+      w1 <- base::which.max(abs(es_res_neg$RES));
+      graphics::segments(x0=w1,x1=w1,y0=0,y1=es_res_neg$RES[w1],lty=2,col='grey')
     }else{
-      plot(es_res$RES,col='green',xaxt='n',xlab="",ylab="",bty='n',
-           xlim=c(1,r_len),type='l',lwd=3,ylim=c(min(es_res$RES),max(y2)),main=main,xpd=TRUE,xaxs='i',las=1)
+      es_res <- get_ES(rank_profile,use_genes)
+      y2 <- base::seq(base::min(es_res$RES),base::max(es_res$RES),length.out=7); y2 <- round(y2,1)
+      graphics::plot(es_res$RES,col='green',xaxt='n',xlab="",ylab="",bty='n',
+           xlim=c(1,r_len),type='l',lwd=3,ylim=c(base::min(es_res$RES),base::max(y2)),main=main,xpd=TRUE,xaxs='i',las=1)
+      w1 <- base::which.max(abs(es_res$RES));
+      graphics::segments(x0=w1,x1=w1,y0=0,y1=es_res$RES[w1],lty=2,col='grey')
+      es <- sprintf('ES: %s',format(es_res$RES[w1],digits=3))
     }
-    abline(h=0,lty=2,col='dark grey')
+    graphics::abline(h=0,lty=2,col='dark grey')
     pp <- par()$usr
-    mtext(side=2,line = 3,'Enrichment score (ES)',cex=1.2)
+    graphics::mtext(side=2,line = 3,'Enrichment score (ES)',cex=annotation_cex)
     # add annotation
     if(is.null(annotation)==TRUE){
-      pv <- ks.test(rank_profile,rank_profile[use_genes])$p.value
+      if(is.null(use_direction)==FALSE){
+        pv <- ks.test(new_rank_profile,new_rank_profile[new_use_genes])$p.value
+      }else{
+        pv <- ks.test(rank_profile,rank_profile[use_genes])$p.value
+      }
       #print(t.test(rank_profile,rank_profile[use_genes]))
       if(pv==0){
         pv <- '<2.2e-16'
       }else{
         if(pv<0.01) pv <- format(pv,digits = 3,scientific = TRUE) else pv <- signif(pv,3)
       }
-      annotation <- sprintf("KS test p-value:%s",pv)
+      annotation <- sprintf("%s\nKS test p-value:%s",es,pv)
     }
-    if(es_res$RES[which.max(abs(es_res$RES))]>0)
-      text(r_len,max(y2)-par.char2pos()[2],annotation,pos=2,cex=annotation_cex,xpd=TRUE)
+    if(es_res$RES[base::which.max(abs(es_res$RES))]>0)
+      graphics::text(r_len,base::max(y2)-par.char2pos()[2],annotation,pos=2,cex=annotation_cex,xpd=TRUE)
     else
-      text(0,min(y2)+par.char2pos()[2],annotation,pos=4,cex=annotation_cex,xpd=TRUE)
+      graphics::text(0,base::min(y2)+par.char2pos()[2],annotation,pos=4,cex=annotation_cex,xpd=TRUE)
   }
   if(is.null(pdf_file)==FALSE){plot_part(ori=TRUE);dev.off()} else {plot_part()}
   return(TRUE)
@@ -5502,8 +6356,8 @@ get_ES <- function(rank_profile=NULL,use_genes=NULL,weighted.score.type=1){
   correl.vector <- rank_profile
   tag.indicator <- sign(match(gene.list, use_genes, nomatch=0))    # notice that the sign is 0 (no tag) or 1 (tag)
   no.tag.indicator <- 1 - tag.indicator
-  N <- length(gene.list)
-  Nh <- length(use_genes)
+  N <- base::length(gene.list)
+  Nh <- base::length(use_genes)
   Nm <-  N - Nh
   if (weighted.score.type == 0) {
     correl.vector <- rep(1, N)
@@ -5514,16 +6368,16 @@ get_ES <- function(rank_profile=NULL,use_genes=NULL,weighted.score.type=1){
   norm.tag    <- 1.0/sum.correl.tag
   norm.no.tag <- 1.0/Nm
   RES <- cumsum(tag.indicator * correl.vector * norm.tag - no.tag.indicator * norm.no.tag)
-  max.ES <- max(RES)
-  min.ES <- min(RES)
+  max.ES <- base::max(RES)
+  min.ES <- base::min(RES)
   if (max.ES > - min.ES) {
     #      ES <- max.ES
     ES <- signif(max.ES, digits = 5)
-    arg.ES <- which.max(RES)
+    arg.ES <- base::which.max(RES)
   } else {
     #      ES <- min.ES
     ES <- signif(min.ES, digits=5)
-    arg.ES <- which.min(RES)
+    arg.ES <- base::which.min(RES)
   }
   return(list(ES = ES, arg.ES = arg.ES, RES = RES, indicator = tag.indicator))
 }
@@ -5533,7 +6387,7 @@ get_z2p <- function(x,use_star=FALSE,digit_num=2){
   #if(is.na(x[1])==TRUE) return('NA')
   x <- abs(x)
   x[which(is.na(x)==TRUE)] <- 0 ##
-  if(max(x)<5){
+  if(base::max(x)<5){
     use_pv <- 1-pnorm(x)
     use_p <- format(use_pv,digits=digit_num,scientific = TRUE)
   }else{
@@ -5546,7 +6400,7 @@ get_z2p <- function(x,use_star=FALSE,digit_num=2){
     use_p[which(use_p=='NA')] <- '<1e-308'
     use_p <- as.character(use_p)
   }
-  x_star <- rep('',length.out=length(use_pv))
+  x_star <- rep('',length.out=base::length(use_pv))
   x_star[which(use_pv<0.05)] <-'*'
   x_star[which(use_pv<0.01)] <-'**'
   x_star[which(use_pv<0.001)] <-'***'
@@ -5697,6 +6551,19 @@ draw.GSEA.NetBID <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_tren
                              top_driver_number=30,target_nrow=2,target_col='RdBu',target_col_type='PN',
                              left_annotation="",right_annotation="",main="",
                              profile_sig_thre=0,Z_sig_thre=1.64,pdf_file=NULL){
+  #
+  all_input_para <- c('DE','profile_col','profile_trend','driver_list','show_label',
+                      'driver_DA_Z','driver_DE_Z','target_list','top_driver_number','target_nrow',
+                      'target_col','target_col_type','left_annotation','right_annotation','main',
+                      'profile_sig_thre','Z_sig_thre')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  check_res <- c(check_option('profile_trend',c('pos2neg','neg2pos'),envir=environment()),
+                 check_option('target_nrow',c(1,2),envir=environment()),
+                 check_option('target_col',c('RdBu','black'),envir=environment()),
+                 check_option('target_col_type',c('PN','DE'),envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
   pos_col <- brewer.pal(12,'Paired')[8]
   neg_col <- brewer.pal(12,'Paired')[4]
   if(!profile_col %in% colnames(DE)){
@@ -5706,7 +6573,7 @@ draw.GSEA.NetBID <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_tren
   if(is.null(names(driver_DA_Z))) names(driver_DA_Z) <- driver_list
   if(is.null(names(driver_DE_Z))) names(driver_DE_Z) <- driver_list
   if(is.null(names(show_label))) names(show_label) <- driver_list
-  if(length(driver_list)>top_driver_number){
+  if(base::length(driver_list)>top_driver_number){
     driver_DA_Z <- driver_DA_Z[driver_list]
     driver_DE_Z <- driver_DE_Z[driver_list]
     driver_list <- driver_list[order(abs(driver_DA_Z[driver_list]),decreasing = TRUE)][1:top_driver_number]
@@ -5719,9 +6586,9 @@ draw.GSEA.NetBID <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_tren
   driver_DA_Z <- driver_DA_Z[driver_list]
   driver_DE_Z <- driver_DE_Z[driver_list]
   ###################
-  ## calculate layout
+  ## calculate graphics::layout
   if(is.null(name_col)==TRUE){
-    DE <- cbind(DE[,setdiff(colnames(DE),'name')],name=rownames(DE),stringsAsFactors=FALSE)
+    DE <- base::cbind(DE[,base::setdiff(colnames(DE),'name')],name=rownames(DE),stringsAsFactors=FALSE)
     name_col <- 'name'
   }
   w1 <- which(is.na(DE[,profile_col])==FALSE)
@@ -5729,16 +6596,16 @@ draw.GSEA.NetBID <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_tren
   if(profile_trend=='pos2neg') DE <- DE[order(DE[,profile_col],decreasing = TRUE),] else DE <- DE[order(DE[,profile_col],decreasing = FALSE),]
   DE_profile <- DE[,profile_col]
   DE_profile_name <- DE[,name_col]
-  n_gene <- length(DE_profile)
+  n_gene <- base::length(DE_profile)
 
   plot_part <- function(ori=FALSE,before_off=FALSE){
     if(target_nrow==2){
-      n_driver <- length(driver_list)*2
+      n_driver <- base::length(driver_list)*2
       ratio1 <- ceiling(n_driver/15) ## profile height to rows
       ratio2 <- 4 ## width of profile to DA/DE
       rr <- 1
     } else {
-      n_driver <- length(driver_list)
+      n_driver <- base::length(driver_list)
       ratio1 <- ceiling(1.2*n_driver/15) ## profile height to rows
       ratio2 <- 4 ## width of profile to DA/DE
       rr <- 1
@@ -5748,67 +6615,67 @@ draw.GSEA.NetBID <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_tren
     if(is.null(pdf_file)==FALSE){
       pdf(pdf_file,width=(rr*2+ratio2)*1.5,height=(ratio1+rr)*1.5)
     }
-    # get layout
-    layout(matrix(c(rep(0,length.out=rr),rep(1,length.out=ratio2),rep(0,length.out=rr*1),
+    # get graphics::layout
+    graphics::layout(matrix(c(rep(0,length.out=rr),rep(1,length.out=ratio2),rep(0,length.out=rr*1),
                     rep(c(rep(4,length.out=rr),rep(2,length.out=ratio2),rep(3,length.out=rr*1)),
                         length.out=ratio1*(ratio2+rr*2))),
                   ncol=c(ratio2+rr*2),byrow=TRUE))
-    ## layout
+    ## graphics::layout
     # |0|1|0
     # |4|2|3
     ## plot 1
     par(mar=c(1.5,1.5,4,0))
     mm <- quantile(DE_profile,probs=c(0.0001,0.9999));
-    mm <- max(abs(mm)); mm <- c(-mm,mm)
-    y1 <- seq(mm[1],mm[2],length.out=5); y1 <- round(y1,1)
+    mm <- base::max(abs(mm)); mm <- c(-mm,mm)
+    y1 <- base::seq(mm[1],mm[2],length.out=5); y1 <- round(y1,1)
     unit <- n_gene/10; unit <- round(unit/100)*100
-    x1 <- seq(0,n_gene,by=unit);x1 <- unique(x1); x1 <- c(x1[1:(length(x1)-1)],n_gene)
-    par(usr=c(0,length(DE_profile),mm[1],mm[2]))
-    plot(DE_profile,col='white',pch=16,xaxt='n',yaxt='n',xlab="",ylab="",bty='n',type='n',ylim=c(mm[1],mm[2]),main=main,cex.main=1.8)
+    x1 <- base::seq(0,n_gene,by=unit);x1 <- base::unique(x1); x1 <- c(x1[1:(base::length(x1)-1)],n_gene)
+    par(usr=c(0,base::length(DE_profile),mm[1],mm[2]))
+    graphics::plot(DE_profile,col='white',pch=16,xaxt='n',yaxt='n',xlab="",ylab="",bty='n',type='n',ylim=c(mm[1],mm[2]),main=main,cex.main=1.8)
     pp <- par()$usr; rr <- (pp[2]-pp[1])/n_gene
-    polygon(x=c(pp[1],c(1:n_gene)*rr+pp[1],pp[2]),y=c(0,DE_profile,0),col='grey',border='grey',xpd=TRUE,lwd=0.3)
+    graphics::polygon(x=c(pp[1],c(1:n_gene)*rr+pp[1],pp[2]),y=c(0,DE_profile,0),col='grey',border='grey',xpd=TRUE,lwd=0.3)
     if(profile_trend=='pos2neg'){
-      if(is.null(left_annotation)==FALSE) text(pp[1]+(pp[2]-pp[1])/100,mm[2]*0.8,adj=0,left_annotation,col=brewer.pal(9,'Reds')[6],xpd=TRUE,cex=1.2)
-      if(is.null(right_annotation)==FALSE) text(pp[2]-(pp[2]-pp[1])/100,mm[1]*0.8,adj=1,right_annotation,col=brewer.pal(9,'Blues')[6],xpd=TRUE,cex=1.2)
+      if(is.null(left_annotation)==FALSE) graphics::text(pp[1]+(pp[2]-pp[1])/100,mm[2]*0.8,adj=0,left_annotation,col=brewer.pal(9,'Reds')[6],xpd=TRUE,cex=1.2)
+      if(is.null(right_annotation)==FALSE) graphics::text(pp[2]-(pp[2]-pp[1])/100,mm[1]*0.8,adj=1,right_annotation,col=brewer.pal(9,'Blues')[6],xpd=TRUE,cex=1.2)
     }else{
-      if(is.null(left_annotation)==FALSE) text(pp[1]+(pp[2]-pp[1])/100,mm[1]*0.8,adj=0,left_annotation,col=brewer.pal(9,'Blues')[6],xpd=TRUE,cex=1.2)
-      if(is.null(right_annotation)==FALSE) text(pp[2]-(pp[2]-pp[1])/100,mm[2]*0.8,adj=1,right_annotation,col=brewer.pal(9,'Reds')[6],xpd=TRUE,cex=1.2)
+      if(is.null(left_annotation)==FALSE) graphics::text(pp[1]+(pp[2]-pp[1])/100,mm[1]*0.8,adj=0,left_annotation,col=brewer.pal(9,'Blues')[6],xpd=TRUE,cex=1.2)
+      if(is.null(right_annotation)==FALSE) graphics::text(pp[2]-(pp[2]-pp[1])/100,mm[2]*0.8,adj=1,right_annotation,col=brewer.pal(9,'Reds')[6],xpd=TRUE,cex=1.2)
     }
-    axis(side=2,at=y1,labels=y1)
-    mtext(side=2,line = 2.5,profile_col,cex=1)
-    segments(pp[1],mm[1],pp[2],mm[1],xpd=TRUE)
-    segments(x1*rr+pp[1],mm[1]-(mm[2]-mm[1])/30,x1*rr+pp[1],mm[1],xpd=TRUE)
-    text(x1*rr+pp[1],mm[1]-(mm[2]-mm[1])/10,get_label_manual(x1),adj=1,xpd=TRUE)
+    graphics::axis(side=2,at=y1,labels=y1)
+    graphics::mtext(side=2,line = 2.5,profile_col,cex=1)
+    graphics::segments(pp[1],mm[1],pp[2],mm[1],xpd=TRUE)
+    graphics::segments(x1*rr+pp[1],mm[1]-(mm[2]-mm[1])/30,x1*rr+pp[1],mm[1],xpd=TRUE)
+    graphics::text(x1*rr+pp[1],mm[1]-(mm[2]-mm[1])/10,get_label_manual(x1),adj=1,xpd=TRUE)
     ## plot2
     par(mar=c(2,1.5,2,0))
-    plot(1,col='white',xlab="",ylab="",xlim=c(0,n_gene),xaxt='n',yaxt='n')
+    graphics::plot(1,col='white',xlab="",ylab="",xlim=c(0,n_gene),xaxt='n',yaxt='n')
     pp <- par()$usr;rr <- (pp[2]-pp[1])/n_gene
-    yy1 <- seq(from=pp[3],to=pp[4],length.out=n_driver+1)
-    yy2 <- seq(from=pp[3],to=pp[4],length.out=length(driver_list)+1)
-    #segments(x0=pp[1],x1=pp[2],y0=yy1,y1=yy1,lwd=0.2,col='light grey')
-    #segments(x0=pp[1],x1=pp[2],y0=yy2,y1=yy2,lwd=2,col='white')
-    #segments(x0=pp[1],x1=pp[2],y0=yy2,y1=yy2,lwd=1.2,col='dark grey')
+    yy1 <- base::seq(from=pp[3],to=pp[4],length.out=n_driver+1)
+    yy2 <- base::seq(from=pp[3],to=pp[4],length.out=base::length(driver_list)+1)
+    #graphics::segments(x0=pp[1],x1=pp[2],y0=yy1,y1=yy1,lwd=0.2,col='light grey')
+    #graphics::segments(x0=pp[1],x1=pp[2],y0=yy2,y1=yy2,lwd=2,col='white')
+    #graphics::segments(x0=pp[1],x1=pp[2],y0=yy2,y1=yy2,lwd=1.2,col='dark grey')
     # add columns
     use_target_list <- target_list[driver_list]
     if(target_col_type=='DE'){
       cc <- z2col(DE_profile,sig_thre=profile_sig_thre,n_len=100,red_col = brewer.pal(9,'Reds')[5:9],blue_col=brewer.pal(9,'Blues')[5:9],
-                  col_max_thre=max(abs(DE_profile)))
+                  col_max_thre=base::max(abs(DE_profile)))
       #names(cc) <- DE_profile_name
       cc[which(cc=='white')] <- 'light grey'
     }
     if(target_nrow==1){
-      for(i in 1:length(driver_list)){
+      for(i in 1:base::length(driver_list)){
         t1 <- use_target_list[[driver_list[[i]]]]
         w0 <- which(DE_profile_name %in% t1$target)
         w1 <- w0*rr+pp[1]
         if(target_col=='black'){
-          segments(x0=w1,x1=w1,y0=yy1[i],y1=yy1[i+1],col='black',lwd=1)
+          graphics::segments(x0=w1,x1=w1,y0=yy1[i],y1=yy1[i+1],col='black',lwd=1)
         }else{
           if(target_col_type=='DE'){
-            segments(x0=w1,x1=w1,y0=yy1[i],y1=yy1[i+1],lwd=1.5,
+            graphics::segments(x0=w1,x1=w1,y0=yy1[i],y1=yy1[i+1],lwd=1.5,
                      col=cc[w0])
           }else{
-            segments(x0=w1,x1=w1,y0=yy1[i],y1=yy1[i+1],lwd=1.5,
+            graphics::segments(x0=w1,x1=w1,y0=yy1[i],y1=yy1[i+1],lwd=1.5,
                      col=z2col(t1$spearman,sig_thre=0,col_max_thre=1,col_min_thre=0.01,
                                red_col = pos_col,blue_col=neg_col))
           }
@@ -5816,117 +6683,117 @@ draw.GSEA.NetBID <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_tren
       }
     }
     if(target_nrow==2){
-      for(i in 1:length(driver_list)){
+      for(i in 1:base::length(driver_list)){
         t1 <- use_target_list[[driver_list[[i]]]]
         t11 <- t1[which(t1$spearman>=0),]$target
         t12 <- t1[which(t1$spearman<0),]$target
         w0 <- which(DE_profile_name %in% t11)
         w1 <- w0*rr+pp[1]
-        if(length(w1)>0){
+        if(base::length(w1)>0){
           if(target_col=='black'){
-            segments(x0=w1,x1=w1,y0=yy1[2*i],y1=yy1[2*i+1],col='black',lwd=1)
+            graphics::segments(x0=w1,x1=w1,y0=yy1[2*i],y1=yy1[2*i+1],col='black',lwd=1)
           }else{
             if(target_col_type=='DE'){
-              segments(x0=w1,x1=w1,y0=yy1[2*i],y1=yy1[2*i+1],col=cc[w0],lwd=1.5)
+              graphics::segments(x0=w1,x1=w1,y0=yy1[2*i],y1=yy1[2*i+1],col=cc[w0],lwd=1.5)
             }else{
-              segments(x0=w1,x1=w1,y0=yy1[2*i],y1=yy1[2*i+1],col=pos_col,lwd=1.5)
+              graphics::segments(x0=w1,x1=w1,y0=yy1[2*i],y1=yy1[2*i+1],col=pos_col,lwd=1.5)
             }
           }
         }
         w0 <- which(DE_profile_name %in% t12)
         w1 <- w0*rr+pp[1]
-        if(length(w1)>0){
+        if(base::length(w1)>0){
           if(target_col=='black'){
-            segments(x0=w1,x1=w1,y0=yy1[2*i-1],y1=yy1[2*i],col='black',lwd=1)
+            graphics::segments(x0=w1,x1=w1,y0=yy1[2*i-1],y1=yy1[2*i],col='black',lwd=1)
           }else{
             if(target_col_type=='DE'){
-              segments(x0=w1,x1=w1,y0=yy1[2*i-1],y1=yy1[2*i],col=cc[w0],lwd=1.5)
+              graphics::segments(x0=w1,x1=w1,y0=yy1[2*i-1],y1=yy1[2*i],col=cc[w0],lwd=1.5)
             }else{
-              segments(x0=w1,x1=w1,y0=yy1[2*i-1],y1=yy1[2*i],col=neg_col,lwd=1.5)
+              graphics::segments(x0=w1,x1=w1,y0=yy1[2*i-1],y1=yy1[2*i],col=neg_col,lwd=1.5)
             }
           }
         }
       }
     }
-    segments(x0=pp[1],x1=pp[2],y0=yy1,y1=yy1,lwd=0.2,col='light grey')
-    segments(x0=pp[1],x1=pp[2],y0=yy2,y1=yy2,lwd=2,col='white')
-    segments(x0=pp[1],x1=pp[2],y0=yy2,y1=yy2,lwd=1.2,col='dark grey')
+    graphics::segments(x0=pp[1],x1=pp[2],y0=yy1,y1=yy1,lwd=0.2,col='light grey')
+    graphics::segments(x0=pp[1],x1=pp[2],y0=yy2,y1=yy2,lwd=2,col='white')
+    graphics::segments(x0=pp[1],x1=pp[2],y0=yy2,y1=yy2,lwd=1.2,col='dark grey')
     ## plot 3
     par(mar=c(2,0.5,2,2))
-    plot(1,col='white',xlab="",ylab="",xlim=c(0,2),xaxt='n',yaxt='n',bty='n')
+    graphics::plot(1,col='white',xlab="",ylab="",xlim=c(0,2),xaxt='n',yaxt='n',bty='n')
     pp <- par()$usr
-    rect(xleft=pp[1],xright=pp[2],ybottom=pp[3],ytop=pp[4])
-    yy2 <- seq(from=pp[3],to=pp[4],length.out=length(driver_list)+1)
-    segments(x0=pp[1],x1=pp[2],y0=yy2,y1=yy2,lwd=2,col='white',xpd=TRUE)
-    segments(x0=pp[1],x1=pp[2],y0=yy2,y1=yy2,lwd=1.2,col='dark grey',xpd=TRUE)
-    abline(v=c(pp[1],(pp[1]+pp[2])/2,pp[2]))
+    graphics::rect(xleft=pp[1],xright=pp[2],ybottom=pp[3],ytop=pp[4])
+    yy2 <- base::seq(from=pp[3],to=pp[4],length.out=base::length(driver_list)+1)
+    graphics::segments(x0=pp[1],x1=pp[2],y0=yy2,y1=yy2,lwd=2,col='white',xpd=TRUE)
+    graphics::segments(x0=pp[1],x1=pp[2],y0=yy2,y1=yy2,lwd=1.2,col='dark grey',xpd=TRUE)
+    graphics::abline(v=c(pp[1],(pp[1]+pp[2])/2,pp[2]))
     ## add text
-    mm_min <- min(min(abs(driver_DA_Z[driver_list]),na.rm=TRUE)*0.9,min(abs(driver_DE_Z[driver_list]),na.rm=TRUE)*0.9)
-    mm_min <- max(mm_min,Z_sig_thre)
-    mm_max <- max(max(abs(driver_DA_Z[driver_list]),na.rm=TRUE)*1.1,max(abs(driver_DE_Z[driver_list]),na.rm=TRUE)*1.1)
+    mm_min <- base::min(base::min(abs(driver_DA_Z[driver_list]),na.rm=TRUE)*0.9,base::min(abs(driver_DE_Z[driver_list]),na.rm=TRUE)*0.9)
+    mm_min <- base::max(mm_min,Z_sig_thre)
+    mm_max <- base::max(base::max(abs(driver_DA_Z[driver_list]),na.rm=TRUE)*1.1,base::max(abs(driver_DE_Z[driver_list]),na.rm=TRUE)*1.1)
     c1 <- z2col(driver_DA_Z[driver_list],sig_thre=Z_sig_thre,n_len=100,red_col = brewer.pal(9,'Reds')[7],blue_col=brewer.pal(9,'Blues')[7],
                 col_min_thre=mm_min,col_max_thre=mm_max)
     c2 <- z2col(driver_DE_Z[driver_list],sig_thre=Z_sig_thre,n_len=100,red_col = brewer.pal(9,'Reds')[7],blue_col=brewer.pal(9,'Blues')[7],
                 col_min_thre=mm_min,col_max_thre=mm_max)
-    for(i in 1:length(driver_list)){
+    for(i in 1:base::length(driver_list)){
       z1 <- driver_DA_Z[driver_list[i]]
       z2 <- driver_DE_Z[driver_list[i]]
       p1 <- get_z2p(z1)
       p2 <- get_z2p(z2)
-      rect(xleft=pp[1],xright=(pp[1]+pp[2])/2,ybottom=yy2[i],ytop=yy2[i+1],col=c1[i],border='dark grey',xpd=TRUE)
-      rect(xright=pp[2],xleft=(pp[1]+pp[2])/2,ybottom=yy2[i],ytop=yy2[i+1],col=c2[i],border='dark grey',xpd=TRUE)
-      text(x=(pp[1]+(pp[1]+pp[2])/2)/2,y=(yy2[i]+yy2[i+1])/2,p1,adj=0.5)
-      text(x=(pp[2]+(pp[1]+pp[2])/2)/2,y=(yy2[i]+yy2[i+1])/2,p2,adj=0.5)
+      graphics::rect(xleft=pp[1],xright=(pp[1]+pp[2])/2,ybottom=yy2[i],ytop=yy2[i+1],col=c1[i],border='dark grey',xpd=TRUE)
+      graphics::rect(xright=pp[2],xleft=(pp[1]+pp[2])/2,ybottom=yy2[i],ytop=yy2[i+1],col=c2[i],border='dark grey',xpd=TRUE)
+      graphics::text(x=(pp[1]+(pp[1]+pp[2])/2)/2,y=(yy2[i]+yy2[i+1])/2,p1,adj=0.5)
+      graphics::text(x=(pp[2]+(pp[1]+pp[2])/2)/2,y=(yy2[i]+yy2[i+1])/2,p2,adj=0.5)
     }
     text((pp[1]+(pp[1]+pp[2])/2)/2,pp[4],'DA',xpd=TRUE,cex=1.5,pos=3)
     text((pp[2]+(pp[1]+pp[2])/2)/2,pp[4],'DE',xpd=TRUE,cex=1.5,pos=3)
     ## plot 4
     par(mar=c(2,6,2,0.2))
-    plot(1,col='white',xlab="",ylab="",xlim=c(0,2),xaxt='n',yaxt='n',bty='n')
+    graphics::plot(1,col='white',xlab="",ylab="",xlim=c(0,2),xaxt='n',yaxt='n',bty='n')
     pp <- par()$usr
-    #yy1 <- seq(from=pp[3],to=pp[4],length.out=n_driver+1)
-    #yy11 <- (yy1[1:(length(yy1)-1)]+yy1[2:length(yy1)])/2
-    yy2 <- seq(from=pp[3],to=pp[4],length.out=length(driver_list)+1)
-    yy22 <- (yy2[1:(length(yy2)-1)]+yy2[2:length(yy2)])/2
+    #yy1 <- base::seq(from=pp[3],to=pp[4],length.out=n_driver+1)
+    #yy11 <- (yy1[1:(base::length(yy1)-1)]+yy1[2:base::length(yy1)])/2
+    yy2 <- base::seq(from=pp[3],to=pp[4],length.out=base::length(driver_list)+1)
+    yy22 <- (yy2[1:(base::length(yy2)-1)]+yy2[2:base::length(yy2)])/2
     dyy <- yy2[2]-yy2[1]
-    text(show_label,x=(pp[1]+pp[2])/2,y=yy22,xpd=TRUE,adj=1)
+    graphics::text(show_label,x=(pp[1]+pp[2])/2,y=yy22,xpd=TRUE,adj=1)
     # add target size
     target_size <- do.call(rbind,lapply(use_target_list,function(x){
-      x1 <- length(which(x$spearman>=0))
-      x2 <- length(which(x$spearman<0))
+      x1 <- base::length(which(x$spearman>=0))
+      x2 <- base::length(which(x$spearman<0))
       c(x1,x2)
     }))
     if(target_nrow==2){
-      mm <- max(target_size)
+      mm <- base::max(target_size)
       tt <- pp[2]-(pp[1]+pp[2])*0.55
-      for(i in 1:length(driver_list)){
-        rect(xleft=(pp[1]+pp[2])*0.55,xright=(pp[1]+pp[2])*0.55+target_size[i,1]/mm*tt,
+      for(i in 1:base::length(driver_list)){
+        graphics::rect(xleft=(pp[1]+pp[2])*0.55,xright=(pp[1]+pp[2])*0.55+target_size[i,1]/mm*tt,
              ybottom=yy22[i],ytop=yy22[i]+dyy*0.35,col=pos_col,border=NA)
-        rect(xleft=(pp[1]+pp[2])*0.55,xright=(pp[1]+pp[2])*0.55+target_size[i,2]/mm*tt,
+        graphics::rect(xleft=(pp[1]+pp[2])*0.55,xright=(pp[1]+pp[2])*0.55+target_size[i,2]/mm*tt,
              ytop=yy22[i],ybottom=yy22[i]-dyy*0.35,col=neg_col,border=NA)
       }
-      segments(x0=(pp[1]+pp[2])*0.55,x1=pp[2],y0=pp[4],y1=pp[4],xpd=TRUE)
-      sst <- round(seq(0,mm,length.out=3))
+      graphics::segments(x0=(pp[1]+pp[2])*0.55,x1=pp[2],y0=pp[4],y1=pp[4],xpd=TRUE)
+      sst <- round(base::seq(0,mm,length.out=3))
       ss <- sst*tt/mm+(pp[1]+pp[2])*0.55
-      segments(x0=ss,x1=ss,y0=pp[4],y1=pp[4]+(pp[4]-pp[3])/150,xpd=TRUE)
-      text(x=ss,y=pp[4]+(pp[4]-pp[3])/100,srt=90,sst,xpd=TRUE,adj=0,cex=0.8)
+      graphics::segments(x0=ss,x1=ss,y0=pp[4],y1=pp[4]+(pp[4]-pp[3])/150,xpd=TRUE)
+      graphics::text(x=ss,y=pp[4]+(pp[4]-pp[3])/100,srt=90,sst,xpd=TRUE,adj=0,cex=0.8)
       text('Target Size',x=(pp[1]+pp[2])*0.45,y=pp[4]+(pp[4]-pp[3])/50,adj=1,xpd=TRUE,cex=0.8)
-      legend(2,pp[3],c('Positively-regulated','Negatively-regulated'),fill=c(pos_col,neg_col),border = NA,bty='n',cex=0.6,xpd=TRUE,xjust=1,yjust=1)
+      graphics::legend(2,pp[3],c('Positively-regulated','Negatively-regulated'),fill=c(pos_col,neg_col),border = NA,bty='n',cex=0.6,xpd=TRUE,xjust=1,yjust=1)
     }
     #
     if(target_nrow==1){
-      target_size <- rowSums(target_size)
-      mm <- max(target_size)
+      target_size <- base::rowSums(target_size)
+      mm <- base::max(target_size)
       tt <- pp[2]-(pp[1]+pp[2])*0.55
-      for(i in 1:length(driver_list)){
-        rect(xleft=(pp[1]+pp[2])*0.55,xright=(pp[1]+pp[2])*0.55+target_size[i]/mm*tt,
+      for(i in 1:base::length(driver_list)){
+        graphics::rect(xleft=(pp[1]+pp[2])*0.55,xright=(pp[1]+pp[2])*0.55+target_size[i]/mm*tt,
              ybottom=yy22[i]-dyy*0.2,ytop=yy22[i]+dyy*0.2,col='dark grey',border=NA)
       }
-      segments(x0=(pp[1]+pp[2])*0.55,x1=pp[2],y0=pp[4],y1=pp[4],xpd=TRUE)
-      sst <- round(seq(0,mm,length.out=3))
+      graphics::segments(x0=(pp[1]+pp[2])*0.55,x1=pp[2],y0=pp[4],y1=pp[4],xpd=TRUE)
+      sst <- round(base::seq(0,mm,length.out=3))
       ss <- sst*tt/mm+(pp[1]+pp[2])*0.55
-      segments(x0=ss,x1=ss,y0=pp[4],y1=pp[4]+(pp[4]-pp[3])/150,xpd=TRUE)
-      text(x=ss,y=pp[4]+(pp[4]-pp[3])/100,srt=90,sst,xpd=TRUE,adj=0,cex=0.8)
+      graphics::segments(x0=ss,x1=ss,y0=pp[4],y1=pp[4]+(pp[4]-pp[3])/150,xpd=TRUE)
+      graphics::text(x=ss,y=pp[4]+(pp[4]-pp[3])/100,srt=90,sst,xpd=TRUE,adj=0,cex=0.8)
       text('Target Size',x=(pp[1]+pp[2])*0.45,y=pp[4]+(pp[4]-pp[3])/50,adj=1,xpd=TRUE,cex=0.8)
     }
   }
@@ -5973,7 +6840,7 @@ draw.GSEA.NetBID <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_tren
 #' ## get all_gs2gene
 #'
 #' analysis.par <- list()
-#' analysis.par$out.dir.DATA <- system.file('demo','gene set/DATA/',package = "NetBID2")
+#' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
 #' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
 #'
 #' ms_tab <- analysis.par$final_ms_tab
@@ -5982,7 +6849,7 @@ draw.GSEA.NetBID <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_tren
 #' analysis.par$out.dir.PLOT <- getwd()
 #'
 #' ## directory for saving the pdf files
-#' exp_mat_gene <- exprs(analysis.par$cal.eset)
+#' exp_mat_gene <- Biobase::exprs(analysis.par$cal.eset)
 #'
 #' ## calculate activity for all genesets
 #' use_gs2gene <- merge_gs(all_gs2gene=all_gs2gene,
@@ -5990,7 +6857,7 @@ draw.GSEA.NetBID <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_tren
 #' ac_gs <- cal.Activity.GS(use_gs2gene = use_gs2gene,cal_mat = exp_mat_gene)
 #'
 #' ## get DA for the gene set
-#' phe_info <- pData(analysis.par$cal.eset)
+#' phe_info <- Biobase::pData(analysis.par$cal.eset)
 #' G0  <- rownames(phe_info)[which(phe_info$`subgroup`!='G4')]
 #' # get sample list for G0
 #' G1  <- rownames(phe_info)[which(phe_info$`subgroup`=='G4')]
@@ -6015,8 +6882,8 @@ draw.GSEA.NetBID <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_tren
 #' ## GSEA plot for the significant gene sets
 #' draw.GSEA.NetBID.GS(DE=DE,name_col='ID',
 #'                     profile_col='t',profile_trend='pos2neg',
-#'                     sig_gs_list = sig_gs$names,
-#'                     gs_DA_Z=DA_gs[sig_gs$names,'Z-statistics'],
+#'                     sig_gs_list = sig_gs$ID,
+#'                     gs_DA_Z=DA_gs[sig_gs$ID,'Z-statistics'],
 #'                     use_gs2gene = use_gs2gene,
 #'                     top_gs_number=5,target_col='RdBu',
 #'                     left_annotation = 'test_left',
@@ -6031,6 +6898,17 @@ draw.GSEA.NetBID.GS <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_t
                                 top_gs_number=30,target_col='RdBu',
                                 left_annotation="",right_annotation="",main="",
                                 profile_sig_thre=0,Z_sig_thre=1.64,pdf_file=NULL){
+  #
+  all_input_para <- c('DE','name_col','profile_col','profile_trend','sig_gs_list',
+                      'gs_DA_Z','top_gs_number',
+                      'target_col','left_annotation','right_annotation','main',
+                      'profile_sig_thre','Z_sig_thre')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  check_res <- c(check_option('profile_trend',c('pos2neg','neg2pos'),envir=environment()),
+                 check_option('target_col',c('RdBu','black'),envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
   if(!profile_col %in% colnames(DE)){
     message(sprintf('%s not in colnames of DE, please check and re-try!',profile_col))
     return(FALSE)
@@ -6042,11 +6920,11 @@ draw.GSEA.NetBID.GS <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_t
   }
   use_gs2gene <- use_gs2gene[sig_gs_list]
   if(is.null(name_col)==TRUE){
-    DE <- cbind(DE[,setdiff(colnames(DE),'name')],name=rownames(DE),stringsAsFactors=FALSE)
+    DE <- base::cbind(DE[,base::setdiff(colnames(DE),'name')],name=rownames(DE),stringsAsFactors=FALSE)
     name_col <- 'name'
   }
   if(is.null(names(gs_DA_Z))) names(gs_DA_Z) <- sig_gs_list
-  if(length(sig_gs_list)>top_gs_number){
+  if(base::length(sig_gs_list)>top_gs_number){
     gs_DA_Z <- gs_DA_Z[sig_gs_list]
     sig_gs_list <- sig_gs_list[order(abs(gs_DA_Z[sig_gs_list]),decreasing = TRUE)][1:top_gs_number]
   }
@@ -6057,138 +6935,139 @@ draw.GSEA.NetBID.GS <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_t
   show_label <- sig_gs_list
   gs_DA_Z <- gs_DA_Z[sig_gs_list]
   ###################
-  ## calculate layout
+  ## calculate graphics::layout
   w1 <- which(is.na(DE[,profile_col])==FALSE)
   DE <- DE[w1,]
   if(profile_trend=='pos2neg') DE <- DE[order(DE[,profile_col],decreasing = TRUE),] else DE <- DE[order(DE[,profile_col],decreasing = FALSE),]
   DE_profile <- DE[,profile_col]
   DE_profile_name <- DE[,name_col]
-  use_gs2gene <- lapply(use_gs2gene,function(x)intersect(x,DE_profile_name))
+  use_gs2gene <- lapply(use_gs2gene,function(x)base::intersect(x,DE_profile_name))
   use_gs2gene <- use_gs2gene[sig_gs_list]
   #names(DE_profile) <- rownames(DE)
-  n_gene <- length(DE_profile)
-  n_driver <- length(sig_gs_list)
+  n_gene <- base::length(DE_profile)
+  n_driver <- base::length(sig_gs_list)
   plot_part <- function(ori=FALSE,before_off=FALSE){
-    gswidth <- max(strwidthMod(sig_gs_list,units='inches',cex=1))
-    gsheight <- max(strheightMod(sig_gs_list,units='inches',cex=1))*n_driver*1.5
+    gswidth <- base::max(strwidthMod(sig_gs_list,units='inches',cex=1))
+    gsheight <- base::max(strheightMod(sig_gs_list,units='inches',cex=1))*length(sig_gs_list)*2
     gswidth <- ceiling(gswidth)
-    ratio1 <- ceiling(gsheight/1.5)
-    ratio2 <- 4 ## width of main profile
-    rr1 <- gswidth
-    rr2 <- 1
-    # width: rr1|ratio2|rr2
-    # height: 1.5|gsheight
+    ratio1 <- ceiling(gsheight/1.5) ## profile height to rows
+    ratio2 <- 6 ## width of main profile
+    rr1 <- ceiling(gswidth/0.5)+1
+    rr2 <- 2
+    # width: 0.2|rr1|0.2|ratio2|0.1|rr2|0.2
+    # 4: gswidth,0.5
+    # height: 0.2|ratio1|0.3|1|0.2
     if(before_off==TRUE) dev.off()
     if(is.null(pdf_file)==FALSE){
-      pdf(pdf_file,width=rr1+rr2+ratio2,height=gsheight*(ratio1+1))
+      pdf(pdf_file,width=0.7+(gswidth+0.5)/rr1*(rr1+rr2+ratio2),height=0.5+(gsheight/ratio1)*(ratio1+1))
     }
-    # get layout
-    layout(matrix(c(rep(0,length.out=rr1),rep(1,length.out=ratio2),rep(0,length.out=rr2*1),
+    # get graphics::layout
+    graphics::layout(matrix(c(rep(0,length.out=rr1),rep(1,length.out=ratio2),rep(0,length.out=rr2*1),
                     rep(c(rep(4,length.out=rr1),rep(2,length.out=ratio2),rep(3,length.out=rr2*1)),
                         length.out=ratio1*(ratio2+rr1+rr2))),
                   ncol=c(ratio2+rr1+rr2),byrow=TRUE))
-    print(matrix(c(rep(0,length.out=rr1),rep(1,length.out=ratio2),rep(0,length.out=rr2*1),
-                   rep(c(rep(4,length.out=rr1),rep(2,length.out=ratio2),rep(3,length.out=rr2*1)),
-                       length.out=ratio1*(ratio2+rr1+rr2))),
-                 ncol=c(ratio2+rr1+rr2),byrow=TRUE))
+    #print(matrix(c(rep(0,length.out=rr1),rep(1,length.out=ratio2),rep(0,length.out=rr2*1),
+    #               rep(c(rep(4,length.out=rr1),rep(2,length.out=ratio2),rep(3,length.out=rr2*1)),
+    #                   length.out=ratio1*(ratio2+rr1+rr2))),
+    #             ncol=c(ratio2+rr1+rr2),byrow=TRUE))
     # 0|1|0
     # 4|2|3
     ## plot 1
-    par(mar=c(1.5,1.5,4,0))
+    par(mai=c(0.1,0.1,0.2,0.1))
     mm <- quantile(DE_profile,probs=c(0.0001,0.9999));
-    mm <- max(abs(mm)); mm <- c(-mm,mm)
-    y1 <- seq(mm[1],mm[2],length.out=5); y1 <- round(y1,1)
+    mm <- base::max(abs(mm)); mm <- c(-mm,mm)
+    y1 <- base::seq(mm[1],mm[2],length.out=5); y1 <- round(y1,1)
     unit <- n_gene/10; unit <- round(unit/100)*100
-    x1 <- seq(0,n_gene,by=unit);x1 <- unique(x1); x1 <- c(x1[1:(length(x1)-1)],n_gene)
-    par(usr=c(0,length(DE_profile),mm[1],mm[2]))
-    plot(DE_profile,col='white',pch=16,xaxt='n',yaxt='n',xlab="",ylab="",bty='n',type='n',ylim=c(mm[1],mm[2]),main=main,cex.main=1.8)
+    x1 <- base::seq(0,n_gene,by=unit);x1 <- base::unique(x1); x1 <- c(x1[1:(base::length(x1)-1)],n_gene)
+    par(usr=c(0,base::length(DE_profile),mm[1],mm[2]))
+    graphics::plot(DE_profile,col='white',pch=16,xaxt='n',yaxt='n',xlab="",ylab="",bty='n',type='n',ylim=c(mm[1],mm[2]),main=main,cex.main=1.8)
     pp <- par()$usr; rr <- (pp[2]-pp[1])/n_gene
-    polygon(x=c(pp[1],c(1:n_gene)*rr+pp[1],pp[2]),y=c(0,DE_profile,0),col='grey',border='grey',xpd=TRUE,lwd=0.3)
+    graphics::polygon(x=c(pp[1],c(1:n_gene)*rr+pp[1],pp[2]),y=c(0,DE_profile,0),col='grey',border='grey',xpd=TRUE,lwd=0.3)
     if(profile_trend=='pos2neg'){
-      if(is.null(left_annotation)==FALSE) text(pp[1]+(pp[2]-pp[1])/100,mm[2]*0.8,adj=0,left_annotation,col=brewer.pal(9,'Reds')[6],xpd=TRUE,cex=1.2)
-      if(is.null(right_annotation)==FALSE) text(pp[2]-(pp[2]-pp[1])/100,mm[1]*0.8,adj=1,right_annotation,col=brewer.pal(9,'Blues')[6],xpd=TRUE,cex=1.2)
+      if(is.null(left_annotation)==FALSE) graphics::text(pp[1]+(pp[2]-pp[1])/100,mm[2]*0.8,adj=0,left_annotation,col=brewer.pal(9,'Reds')[6],xpd=TRUE,cex=1.2)
+      if(is.null(right_annotation)==FALSE) graphics::text(pp[2]-(pp[2]-pp[1])/100,mm[1]*0.8,adj=1,right_annotation,col=brewer.pal(9,'Blues')[6],xpd=TRUE,cex=1.2)
     }else{
-      if(is.null(left_annotation)==FALSE) text(pp[1]+(pp[2]-pp[1])/100,mm[1]*0.8,adj=0,left_annotation,col=brewer.pal(9,'Blues')[6],xpd=TRUE,cex=1.2)
-      if(is.null(right_annotation)==FALSE) text(pp[2]-(pp[2]-pp[1])/100,mm[2]*0.8,adj=1,right_annotation,col=brewer.pal(9,'Reds')[6],xpd=TRUE,cex=1.2)
+      if(is.null(left_annotation)==FALSE) graphics::text(pp[1]+(pp[2]-pp[1])/100,mm[1]*0.8,adj=0,left_annotation,col=brewer.pal(9,'Blues')[6],xpd=TRUE,cex=1.2)
+      if(is.null(right_annotation)==FALSE) graphics::text(pp[2]-(pp[2]-pp[1])/100,mm[2]*0.8,adj=1,right_annotation,col=brewer.pal(9,'Reds')[6],xpd=TRUE,cex=1.2)
     }
-    axis(side=2,at=y1,labels=y1)
-    mtext(side=2,line = 2.5,profile_col,cex=1)
-    segments(pp[1],mm[1],pp[2],mm[1],xpd=TRUE)
-    segments(x1*rr+pp[1],mm[1]-(mm[2]-mm[1])/30,x1*rr+pp[1],mm[1],xpd=TRUE)
-    text(x1*rr+pp[1],mm[1]-(mm[2]-mm[1])/10,get_label_manual(x1),adj=1,xpd=TRUE)
+    graphics::axis(side=2,at=y1,labels=y1)
+    graphics::mtext(side=2,line = 2.5,profile_col,cex=1)
+    graphics::segments(pp[1],mm[1],pp[2],mm[1],xpd=TRUE)
+    graphics::segments(x1*rr+pp[1],mm[1]-(mm[2]-mm[1])/30,x1*rr+pp[1],mm[1],xpd=TRUE)
+    graphics::text(x1*rr+pp[1],mm[1]-(mm[2]-mm[1])/10,get_label_manual(x1),adj=1,xpd=TRUE,cex=0.6)
     ## plot2
-    par(mar=c(2,1.5,2,0))
-    plot(1,col='white',xlab="",ylab="",xlim=c(0,n_gene),xaxt='n',yaxt='n')
+    par(mai=c(0.2,0.1,0.2,0.1))
+    graphics::plot(1,col='white',xlab="",ylab="",xlim=c(0,n_gene),xaxt='n',yaxt='n')
     pp <- par()$usr;rr <- (pp[2]-pp[1])/n_gene
-    yy1 <- seq(from=pp[3],to=pp[4],length.out=n_driver+1)
-    yy2 <- seq(from=pp[3],to=pp[4],length.out=length(sig_gs_list)+1)
+    yy1 <- base::seq(from=pp[3],to=pp[4],length.out=n_driver+1)
+    yy2 <- base::seq(from=pp[3],to=pp[4],length.out=base::length(sig_gs_list)+1)
     # add columns
     use_target_list <- use_gs2gene[sig_gs_list]
     cc <- z2col(DE_profile,sig_thre=profile_sig_thre,n_len=100,red_col = brewer.pal(9,'Reds')[5:9],blue_col=brewer.pal(9,'Blues')[5:9],
-                col_max_thre=max(abs(DE_profile)))
+                col_max_thre=base::max(abs(DE_profile)))
     cc[which(cc=='white')] <- 'light grey'
-    for(i in 1:length(sig_gs_list)){
+    for(i in 1:base::length(sig_gs_list)){
       t1 <- use_target_list[[sig_gs_list[i]]]
       w0 <- which(DE_profile_name %in% t1)
       w1 <- w0*rr+pp[1]
       if(target_col=='black'){
-        segments(x0=w1,x1=w1,y0=yy1[i],y1=yy1[i+1],col='black',lwd=1)
+        graphics::segments(x0=w1,x1=w1,y0=yy1[i],y1=yy1[i+1],col='black',lwd=1)
       }else{
-        segments(x0=w1,x1=w1,y0=yy1[i],y1=yy1[i+1],lwd=1.5,col=cc[w0])
+        graphics::segments(x0=w1,x1=w1,y0=yy1[i],y1=yy1[i+1],lwd=1.5,col=cc[w0])
       }
     }
-    segments(x0=pp[1],x1=pp[2],y0=yy1,y1=yy1,lwd=0.2,col='light grey')
-    segments(x0=pp[1],x1=pp[2],y0=yy2,y1=yy2,lwd=2,col='white')
-    segments(x0=pp[1],x1=pp[2],y0=yy2,y1=yy2,lwd=1.2,col='dark grey')
+    graphics::segments(x0=pp[1],x1=pp[2],y0=yy1,y1=yy1,lwd=0.2,col='light grey')
+    graphics::segments(x0=pp[1],x1=pp[2],y0=yy2,y1=yy2,lwd=2,col='white')
+    graphics::segments(x0=pp[1],x1=pp[2],y0=yy2,y1=yy2,lwd=1.2,col='dark grey')
     ## plot 3
-    par(mar=c(2,0.5,2,2))
-    plot(1,col='white',xlab="",ylab="",xlim=c(0,1),xaxt='n',yaxt='n',bty='n')
+    par(mai=c(0.2,0,0.2,0.2))
+    graphics::plot(1,col='white',xlab="",ylab="",xlim=c(0,1),xaxt='n',yaxt='n',bty='n')
     pp <- par()$usr
-    rect(xleft=pp[1],xright=pp[2],ybottom=pp[3],ytop=pp[4])
-    yy2 <- seq(from=pp[3],to=pp[4],length.out=length(sig_gs_list)+1)
-    segments(x0=pp[1],x1=pp[2],y0=yy2,y1=yy2,lwd=2,col='white',xpd=TRUE)
-    segments(x0=pp[1],x1=pp[2],y0=yy2,y1=yy2,lwd=1.2,col='dark grey',xpd=TRUE)
+    graphics::rect(xleft=pp[1],xright=pp[2],ybottom=pp[3],ytop=pp[4])
+    yy2 <- base::seq(from=pp[3],to=pp[4],length.out=base::length(sig_gs_list)+1)
+    graphics::segments(x0=pp[1],x1=pp[2],y0=yy2,y1=yy2,lwd=2,col='white',xpd=TRUE)
+    graphics::segments(x0=pp[1],x1=pp[2],y0=yy2,y1=yy2,lwd=1.2,col='dark grey',xpd=TRUE)
     ## add text
-    mm_min <- min(abs(gs_DA_Z[sig_gs_list]),na.rm=TRUE)*0.9
-    mm_min <- max(mm_min,Z_sig_thre)
-    mm_max <- max(abs(gs_DA_Z[sig_gs_list]),na.rm=TRUE)*1.1
+    mm_min <- base::min(abs(gs_DA_Z[sig_gs_list]),na.rm=TRUE)*0.9
+    mm_min <- base::max(mm_min,Z_sig_thre)
+    mm_max <- base::max(abs(gs_DA_Z[sig_gs_list]),na.rm=TRUE)*1.1
     c1 <- z2col(gs_DA_Z[sig_gs_list],sig_thre=Z_sig_thre,n_len=100,red_col = brewer.pal(9,'Reds')[7],blue_col=brewer.pal(9,'Blues')[7],
                 col_min_thre=mm_min,col_max_thre=mm_max)
-    for(i in 1:length(sig_gs_list)){
+    for(i in 1:base::length(sig_gs_list)){
       z1 <- gs_DA_Z[sig_gs_list[i]]
       p1 <- get_z2p(z1)
-      rect(xleft=pp[1],xright=pp[2],ybottom=yy2[i],ytop=yy2[i+1],col=c1[i],border='dark grey',xpd=TRUE)
-      text(x=(pp[1]+pp[2])/2,y=(yy2[i]+yy2[i+1])/2,p1,adj=0.5)
+      graphics::rect(xleft=pp[1],xright=pp[2],ybottom=yy2[i],ytop=yy2[i+1],col=c1[i],border='dark grey',xpd=TRUE)
+      graphics::text(x=(pp[1]+pp[2])/2,y=(yy2[i]+yy2[i+1])/2,p1,adj=0.5)
     }
     text((pp[1]+pp[2])/2,pp[4],'DA',xpd=TRUE,cex=1.5,pos=3)
     ## plot 4
-    par(mar=c(2,6,2,0.2))
-    plot(1,col='white',xlab="",ylab="",xlim=c(0,2),xaxt='n',yaxt='n',bty='n')
+    par(mai=c(0.2,0.2,0.2,0.1))
+    graphics::plot(1,col='white',xlab="",ylab="",xlim=c(0,2),xaxt='n',yaxt='n',bty='n')
     pp <- par()$usr
-    yy2 <- seq(from=pp[3],to=pp[4],length.out=length(sig_gs_list)+1)
-    yy22 <- (yy2[1:(length(yy2)-1)]+yy2[2:length(yy2)])/2
+    yy2 <- base::seq(from=pp[3],to=pp[4],length.out=base::length(sig_gs_list)+1)
+    yy22 <- (yy2[1:(base::length(yy2)-1)]+yy2[2:base::length(yy2)])/2
     dyy <- yy22[2]-yy22[1]
     # add target size
     target_size <- unlist(lapply(use_gs2gene,length))
-    mm <- max(target_size)
+    mm <- base::max(target_size)
     rr <- ceiling(gswidth)*1.5
     tt_left <- pp[2]-(pp[2]-pp[1])/(1+rr)
     tt <- (pp[2]-pp[1])/(1+rr)
-    text(show_label,x=tt_left-tt/25,y=yy22,xpd=TRUE,adj=1)
-    for(i in 1:length(sig_gs_list)){
-      rect(xleft=tt_left,xright=tt_left+target_size[i]/mm*tt,
+    graphics::text(show_label,x=tt_left-tt/25,y=yy22,xpd=TRUE,adj=1)
+    for(i in 1:base::length(sig_gs_list)){
+      graphics::rect(xleft=tt_left,xright=tt_left+target_size[i]/mm*tt,
            ybottom=yy22[i]-dyy*0.2,ytop=yy22[i]+dyy*0.2,col='dark grey',border=NA)
     }
-    segments(x0=tt_left,x1=pp[2],y0=pp[4],y1=pp[4],xpd=TRUE)
-    sst <- round(seq(0,mm,length.out=3))
+    graphics::segments(x0=tt_left,x1=pp[2],y0=pp[4],y1=pp[4],xpd=TRUE)
+    sst <- round(base::seq(0,mm,length.out=3))
     ss <- sst*tt/mm+tt_left
-    segments(x0=ss,x1=ss,y0=pp[4],y1=pp[4]+(pp[4]-pp[3])/150,xpd=TRUE)
-    text(x=ss,y=pp[4]+(pp[4]-pp[3])/100,srt=90,sst,xpd=TRUE,adj=0,cex=0.8)
+    graphics::segments(x0=ss,x1=ss,y0=pp[4],y1=pp[4]+(pp[4]-pp[3])/150,xpd=TRUE)
+    graphics::text(x=ss,y=pp[4]+(pp[4]-pp[3])/100,srt=90,sst,xpd=TRUE,adj=0,cex=0.8)
     text('Size',x=tt_left-tt/10,y=pp[4]+(pp[4]-pp[3])/50,adj=1,xpd=TRUE,cex=0.8)
     ##
   }
-  if(is.null(pdf_file)==FALSE){plot_part(ori=TRUE);plot_part(ori=TRUE,before_off=TRUE);dev.off();dev.off();} else {plot_part()}
-  layout(1);
+  if(is.null(pdf_file)==FALSE){plot_part(ori=TRUE);plot_part(ori=TRUE,before_off=TRUE);while (!is.null(dev.list()))  dev.off();} else {plot_part()}
+  graphics::layout(1);
   return(TRUE)
 }
 
@@ -6215,15 +7094,20 @@ draw.GSEA.NetBID.GS <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_t
 #'                           target_list=analysis.par$merge.network$target_list)
 #' @export
 merge_target_list <- function(driver1=NULL,driver2=NULL,target_list=NULL){
+  #
+  all_input_para <- c('driver1','driver2','target_list')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
   t1 <- target_list[driver1][[1]]
   t2 <- target_list[driver2][[1]]
-  ov <- intersect(t1$target,t2$target)
+  ov <- base::intersect(t1$target,t2$target)
   rownames(t1) <- t1$target
   rownames(t2) <- t2$target
-  if(length(ov)==0){
-    t_out <- rbind(t1,t2)
+  if(base::length(ov)==0){
+    t_out <- base::rbind(t1,t2)
   }else{
-    t_out1 <- rbind(t1[setdiff(rownames(t1),ov),],t2[setdiff(rownames(t2),ov),])
+    t_out1 <- base::rbind(t1[base::setdiff(rownames(t1),ov),],t2[base::setdiff(rownames(t2),ov),])
     t_out2 <- list()
     for(each_ov in ov){
       x1 <- t1[each_ov,2:3]
@@ -6231,7 +7115,7 @@ merge_target_list <- function(driver1=NULL,driver2=NULL,target_list=NULL){
       if(x1[1]>x2[1]) t_out2[[each_ov]] <- t1[each_ov,] else t_out2[[each_ov]] <- t2[each_ov,]
     }
     t_out2 <- do.call(rbind,t_out2)
-    t_out <- rbind(t_out1,t_out2)
+    t_out <- base::rbind(t_out1,t_out2)
   }
   return(t_out)
 }
@@ -6258,6 +7142,8 @@ merge_target_list <- function(driver1=NULL,driver2=NULL,target_list=NULL){
 #' @param main_ac character, the main title of the plot to show activity values. Default is "".
 #' @param main_exp character, the main title of the plot to show expression values. Default is "".
 #' @param main_cex numeric, giving the amount by which the text of the main title should be magnified relative to the default. Default is 1.
+#' @param use_color a vector of color codes, colors to be assigned to each member of display label. Default is brewer.pal(9, 'Set1').
+#' @param pre_define a vector of characters, pre-defined color codes for a certain input (e.g. c("blue", "red") with names c("A", "B")). Default is NULL.
 #'
 #' @return Return a logical value. If TRUE, the plot has been created successfully.
 #'
@@ -6277,11 +7163,11 @@ merge_target_list <- function(driver1=NULL,driver2=NULL,target_list=NULL){
 #'                                label_cex = 0.5)
 #' driver_list <- rownames(sig_driver)
 #' use_driver <- driver_list[3]
-#' exp_mat <- exprs(analysis.par$cal.eset)
+#' exp_mat <- Biobase::exprs(analysis.par$cal.eset)
 #' ## expression,the rownames could match originalID
-#' ac_mat  <- exprs(analysis.par$merge.ac.eset)
+#' ac_mat  <- Biobase::exprs(analysis.par$merge.ac.eset)
 #' ## activity,the rownames could match originalID_label
-#' phe_info <- pData(analysis.par$cal.eset)
+#' phe_info <- Biobase::pData(analysis.par$cal.eset)
 #' use_obs_class <- get_obs_label(phe_info = phe_info,'subgroup')
 #' draw.categoryValue(ac_val=ac_mat[use_driver,],
 #'                    exp_val=exp_mat[ms_tab[use_driver,'originalID'],],
@@ -6289,7 +7175,8 @@ merge_target_list <- function(driver1=NULL,driver2=NULL,target_list=NULL){
 #'                    class_order=c('WNT','SHH','G4'),
 #'                    class_srt=30,
 #'                    main_ac = ms_tab[use_driver,'gene_label'],
-#'                    main_exp=ms_tab[use_driver,'geneSymbol'])
+#'                    main_exp=ms_tab[use_driver,'geneSymbol'],
+#'                    pre_define=c('WNT'='blue','SHH'='red','G4'='green'))
 #' \dontrun{
 #' analysis.par <- list()
 #' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
@@ -6306,9 +7193,11 @@ merge_target_list <- function(driver1=NULL,driver2=NULL,target_list=NULL){
 #'                                label_cex = 0.5)
 #' driver_list <- rownames(sig_driver)
 #' use_driver <- driver_list[3]
-#' exp_mat <- exprs(analysis.par$cal.eset) ## expression,the rownames could match originalID
-#' ac_mat  <- exprs(analysis.par$merge.ac.eset) ## activity,the rownames could match originalID_label
-#' phe_info <- pData(analysis.par$cal.eset)
+#' exp_mat <- Biobase::exprs(analysis.par$cal.eset)
+#' ## rownames could match originalID
+#' ac_mat  <- Biobase::exprs(analysis.par$merge.ac.eset)
+#' ## rownames could match originalID_label
+#' phe_info <- Biobase::pData(analysis.par$cal.eset)
 #' use_obs_class <- get_obs_label(phe_info = phe_info,'subgroup')
 #' analysis.par$out.dir.PLOT <- getwd() ## directory for saving the pdf files
 #' draw.categoryValue(ac_val=ac_mat[use_driver,],
@@ -6324,16 +7213,24 @@ merge_target_list <- function(driver1=NULL,driver2=NULL,target_list=NULL){
 #' @export
 draw.categoryValue <- function(ac_val=NULL,exp_val=NULL,use_obs_class=NULL,category_color=NULL,
                                stripchart_color=get_transparent('black',0.7),strip_cex=1,class_order=NULL,class_srt=90,class_cex=1,pdf_file=NULL,
-                               main_ac="",main_exp="",main_cex=1){
+                               main_ac="",main_exp="",main_cex=1,
+                               use_color=NULL,pre_define=NULL){
+  #
+  all_input_para <- c('ac_val','use_obs_class','strip_cex',
+                      'class_srt','class_cex','main_ac','main_exp','main_cex')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  use_obs_class <- clean_charVector(use_obs_class)
+  #
   if(is.null(names(use_obs_class))==FALSE){
     if(is.null(ac_val)==FALSE) use_obs_class <- use_obs_class[names(ac_val)]
     if(is.null(exp_val)==FALSE) use_obs_class <- use_obs_class[names(exp_val)]
   }
   if(is.null(class_order)){
-    class_order <- sort(unique(use_obs_class))
+    class_order <- sort(base::unique(use_obs_class))
   }
   if(is.null(category_color)==TRUE){
-    class_col <- get.class.color(class_order)
+    class_col  <- get.class.color(class_order,use_color=use_color,pre_define=pre_define)
     class_col1 <- get_transparent(class_col,0.5)
   }else{
     class_col1 <- category_color
@@ -6341,44 +7238,44 @@ draw.categoryValue <- function(ac_val=NULL,exp_val=NULL,use_obs_class=NULL,categ
   c1 <- 0
   if(is.null(ac_val)==FALSE){c1 <- c1+1}
   if(is.null(exp_val)==FALSE){c1 <- c1+1}
-  labelWidth <- max(strwidthMod(class_order,'inches',cex=class_cex)*sin(class_srt*pi/180))
+  labelWidth <- base::max(strwidthMod(class_order,'inches',cex=class_cex)*sin(class_srt*pi/180))
   if(is.null(pdf_file)==FALSE){
     hh <- 5+1.5+labelWidth
     if(c1==1) pdf(pdf_file,width=1.5+3,height=hh)
     if(c1==2) pdf(pdf_file,width=1.5+3*2,height=hh)
   }
-  if(c1>1) layout(t(matrix(1:c1)))
+  if(c1>1) graphics::layout(t(matrix(1:c1)))
   par(mai=c(labelWidth+0.5,1,1,0.5))
   if(is.null(ac_val)==FALSE){
     ddf <- data.frame(data=ac_val,class=factor(use_obs_class,levels=class_order))
     a <- boxplot(data~class,data=ddf,ylab='Activity Value',col=class_col1,outline=FALSE,border='dark grey',cex.lab=1.2,names=NA,bty='n',
-                 ylim=c(min(ddf$data),max(ddf$data)),main=main_ac,cex.main=main_cex)
-    text(1:length(class_order),par()$usr[3]-(par()$usr[4]-par()$usr[3])/20,adj=0.5+class_srt/180,class_order,srt=class_srt,xpd=TRUE,cex=class_cex)
+                 ylim=c(base::min(ddf$data),base::max(ddf$data)),main=main_ac,cex.main=main_cex)
+    graphics::text(1:base::length(class_order),par()$usr[3]-(par()$usr[4]-par()$usr[3])/20,adj=0.5+class_srt/180,class_order,srt=class_srt,xpd=TRUE,cex=class_cex)
     stripchart(data~class,data=ddf,add=TRUE,pch=16,method='jitter',vertical=TRUE,col=stripchart_color,cex=strip_cex)
   }
   if(is.null(exp_val)==FALSE){
     ddf <- data.frame(data=exp_val,class=factor(use_obs_class,levels=class_order))
     a <- boxplot(data~class,data=ddf,col=class_col1,ylab='Expression Value',outline=FALSE,border='dark grey',cex.lab=1.2,names=NA,bty='n',
-                 ylim=c(min(ddf$data),max(ddf$data)),main=main_exp,cex.main=main_cex)
-    text(1:length(class_order),par()$usr[3]-(par()$usr[4]-par()$usr[3])/20,adj=0.5+class_srt/180,class_order,srt=class_srt,xpd=TRUE,cex=class_cex)
+                 ylim=c(base::min(ddf$data),base::max(ddf$data)),main=main_exp,cex.main=main_cex)
+    graphics::text(1:base::length(class_order),par()$usr[3]-(par()$usr[4]-par()$usr[3])/20,adj=0.5+class_srt/180,class_order,srt=class_srt,xpd=TRUE,cex=class_cex)
     stripchart(data~class,data=ddf,add=TRUE,pch=16,method='jitter',vertical=TRUE,col=stripchart_color,cex=strip_cex)
   }
-  layout(1)
+  graphics::layout(1)
   if(is.null(pdf_file)==FALSE) dev.off()
   return(TRUE)
 }
 
 ### simple functions
 get_transparent <- function(x,alpha=0.1){
-  rgb(t(col2rgb(x)/255),alpha=alpha)
+  grDevices::rgb(t(grDevices::col2rgb(x)/255),alpha=alpha)
 }
 
 get_label_manual <- function(x){
   x1 <- sapply(x,function(x2){
     x3 <- unlist(strsplit(as.character(x2),""))
-    x4 <- length(x3)%/%3 ## add number
+    x4 <- base::length(x3)%/%3 ## add number
     if(x4>0){
-      pp <- length(x3)-seq(1,x4)*3; x3[pp] <- paste0(x3[pp],','); paste(x3,collapse="")
+      pp <- base::length(x3)-base::seq(1,x4)*3; x3[pp] <- paste0(x3[pp],','); base::paste(x3,collapse="")
     }else{
       x2
     }
@@ -6434,50 +7331,59 @@ get_label_manual <- function(x){
 draw.targetNet <- function(source_label="",source_z=NULL,edge_score=NULL,
                            label_cex=0.7,source_cex=1,
                            pdf_file=NULL,arrow_direction='out',n_layer=1,alphabetical_order=FALSE){
+  #
+  all_input_para <- c('source_label','source_z','edge_score','label_cex','source_cex',
+                      'arrow_direction','n_layer','alphabetical_order')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  check_res <- c(check_option('alphabetical_order',c(TRUE,FALSE),envir=environment()),
+                 check_option('arrow_direction',c('in','out'),envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
   pos_col <- brewer.pal(12,'Paired')[8]
   neg_col <- brewer.pal(12,'Paired')[4]
   edge_score<- sort(edge_score)
-  tmp1 <- sapply(unique(names(edge_score)),function(x){
+  tmp1 <- sapply(base::unique(names(edge_score)),function(x){
     x1 <- edge_score[which(names(edge_score)==x)]
-    x1[which.max(abs(x1))]
+    x1[base::which.max(abs(x1))]
   })
-  names(tmp1) <- unique(names(edge_score))
+  names(tmp1) <- base::unique(names(edge_score))
   edge_score <- tmp1
   edge_score<- edge_score[order(edge_score,decreasing = TRUE)]
   g1 <- names(edge_score)
-  ec <- z2col(edge_score*100,sig_thre=0,n_len=length(edge_score),red_col=pos_col,blue_col=neg_col);names(ec) <- names(edge_score)
+  ec <- z2col(edge_score*100,sig_thre=0,n_len=base::length(edge_score),red_col=pos_col,blue_col=neg_col);names(ec) <- names(edge_score)
   ec <- get_transparent(ec,alpha=0.8); names(ec) <- names(edge_score)
-  ew <- 2*label_cex*(abs(edge_score)-min(abs(edge_score)))/(max(abs(edge_score))-min(abs(edge_score)))+label_cex/2; names(ew) <- names(edge_score)
+  ew <- 2*label_cex*(abs(edge_score)-base::min(abs(edge_score)))/(base::max(abs(edge_score))-base::min(abs(edge_score)))+label_cex/2; names(ew) <- names(edge_score)
   t2xy <- function(tt,radius=1) {
     t2p <- pi*2 * tt
     list(x = radius * cos(t2p), y = radius * sin(t2p))
   }
   if(alphabetical_order==TRUE)  g1 <- sort(g1)
   plot_part <- function(ori=FALSE,before_off=FALSE){
-    geneWidth <- max(strwidthMod(g1,'inches',cex=label_cex))
+    geneWidth <- base::max(strwidthMod(g1,'inches',cex=label_cex))
     if(before_off==TRUE) dev.off()
     if(is.null(pdf_file)==FALSE) pdf(pdf_file,width=6+2*geneWidth*n_layer,height=6+2*geneWidth*n_layer)
     par(mai=c(1,1,1,1))
-    plot(1,xlim=c(-1,1),ylim=c(-1,1),bty='n',col='white',xlab="",ylab="",xaxt='n',yaxt='n')
+    graphics::plot(1,xlim=c(-1,1),ylim=c(-1,1),bty='n',col='white',xlab="",ylab="",xaxt='n',yaxt='n')
     pp <- par()$usr
     ## add target label
-    #tt <- seq(-0.5,0.5,length.out=length(g1)+1)[-1]; ## g1
-    rad_v <- seq(from=0.5,to=1,length.out=n_layer)
+    #tt <- seq(-0.5,0.5,length.out=base::length(g1)+1)[-1]; ## g1
+    rad_v <- base::seq(from=0.5,to=1,length.out=n_layer)
     if(n_layer==1) rad_v=0.8
-    #tmp1 <- ceiling(length(g1)/sum(rad_v)*rad_v)
-    uu <- ceiling(length(g1)/length(rad_v))
-    tmp1 <- rep(uu,length.out=length(rad_v))
-    if(n_layer>1) tmp1[length(tmp1)] <- length(g1)-sum(tmp1[1:(length(tmp1)-1)]) else tmp1 <- length(g1)
+    #tmp1 <- ceiling(base::length(g1)/sum(rad_v)*rad_v)
+    uu <- ceiling(base::length(g1)/base::length(rad_v))
+    tmp1 <- rep(uu,length.out=base::length(rad_v))
+    if(n_layer>1) tmp1[base::length(tmp1)] <- base::length(g1)-sum(tmp1[1:(base::length(tmp1)-1)]) else tmp1 <- base::length(g1)
     tmp1<-cumsum(tmp1)
     all_g1 <- list()
     for(i in 1:n_layer){
       if(i==1) all_g1[[i]] <- g1[1:tmp1[i]] else all_g1[[i]]  <- g1[(tmp1[i-1]+1):tmp1[i]]
     }
     if(alphabetical_order==FALSE) all_g1 <- lapply(all_g1,function(x)x[order(edge_score[x])])
-    #all_tt <- lapply(1:n_layer,function(i)seq(-0.5,0.5,length.out=length(all_g1[[i]])+1)[-1])
+    #all_tt <- lapply(1:n_layer,function(i)seq(-0.5,0.5,length.out=base::length(all_g1[[i]])+1)[-1])
     all_tt <- lapply(1:n_layer,function(i){
-      if(i==1) return(seq(-0.5,0.5,length.out=uu+1)[-1][1:length(all_g1[[i]])])
-      if(i>1) return(seq(-0.5-(i-1)/(n_layer*uu),0.5-(i-1)/(n_layer*uu),length.out=uu+1)[-1][1:length(all_g1[[i]])])
+      if(i==1) return(seq(-0.5,0.5,length.out=uu+1)[-1][1:base::length(all_g1[[i]])])
+      if(i>1) return(seq(-0.5-(i-1)/(n_layer*uu),0.5-(i-1)/(n_layer*uu),length.out=uu+1)[-1][1:base::length(all_g1[[i]])])
     })
     all_p <- lapply(1:n_layer,function(i)t2xy(all_tt[[i]],radius=rad_v[i]))
     # add line
@@ -6490,20 +7396,20 @@ draw.targetNet <- function(source_label="",source_z=NULL,edge_score=NULL,
       if(arrow_direction=='out'){
         p2<-t2xy(tt,radius=each_v-label_cex/36);
         p3<-t2xy(tt,radius=each_v-label_cex/48);
-        arrows(x0=0,y0=0,x1=p2$x,y1=p2$y,col=ec[g1_use],lwd=ew[g1_use],angle=10,length=0.1*label_cex,xpd=TRUE);
+        graphics::arrows(x0=0,y0=0,x1=p2$x,y1=p2$y,col=ec[g1_use],lwd=ew[g1_use],angle=10,length=0.1*label_cex,xpd=TRUE);
       }else{
         p2<-t2xy(tt,radius=each_v-label_cex/36);
         p3<-t2xy(tt,radius=each_v-label_cex/36);
         p4<-t2xy(tt,radius=geneWidth/2);
-        arrows(x0=p2$x,y0=p2$y,x1=p4$x,y1=p4$y,col=ec[g1_use],lwd=ew[g1_use],angle=5,length=0.1*label_cex,xpd=TRUE);
+        graphics::arrows(x0=p2$x,y0=p2$y,x1=p4$x,y1=p4$y,col=ec[g1_use],lwd=ew[g1_use],angle=5,length=0.1*label_cex,xpd=TRUE);
       }
-      points(p3$x,p3$y,pch=16,col='dark grey',cex=label_cex)
+      graphics::points(p3$x,p3$y,pch=16,col='dark grey',cex=label_cex)
     }
     # add label
     for(j in 1:n_layer){
       p1 <- all_p[[j]]
       g1_use <- all_g1[[j]]
-      for(i in 1:length(p1$x)) text(p1$x[i],p1$y[i],g1_use[i],cex=label_cex,srt=180*atan(p1$y[i]/p1$x[i])/pi,adj=ifelse(p1$x[i]>0,0,1),xpd=TRUE)
+      for(i in 1:base::length(p1$x)) graphics::text(p1$x[i],p1$y[i],g1_use[i],cex=label_cex,srt=180*atan(p1$y[i]/p1$x[i])/pi,adj=ifelse(p1$x[i]>0,0,1),xpd=TRUE)
     }
     ## add source label
     if(is.null(source_z)==TRUE){
@@ -6511,10 +7417,10 @@ draw.targetNet <- function(source_label="",source_z=NULL,edge_score=NULL,
     }else{
       draw.ellipse(0,0,a=1.05*geneWidth/2,b=1.05*geneWidth/2,col=z2col(source_z),border=NA)
     }
-    text(0,0,source_label,adj=0.5,xpd=TRUE,cex=source_cex)
-    legend(x=pp[1],y=pp[3],fill=c(pos_col,neg_col),c('Positively-regulated','Negatively-regulated'),bty='n',xpd=T,border=NA,cex=label_cex,horiz = TRUE)
+    graphics::text(0,0,source_label,adj=0.5,xpd=TRUE,cex=source_cex)
+    graphics::legend(x=pp[1],y=pp[3],fill=c(pos_col,neg_col),c('Positively-regulated','Negatively-regulated'),bty='n',xpd=T,border=NA,cex=label_cex,horiz = FALSE)
   }
-  if(is.null(pdf_file)==FALSE){plot_part(ori=TRUE);plot_part(ori=TRUE,before_off=TRUE);dev.off();dev.off()} else {plot_part()}
+  if(is.null(pdf_file)==FALSE){plot_part(ori=TRUE);plot_part(ori=TRUE,before_off=TRUE);while (!is.null(dev.list()))  dev.off()} else {plot_part()}
   return(TRUE)
 }
 
@@ -6535,8 +7441,8 @@ draw.targetNet <- function(source_label="",source_z=NULL,edge_score=NULL,
 #' The range of the numeric value is from -1 to 1. Positive value means it is positively-regulated by driver and vice versa. The names of the vector are gene names.
 #' @param edge_score2 a named vector of numerics, indicating the correlation between the seconde driver and its target genes.
 #' The range of the numeric value is from -1 to 1. Positive value means it is positively-regulated by driver and vice versa. The names of the vector are gene names.
-#' @param arrow1_direction character, the arrow direction for first driver. Users can choose between "in" and "out". Default is "out".
-#' @param arrow2_direction character, the arrow direction for second driver. Users can choose between "in" and "out". Default is "out".
+#' @param arrow_direction1 character, the arrow direction for first driver. Users can choose between "in" and "out". Default is "out".
+#' @param arrow_direction2 character, the arrow direction for second driver. Users can choose between "in" and "out". Default is "out".
 #' @param label_cex numeric, giving the amount by which the text of target gene names should be magnified relative to the default. Default is 0.7.
 #' @param source_cex numeric, giving the amount by which the text of driver name should be magnified relative to the default. Default is 1.
 #' @param pdf_file character, the file path to save as PDF file. If NULL, no PDF file will be saved. Default is NULL.
@@ -6595,28 +7501,41 @@ draw.targetNet <- function(source_label="",source_z=NULL,edge_score=NULL,
 draw.targetNet.TWO <- function(source1_label="",source2_label="",
                                source1_z=NULL,source2_z=NULL,
                                edge_score1=NULL,edge_score2=NULL,
-                               arrow1_direction='out',arrow2_direction='out',
+                               arrow_direction1='out',arrow_direction2='out',
                                label_cex=0.7,source_cex=1,pdf_file=NULL,
                                total_possible_target=NULL,show_test=FALSE,n_layer=1,alphabetical_order=FALSE){
+  #
+  all_input_para <- c('source1_label','source2_label','source1_z','source2_z',
+                      'edge_score1','edge_score2','label_cex','source_cex',
+                      'arrow_direction1','arrow_direction2',
+                      'n_layer','alphabetical_order','show_test')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  check_res <- c(check_option('alphabetical_order',c(TRUE,FALSE),envir=environment()),
+                 check_option('show_test',c(TRUE,FALSE),envir=environment()),
+                 check_option('arrow_direction1',c('in','out'),envir=environment()),
+                 check_option('arrow_direction2',c('in','out'),envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
   pos_col <- brewer.pal(12,'Paired')[8]
   neg_col <- brewer.pal(12,'Paired')[4]
-  tmp1 <- sapply(unique(names(edge_score1)),function(x){
-    x1 <- edge_score1[which(names(edge_score1)==x)];x1[which.max(abs(x1))]
+  tmp1 <- sapply(base::unique(names(edge_score1)),function(x){
+    x1 <- edge_score1[which(names(edge_score1)==x)];x1[base::which.max(abs(x1))]
   })
-  names(tmp1) <- unique(names(edge_score1));edge_score1 <- tmp1
-  tmp1 <- sapply(unique(names(edge_score2)),function(x){
-    x1 <- edge_score2[which(names(edge_score2)==x)];x1[which.max(abs(x1))]
+  names(tmp1) <- base::unique(names(edge_score1));edge_score1 <- tmp1
+  tmp1 <- sapply(base::unique(names(edge_score2)),function(x){
+    x1 <- edge_score2[which(names(edge_score2)==x)];x1[base::which.max(abs(x1))]
   })
-  names(tmp1) <- unique(names(edge_score2));edge_score2 <- tmp1
+  names(tmp1) <- base::unique(names(edge_score2));edge_score2 <- tmp1
   edge_score1<- sort(edge_score1,decreasing = FALSE)
   edge_score2<- sort(edge_score2,decreasing = TRUE)
-  g12 <- intersect(names(edge_score1),names(edge_score2))
-  g1  <- setdiff(names(edge_score1),names(edge_score2))
-  g2  <- setdiff(names(edge_score2),names(edge_score1))
-  ec1 <- z2col(edge_score1*100,sig_thre=0,n_len=length(edge_score1),red_col=pos_col,blue_col=neg_col);names(ec1) <- names(edge_score1)
-  ec2 <- z2col(edge_score2*100,sig_thre=0,n_len=length(edge_score2),red_col=pos_col,blue_col=neg_col);names(ec2) <- names(edge_score2)
-  ew1 <- 2*label_cex*(abs(edge_score1)-min(abs(edge_score1)))/(max(abs(edge_score1))-min(abs(edge_score1)))+label_cex/2; names(ew1) <- names(edge_score1)
-  ew2 <- 2*label_cex*(abs(edge_score2)-min(abs(edge_score2)))/(max(abs(edge_score2))-min(abs(edge_score2)))+label_cex/2; names(ew2) <- names(edge_score2)
+  g12 <- base::intersect(names(edge_score1),names(edge_score2))
+  g1  <- base::setdiff(names(edge_score1),names(edge_score2))
+  g2  <- base::setdiff(names(edge_score2),names(edge_score1))
+  ec1 <- z2col(edge_score1*100,sig_thre=0,n_len=base::length(edge_score1),red_col=pos_col,blue_col=neg_col);names(ec1) <- names(edge_score1)
+  ec2 <- z2col(edge_score2*100,sig_thre=0,n_len=base::length(edge_score2),red_col=pos_col,blue_col=neg_col);names(ec2) <- names(edge_score2)
+  ew1 <- 2*label_cex*(abs(edge_score1)-base::min(abs(edge_score1)))/(base::max(abs(edge_score1))-base::min(abs(edge_score1)))+label_cex/2; names(ew1) <- names(edge_score1)
+  ew2 <- 2*label_cex*(abs(edge_score2)-base::min(abs(edge_score2)))/(base::max(abs(edge_score2))-base::min(abs(edge_score2)))+label_cex/2; names(ew2) <- names(edge_score2)
   t2xy <- function(tt,radius=1,init.angle=0) {
     t2p <- pi*2 * tt + init.angle * pi/180
     list(x = radius * cos(t2p), y = radius * sin(t2p))
@@ -6628,26 +7547,26 @@ draw.targetNet.TWO <- function(source1_label="",source2_label="",
     g12 <- sort(g12);
   }
   plot_part <- function(ori=FALSE,before_off=FALSE){
-    geneWidth <- max(strwidthMod(g1,'inches',cex=label_cex))
+    geneWidth <- base::max(strwidthMod(g1,'inches',cex=label_cex))
     if(before_off==TRUE) dev.off()
     if(is.null(pdf_file)==FALSE) pdf(pdf_file,width=10+4*geneWidth,height=8+2*geneWidth)
-    plot(1,xlim=c(-1.4,1.4),ylim=c(-1,1),bty='n',col='white',xlab="",ylab="",xaxt='n',yaxt='n')
+    graphics::plot(1,xlim=c(-1.4,1.4),ylim=c(-1,1),bty='n',col='white',xlab="",ylab="",xaxt='n',yaxt='n')
     par(mai=c(1,1,1,1))
 
     geneWidth1 <- strwidthMod(source1_label,'user',cex=source_cex)
     geneWidth2 <- strwidthMod(source2_label,'user',cex=source_cex)
-    geneWidth <- max(geneWidth1,geneWidth2)
+    geneWidth <- base::max(geneWidth1,geneWidth2)
 
     ag <- 0.245-0.01*n_layer
     lp <- 0.4
-    rad_v <- seq(from=0.6,to=1,length.out=n_layer)
+    rad_v <- base::seq(from=0.6,to=1,length.out=n_layer)
     if(n_layer==1) rad_v=0.8
 
-    if(length(g1)>0){
+    if(base::length(g1)>0){
       # get info
-      uu <- ceiling(length(g1)/length(rad_v))
-      tmp1 <- rep(uu,length.out=length(rad_v))
-      if(n_layer>1) tmp1[length(tmp1)] <- length(g1)-sum(tmp1[1:(length(tmp1)-1)]) else tmp1 <- length(g1)
+      uu <- ceiling(base::length(g1)/base::length(rad_v))
+      tmp1 <- rep(uu,length.out=base::length(rad_v))
+      if(n_layer>1) tmp1[base::length(tmp1)] <- base::length(g1)-sum(tmp1[1:(base::length(tmp1)-1)]) else tmp1 <- base::length(g1)
       tmp1<-cumsum(tmp1)
       all_g1 <- list()
       for(i in 1:n_layer){
@@ -6655,8 +7574,8 @@ draw.targetNet.TWO <- function(source1_label="",source2_label="",
       }
       #all_g1 <- lapply(all_g1,function(x)x[order(edge_score[x])])
       all_tt <- lapply(1:n_layer,function(i){
-        if(i==1) return(seq(-ag,ag,length.out=uu)[1:length(all_g1[[i]])])
-        if(i>1) return(seq(-ag-2*ag*(i-1)/(n_layer*uu),ag-2*ag*(i-1)/(n_layer*uu),length.out=uu)[1:length(all_g1[[i]])])
+        if(i==1) return(seq(-ag,ag,length.out=uu)[1:base::length(all_g1[[i]])])
+        if(i>1) return(seq(-ag-2*ag*(i-1)/(n_layer*uu),ag-2*ag*(i-1)/(n_layer*uu),length.out=uu)[1:base::length(all_g1[[i]])])
       })
       all_p <- lapply(1:n_layer,function(i)t2xy(all_tt[[i]],radius=rad_v[i],init.angle= -180))
 
@@ -6666,31 +7585,31 @@ draw.targetNet.TWO <- function(source1_label="",source2_label="",
         p1 <- all_p[[i]]
         g1_use <- all_g1[[i]]
         tt <- all_tt[[i]]
-        if(arrow1_direction=='out'){
+        if(arrow_direction1=='out'){
           p2<-t2xy(tt,radius=each_v-label_cex/36,init.angle= -180);
           p3<-t2xy(tt,radius=each_v-label_cex/48,init.angle= -180);
-          arrows(x0=-lp,y0=0,x1=p2$x-lp,y1=p2$y,col=ec1[g1_use],lwd=ew1[g1_use],angle=10,length=0.1*label_cex,xpd=TRUE);
+          graphics::arrows(x0=-lp,y0=0,x1=p2$x-lp,y1=p2$y,col=ec1[g1_use],lwd=ew1[g1_use],angle=10,length=0.1*label_cex,xpd=TRUE);
         }else{
           p2<-t2xy(tt,radius=each_v-label_cex/36,init.angle= -180);
           p3<-t2xy(tt,radius=each_v-label_cex/36,init.angle= -180);
           p4<-t2xy(tt,radius=geneWidth/2,init.angle= -180);
-          arrows(x0=p2$x-lp,y0=p2$y,x1=p4$x-lp,y1=p4$y,col=ec1[g1_use],lwd=ew1[g1_use],angle=5,length=0.1*label_cex,xpd=TRUE);
+          graphics::arrows(x0=p2$x-lp,y0=p2$y,x1=p4$x-lp,y1=p4$y,col=ec1[g1_use],lwd=ew1[g1_use],angle=5,length=0.1*label_cex,xpd=TRUE);
         }
-        points(p3$x-lp,p3$y,pch=16,col='dark grey',cex=label_cex)
+        graphics::points(p3$x-lp,p3$y,pch=16,col='dark grey',cex=label_cex)
       }
       # add label
       for(j in 1:n_layer){
         p1 <- all_p[[j]]
         g1_use <- all_g1[[j]]
-        for(i in 1:length(p1$x)) text(p1$x[i]-lp,p1$y[i],g1_use[i],cex=label_cex,srt=180*atan(p1$y[i]/p1$x[i])/pi,adj=ifelse(p1$x[i]>0,0,1),xpd=TRUE)
+        for(i in 1:base::length(p1$x)) graphics::text(p1$x[i]-lp,p1$y[i],g1_use[i],cex=label_cex,srt=180*atan(p1$y[i]/p1$x[i])/pi,adj=ifelse(p1$x[i]>0,0,1),xpd=TRUE)
       }
     }
     ##
-    if(length(g2)>0){
+    if(base::length(g2)>0){
       # get info
-      uu <- ceiling(length(g2)/length(rad_v))
-      tmp1 <- rep(uu,length.out=length(rad_v))
-      if(n_layer>1) tmp1[length(tmp1)] <- length(g2)-sum(tmp1[1:(length(tmp1)-1)]) else tmp1 <- length(g2)
+      uu <- ceiling(base::length(g2)/base::length(rad_v))
+      tmp1 <- rep(uu,length.out=base::length(rad_v))
+      if(n_layer>1) tmp1[base::length(tmp1)] <- base::length(g2)-sum(tmp1[1:(base::length(tmp1)-1)]) else tmp1 <- base::length(g2)
       tmp1<-cumsum(tmp1)
       all_g1 <- list()
       for(i in 1:n_layer){
@@ -6698,8 +7617,8 @@ draw.targetNet.TWO <- function(source1_label="",source2_label="",
       }
       #all_g1 <- lapply(all_g1,function(x)x[order(edge_score[x])])
       all_tt <- lapply(1:n_layer,function(i){
-        if(i==1) return(seq(-ag,ag,length.out=uu)[1:length(all_g1[[i]])])
-        if(i>1) return(seq(-ag-2*ag*(i-1)/(n_layer*uu),ag-2*ag*(i-1)/(n_layer*uu),length.out=uu)[1:length(all_g1[[i]])])
+        if(i==1) return(seq(-ag,ag,length.out=uu)[1:base::length(all_g1[[i]])])
+        if(i>1) return(seq(-ag-2*ag*(i-1)/(n_layer*uu),ag-2*ag*(i-1)/(n_layer*uu),length.out=uu)[1:base::length(all_g1[[i]])])
       })
       all_p <- lapply(1:n_layer,function(i)t2xy(all_tt[[i]],radius=rad_v[i],init.angle=0))
 
@@ -6709,46 +7628,46 @@ draw.targetNet.TWO <- function(source1_label="",source2_label="",
         p1 <- all_p[[i]]
         g1_use <- all_g1[[i]]
         tt <- all_tt[[i]]
-        if(arrow2_direction=='out'){
+        if(arrow_direction2=='out'){
           p2<-t2xy(tt,radius=each_v-label_cex/36);
           p3<-t2xy(tt,radius=each_v-label_cex/48);
-          arrows(x0=lp,y0=0,x1=p2$x+lp,y1=p2$y,col=ec2[g1_use],lwd=ew2[g1_use],angle=10,length=0.1*label_cex,xpd=TRUE);
+          graphics::arrows(x0=lp,y0=0,x1=p2$x+lp,y1=p2$y,col=ec2[g1_use],lwd=ew2[g1_use],angle=10,length=0.1*label_cex,xpd=TRUE);
         }else{
           p2<-t2xy(tt,radius=each_v-label_cex/36);
           p3<-t2xy(tt,radius=each_v-label_cex/36);
           p4<-t2xy(tt,radius=geneWidth/2);
-          arrows(x0=p2$x+lp,y0=p2$y,x1=p4$x+lp,y1=p4$y,col=ec2[g1_use],lwd=ew2[g1_use],angle=5,length=0.1*label_cex,xpd=TRUE);
+          graphics::arrows(x0=p2$x+lp,y0=p2$y,x1=p4$x+lp,y1=p4$y,col=ec2[g1_use],lwd=ew2[g1_use],angle=5,length=0.1*label_cex,xpd=TRUE);
         }
-        points(p3$x+lp,p3$y,pch=16,col='dark grey',cex=label_cex)
+        graphics::points(p3$x+lp,p3$y,pch=16,col='dark grey',cex=label_cex)
       }
       # add label
       for(j in 1:n_layer){
         p1 <- all_p[[j]]
         g1_use <- all_g1[[j]]
-        for(i in 1:length(p1$x)) text(p1$x[i]+0.4,p1$y[i],g1_use[i],cex=label_cex,srt=180*atan(p1$y[i]/p1$x[i])/pi,adj=ifelse(p1$x[i]>0,0,1),xpd=TRUE)
+        for(i in 1:base::length(p1$x)) graphics::text(p1$x[i]+0.4,p1$y[i],g1_use[i],cex=label_cex,srt=180*atan(p1$y[i]/p1$x[i])/pi,adj=ifelse(p1$x[i]>0,0,1),xpd=TRUE)
       }
     }
     ##
-    if(length(g12)>0){
-      rm <- min(0.1*length(g12),1)
-      dd <- par.char2pos()[2]/2; nr <-ceiling(length(g12)/(rm*2/dd));each_col_n<-ceiling(length(g12)/nr)
-      tt <- seq(rm,-rm,length.out=each_col_n);
+    if(base::length(g12)>0){
+      rm <- base::min(0.1*base::length(g12),1)
+      dd <- par.char2pos()[2]/2; nr <-ceiling(base::length(g12)/(rm*2/dd));each_col_n<-ceiling(base::length(g12)/nr)
+      tt <- base::seq(rm,-rm,length.out=each_col_n);
       xx <- seq(-lp+geneWidth,lp-geneWidth,length.out=nr)
       if(nr==1) xx<-0
-      tt <- unlist(lapply(tt,function(x)rep(x,length.out=nr)))[1:length(g12)]
-      xx <- rep(xx,length.out=length(xx)*each_col_n)[1:length(g12)]
+      tt <- unlist(lapply(tt,function(x)rep(x,length.out=nr)))[1:base::length(g12)]
+      xx <- rep(xx,length.out=base::length(xx)*each_col_n)[1:base::length(g12)]
 
-      if(arrow1_direction=='out'){
-        arrows(x0=-lp,y0=0,x1=xx,y1=tt,col=ec1[g12],lwd=ew1[g12],angle=10,length=0.1*label_cex,xpd=TRUE)
+      if(arrow_direction1=='out'){
+        graphics::arrows(x0=-lp,y0=0,x1=xx,y1=tt,col=ec1[g12],lwd=ew1[g12],angle=10,length=0.1*label_cex,xpd=TRUE)
       }else{
         p4<-t2xy(tt,radius=geneWidth/2);
-        arrows(x0=xx,y0=tt,x1=-lp,y1=0,col=ec1[g12],lwd=ew1[g12],angle=5,length=0.1*label_cex,xpd=TRUE);
+        graphics::arrows(x0=xx,y0=tt,x1=-lp,y1=0,col=ec1[g12],lwd=ew1[g12],angle=5,length=0.1*label_cex,xpd=TRUE);
       }
-      if(arrow2_direction=='out'){
-        arrows(x0=lp,y0=0,x1=xx,y1=tt,col=ec2[g12],lwd=ew2[g12],angle=10,length=0.1*label_cex,xpd=TRUE)
+      if(arrow_direction2=='out'){
+        graphics::arrows(x0=lp,y0=0,x1=xx,y1=tt,col=ec2[g12],lwd=ew2[g12],angle=10,length=0.1*label_cex,xpd=TRUE)
       }else{
         p4<-t2xy(tt,radius=geneWidth/2);
-        arrows(x0=xx,y0=tt,x1=lp,y1=0,col=ec1[g12],lwd=ew1[g12],angle=5,length=0.1*label_cex,xpd=TRUE);
+        graphics::arrows(x0=xx,y0=tt,x1=lp,y1=0,col=ec1[g12],lwd=ew1[g12],angle=5,length=0.1*label_cex,xpd=TRUE);
       }
       boxtext(xx,tt,labels=g12,col.bg=get_transparent('light grey',0.3),cex=label_cex)
     }
@@ -6757,7 +7676,7 @@ draw.targetNet.TWO <- function(source1_label="",source2_label="",
     else
       draw.ellipse(lp,0,a=geneWidth/2,b=geneWidth/2,col=z2col(source2_z),border=NA)
 
-    text(lp,0,source2_label,adj=0.5,cex=source_cex)
+    graphics::text(lp,0,source2_label,adj=0.5,cex=source_cex)
 
     if(is.null(source1_z)==TRUE)
       draw.ellipse(-lp,0,a=geneWidth/2,b=geneWidth/2,col='light grey',border=NA)
@@ -6765,10 +7684,10 @@ draw.targetNet.TWO <- function(source1_label="",source2_label="",
       draw.ellipse(-lp,0,a=geneWidth/2,b=geneWidth/2,col=z2col(source1_z),border=NA)
     text(-lp,0,source1_label,adj=0.5,cex=source_cex)
     pp <- par()$usr
-    legend(x=pp[1],y=pp[3],fill=c(pos_col,neg_col),c('Positively-regulated','Negatively-regulated'),bty='n',xpd=T,border=NA,cex=label_cex,horiz = TRUE)
+    graphics::legend(x=pp[1],y=pp[3],fill=c(pos_col,neg_col),c('Positively-regulated','Negatively-regulated'),bty='n',xpd=T,border=NA,cex=label_cex,horiz = TRUE)
   }
   # fisher test for target
-  if(is.null(pdf_file)==FALSE){plot_part(ori=TRUE);plot_part(ori=TRUE,before_off=TRUE);dev.off();dev.off()} else {plot_part()}
+  if(is.null(pdf_file)==FALSE){plot_part(ori=TRUE);plot_part(ori=TRUE,before_off=TRUE);while (!is.null(dev.list()))  dev.off()} else {plot_part()}
 
   if(is.null(total_possible_target)==FALSE & show_test==TRUE){
     res <- test.targetNet.overlap(source1_label,source2_label,names(edge_score1),names(edge_score2),total_possible_target)
@@ -6805,19 +7724,24 @@ draw.targetNet.TWO <- function(source1_label="",source2_label="",
 test.targetNet.overlap <- function(source1_label=NULL,source2_label=NULL,
                                    target1=NULL,target2=NULL,
                                    total_possible_target=NULL){
-  t1  <- unique(target1)
-  t2  <- unique(target2)
-  print(sprintf('%s has %d unique targets !',source1_label,length(t1)))
-  print(sprintf('%s has %d unique targets !',source2_label,length(t2)))
-  n11 <- length(intersect(t1,t2))
-  n12 <- length(setdiff(t1,t2))
-  n21 <- length(setdiff(t2,t1))
+  #
+  all_input_para <- c('source1_label','source2_label','target1','target2')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
+  t1  <- base::unique(target1)
+  t2  <- base::unique(target2)
+  print(sprintf('%s has %d unique targets !',source1_label,base::length(t1)))
+  print(sprintf('%s has %d unique targets !',source2_label,base::length(t2)))
+  n11 <- base::length(base::intersect(t1,t2))
+  n12 <- base::length(base::setdiff(t1,t2))
+  n21 <- base::length(base::setdiff(t2,t1))
   if(class(total_possible_target) %in% c('integer','numeric')){
-    n22 <- total_possible_target-length(union(t1,t2))
+    n22 <- total_possible_target-base::length(union(t1,t2))
   }else{
-    n22 <- length(setdiff(total_possible_target,c(t1,t2)))
+    n22 <- base::length(base::setdiff(total_possible_target,c(t1,t2)))
   }
-  mm  <- cbind(c(n11,n21),c(n12,n22))
+  mm  <- base::cbind(c(n11,n21),c(n12,n22))
   ft  <- fisher.test(mm)$p.value
   or  <- n11/n12/(n21/n22)
   rownames(mm) <- c(sprintf('In %s target',source1_label),sprintf('Not in %s target',source1_label))
@@ -6849,9 +7773,12 @@ test.targetNet.overlap <- function(source1_label=NULL,source2_label=NULL,
 #' target_list  <- get_net2target_list(net_dat)
 #' @export
 get_net2target_list <- function(net_dat=NULL) {
-  all_source <- unique(net_dat$source)
+  all_input_para <- c('net_dat')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  all_source <- base::unique(net_dat$source)
   all_target <- lapply(all_source, function(x) {
-    n1 <- net_dat[which(net_dat$source == x), intersect(c('target', 'MI', 'spearman'),colnames(net_dat))]
+    n1 <- net_dat[which(net_dat$source == x), base::intersect(c('target', 'MI', 'spearman'),colnames(net_dat))]
     rownames(n1) <- n1$target
     return(n1)
   })
@@ -6894,9 +7821,9 @@ get_net2target_list <- function(net_dat=NULL) {
 #' }
 #' @export
 get.SJAracne.network <- function(network_file=NULL){
-  if(is.null(network_file)){
-    message('No input network file, please check and re-try !');return(FALSE)
-  }
+  all_input_para <- c('network_file')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
   net_dat      <- read.delim(file=network_file,stringsAsFactors = FALSE)
   target_list  <- get_net2target_list(net_dat)
   igraph_obj   <- graph_from_data_frame(net_dat[,c('source','target')],directed=TRUE) ## add edge weight ???
@@ -6955,7 +7882,7 @@ get.SJAracne.network <- function(network_file=NULL){
 #'                                              force_all_drivers=TRUE,
 #'                                              force_all_targets=FALSE,
 #'                                              pearson_sign_use=1)
-#' print(intersect(c('addition_driver_1','addition_driver_2'),
+#' print(base::intersect(c('addition_driver_1','addition_driver_2'),
 #'       names(V(tf.network.update$igraph_obj)))) ## check
 #' \dontrun{
 #' }
@@ -6972,16 +7899,28 @@ update_SJAracne.network <- function(network_list=NULL,
                                     pearson_sign_use=c(1,-1),
                                     directed=TRUE,weighted=TRUE
 ){
+  #
+  all_input_para <- c('network_list','force_all_drivers','force_all_targets',
+                      'min_MI','max_p.value','min_spearman_value','min_pearson_value',
+                      'spearman_sign_use','pearson_sign_use','directed','weighted')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  check_res <- c(check_option('force_all_drivers',c(TRUE,FALSE),envir=environment()),
+                 check_option('force_all_targets',c(TRUE,FALSE),envir=environment()),
+                 check_option('directed',c(TRUE,FALSE),envir=environment()),
+                 check_option('weighted',c(TRUE,FALSE),envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
   n1 <- names(network_list)
   n2 <- c('network_dat','target_list','igraph_obj')
-  if(length(setdiff(n2,n1))>0){
-    message(sprintf('%s not included in the network_list, please chech and re-try !',paste(setdiff(n2,n1),collapse=';')));
+  if(base::length(base::setdiff(n2,n1))>0){
+    message(sprintf('%s not included in the network_list, please chech and re-try !',base::paste(base::setdiff(n2,n1),collapse=';')));
     return(FALSE)
   }
   ori_net_dat <- network_list$network_dat
   net_dat <- ori_net_dat
-  if(is.null(all_possible_drivers)==TRUE) all_possible_drivers <- unique(net_dat$source)
-  if(is.null(all_possible_targets)==TRUE) all_possible_targets <- unique(net_dat$target)
+  if(is.null(all_possible_drivers)==TRUE) all_possible_drivers <- base::unique(net_dat$source)
+  if(is.null(all_possible_targets)==TRUE) all_possible_targets <- base::unique(net_dat$target)
   # basic statistics filter
   w1 <- which(net_dat$MI>=min_MI & net_dat$p.value<=max_p.value
               & abs(net_dat$pearson)>=min_pearson_value &
@@ -6990,38 +7929,39 @@ update_SJAracne.network <- function(network_list=NULL,
   # sign choose
   if(!1 %in% spearman_sign_use){ ## do not use the positive ones
     w1 <- which(net_dat$spearman<=0)
-    all_w1 <- setdiff(all_w1,w1)
+    all_w1 <- base::setdiff(all_w1,w1)
   }
   if(!-1 %in% spearman_sign_use){ ## do not use the negative ones
     w1 <- which(net_dat$spearman>=0)
-    all_w1 <- setdiff(all_w1,w1)
+    all_w1 <- base::setdiff(all_w1,w1)
   }
   if(!1 %in% pearson_sign_use){ ## do not use the positive ones
     w1 <- which(net_dat$pearson<=0)
-    all_w1 <- setdiff(all_w1,w1)
+    all_w1 <- base::setdiff(all_w1,w1)
   }
   if(!-1 %in% pearson_sign_use){ ## do not use the negative ones
     w1 <- which(net_dat$pearson>=0)
-    all_w1 <- setdiff(all_w1,w1)
+    all_w1 <- base::setdiff(all_w1,w1)
   }
   # nodes filter
-  all_possible_nodes <- unique(c(unique(net_dat$source),unique(net_dat$target))) ## original all possible
+  all_possible_nodes <- base::unique(c(base::unique(net_dat$source),base::unique(net_dat$target))) ## original all possible
   if(force_all_drivers==TRUE){
     w1 <- which(net_dat$source %in% all_possible_drivers)
-    all_w1 <- unique(c(all_w1,w1))
-    all_possible_nodes <- unique(c(all_possible_nodes,all_possible_drivers))
+    all_w1 <- base::unique(c(all_w1,w1))
+    all_possible_nodes <- base::unique(c(all_possible_nodes,all_possible_drivers))
   }
   if(force_all_targets==TRUE){
     w1 <- which(net_dat$target %in% all_possible_targets)
-    all_w1 <- unique(c(all_w1,w1))
-    all_possible_nodes <- unique(c(all_possible_nodes,all_possible_targets))
+    all_w1 <- base::unique(c(all_w1,w1))
+    all_possible_nodes <- base::unique(c(all_possible_nodes,all_possible_targets))
   }
-  message(sprintf('%d from %d edges are kept in the network !',length(all_w1),nrow(ori_net_dat)))
-  message(sprintf('%d nodes will be used to generate the igraph!',length(all_possible_nodes)))
+  message(sprintf('%d from %d edges are kept in the network !',base::length(all_w1),nrow(ori_net_dat)))
+  message(sprintf('%d nodes will be used to generate the igraph!',base::length(all_possible_nodes)))
   # keep all genes in all* to be in the igraph
   net_dat <- net_dat[which(net_dat$source %in% all_possible_drivers & net_dat$target %in% all_possible_targets),] ## filter by all
   igraph_obj   <- graph_from_data_frame(net_dat[,c('source','target')],directed=directed,vertices = all_possible_nodes) ##
   if(weighted==TRUE) igraph_obj <- set_edge_attr(igraph_obj,'weight',index=E(igraph_obj),value=net_dat[,'MI'])
+  if(directed==TRUE) igraph_obj   <- set_edge_attr(igraph_obj,'sign',index=E(igraph_obj),value=sign(net_dat[,'spearman']))
   target_list  <- get_net2target_list(net_dat)
   return(list(network_dat=net_dat,target_list=target_list,igraph_obj=igraph_obj))
 }
@@ -7040,6 +7980,7 @@ update_SJAracne.network <- function(network_list=NULL,
 #' @param generate_html logical, if TRUE, a html file will be created by R Markdown.
 #' If FALSE, plots will be save as separated PDFs.
 #' Default is TRUE.
+#' @param html_info_limit logical, if TRUE, the statistics for network QC html will be limited. Default is TRUE.
 #' @return Return a logical value. If TRUE, success in creating QC tables and plots.
 #'
 #' @examples
@@ -7059,7 +8000,17 @@ update_SJAracne.network <- function(network_list=NULL,
 #'                 outdir=analysis.par$out.dir.QC,prefix='TF_net_')
 #' }
 #' @export
-draw.network.QC <- function(igraph_obj,outdir=NULL,prefix="",directed=TRUE,weighted=FALSE,generate_html=TRUE){
+draw.network.QC <- function(igraph_obj,outdir=NULL,prefix="",directed=TRUE,weighted=FALSE,generate_html=TRUE,html_info_limit=TRUE){
+  #
+  all_input_para <- c('igraph_obj','prefix','directed','weighted','generate_html','html_info_simple')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  check_res <- c(check_option('directed',c(TRUE,FALSE),envir=environment()),
+                 check_option('weighted',c(TRUE,FALSE),envir=environment()),
+                 check_option('generate_html',c(TRUE,FALSE),envir=environment()),
+                 check_option('html_info_limit',c(TRUE,FALSE),envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
   if (!file.exists(outdir)) {
     dir.create(outdir, recursive = TRUE)
     message(paste0("The output directory: \"", outdir, "\" is created!"))
@@ -7070,23 +8021,41 @@ draw.network.QC <- function(igraph_obj,outdir=NULL,prefix="",directed=TRUE,weigh
   }
   net <- igraph_obj
   if(generate_html==TRUE){
+    if(pandoc_available()==FALSE){
+      stop('pandoc not available, please set Sys.setenv(RSTUDIO_PANDOC=$pandoc_installed_path), or set generate_html=FALSE')
+    }
     directed <- directed
     weighted <- weighted
     output_rmd_file <- sprintf('%s/%snetQC.Rmd',outdir,prefix)
     file.copy(from=system.file('Rmd/net_QC.Rmd',package = "NetBID2"),to=output_rmd_file)
-    render(output_rmd_file, html_document(toc = TRUE))
+    rmarkdown::render(output_rmd_file, html_document(toc = TRUE))
     return(TRUE)
   }
+  ###
+  deg <- igraph::degree(net,mode='out')
+  source_list <- names(deg)[which(deg>0)]
+  #
   res_file <- sprintf('%s/%snetwork_info.pdf',outdir,prefix)
   pdf(res_file,width=8,height=8);
+  #
   par(mar=c(6,6,6,8))
-  a <- hist(igraph::degree(net),xlab='Degree',cex.lab=1.2,cex.axis=1.2,cex.main=1.2,
-            main=sprintf('Density plot for degree distribution \n (network node:%d, network edge:%d)',length(V(net)),length(E(net))));
-  d1 <- density(igraph::degree(net))
-  mm <- max(a$counts)/max(d1$y);mm1 <- seq(0,max(d1$y),length.out = 5);mm2 <- format(mm1,scientific=TRUE,digits=3);mm2[0]<-'0';
+  d_out <- igraph::degree(net,mode = 'all')
+  a <- graphics::hist(d_out,breaks = 20,xlab='Degree',cex.lab=1.2,cex.axis=1.2,cex.main=1.2,
+            main=sprintf('Density plot of degree distribution for all nodes \n (network node:%d, network edge:%d)',base::length(V(net)),base::length(E(net))));
+  d1 <- stats::density(d_out)
+  mm <- base::max(a$counts)/base::max(d1$y);mm1 <- base::seq(0,base::max(d1$y),length.out = 5);mm2 <- format(mm1,scientific=TRUE,digits=3);mm2[1]<-'0';
   lines(x=d1$x,y=d1$y*mm,col=get_transparent('red',0.5),lwd=1.5)
-  axis(side=4,at=mm*mm1,labels=mm2,las=2);
-  mtext(side=4,line = 6,'Density',cex=1.2)
+  graphics::axis(side=4,at=mm*mm1,labels=mm2,las=2);
+  graphics::mtext(side=4,line = 6,'Density',cex=1.2)
+  d_out <- igraph::degree(net,mode = 'out')[source_list]
+  a <- graphics::hist(d_out,breaks = 20,xlab='Degree',cex.lab=1.2,cex.axis=1.2,cex.main=1.2,
+            main=sprintf('Density plot of target size for all %s drivers \n (Size from %s to %s; mean Size: %s, median Size: %s )',base::length(source_list),base::min(d_out),base::max(d_out),format(base::mean(d_out),digits=5),stats::median(d_out)));
+  d1 <- stats::density(d_out)
+  mm <- base::max(a$counts)/base::max(d1$y);mm1 <- base::seq(0,base::max(d1$y),length.out = 5);mm2 <- format(mm1,scientific=TRUE,digits=3);mm2[1]<-'0';
+  lines(x=d1$x,y=d1$y*mm,col=get_transparent('red',0.5),lwd=1.5)
+  graphics::axis(side=4,at=mm*mm1,labels=mm2,las=2);
+  graphics::mtext(side=4,line = 6,'Density',cex=1.2)
+  #
   res1 <- check_scalefree(net)
   dev.off()
   return(TRUE)
@@ -7095,15 +8064,15 @@ draw.network.QC <- function(igraph_obj,outdir=NULL,prefix="",directed=TRUE,weigh
 ## functions to check the scale free feature of the network
 check_scalefree <- function(igraph_obj) {
   gr1 <- igraph_obj
-  fp1 <- degree_distribution(gr1)
-  dd <- as.data.frame(cbind(k = 1:max(igraph::degree(gr1)), pk = fp1[-1]))
-  dd$pk <- dd$pk + 1 / length(V(gr1))
+  fp1 <- igraph::degree_distribution(gr1)
+  dd <- as.data.frame(base::cbind(k = 1:base::max(igraph::degree(gr1)), pk = fp1[-1]))
+  dd$pk <- dd$pk + 1 / base::length(V(gr1))
   r2 <-
-    lm(log10(dd$pk) ~ log10(dd$k))
+    stats::lm(log10(dd$pk) ~ log10(dd$k))
   r3 <- summary(r2)$adj.r.squared
-  if(length(dd$k)>100) plot(pk ~ k,data = dd,log = 'xy',main = sprintf('R2:%s', format(r3,digits=4)),pch=16,col=get_transparent('dark grey',0.8),cex.lab=1.4,cex.axis=1.2)
-  if(length(dd$k)<=100) plot(pk ~ k,data = dd,log = 'xy',main = sprintf('R2:%s', format(r3,digits=4)),pch=16,col=get_transparent('black',0.8),cex.lab=1.4,cex.axis=1.2)
-  abline(a=r2$coefficients[1],b=r2$coefficients[2],col=get_transparent('red',0.5),lwd=2)
+  if(base::length(dd$k)>100) graphics::plot(pk ~ k,data = dd,log = 'xy',main = sprintf('R2:%s', format(r3,digits=4)),pch=16,col=get_transparent('dark grey',0.8),cex.lab=1.4,cex.axis=1.2)
+  if(base::length(dd$k)<=100) graphics::plot(pk ~ k,data = dd,log = 'xy',main = sprintf('R2:%s', format(r3,digits=4)),pch=16,col=get_transparent('black',0.8),cex.lab=1.4,cex.axis=1.2)
+  graphics::abline(a=r2$coefficients[1],b=r2$coefficients[2],col=get_transparent('red',0.5),lwd=2)
   return(r3)
 }
 
@@ -7123,6 +8092,8 @@ check_scalefree <- function(igraph_obj) {
 #' @param SJAR.project_name character, the project name used to label the output directory.
 #' @param IQR.thre numeric, the IQR filter threshold to filter all non-driver genes.
 #' @param IQR.loose_thre numeric, the IQR filter threshold to filter for all driver(TF/SIG) genes.
+#' @param geneSymbol_column character, the column name in fdata(eset) which contains gene symbol.
+#' If NULL, will use the main ID in exprs(eset) to fulfill the "geneSymbol" column. Default is NULL.
 #' @param add_options additional option for running SJARACNe.
 #' @examples
 #' \dontrun{
@@ -7131,10 +8102,10 @@ check_scalefree <- function(igraph_obj) {
 #' NetBID.loadRData(network.par=network.par,step='exp-QC')
 #' db.preload(use_level='gene',use_spe='human',update=FALSE)
 #' use_gene_type <- 'external_gene_name' ## this should user-defined !!!
-#' use_genes <- rownames(fData(network.par$net.eset))
+#' use_genes <- rownames(Biobase::fData(network.par$net.eset))
 #' use_list  <- get.TF_SIG.list(use_genes,use_gene_type=use_gene_type)
 #' #select sample for analysis
-#' phe <- pData(network.par$net.eset)
+#' phe <- Biobase::pData(network.par$net.eset)
 #' use.samples <- rownames(phe) ## use all samples, or choose to use some samples
 #' prj.name <- network.par$project.name # can use other names, if need to run different use samples
 #' network.par$out.dir.SJAR <- 'test' ## set the directory
@@ -7148,20 +8119,16 @@ check_scalefree <- function(igraph_obj) {
 #' }
 #' @export
 SJAracne.prepare <-
-  function(eset,use.samples = rownames(pData(eset)),
+  function(eset,use.samples = rownames(Biobase::pData(eset)),
            TF_list=NULL,SIG_list=NULL,
            SJAR.main_dir='',
            SJAR.project_name = "",
-           IQR.thre=0.5,IQR.loose_thre=0.1,add_options='') {
-    if(is.null(TF_list)==TRUE){
-      message('Empty TF_list, please check and re-try !');return(FALSE)
-    }
-    if(is.null(SIG_list)==TRUE){
-      message('Empty SIG_list, please check and re-try !');return(FALSE)
-    }
-    if(is.null(SJAR.project_name)==TRUE){
-      message('Empty SJAR.project_name, please check and re-try !');return(FALSE)
-    }
+           IQR.thre=0.5,IQR.loose_thre=0.1,add_options='',geneSymbol_column=NULL) {
+    #
+    all_input_para <- c('eset','use.samples','TF_list','SIG_list','SJAR.main_dir','SJAR.project_name','IQR.thre','IQR.loose_thre')
+    check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+    if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+    #
     SJAR.outdir <- file.path(SJAR.main_dir, SJAR.project_name)
     if (!file.exists(SJAR.outdir)) {
       dir.create(SJAR.outdir, recursive = TRUE)
@@ -7177,11 +8144,11 @@ SJAracne.prepare <-
     SJAR.bash_file.sig <-
       file.path(SJAR.main_dir, SJAR.project_name, 'run_sig.sh')
     ## process exp matrix
-    d <- exprs(eset)[, use.samples]
+    d <- Biobase::exprs(eset)[, use.samples]
     # filter genes with count=0
     d <- d[!apply(d == 0, 1, all), ]
     # filter genes with IQR
-    choose1 <- IQR.filter(d, rownames(d),thre = IQR.thre,loose_thre=IQR.loose_thre,loose_gene=unique(c(TF_list,SIG_list)))
+    choose1 <- IQR.filter(d, rownames(d),thre = IQR.thre,loose_thre=IQR.loose_thre,loose_gene=base::unique(c(TF_list,SIG_list)))
     d <- d[choose1, ]
     use.genes <- rownames(d)
     use.genes <- use.genes[which(is.na(use.genes)==FALSE)]
@@ -7190,9 +8157,12 @@ SJAracne.prepare <-
     use.genes <- rownames(d)
     # write exp data to exp format
     use.genes.symbol <- use.genes
-    if('geneSymbol' %in% colnames(fData(eset))){use.genes.symbol <- fData(eset)[use.genes,'geneSymbol']}
-    if('external_gene_name' %in% colnames(fData(eset))){use.genes.symbol <- fData(eset)[use.genes,'external_gene_name']}
-    expdata <- data.frame(cbind(isoformId = use.genes, geneSymbol = use.genes.symbol, d))
+    if(is.null(geneSymbol_column)==FALSE){
+      if(geneSymbol_column %in% colnames(Biobase::fData(eset))){use.genes.symbol <- Biobase::fData(eset)[use.genes,geneSymbol_column]}
+    }
+    use.genes <- clean_charVector(use.genes)
+    use.genes.symbol <- clean_charVector(use.genes.symbol)
+    expdata <- data.frame(base::cbind(isoformId = use.genes, geneSymbol = use.genes.symbol, d),stringsAsFactors=FALSE)
     #
     write.table(
       expdata,
@@ -7202,8 +8172,8 @@ SJAracne.prepare <-
       quote = FALSE
     )
     ##
-    cat(intersect(use.genes, TF_list),file = SJAR.hub_genes.tf,sep = '\n')
-    cat(intersect(use.genes, SIG_list),file = SJAR.hub_genes.sig,sep = '\n')
+    cat(base::intersect(use.genes, TF_list),file = SJAR.hub_genes.tf,sep = '\n')
+    cat(base::intersect(use.genes, SIG_list),file = SJAR.hub_genes.sig,sep = '\n')
     # write scripts to bash file for tf
     network_project_name <- SJAR.project_name
     tf_out_path <- SJAR.main_dir
@@ -7304,19 +8274,33 @@ SJAracne.prepare <-
 #' }
 #' @export
 bid <- function(mat=NULL,use_obs_class=NULL,class_order=NULL,class_ordered=TRUE,
-                method=c('MLE','Bayesian'),family=gaussian,pooling=c('full','no','partial'),
+                method='Bayesian',family=gaussian,pooling='full',
                 prior.V.scale=0.02,prior.R.nu=1,prior.G.nu=2,nitt = 13000,burnin =3000,thin=10,
                 std=TRUE,logTransformed=TRUE,log.base=2,
                 average.method='geometric',pseudoCount=0,return_model=FALSE,use_seed=999,verbose=FALSE){
   #check input
-  if(is.null(mat)==TRUE){message('Input mat is NULL, please check and re-try!');return(FALSE);}
-  if(is.null(use_obs_class)==TRUE){message('Input use_obs_class is NULL, please check and re-try!');return(FALSE);}
-  if(is.null(class_order)==TRUE){message('Input class_order is NULL, please check and re-try!');return(FALSE);}
-  if(missing(pooling))
-    pooling<-c('full')
-  else
-    pooling<-tolower(pooling)
-  pooling<-match.arg(pooling,several.ok=T)
+  #
+  all_input_para <- c('mat','use_obs_class','class_order','class_ordered',
+                      'method','family','pooling',
+                      'prior.V.scale','prior.R.nu','prior.G.nu',
+                      'nitt','burnin','thin','std','log.base',
+                      'logTransformed','average.method','pseudoCount',
+                      'return_model','use_seed','verbose')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  check_res <- c(check_option('class_ordered',c(TRUE,FALSE),envir=environment()),
+                 check_option('std',c(TRUE,FALSE),envir=environment()),
+                 check_option('logTransformed',c(TRUE,FALSE),envir=environment()),
+                 check_option('return_model',c(TRUE,FALSE),envir=environment()),
+                 check_option('verbose',c(TRUE,FALSE),envir=environment()),
+                 check_option('method',c('Bayesian','MLE'),envir=environment()),
+                 check_option('pooling',c('full','no','partial'),envir=environment()),
+                 check_option('average.method',c('arithmetic','geometric'),envir=environment())
+                 )
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
+  use_obs_class <- clean_charVector(use_obs_class)
+  #
   if (is.character(family)){
     if(family %in% c('category','ordinal')) family <- 'binomial' ## use automatically judging
     if (!family %in% c('gaussian','binomial', 'poisson')) {
@@ -7333,9 +8317,6 @@ bid <- function(mat=NULL,use_obs_class=NULL,class_order=NULL,class_ordered=TRUE,
   if (!family$family %in% c('gaussian','binomial', 'poisson')) {
     message("Only gaussian,poisson, and binomial/category/ordinal are supported, please check and re-try!");return(FALSE);
   }
-  if(missing(method)) method<-'Bayesian'
-  if(grepl('Bayes',method,ignore.case = T)) method<-'Bayesian'
-  if(grepl('MLE|MaxLikelihood',method,ignore.case = T)) method<-'MLE'
   method<-match.arg(method)
   #sample name
   if(is.null(colnames(mat))==TRUE & is.null(names(use_obs_class))==TRUE){
@@ -7350,9 +8331,9 @@ bid <- function(mat=NULL,use_obs_class=NULL,class_order=NULL,class_ordered=TRUE,
   }
   use_obs_class <- use_obs_class[colnames(mat)]
   ##check sample class
-  class_order  <- intersect(class_order,use_obs_class)
-  if(length(class_order)<=1){message('Sample class order is smaller than two classes, please check and re-try!');return(FALSE);}
-  if(verbose==TRUE) message(sprintf('%d sample classes will be used in calculation and %s will be treated as control',length(class_order),class_order[1]))
+  class_order  <- base::intersect(class_order,use_obs_class)
+  if(base::length(class_order)<=1){message('Sample class order is smaller than two classes, please check and re-try!');return(FALSE);}
+  if(verbose==TRUE) message(sprintf('%d sample classes will be used in calculation and %s will be treated as control',base::length(class_order),class_order[1]))
   ##generate comp
   comp <- factor(use_obs_class,levels=class_order)
   ##check input matrix
@@ -7362,11 +8343,11 @@ bid <- function(mat=NULL,use_obs_class=NULL,class_order=NULL,class_ordered=TRUE,
   if(dim(d)[1]==1){ d <- t(as.matrix(d[,nna])); rownames(d) <- rownames(mat) }else{ d <- d[,nna]}
   ##generate data frame
   d   <- melt(t(d))
-  dat <- data.frame(response=d$value,treatment=rep(comp,length(unique(d$X2))),probe=d$X2)
+  dat <- data.frame(response=d$value,treatment=rep(comp,base::length(base::unique(d$X2))),probe=d$X2)
   ##calculate FC
-  n.levels<-length(unique(dat$probe)) ##
-  n.treatments<-length(unique(dat$treatment)) ## 2grp or mgrp
-  AveExpr<-mean(dat$response)
+  n.levels<-base::length(base::unique(dat$probe)) ##
+  n.treatments<-base::length(base::unique(dat$treatment)) ## 2grp or mgrp
+  AveExpr<-base::mean(dat$response)
   if(n.treatments==2){
     FC.val<-FC(dat$response,dat$treatment,
                logTransformed=logTransformed,log.base=log.base,
@@ -7380,7 +8361,7 @@ bid <- function(mat=NULL,use_obs_class=NULL,class_order=NULL,class_ordered=TRUE,
     message('negative values not allowed for the Poisson family, please set std=FALSE and re-try!');return(FALSE)
   }
   if(std==TRUE & sd(dat$response)>0)
-    dat$response<-0.5*(dat$response-mean(dat$response))/sd(dat$response)
+    dat$response<-0.5*(dat$response-base::mean(dat$response))/sd(dat$response)
 
   if(class_ordered==TRUE) dat$treatment <- as.ordered(dat$treatment) ## for multi-groups
   if(n.treatments==2) class_ordered=FALSE
@@ -7400,7 +8381,7 @@ bid <- function(mat=NULL,use_obs_class=NULL,class_order=NULL,class_ordered=TRUE,
         t_sta <- NA
       } else{
         t_sta <- sum.tmp$coef[w1,'t value']
-        if(length(grep('^Pr',colnames(sum.tmp$coef)))>0){
+        if(base::length(grep('^Pr',colnames(sum.tmp$coef)))>0){
           p_sta <- sum.tmp$coef[w1,grep('^Pr',colnames(sum.tmp$coef))]
         }else{
           p_sta<-2*pt(abs(t_sta),lower.tail=FALSE,df=df_sta)
@@ -7438,30 +8419,30 @@ bid <- function(mat=NULL,use_obs_class=NULL,class_order=NULL,class_ordered=TRUE,
   #### gaussian/poisson
   if(method=='MLE' & family$family %in% c('gaussian','poisson') & (n.levels==1 | pooling=='full')){ ## n.levels==1/full
     if(class_ordered==TRUE){message('If need to get p-value between each group, try to set family to "ordinial"!');}
-    M <- glm(response ~ treatment, data=dat, family=family)
+    M <- stats::glm(response ~ treatment, data=dat, family=family)
   }
   if(method=='MLE' & family$family %in% c('gaussian','poisson') & n.levels>1 & pooling=='no'){
     if(class_ordered==TRUE){message('If need to get p-value between each group, try to set family to "ordinial"!');}
-    M <- glm(response ~ treatment + probe, data=dat,family=family)
+    M <- stats::glm(response ~ treatment + probe, data=dat,family=family)
   }
   if(method=='MLE' & family$family %in% c('gaussian','poisson') & n.levels>1 & pooling=='partial'){
     if(class_ordered==TRUE){message('If need to get p-value between each group, try to set family to "ordinial"!');}
-    M <- lmer(response ~ treatment + (treatment + 1 | probe), data=dat)
+    M <- lme4::lmer(response ~ treatment + (treatment + 1 | probe), data=dat)
   }
   #### binomial
   if(method=='MLE' & family$family=='binomial' & (n.levels==1 | pooling=='full')){ ## n.levels==1
-    if(class_ordered==FALSE) M <- glm(treatment ~ response, data=dat, family=family)
-    if(class_ordered==TRUE) M <- clm(treatment ~ response, data=dat)
+    if(class_ordered==FALSE) M <- stats::glm(treatment ~ response, data=dat, family=family)
+    if(class_ordered==TRUE) M <- ordinal::clm(treatment ~ response, data=dat)
   }
   if(method=='MLE' & family$family=='binomial' & n.levels>1 & pooling=='no'){
-    if(class_ordered==FALSE) M <- glm(treatment ~ response + probe, data=dat,family=family)
-    if(class_ordered==TRUE) M <- clm(treatment ~ response + probe, data=dat)
+    if(class_ordered==FALSE) M <- stats::glm(treatment ~ response + probe, data=dat,family=family)
+    if(class_ordered==TRUE) M <- ordinal::clm(treatment ~ response + probe, data=dat)
   }
   if(method=='MLE' & family$family=='binomial' & n.levels>1 & pooling=='partial'){
-    if(class_ordered==FALSE) M <- glmer(treatment ~ response + (response + 1 | probe), data=dat,family=family)
+    if(class_ordered==FALSE) M <- lme4::lmer(treatment ~ response + (response + 1 | probe), data=dat,family=family)
     if(class_ordered==TRUE){
-      if(length(levels(dat$probe))<3){message('Random-effect terms has less than three levels, treat as fix effect!');M <- clm(treatment ~ response + probe, data=dat)}
-      if(length(levels(dat$probe))>=3) M <- clmm(treatment ~ response + (response+1|probe), data=dat) ## clmm must have grouping factor larger than 3
+      if(base::length(levels(dat$probe))<3){message('Random-effect terms has less than three levels, treat as fix effect!');M <- ordinal::clm(treatment ~ response + probe, data=dat)}
+      if(base::length(levels(dat$probe))>=3) M <- ordinal::clmm(treatment ~ response + (response+1|probe), data=dat) ## clmm must have grouping factor larger than 3
     }
   }
   ################### Bayesian, 8 conditions
@@ -7471,37 +8452,37 @@ bid <- function(mat=NULL,use_obs_class=NULL,class_order=NULL,class_ordered=TRUE,
   #### gaussian/poisson
   if(method=='Bayesian' & family$family %in% c('gaussian','poisson') & (pooling=='full' | pooling=='no' & n.levels==1)){
     if(class_ordered==TRUE){message('If need to get p-value between each group, try to set family to "ordinial"!');}
-    M <- bayesglm(response ~ treatment, data=dat, family=family)
+    M <- arm::bayesglm(response ~ treatment, data=dat, family=family)
   }
   if(method=='Bayesian' & family$family %in% c('gaussian','poisson') & n.levels>1 & pooling=='no'){
     if(class_ordered==TRUE){message('If need to get p-value between each group, try to set family to "ordinial"!');}
-    M <- bayesglm(response ~ treatment + probe, data=dat,family=family)
+    M <- arm::bayesglm(response ~ treatment + probe, data=dat,family=family)
   }
   #
   prior<-list(R = list(V = prior.V.scale, nu=prior.R.nu)) ## default prior
   if(method=='Bayesian' & family$family %in% c('gaussian','poisson') & n.levels==1 & pooling=='partial'){
     if(class_ordered==TRUE){message('If need to get p-value between each group, try to set family to "ordinial"!');}
-    M <- MCMCglmm(response ~ treatment, data=dat, prior=prior,verbose=FALSE, nitt=nitt, burnin = burnin,thin=thin,family=family$family)
+    M <- MCMCglmm::MCMCglmm(response ~ treatment, data=dat, prior=prior,verbose=FALSE, nitt=nitt, burnin = burnin,thin=thin,family=family$family)
     df_sta<-nrow(dat)-n.treatments
   }
   if(method=='Bayesian' & family$family %in% c('gaussian','poisson') & n.levels>1 & pooling=='partial'){
     prior<-list(R = list(V = prior.V.scale, nu=prior.R.nu), G = list(G1 = list(V = diag(n.treatments)*prior.V.scale, nu = prior.G.nu)))
     if(class_ordered==TRUE){message('If need to get p-value between each group, try to set family to "ordinial"!');}
-    M <- MCMCglmm(response ~ treatment, random=~idh(treatment+1):probe, data=dat, prior=prior,verbose=FALSE, nitt=nitt, burnin = burnin,thin=thin,family=family$family)
+    M <- MCMCglmm::MCMCglmm(response ~ treatment, random=~idh(treatment+1):probe, data=dat, prior=prior,verbose=FALSE, nitt=nitt, burnin = burnin,thin=thin,family=family$family)
     df_sta <-nrow(dat)-(n.levels+1)*n.treatments
   }
   #### binomial
   if(method=='Bayesian' & family$family=='binomial' & (pooling=='full' | pooling=='no' & n.levels==1)){ ###
-    if(class_ordered==FALSE) M <- bayesglm(treatment ~ response, data=dat, family=family, prior.scale = prior.scale)
+    if(class_ordered==FALSE) M <- arm::bayesglm(treatment ~ response, data=dat, family=family, prior.scale = prior.scale)
     if(class_ordered==TRUE){
-      M <- MCMCglmm(treatment ~ response, data=dat, family='ordinal',prior=prior,verbose=FALSE, nitt=nitt, burnin = burnin,thin=thin)
+      M <- MCMCglmm::MCMCglmm(treatment ~ response, data=dat, family='ordinal',prior=prior,verbose=FALSE, nitt=nitt, burnin = burnin,thin=thin)
       df_sta<-nrow(dat)-2
     }
   }
   if(method=='Bayesian' & family$family=='binomial' & n.levels>1 & pooling=='no'){ ###
-    if(class_ordered==FALSE) M <- bayesglm(treatment ~ response + probe, data=dat, family=family,prior.scale = prior.scale)
+    if(class_ordered==FALSE) M <- arm::bayesglm(treatment ~ response + probe, data=dat, family=family,prior.scale = prior.scale)
     if(class_ordered==TRUE){
-      M <- MCMCglmm(treatment ~ response + probe, data=dat, family='ordinal',prior=prior,verbose=FALSE, nitt=nitt, burnin = burnin,thin=thin)
+      M <- MCMCglmm::MCMCglmm(treatment ~ response + probe, data=dat, family='ordinal',prior=prior,verbose=FALSE, nitt=nitt, burnin = burnin,thin=thin)
       df_sta <-nrow(dat)-(n.levels+1)*2
     }
   }
@@ -7510,16 +8491,16 @@ bid <- function(mat=NULL,use_obs_class=NULL,class_order=NULL,class_ordered=TRUE,
     if(family$link=='logit'){prior<-list(R = list(V = prior.V.scale, nu=n.levels))}
     if(family$link=='probit'){prior<-list(R = list(V = prior.V.scale, nu=n.levels+1))}
     if(!family$link %in% c('probit','logit')){message('For partial pooling with Binomial family and Bayeisan method, only logit and probit model are supported!');return(FALSE)}
-    if(class_ordered==FALSE) M <- MCMCglmm(treatment~response,family=glmm.family, prior=prior, data=dat, verbose=FALSE, nitt = nitt, burnin = burnin,thin=thin)
-    if(class_ordered==TRUE) M <- MCMCglmm(treatment~response,family='ordinal', prior=prior, data=dat, verbose=FALSE, nitt = nitt, burnin = burnin,thin=thin)
+    if(class_ordered==FALSE) M <- MCMCglmm::MCMCglmm(treatment~response,family=glmm.family, prior=prior, data=dat, verbose=FALSE, nitt = nitt, burnin = burnin,thin=thin)
+    if(class_ordered==TRUE) M <- MCMCglmm::MCMCglmm(treatment~response,family='ordinal', prior=prior, data=dat, verbose=FALSE, nitt = nitt, burnin = burnin,thin=thin)
     df_sta<-nrow(dat)-2
   }
   if(method=='Bayesian' & family$family=='binomial' & n.levels>1 & pooling=='partial'){
     if(family$link=='logit'){prior<-list(R = list(V = prior.V.scale, nu=n.levels), G = list(G1 = list(V = diag(2)*prior.V.scale, nu = n.levels+1)))}
     if(family$link=='probit'){prior<-list(R = list(V = prior.V.scale, nu=n.levels+1), G = list(G1 = list(V = diag(2)*prior.V.scale, nu = n.levels+1)))}
     if(!family$link %in% c('probit','logit')){message('For partial pooling with Binomial family and Bayeisan method, only logit and probit model are supported!');return(FALSE)}
-    if(class_ordered==FALSE) M <- MCMCglmm(treatment~response, random=~idh(1+response):probe,family=glmm.family, prior=prior, data=dat, verbose=FALSE, nitt = nitt, burnin = burnin,thin=thin)
-    if(class_ordered==TRUE) M <- MCMCglmm(treatment~response, random=~idh(1+response):probe,family='ordinal', prior=prior, data=dat, verbose=FALSE, nitt = nitt, burnin = burnin,thin=thin)
+    if(class_ordered==FALSE) M <- MCMCglmm::MCMCglmm(treatment~response, random=~idh(1+response):probe,family=glmm.family, prior=prior, data=dat, verbose=FALSE, nitt = nitt, burnin = burnin,thin=thin)
+    if(class_ordered==TRUE) M <- MCMCglmm::MCMCglmm(treatment~response, random=~idh(1+response):probe,family='ordinal', prior=prior, data=dat, verbose=FALSE, nitt = nitt, burnin = burnin,thin=thin)
     df_sta <-nrow(dat)-(n.levels+1)*2
   }
   ##
@@ -7543,13 +8524,13 @@ FC <- function(x,cl,logTransformed = TRUE,
   if (logTransformed) {
     if (is.na(log.base) | log.base < 0)
       stop('Please specify log.base !\n')
-    logFC <- mean(x.class1) - mean(x.class0)
+    logFC <- base::mean(x.class1) - base::mean(x.class0)
     FC.val <- sign(logFC) * log.base ^ abs(logFC)
   } else{
     logFC <-
       ifelse(average.method == 'arithmetic',
-             log(mean(x.class1)) - log(mean(x.class0)),
-             mean(log(x.class1) - mean(log(x.class0))))
+             log(base::mean(x.class1)) - log(base::mean(x.class0)),
+             base::mean(log(x.class1) - base::mean(log(x.class0))))
     FC.val <- sign(logFC) * exp(abs(logFC))
   }
   FC.val[FC.val == 0 | is.na(FC.val)] <- 1
@@ -7596,5 +8577,380 @@ strwidthMod <- function(s, units = "inch", cex = 1,ori=TRUE,mod=FALSE){
   }
 }
 
+##
+#' Lazy mode for NetBID2 result visualization
+#'
+#' \code{NetBID.lazyMode.DriverVisualization} is an integrated function to draw visualization plots for top drivers.
+#'
+#' User need to strictly follow the NetBID2 pipeline to get the complicated list object analysis.par.
+#' "intgroup", "use_comp" should be specified;
+#' "transfer_tab" could be set to NULL with "main_id_type" specified, but it is suggested to input by hand if available.
+#'
+#' @param analysis.par list, stores all related datasets from driver analysis step.
+#' @param intgroup character, one interested phenotype group from the \code{analysis.par$cal.eset}.
+#' @param use_comp character, the name of the comparison of interest, should be included in the colnames of \code{analysis.par$DA} and \code{analysis.par$DE}.
+#' @param main_id_type character, the type of driver's ID. It comes from the attribute name in biomaRt package.
+#' Such as "ensembl_gene_id", "ensembl_gene_id_version", "ensembl_transcript_id", "ensembl_transcript_id_version" or "refseq_mrna".
+#' For details, user can call \code{biomaRt::listAttributes()} to display all available attributes in the selected dataset.
+#' @param transfer_tab data.frame, the ID conversion table. Users can call \code{get_IDtransfer} to get this table.
+#' @param use_gs a vector of characters, names of major gene set collections. Users can call \code{all_gs2gene_info} to see all the available collections.
+#' Default is c("H", "CP:BIOCARTA", "CP:REACTOME", "CP:KEGG").
+#' @param min_Size numeric, minimum size for the target genes. Default is 30.
+#' @param max_Size numeric, maximum size for the target genes. Default is 1000.
+#' @param top_number number for the top significant genes/drivers in the combine results to be displayed on the plot.
+#' Default is 30.
+#' @param top_strategy character, choose from "Both", "Up", "Down".
+#' If set to "Both", top drivers with highest absolute Z statistics will be displayed.
+#' If set to "Up", only top up-regulated drivers will be displayed.
+#' If set to "Down", only top down-regulated drivers will be displayed.
+#' Default is "Both".
+#' @param logFC_thre numeric, the threshold of logFC. Genes or drivers with absolute logFC value higher than the threshold will be kept.
+#' Default is 0.05.
+#' @param Pv_thre numeric, the threshold of P-values. Genes or drivers with P-values lower than the threshold will be kept.
+#' Default is 0.05.
+#'
+#' @examples
+#' \dontrun{
+#' analysis.par <- list()
+#' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
+#' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' analysis.par$out.dir.PLOT <- 'test/'
+#' NetBID.lazyMode.DriverVisualization(analysis.par=analysis.par,
+#'                                     intgroup='subgroup',use_comp='G4.Vs.others',
+#'                                     transfer_tab=analysis.par$transfer_tab,
+#'                                     logFC_thre=0.2,Pv_thre=1e-4)
+#' }
+#' @export
+NetBID.lazyMode.DriverVisualization <- function(analysis.par=NULL,intgroup=NULL,use_comp=NULL,
+                                                main_id_type='external_gene_name',
+                                                transfer_tab=NULL,use_gs=c("H", "CP:BIOCARTA", "CP:REACTOME", "CP:KEGG"),
+                                                min_Size=30,max_Size=1000,top_number=30,top_strategy='Both',
+                                                logFC_thre=0.05,Pv_thre=0.05){
+  all_input_para <- c('analysis.par','intgroup','use_comp','main_id_type',
+                      'min_Size','max_Size','top_number','top_strategy','logFC_thre','Pv_thre')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  if('final_ms_tab' %in% names(analysis.par)){
+    ms_tab <- analysis.par$final_ms_tab
+  }else{
+    message('final_ms_tab not included in the analysis.par list, please check and re-try!');return(FALSE)
+  }
+  if('cal.eset' %in% names(analysis.par)){
+    exp_mat <- Biobase::exprs(analysis.par$cal.eset)
+  }else{
+    message('cal.eset not included in the analysis.par list, please check and re-try!');return(FALSE)
+  }
+  if('merge.ac.eset' %in% names(analysis.par)){
+    ac_mat <- Biobase::exprs(analysis.par$merge.ac.eset)
+  }else{
+    message('merge.ac.eset not included in the analysis.par list, please check and re-try!');return(FALSE)
+  }
+  if(!'DE' %in% names(analysis.par)){
+    message('DE not included in the analysis.par list, please check and re-try!');return(FALSE)
+  }
+  if(!'DA' %in% names(analysis.par)){
+    message('DA not included in the analysis.par list, please check and re-try!');return(FALSE)
+  }
+  if(!use_comp %in% names(analysis.par$DA)){
+    message(sprintf('%s not included in the analysis.par$DA list, please check and re-try!',use_comp));return(FALSE)
+  }
+  if(!use_comp %in% names(analysis.par$DE)){
+    message(sprintf('%s not included in the analysis.par$DE list, please check and re-try!',use_comp));return(FALSE)
+  }
+  if(!intgroup %in% colnames(Biobase::pData(analysis.par$cal.eset))){
+    message(sprintf('%s not included in the Biobase::pData(analysis.par$cal.eset), please check and re-try!',use_comp));return(FALSE)
+  }
+  if(exists('db_info')==FALSE){
+    message('Please run db.preload() first to load in db_info !');return(FALSE)
+  }
+  if(is.null(transfer_tab)==TRUE){
+    transfer_tab <- get_IDtransfer2symbol2type(from_type=main_id_type,use_genes = NULL)
+  }
+  if(exists('all_gs2gene')==FALSE){
+    message('Please run gs.preload() first to load in all_gs2gene or prepare the same format of this object!');return(FALSE)
+  }
+  phe <- Biobase::pData(analysis.par$cal.eset)
+  DE <- analysis.par$DE[[use_comp]];DA <- analysis.par$DA[[use_comp]]
+  G1 <- gsub('Ave.(.*)','\\1',colnames(DE)[grep('^Ave\\.',colnames(DE))])[2]
+  G0 <- gsub('Ave.(.*)','\\1',colnames(DE)[grep('^Ave\\.',colnames(DE))])[1]
+  #
+  w1 <- which(ms_tab$Size>=min_Size & ms_tab$Size<=max_Size)
+  message(sprintf('%s out of %s drivers passed the size filteration!',base::length(w1),nrow(ms_tab)))
+  ms_tab <- ms_tab[w1,]
+  print('Begin Volcano plot by draw.volcanoPlot() ')
+  res1 <- draw.volcanoPlot(dat=ms_tab,label_col = 'gene_label',
+                           logFC_col = sprintf('logFC.%s_DA',use_comp),Pv_col = sprintf('P.Value.%s_DA',use_comp),
+                           logFC_thre = logFC_thre,Pv_thre = Pv_thre,
+                           pdf_file=sprintf('%s/%s_Volcano.pdf',analysis.par$out.dir.PLOT,use_comp))
+  print('Finish Volcano plot ')
+  if(nrow(res1)<5){
+    message(sprintf('%s drivers remained, too few for draw, please check and re-try!',nrow(res1)));return(FALSE)
+  }
+  if(top_strategy=='Up') res1 <- res1[which(res1[,sprintf('logFC.%s_DA',use_comp)]>0),]
+  if(top_strategy=='Down') res1 <- res1[which(res1[,sprintf('logFC.%s_DA',use_comp)]<0),]
+  if(nrow(res1)<5){
+    message(sprintf('%s drivers remained, too few for draw, please check and re-try!',nrow(res1)));return(FALSE)
+  }
+  driver_list <- rownames(res1)
+  driver_DE_Z <- ms_tab[driver_list,sprintf('Z.%s_DE',use_comp)]
+  driver_DA_Z <- ms_tab[driver_list,sprintf('Z.%s_DA',use_comp)]
+  if(base::length(driver_list>=top_number)){
+    driver_list <- driver_list[order(abs(driver_DA_Z),decreasing = TRUE)[1:top_number]]
+  }
+  driver_DE_Z <- ms_tab[driver_list,sprintf('Z.%s_DE',use_comp)];names(driver_DE_Z) <- driver_list
+  driver_DA_Z <- ms_tab[driver_list,sprintf('Z.%s_DA',use_comp)];names(driver_DA_Z) <- driver_list
+  message(sprintf('%s drivers (%s) will be displayed!',base::length(driver_list),base::paste(driver_list,collapse=';')))
+  print('Begin TopDA_GSEA plot by draw.GSEA.NetBID() ')
+  draw.GSEA.NetBID(DE=DE,profile_col = 'logFC',name_col = 'ID',
+                   driver_list = driver_list,show_label=ms_tab[driver_list,'gene_label'],
+                   driver_DE_Z = driver_DE_Z,
+                   driver_DA_Z = driver_DA_Z,
+                   target_list = analysis.par$merge.network$target_list,
+                   pdf_file=sprintf('%s/%s_TopDA_GSEA.pdf',analysis.par$out.dir.PLOT,use_comp),
+                   top_driver_number = top_number,main=use_comp)
+  print(sprintf('Finish TopDA_GSEA plot by draw.GSEA.NetBID(), please check %s',sprintf('%s/%s_TopDA_GSEA.pdf',analysis.par$out.dir.PLOT,use_comp)))
+  print('Begin TopDA_Heatmap_ac plot by draw.heatmap() ')
+  draw.heatmap(mat=ac_mat,use_genes = ms_tab[driver_list,'originalID_label'],use_gene_label = ms_tab[driver_list,'gene_label'],
+               phenotype_info  = Biobase::pData(analysis.par$merge.ac.eset),use_phe=intgroup,
+               pdf_file=sprintf('%s/%s_TopDA_Heatmap_ac.pdf',analysis.par$out.dir.PLOT,use_comp),scale='row')
+  print(sprintf('Finish TopDA_Heatmap_ac plot by draw.heatmap(), please check %s',sprintf('%s/%s_TopDA_Heatmap_ac.pdf',analysis.par$out.dir.PLOT,use_comp)))
+  print('Begin TopDA_Heatmap_exp plot by draw.heatmap() ')
+  draw.heatmap(mat=exp_mat,use_genes = ms_tab[driver_list,'originalID'],use_gene_label = ms_tab[driver_list,'geneSymbol'],
+               phenotype_info  = Biobase::pData(analysis.par$merge.ac.eset),use_phe=intgroup,
+               pdf_file=sprintf('%s/%s_TopDA_Heatmap_exp.pdf',analysis.par$out.dir.PLOT,use_comp),scale='row')
+  print(sprintf('Finish TopDA_Heatmap_exp plot by draw.heatmap(), please check %s',sprintf('%s/%s_TopDA_Heatmap_exp.pdf',analysis.par$out.dir.PLOT,use_comp)))
+  print('Begin TopDA_FuncEnrich plot by funcEnrich.Fisher() and draw.funcEnrich.cluster()')
+  res1 <- funcEnrich.Fisher(input_list = ms_tab[driver_list,'geneSymbol'],bg_list = ms_tab$geneSymbol,
+                            Pv_thre = 0.1,use_gs=use_gs,Pv_adj = 'none')
+  out2excel(res1,out.xlsx = sprintf('%s/%s_TopDA_FuncEnrich.xlsx',analysis.par$out.dir.PLOT,use_comp))
+  print(sprintf('Finish TopDA_FuncEnrich plot by funcEnrich.Fisher(), please check %s',
+                sprintf('%s/%s_TopDA_FuncEnrich.xlsx',analysis.par$out.dir.PLOT,use_comp)))
+  if(nrow(res1)>=3){
+    draw.funcEnrich.cluster(res1,pdf_file=sprintf('%s/%s_TopDA_FuncEnrich.pdf',analysis.par$out.dir.PLOT,use_comp),top_number = top_number,
+                            Pv_thre = 0.1)
+    print(sprintf('Finish TopDA_FuncEnrich plot by draw.funcEnrich.cluster(), please check %s',
+                  sprintf('%s/%s_TopDA_FuncEnrich.pdf',analysis.par$out.dir.PLOT,use_comp)))
+  }else{
+    message('Too few results for Function enrichment analysis for top drivers, will pass the FuncEnrich Plot!')
+  }
+  print('Begin TopDA_BubblePlot plot by draw.bubblePlot() ')
+  draw.bubblePlot(driver_list = driver_list,show_label = ms_tab[driver_list,'gene_label'],
+                  transfer2symbol2type = transfer_tab,
+                  target_list=analysis.par$merge.network$target_list,
+                  Z_val=driver_DA_Z,Pv_thre=0.1,top_geneset_number = top_number,
+                  top_driver_number = top_number,use_gs=use_gs,
+                  pdf_file=sprintf('%s/%s_TopDA_BubblePlot.pdf',analysis.par$out.dir.PLOT,use_comp))
+  print(sprintf('Finish TopDA_BubblePlot plot by draw.bubblePlot(), please check %s',sprintf('%s/%s_TopDA_BubblePlot.pdf',analysis.par$out.dir.PLOT,use_comp)))
+  ## detailed for top
+  pf <- DE$logFC; names(pf)<-DE$ID
+  print('Begin EachTopDA_GSEA plot by draw.GSEA() ')
+  pdf(sprintf('%s/%s_EachTopDA_GSEA.pdf',analysis.par$out.dir.PLOT,use_comp),width=8,height=8)
+  for(each_driver in driver_list){
+    draw.GSEA(rank_profile = pf,use_genes = analysis.par$merge.network$target_list[[each_driver]]$target,
+              use_direction = sign(analysis.par$merge.network$target_list[[each_driver]]$spearman),
+              annotation=sprintf('P.Value:%s',get_z2p(driver_DA_Z[each_driver])),
+              left_annotation = sprintf('High in %s',G1),
+              right_annotation = sprintf('High in %s',G0),main=ms_tab[each_driver,'gene_label'])
+  }
+  dev.off()
+  print(sprintf('Finish EachTopDA_GSEA plot by draw.GSEA(), please check %s',sprintf('%s/%s_EachTopDA_GSEA.pdf',analysis.par$out.dir.PLOT,use_comp)))
+  #
+  print('Begin EachTopDA_CateBox plot by draw.categoryValue() ')
+  pdf(sprintf('%s/%s_EachTopDA_CateBox.pdf',analysis.par$out.dir.PLOT,use_comp),width=8,height=8)
+  for(each_driver in driver_list){
+    draw.categoryValue(ac_val   = ac_mat[ms_tab[each_driver,'originalID_label'],],
+                       exp_val  = exp_mat[ms_tab[each_driver,'originalID'],],
+                       main_ac  = sprintf("%s\n(P.Value:%s)",ms_tab[each_driver,'gene_label'],get_z2p(driver_DA_Z[each_driver])),
+                       main_exp = sprintf("%s\n(P.Value:%s)",ms_tab[each_driver,'geneSymbol'],get_z2p(driver_DE_Z[each_driver])),
+                       use_obs_class=get_obs_label(phe,intgroup))
+  }
+  dev.off()
+  print(sprintf('Finish EachTopDA_CateBox plot by draw.categoryValue(), please check %s',sprintf('%s/%s_EachTopDA_CateBox.pdf',analysis.par$out.dir.PLOT,use_comp)))
+  #
+  print('Begin EachTopDA_TargetNet plot by draw.targetNet() ')
+  pdf(sprintf('%s/%s_EachTopDA_TargetNet.pdf',analysis.par$out.dir.PLOT,use_comp),width=8,height=8)
+  for(each_driver in driver_list){
+    es <- analysis.par$merge.network$target_list[[each_driver]]$MI*sign(analysis.par$merge.network$target_list[[each_driver]]$spearman);
+    names(es) <- analysis.par$merge.network$target_list[[each_driver]]$target
+    if(main_id_type!='external_gene_name'){
+      es <- base::cbind(es,es)
+      colnames(es) <- c('Sample1','Sample2')
+      tmp_eset <- generate.eset(es)
+      tmp_eset <- update_eset.feature(tmp_eset,use_feature_info = transfer_tab,
+                                      from_feature = colnames(transfer_tab)[1],to_feature = colnames(transfer_tab)[2])
+      es <- Biobase::exprs(tmp_eset)[,1];names(es) <- rownames(Biobase::exprs(tmp_eset))
+    }
+    if(base::length(es)<30){n_layer=1;label_cex=1;}
+    if(base::length(es)<50 & base::length(es)>=30){n_layer=1;label_cex=0.8;}
+    if(base::length(es)>=50){n_layer <- 1+floor(base::length(es)/50);label_cex=0.7;}
+    if(n_layer>=4){n_layer <- n_layer/2; label_cex<-label_cex-0.1;}
+    if(n_layer>=4){n_layer <- n_layer/2; label_cex<-label_cex-0.1;}
+    draw.targetNet(source_label = ms_tab[each_driver,'gene_label'],source_z = driver_DA_Z[each_driver],
+                   edge_score=es,n_layer = n_layer,label_cex=label_cex)
+  }
+  dev.off()
+  print(sprintf('Finish EachTopDA_TargetNet plot by draw.targetNet(), please check %s',sprintf('%s/%s_EachTopDA_TargetNet.pdf',analysis.par$out.dir.PLOT,use_comp)))
+  message(sprintf('Finish All !!! Check %s',analysis.par$out.dir.PLOT))
+  return(TRUE)
+}
 
+##
+#' Lazy mode for NetBID2 driver estimation
+#'
+#' \code{NetBID.lazyMode.DriverEstimation} is an integrated function for NetBID2 driver estimation.
+#'
+#' The function will return the complicated list object analysis.par if set return_analysis.par=TRUE.
+#' Meanwhile, the master table and the RData containing analysis.par will be automatically saved.
+#'
+#' @param project_main_dir character, name or absolute path of the main working directory for driver analysis.
+#' @param project_name character, name of the project folder.
+#' @param tf.network.file character, the path of the TF network file (e.g. "XXX/consensus_network_ncol_.txt").
+#' @param sig.network.file character, the path of the SIG network file (e.g. "XXX/consensus_network_ncol_.txt").
+#' @param cal.eset ExpressionSet class, the ExpressionSet for analysis.
+#' @param main_id_type character, the type of driver's ID. It comes from the attribute name in biomaRt package.
+#' Such as "ensembl_gene_id", "ensembl_gene_id_version", "ensembl_transcript_id", "ensembl_transcript_id_version" or "refseq_mrna".
+#' For details, user can call \code{biomaRt::listAttributes()} to display all available attributes in the selected dataset.
+#' @param cal.eset_main_id_type character, the type of cal.eset's ID. It comes from the attribute name in biomaRt package.
+#' Such as "ensembl_gene_id", "ensembl_gene_id_version", "ensembl_transcript_id", "ensembl_transcript_id_version" or "refseq_mrna".
+#' For details, user can call \code{biomaRt::listAttributes()} to display all available attributes in the selected dataset.
+#' @param transfer_tab data.frame, the ID conversion table. Users can call \code{get_IDtransfer} to get this table.
+#' Only useful when "cal.eset_main_id_type" does not equal to "main_id_type".
+#' This is mainly for converting ID for cal.eset, must include "cal.eset_main_id_type" and "main_id_type".
+#' If NULL, will automatically generate it.
+#' @param intgroup character, one interested phenotype group from the \code{cal.eset}.
+#' @param G1_name character, the name of experimental group (e.g. "Male"), must be the character in \code{intgroup}.
+#' @param G0_name character, the name of control group (e.g. "Female"), must be the character in \code{intgroup}.
+#' @param comp_name character, the name of the comparison of interest.
+#' @param do.QC logical, if TRUE, will perform network QC and activity eSet QC plots. Default is TRUE.
+#' @param return_analysis.par logical, if TRUE, will return the complicated list object analysis.par.
+#'
+#' @examples
+#' \dontrun{
+#' network.dir <- sprintf('%s/demo1/network/',system.file(package = "NetBID2")) # use demo
+#' network.project.name <- 'project_2019-02-14' # demo project name
+#' project_main_dir <- 'test/'
+#' project_name <- 'test_driver'
+#' tf.network.file <- sprintf('%s/SJAR/%s/output_tf_sjaracne_%s_out_.final/%s',
+#'                 network.dir,network.project.name,network.project.name,
+#'                 'consensus_network_ncol_.txt')
+#' sig.network.file <- sprintf('%s/SJAR/%s/output_sig_sjaracne_%s_out_.final/%s',
+#'                 network.dir,network.project.name,network.project.name,
+#'                 'consensus_network_ncol_.txt')
+#' load(sprintf('%s/DATA/network.par.Step.exp-QC.RData',network.dir))
+#' cal.eset <- network.par$net.eset
+#' db.preload(use_level='gene')
+#' analysis.par <- NetBID.lazyMode.DriverEstimation(project_main_dir=project_main_dir,
+#'                 project_name=project_name,
+#'                 tf.network.file=tf.network.file,
+#'                 sig.network.file=sig.network.file,
+#'                 cal.eset=cal.eset,
+#'                 main_id_type='external_gene_name',
+#'                 cal.eset_main_id_type='external_gene_name',
+#'                 intgroup='subgroup',
+#'                 G1_name='G4',G0_name='SHH',
+#'                 comp_name='G4.Vs.SHH',
+#'                 do.QC=FALSE,return_analysis.par=TRUE)
+#' }
+#' @export
+NetBID.lazyMode.DriverEstimation <- function(project_main_dir=NULL,project_name=NULL,
+                                             tf.network.file=NULL,sig.network.file=NULL,
+                                             cal.eset=NULL,
+                                             main_id_type=NULL,cal.eset_main_id_type=NULL,
+                                             transfer_tab=NULL,
+                                             intgroup=NULL,G1_name=NULL,G0_name=NULL,comp_name=NULL,
+                                             do.QC=TRUE,return_analysis.par=TRUE){
+  #
+  if(exists('analysis.par')==TRUE){
+    message('analysis.par is occupied in the current session,please manually run: rm(analysis.par) and re-try, otherwise will not change !');
+    return(analysis.par)
+  }
+  all_input_para <- c('project_main_dir','project_name','tf.network.file','sig.network.file','cal.eset',
+                      'main_id_type','cal.eset_main_id_type','intgroup','G1_name','G0_name')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  if(exists('tf_sigs')==FALSE){
+    message('Please run db.preload() first to load in db_info !');return(FALSE)
+  }
+  if('ensembl_transcript_id' %in% names(tf_sigs$tf)){
+    message('You setting is at transcript level! If this setting is not TRUE, please run db.preload() again !')
+  }else{
+    message('You setting is at gene level! If this setting is not TRUE, please run db.preload() again !')
+  }
+  print('Current db info:')
+  print(db_info)
+  if(!intgroup %in% colnames(Biobase::pData(cal.eset))){
+    message(sprintf('%s not included in the Biobase::pData(cal.eset), please check and re-try!',use_comp));return(FALSE)
+  }
+  phe <- Biobase::pData(cal.eset)
+  G1 <- rownames(phe)[which(phe[,intgroup]==G1_name)];G0 <- rownames(phe)[which(phe[,intgroup]==G0_name)];
+  if(base::length(G1)==0){message(sprintf('NO Sample annotated by %s in %s, please check and re-try!',G1_name,intgroup));return(FALSE)}
+  if(base::length(G0)==0){message(sprintf('NO Sample annotated by %s in %s, please check and re-try!',G0_name,intgroup));return(FALSE)}
+  if(is.null(comp_name)==TRUE) comp_name <- sprintf('%s.Vs.%s',G1_name,G0_name)
+  if(file.exists(tf.network.file)==FALSE){message('%s not exists, please check and re-try!');return(FALSE)}
+  if(file.exists(sig.network.file)==FALSE){message('%s not exists, please check and re-try!');return(FALSE)}
+  # create workspace
+  print('Begin create workspace by NetBID.analysis.dir.create() ')
+  analysis.par <- NetBID.analysis.dir.create(project_main_dir=project_main_dir,
+                                             project_name=project_name,
+                                             tf.network.file=tf.network.file,sig.network.file=sig.network.file)
+  print('Finish create workspace')
+  # read in network
+  print('Begin read in network from file by get.SJAracne.network() ')
+  analysis.par$tf.network <- get.SJAracne.network(analysis.par$tf.network.file)
+  analysis.par$sig.network <- get.SJAracne.network(analysis.par$sig.network.file)
+  print('Finish read in network from file')
+  if(do.QC==TRUE) draw.network.QC(analysis.par$tf.network$igraph_obj,outdir = analysis.par$out.dir.QC,prefix = 'TF_')
+  if(do.QC==TRUE) draw.network.QC(analysis.par$sig.network$igraph_obj,outdir = analysis.par$out.dir.QC,prefix = 'SIG_')
+  analysis.par$merge.network <- merge_TF_SIG.network(analysis.par$tf.network,analysis.par$sig.network)
+  if(cal.eset_main_id_type!=main_id_type){
+    message(sprintf('The ID type for the network is %s, and the ID type for the cal.eset is %s, need to transfer the ID type of cal.eset from %s to %s',
+                    main_id_type,cal.eset_main_id_type,cal.eset_main_id_type,main_id_type))
+    if(is.null(transfer_tab)==FALSE){
+      w1 <- base::setdiff(c(cal.eset_main_id_type,main_id_type),colnames(transfer_tab))
+      if(base::length(w1)>0){
+        message(sprintf('Wrong ID type for the input transfer_tab, missing %s, try to prepare the correct transfer_tab or set it to NULL',base::paste(w1,collapse=';')));
+        return(FALSE)
+      }
+    }
+    if(is.null(transfer_tab)==FALSE){
+      transfer_tab1 <- transfer_tab
+    }else{
+      transfer_tab1 <- get_IDtransfer(from_type = cal.eset_main_id_type,to_type=main_id_type,use_genes=rownames(Biobase::exprs(cal.eset)))
+    }
+    cal.eset <- update_eset.feature(cal.eset,use_feature_info = transfer_tab1,
+                                    from_feature = cal.eset_main_id_type,to_feature = main_id_type)
+    message('Finish transforming the cal.eset ID ! ')
+  }
+  print('Begin calculate activity by cal.Activity(), the default setting for es.method is weightedmean ')
+  ac_mat <- cal.Activity(igraph_obj = analysis.par$merge.network$igraph_obj,
+                         cal_mat = Biobase::exprs(cal.eset))
+  analysis.par$merge.ac.eset <- generate.eset(exp_mat=ac_mat,phenotype_info = phe)
+  if(do.QC==TRUE) draw.eset.QC(analysis.par$merge.ac.eset,outdir = analysis.par$out.dir.QC,prefix = 'AC_')
+  print('Finish calculate activity ')
+  print('Begin prepare ID transfer table to external_gene_name ')
+  transfer_tab <- get_IDtransfer2symbol2type(from_type=main_id_type,
+                                             use_genes = base::unique(c(analysis.par$merge.network$network_dat$source,
+                                                                  analysis.par$merge.network$network_dat$target)))
+  print('Finish prepare ID transfer table ')
+  # DE/DA
+  print(sprintf('Begin get DE/DA for %s by getDE.limma.2G() ',comp_name))
+  de <- getDE.limma.2G(cal.eset,G1 = G1,G0=G0,G1_name=G1_name,G0_name=G0_name)
+  da <- getDE.limma.2G(analysis.par$merge.ac.eset,G1 = G1,G0=G0,G1_name=G1_name,G0_name=G0_name)
+  DE <- list(de); DA <- list(da); names(DE) <- names(DA) <- comp_name
+  print(sprintf('Finish get DE/DA for %s',comp_name))
+  #
+  print('Begin generate master table by generate.masterTable() ')
+  ms_tab <- generate.masterTable(use_comp=comp_name,DE=DE,DA=DA,target_list = analysis.par$merge.network$target_list,
+                                 main_id_type = main_id_type,transfer_tab=transfer_tab,tf_sigs = tf_sigs)
+  print('Finish generate master table')
+  out_file <- sprintf('%s/%s_ms_tab.xlsx',analysis.par$out.dir.DATA,analysis.par$project.name)
+  out2excel(ms_tab,out.xlsx = out_file)
+  message(sprintf('Finish output master table to excel file, please check %s',out_file))
+  analysis.par$DE <- DE;analysis.par$DA <- DA;
+  analysis.par$final_ms_tab <- ms_tab;analysis.par$cal.eset <- cal.eset
+  analysis.par$transfer_tab <- transfer_tab
+  NetBID.saveRData(analysis.par = analysis.par,step = 'ms-tab')
+  message(sprintf('Finish save RData to file, please check %s/analysis.par.Step.ms-tab.RData',analysis.par$out.dir.DATA))
+  if(return_analysis.par==TRUE) return(analysis.par) else return(TRUE)
+}
 

@@ -360,7 +360,7 @@ draw.categoryValue(ac_val=ac_gs[use_gs,],use_obs_class=use_obs_class,
 
 gs2gene_target <- analysis.par$merge.network$target_list[driver_list]
 gs2gene_target <- lapply(gs2gene_target,function(x)x$target)
-transfer_tab_fake <- data.frame(from=transfer_tab[,1],to=transfer_tab[,1],type=transfer_tab[,3],stringsAsFactors=F)
+transfer_tab_fake <- data.frame(from=transfer_tab[,1],to=transfer_tab[,1],gene_biotype=transfer_tab[,3],stringsAsFactors=F)
 draw.bubblePlot(driver_list= driver_list,show_label=ms_tab[driver_list,'gene_label'],
                 Z_val=ms_tab[driver_list,sprintf('Z.%s_DA',comp_name)],
                 driver_type=ms_tab[driver_list,'gene_biotype'],

@@ -12,7 +12,10 @@ The purpose of this part:
 
 **further analysis and visualization of the significant drivers**.
 
-The complete demo script for network construction can be found here, [analysis_and_plot_demo1.R](https://github.com/jyyulab/NetBID-dev/blob/master/demo_scripts/analysis_and_plot_demo1.R).
+One "lazy mode" function without flexiable options is available for this part of analysis: `NetBID.lazyMode.DriverVisualization()`. 
+User could check the manual for this function and try the demo code for usage.
+
+The complete step-by-step demo script for result visualization can be found here, [analysis_and_plot_demo1.R](https://github.com/jyyulab/NetBID-dev/blob/master/demo_scripts/analysis_and_plot_demo1.R).
 
 From the demo dataset, we've found the significant hidden drivers in Group4 compared to other subtype groups. These drivers may relate to specific clinical features of the adult medulloblastoma Group4, and hence the further investigation is needed. 
 Here, we've listed some important biological questions which can be further investigated using NetBID2.
@@ -682,7 +685,7 @@ Just change the input into ome gene list (from gene set) and a fake conversion t
 ```R
 gs2gene_target <- analysis.par$merge.network$target_list[driver_list]
 gs2gene_target <- lapply(gs2gene_target,function(x)x$target)
-transfer_tab_fake <- data.frame(from=transfer_tab[,1],to=transfer_tab[,1],type=transfer_tab[,3],stringsAsFactors=F)
+transfer_tab_fake <- data.frame(from=transfer_tab[,1],to=transfer_tab[,1],gene_biotype=transfer_tab[,3],stringsAsFactors=F)
 draw.bubblePlot(driver_list= driver_list,show_label=ms_tab[driver_list,'gene_label'],
                 Z_val=ms_tab[driver_list,sprintf('Z.%s_DA',comp_name)],
                 driver_type=ms_tab[driver_list,'gene_biotype'],

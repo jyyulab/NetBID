@@ -45,7 +45,7 @@ This plot function need to input the output from \code{combineDE}.
 analysis.par <- list()
 analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
 NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
-phe_info <- pData(analysis.par$cal.eset)
+phe_info <- Biobase::pData(analysis.par$cal.eset)
 each_subtype <- 'G4'
 G0  <- rownames(phe_info)[which(phe_info$`subgroup`!=each_subtype)] # get sample list for G0
 G1  <- rownames(phe_info)[which(phe_info$`subgroup`==each_subtype)] # get sample list for G1

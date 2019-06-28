@@ -4,8 +4,8 @@
 \alias{combinePvalVector}
 \title{Combine P Values Using Fisher's Method or Stouffer's Method}
 \usage{
-combinePvalVector(pvals, method = c("Stouffer", "Fisher"),
-  signed = TRUE, twosided = TRUE)
+combinePvalVector(pvals, method = "Stouffer", signed = TRUE,
+  twosided = TRUE)
 }
 \arguments{
 \item{pvals}{a vector of numerics, the P values from multiple comparison need to be combined.}

@@ -177,25 +177,34 @@ It inherites all the main functions from NetBID, and provides many more function
   <li>From github,</li>
 </ul>
 
-<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">library</span><span class="p">(</span><span class="n">devtools</span><span class="p">)</span><span class="w">
-</span><span class="n">install_github</span><span class="p">(</span><span class="s2">"jyyulab/NetBID-dev"</span><span class="p">,</span><span class="n">ref</span><span class="o">=</span><span class="s1">'master'</span><span class="p">)</span><span class="w">
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">local</span><span class="p">({</span><span class="w">
+  </span><span class="n">r</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">getOption</span><span class="p">(</span><span class="s2">"repos"</span><span class="p">)</span><span class="w">
+  </span><span class="n">r</span><span class="p">[</span><span class="s2">"CRAN"</span><span class="p">]</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="s2">"https://cran.rstudio.com/"</span><span class="w">
+  </span><span class="n">r</span><span class="p">[</span><span class="s2">"BioCsoft"</span><span class="p">]</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="s2">"https://bioconductor.org/packages/3.9/bioc"</span><span class="w">
+  </span><span class="n">r</span><span class="p">[</span><span class="s2">"BioCann"</span><span class="p">]</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="s2">"https://bioconductor.org/packages/3.9/data/annotation"</span><span class="w">
+  </span><span class="n">r</span><span class="p">[</span><span class="s2">"BioCexp"</span><span class="p">]</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="s2">"https://bioconductor.org/packages/3.9/data/experiment"</span><span class="w">
+  </span><span class="n">options</span><span class="p">(</span><span class="n">repos</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">r</span><span class="p">)</span><span class="w">
+</span><span class="p">})</span><span class="w">
+</span><span class="n">library</span><span class="p">(</span><span class="n">devtools</span><span class="p">)</span><span class="w">
+</span><span class="n">library</span><span class="p">(</span><span class="n">BiocManager</span><span class="p">)</span><span class="w">
+</span><span class="n">devtools</span><span class="o">::</span><span class="n">install_github</span><span class="p">(</span><span class="s2">"jyyulab/NetBID-dev"</span><span class="p">,</span><span class="n">ref</span><span class="o">=</span><span class="s1">'master'</span><span class="p">,</span><span class="n">dependencies</span><span class="o">=</span><span class="s1">'Depends'</span><span class="p">)</span><span class="w"> 
 </span></code></pre></div></div>
 
 <ul>
-  <li>From source package <a href="https://github.com/jyyulab/NetBID-dev/releases/download/NetBID2-R/NetBID2_0.1.1.tar.gz">NetBID2_0.1.1.tar.gz</a>,</li>
+  <li>From source package <a href="https://github.com/jyyulab/NetBID-dev/releases/download/NetBID2-R/NetBID2_0.1.2.tar.gz">NetBID2_0.1.2.tar.gz</a>,</li>
 </ul>
 
-<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">install.packages</span><span class="p">(</span><span class="s1">'NetBID2_0.1.1.tar.gz'</span><span class="p">,</span><span class="n">repos</span><span class="o">=</span><span class="kc">NULL</span><span class="p">)</span><span class="w">
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">install.packages</span><span class="p">(</span><span class="s1">'NetBID2_0.1.2.tar.gz'</span><span class="p">,</span><span class="n">repos</span><span class="o">=</span><span class="kc">NULL</span><span class="p">)</span><span class="w">
 </span></code></pre></div></div>
 
 <hr />
 
 <h2 id="design-manual">Design manual</h2>
 
-<p>The manual of all the NetBID2 functions is linked here <a href="https://github.com/jyyulab/NetBID-dev/blob/master/NetBID2_0.1.1.pdf">NetBID2_0.1.1.pdf</a>. 
+<p>The manual of all the NetBID2 functions is linked here <a href="https://github.com/jyyulab/NetBID-dev/blob/master/NetBID2_0.1.2.pdf">NetBID2_0.1.2.pdf</a>. 
 Every function has its own demo scripts to demonstrate its functionality.</p>
 
-<p>All these 67 functions can be grouped into their corresponding function modules,</p>
+<p>All these 70 functions can be grouped into their corresponding function modules,</p>
 
 <p><img src="function_group.png" alt="function group" /></p>
 

@@ -39,8 +39,9 @@ analysis.par$tf.network  <- get.SJAracne.network(network_file=analysis.par$tf.ne
 analysis.par$sig.network <- get.SJAracne.network(network_file=analysis.par$sig.network.file)
 
 # Creat QC report for the network
-draw.network.QC(analysis.par$tf.network$igraph_obj,outdir=analysis.par$out.dir.QC,prefix='TF_net_')
-draw.network.QC(analysis.par$sig.network$igraph_obj,outdir=analysis.par$out.dir.QC,prefix='SIG_net_')
+draw.network.QC(analysis.par$tf.network$igraph_obj,outdir=analysis.par$out.dir.QC,prefix='TF_net_',html_info_limit=FALSE)
+draw.network.QC(analysis.par$sig.network$igraph_obj,outdir=analysis.par$out.dir.QC,prefix='SIG_net_',html_info_limit=TRUE)
+
 
 # Merge network first
 analysis.par$merge.network <- merge_TF_SIG.network(TF_network=analysis.par$tf.network,SIG_network=analysis.par$sig.network)
@@ -145,7 +146,7 @@ transfer_tab <- get_IDtransfer2symbol2type(from_type = 'external_gene_name',use_
 analysis.par$transfer_tab <- transfer_tab
 # Creat the final master table
 analysis.par$final_ms_tab <- generate.masterTable(use_comp=all_comp,DE=analysis.par$DE,DA=analysis.par$DA,
-                                                  network=analysis.par$merge.network$target_list,
+                                                  target_list=analysis.par$merge.network$target_list,
                                                   tf_sigs=tf_sigs,z_col='Z-statistics',display_col=c('logFC','P.Value'),
                                                   main_id_type='external_gene_name')
 

@@ -15,7 +15,9 @@ The purpose of this part:
 
 **create a gene regulatory network from transcriptome dataset**.
 
-The complete demo script for network construction can be found here, [pipeline_network_demo1.R](https://github.com/jyyulab/NetBID-dev/blob/master/demo_scripts/pipeline_network_demo1.R).
+No "lazy mode" function available for this part. The most important function here is : `SJAracne.prepare()`, user could directly call this function if eset (an ExpressionSet class object), TF_list (list of transcription factor genes with ID match the main ID type in eset) and SIG_list (list of signaling factor genes with ID match the main ID type in eset) are well prepared. Others are mainly supporting functions for eset QC, ID conversion and etc. 
+
+The complete step-by-step demo script for network construction can be found here, [pipeline_network_demo1.R](https://github.com/jyyulab/NetBID-dev/blob/master/demo_scripts/pipeline_network_demo1.R).
 
 ----------
 ## Quick Navigation for this page
@@ -167,6 +169,8 @@ It's challenging due to the various output format from RNA-Seq (e.g. using diffe
     - 'txi' is the output of `tximport()`. It is a list containing three matrices, abundance, counts and length. "counts" is the matrix of raw count.
     - 'counts' is the matrix of raw count.
     - 'tpm' is the raw tpm.
+    - 'fpm', 'cpm' is the fragments/counts per million mapped fragments.
+    - 'raw-dds' is the DESeqDataSet class object, which is the original one without processing.
     - 'dds' is the DESeqDataSet class object, which is processed by `DESeq()`.
     - 'eset' is the ExpressionSet class object, which is processed by `DESeq()` and `vst()`.
     
@@ -416,6 +420,19 @@ draw.clustComp(pred_label,obs_label=get_obs_label(phe,use_int),outlier_cex=1,low
 Above is a table to visualize each sample’s observed label vs. its predicted label, it shows more details. 
 The darker the table cell is, the more samples are gathered in the corresponding label. We can see 4 WNTs can be further separated into two sub-groups.
 However, in this demo dataset, no obvious outlier samples are observed. 
+
+```R
+draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,use_int),
+                plot_type='2D.interactive',
+                pre_define=c('WNT'='blue','SHH'='red','G4'='green'))
+```
+
+<iframe width="600" height="400" frameborder="0" scrolling="no" src="interactive.html"></iframe> 
+
+Above is the interactive plot, user could mouse over to check the sample label for each points.
+The text for each point is organized as "sample_name:observed_label:predicted_label".
+The color to the points are categorized by the observed label and the shape by the predicted label.
+
 If user found an outlier sample and removed it, we suggest to re-run Step 2 and Step 3 to see whether the data got cleaner after the remove of outlier.
 
 

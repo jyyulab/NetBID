@@ -34,7 +34,7 @@ net_eset <- load.exp.GEO(out.dir='./test',
                          getGPL=TRUE,
                          update=FALSE)
 net_eset <- update_eset.phenotype(use_eset=net_eset,
-                                  use_phenotype_info=pData(net_eset),
+                                  use_phenotype_info=Biobase::pData(net_eset),
                                   use_sample_col='geo_accession',
                                   use_col='GEO-auto')
 }

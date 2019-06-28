@@ -95,7 +95,7 @@ sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
                                label_cex = 0.5)
 gs.preload(use_spe='Homo sapiens',update=FALSE)
 db.preload(use_level='gene',use_spe='human',update=FALSE)
-use_genes <- unique(analysis.par$merge.network$network_dat$target.symbol)
+use_genes <- base::unique(analysis.par$merge.network$network_dat$target.symbol)
 transfer_tab <- get_IDtransfer2symbol2type(from_type = 'external_gene_name',
                                            use_genes=use_genes,
                                            dataset='hsapiens_gene_ensembl')
@@ -128,7 +128,7 @@ sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
                                label_type = 'origin',
                                label_cex = 0.5)
 gs.preload(use_spe='Homo sapiens',update=FALSE)
-use_genes <- unique(analysis.par$merge.network$network_dat$target.symbol)
+use_genes <- base::unique(analysis.par$merge.network$network_dat$target.symbol)
 transfer_tab <- get_IDtransfer2symbol2type(from_type = 'external_gene_name',
                                            use_genes=use_genes,
                                            dataset='hsapiens_gene_ensembl')

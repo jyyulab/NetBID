@@ -7,7 +7,8 @@
 draw.pca.kmeans(mat = NULL, all_k = NULL, obs_label = NULL,
   legend_pos = "topleft", legend_cex = 0.8, plot_type = "2D.ellipse",
   point_cex = 1, kmeans_strategy = "basic",
-  choose_k_strategy = "ARI", return_type = "optimal")
+  choose_k_strategy = "ARI", return_type = "optimal", main = "",
+  verbose = TRUE, use_color = NULL, pre_define = NULL)
 }
 \arguments{
 \item{mat}{a numeric data matrix, the columns (e.g. sample) will be clustered using the feature (e.g. genes) rows.}
@@ -22,7 +23,7 @@ using sample name as vector name. Can be obtained by calling \code{get_obs_label
 
 \item{legend_cex}{numeric, text size of the plot legend. Default is 0.8.}
 
-\item{plot_type}{character, plot type. Users can choose from "2D", "2D.ellipse", "2D.text" and "3D". Default is "2D.ellipse".}
+\item{plot_type}{character, plot type. Users can choose from "2D", "2D.ellipse", "2D.interactive","2D.text" and "3D". Default is "2D.ellipse".}
 
 \item{point_cex}{numeric, size of the point in the plot. Default is 1.}
 
@@ -38,10 +39,19 @@ Default is "ARI".}
 Users can choose "optimal" or "all". "all", all the K-values in \code{all_k} will be returned.
 "optimal", only the K-value yielding the optimal classification result will be returned.
 Default is "optimal".}
+
+\item{main}{character, title for the plot.}
+
+\item{verbose}{logical, if TRUE, print out detailed information during calculation. Default is TRUE.}
+
+\item{use_color}{a vector of color codes, colors to be assigned to each member of display label. Default is brewer.pal(9, 'Set1').}
+
+\item{pre_define}{a vector of characters, pre-defined color codes for a certain input (e.g. c("blue", "red") with names c("A", "B")). Default is NULL.}
 }
 \value{
 Return a vector of predicted labels, if \code{return_type} is set to "optimal".
 Or a list of all possible K-values, if \code{return_type} is set to be "all".
+If plot_type='2D.interactive', will return a plotly class object for interactive display.
 }
 \description{
 \code{draw.pca.kmeans} is a data visualization function to show the K-means clustering result of a data matrix.
@@ -60,15 +70,20 @@ A comparision score (choose from ARI, NMI, Jaccard) will be calculated and shown
 network.par <- list()
 network.par$out.dir.DATA <- system.file('demo1','network/DATA/',package = "NetBID2")
 NetBID.loadRData(network.par=network.par,step='exp-QC')
-mat <- exprs(network.par$net.eset)
-phe <- pData(network.par$net.eset)
+mat <- Biobase::exprs(network.par$net.eset)
+phe <- Biobase::pData(network.par$net.eset)
 intgroup <- get_int_group(network.par$net.eset)
-for(i in 1:length(intgroup)){
+for(i in 1:base::length(intgroup)){
  print(intgroup[i])
  pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,intgroup[i]))
- print(table(list(pred_label=pred_label,obs_label=get_obs_label(phe,intgroup[i]))))
+ print(base::table(list(pred_label=pred_label,obs_label=get_obs_label(phe,intgroup[i]))))
 }
 pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,
-                             obs_label=get_obs_label(phe,intgroup[i]),
+                             obs_label=get_obs_label(phe,'subgroup'),
                              kmeans_strategy='consensus')
+## interactive display
+draw.pca.kmeans(mat=mat,all_k = NULL,
+               obs_label=get_obs_label(phe,'subgroup'),
+               plot_type='2D.interactive',
+               pre_define=c('WNT'='blue','SHH'='red','G4'='green'))
 }

@@ -5,7 +5,7 @@
 \title{Draw Volcano Plot for Top DE (differentiated expressed) Genes or DA (differentiated activity) Drivers}
 \usage{
 draw.volcanoPlot(dat = NULL, label_col = NULL, logFC_col = NULL,
-  Pv_col = NULL, logFC_thre = 1.5, Pv_thre = 0.01,
+  Pv_col = NULL, logFC_thre = 0.1, Pv_thre = 0.01,
   show_plot = TRUE, xlab = "log2 Fold Change", ylab = "P-value",
   show_label = FALSE, label_cex = 0.5, legend_cex = 0.8,
   label_type = "distribute", main = "", pdf_file = NULL)
@@ -20,7 +20,7 @@ draw.volcanoPlot(dat = NULL, label_col = NULL, logFC_col = NULL,
 \item{Pv_col}{character, the name of the column in \code{dat} contains P-values.}
 
 \item{logFC_thre}{numeric, the threshold of logFC. Genes or drivers with absolute logFC value higher than the threshold will be kept.
-Default is 1.5.}
+Default is 0.1.}
 
 \item{Pv_thre}{numeric, the threshold of P-values. Genes or drivers with P-values lower than the threshold will be kept.
 Default is 0.01.}

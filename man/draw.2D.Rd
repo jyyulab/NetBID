@@ -5,7 +5,8 @@
 \title{Visualize Sample Clustering Result in 2D Plot}
 \usage{
 draw.2D(X, Y, class_label, xlab = "PC1", ylab = "PC2",
-  legend_cex = 0.8, main = "", point_cex = 1)
+  legend_cex = 0.8, main = "", point_cex = 1, use_color = NULL,
+  pre_define = NULL)
 }
 \arguments{
 \item{X}{a vector of numerics, the x coordinates of points in the plot. If user would like to create a PCA biplot, this parameter should be the first component.}
@@ -23,6 +24,10 @@ draw.2D(X, Y, class_label, xlab = "PC1", ylab = "PC2",
 \item{main}{character, an overall title for the plot. Default is "".}
 
 \item{point_cex}{numeric, giving the amount by which the size of the data points should be magnified relative to the default. Default is 1.}
+
+\item{use_color}{a vector of color codes, colors to be assigned to each member of display label. Default is brewer.pal(9, 'Set1').}
+
+\item{pre_define}{a vector of characters, pre-defined color codes for a certain input (e.g. c("blue", "red") with names c("A", "B")). Default is NULL.}
 }
 \value{
 Return a logical value. If TRUE, the plot has been created successfully.
@@ -34,7 +39,7 @@ Return a logical value. If TRUE, the plot has been created successfully.
 mat1 <- matrix(rnorm(2000,mean=0,sd=1),nrow=100,ncol=20)
 rownames(mat1) <- paste0('Gene',1:nrow(mat1))
 colnames(mat1) <- paste0('Sample',1:ncol(mat1))
-pc <- prcomp(t(mat1))$x
+pc <- stats::prcomp(t(mat1))$x
 pred_label <- kmeans(pc,centers=4)$cluster ## this can use other cluster results
 draw.2D(X=pc[,1],Y=pc[,2],class_label=pred_label)
 }

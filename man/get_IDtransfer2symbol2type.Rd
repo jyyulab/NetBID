@@ -11,7 +11,7 @@ get_IDtransfer2symbol2type(from_type = NULL, use_genes = NULL,
 \item{from_type}{character, the attribute name matches the current ID type (the type of use_genes).
 Such as "ensembl_gene_id", "ensembl_gene_id_version", "ensembl_transcript_id", "ensembl_transcript_id_version" or "refseq_mrna".
 The "attribute" is inherited from the biomaRt package.
-For details, user can call \code{listAttributes()} function to display all available attributes in the selected dataset.}
+For details, user can call \code{biomaRt::listAttributes()} function to display all available attributes in the selected dataset.}
 
 \item{use_genes}{a vector of characters, the genes for ID conversion.
 If NULL, all genes will be selected.}

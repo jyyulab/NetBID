@@ -121,7 +121,9 @@
 
 <p><strong>create a gene regulatory network from transcriptome dataset</strong>.</p>
 
-<p>The complete demo script for network construction can be found here, <a href="https://github.com/jyyulab/NetBID-dev/blob/master/demo_scripts/pipeline_network_demo1.R">pipeline_network_demo1.R</a>.</p>
+<p>No “lazy mode” function available for this part. The most important function here is : <code class="highlighter-rouge">SJAracne.prepare()</code>, user could directly call this function if eset (an ExpressionSet class object), TF_list (list of transcription factor genes with ID match the main ID type in eset) and SIG_list (list of signaling factor genes with ID match the main ID type in eset) are well prepared. Others are mainly supporting functions for eset QC, ID conversion and etc.</p>
+
+<p>The complete step-by-step demo script for network construction can be found here, <a href="https://github.com/jyyulab/NetBID-dev/blob/master/demo_scripts/pipeline_network_demo1.R">pipeline_network_demo1.R</a>.</p>
 
 <hr />
 <h2 id="quick-navigation-for-this-page">Quick Navigation for this page</h2>
@@ -235,9 +237,9 @@ Installing and setting the environment for pandoc, one can call <code class="hig
 <p><strong>- What information can you get from the HTML QC report?</strong>  (<a href="beforeQC_QC.html">before_QC.html</a>)</p>
 <ul>
   <li>A table. It contains phenotype information of samples. Descriptive variables, such as number of samples and genes (probes/transcripts/…);</li>
-  <li>A heatmap and a PCA biplot. All samples will be clustered using the raw expression values across all the genes as features. The aim of this is to check possible mis-labeled samples;</li>
+  <li>A heatmap and a PCA biplot. All samples will be clustered using the raw expression values across all the genes as features. The aim of this is to check possible mis-labeled samples and the occurrence of batch effects;</li>
+  <li>A correlation plot for all sample pairs. This helps to check the correlation within group and between groups.</li>
   <li>A density plot. It shows the range and the distribution of the expression values. This also helps to judge if the original dataset has been log transformed;</li>
-  <li>A meansd plot. It shows the relationship between the mean and standard deviation of raw gene expression values. This helps to verify if the mean and the standard deviation are independent.</li>
 </ul>
 
 <p>Now, the basic pre-processing steps are done for the raw data. 
@@ -286,6 +288,8 @@ It’s challenging due to the various output format from RNA-Seq (e.g. using dif
       <li>‘txi’ is the output of <code class="highlighter-rouge">tximport()</code>. It is a list containing three matrices, abundance, counts and length. “counts” is the matrix of raw count.</li>
       <li>‘counts’ is the matrix of raw count.</li>
       <li>‘tpm’ is the raw tpm.</li>
+      <li>‘fpm’, ‘cpm’ is the fragments/counts per million mapped fragments.</li>
+      <li>‘raw-dds’ is the DESeqDataSet class object, which is the original one without processing.</li>
       <li>‘dds’ is the DESeqDataSet class object, which is processed by <code class="highlighter-rouge">DESeq()</code>.</li>
       <li>‘eset’ is the ExpressionSet class object, which is processed by <code class="highlighter-rouge">DESeq()</code> and <code class="highlighter-rouge">vst()</code>.</li>
     </ul>
@@ -398,8 +402,8 @@ Please use <code class="highlighter-rouge">draw.eset.QC()</code> to create QC re
 <ul>
   <li>A table. Compare the table with the one in Step 1. To see if a large amount of genes/samples has been removed;</li>
   <li>A heatmap and a PCA biplot. All samples will be clustered using the normalized expression values across all the genes as features. The aim of this is to check possible mis-labeled samples;</li>
+  <li>A correlation plot for all sample pairs. This helps to check the correlation within group and between groups.</li>
   <li>A density plot. Compare the table with the one in Step 1. To see if the low expressed genes have been removed;</li>
-  <li>A measd plot. It shows the relationship between the mean and standard deviation of normalized gene expression values. This helps to verify if the mean and the standard deviation are independent after QC steps.</li>
 </ul>
 
 <hr />
@@ -513,14 +517,6 @@ ARI is short for “adjusted rand index”, ranges from 0 to 1. Higher ARI value
 
 <p>Above is a side-by-side scatter plot with an ellipse drawn around each cluster of samples. Each ellipse is marked with its cluster label.</p>
 
-<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">pred_label</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">draw.pca.kmeans</span><span class="p">(</span><span class="n">mat</span><span class="o">=</span><span class="n">mat</span><span class="p">,</span><span class="n">all_k</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">NULL</span><span class="p">,</span><span class="n">obs_label</span><span class="o">=</span><span class="n">get_obs_label</span><span class="p">(</span><span class="n">phe</span><span class="p">,</span><span class="n">use_int</span><span class="p">),</span><span class="n">plot_type</span><span class="o">=</span><span class="s1">'2D.text'</span><span class="p">)</span><span class="w">
-</span></code></pre></div></div>
-
-<p><img src="sample_cluster_3.png" alt="sample_cluster_3" /></p>
-
-<p>Above is a side-by-side scatter plot with sample names labeled. The categories of observed labels (left figure) and predicted labels (right figure) are distinguished by color.
-This figure is useful for checking outliers.</p>
-
 <div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">pred_label</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">draw.pca.kmeans</span><span class="p">(</span><span class="n">mat</span><span class="o">=</span><span class="n">mat</span><span class="p">,</span><span class="n">all_k</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">NULL</span><span class="p">,</span><span class="n">obs_label</span><span class="o">=</span><span class="n">get_obs_label</span><span class="p">(</span><span class="n">phe</span><span class="p">,</span><span class="n">use_int</span><span class="p">),</span><span class="n">plot_type</span><span class="o">=</span><span class="s1">'3D'</span><span class="p">)</span><span class="w">
 </span></code></pre></div></div>
 
@@ -536,8 +532,20 @@ This figure is useful for checking outliers.</p>
 
 <p>Above is a table to visualize each sample’s observed label vs. its predicted label, it shows more details. 
 The darker the table cell is, the more samples are gathered in the corresponding label. We can see 4 WNTs can be further separated into two sub-groups.
-However, in this demo dataset, no obvious outlier samples are observed. 
-If user found an outlier sample and removed it, we suggest to re-run Step 2 and Step 3 to see whether the data got cleaner after the remove of outlier.</p>
+However, in this demo dataset, no obvious outlier samples are observed.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">draw.pca.kmeans</span><span class="p">(</span><span class="n">mat</span><span class="o">=</span><span class="n">mat</span><span class="p">,</span><span class="n">all_k</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">NULL</span><span class="p">,</span><span class="n">obs_label</span><span class="o">=</span><span class="n">get_obs_label</span><span class="p">(</span><span class="n">phe</span><span class="p">,</span><span class="n">use_int</span><span class="p">),</span><span class="w">
+                </span><span class="n">plot_type</span><span class="o">=</span><span class="s1">'2D.interactive'</span><span class="p">,</span><span class="w">
+                </span><span class="n">pre_define</span><span class="o">=</span><span class="nf">c</span><span class="p">(</span><span class="s1">'WNT'</span><span class="o">=</span><span class="s1">'blue'</span><span class="p">,</span><span class="s1">'SHH'</span><span class="o">=</span><span class="s1">'red'</span><span class="p">,</span><span class="s1">'G4'</span><span class="o">=</span><span class="s1">'green'</span><span class="p">))</span><span class="w">
+</span></code></pre></div></div>
+
+<iframe width="600" height="400" frameborder="0" scrolling="no" src="interactive.html"></iframe>
+
+<p>Above is the interactive plot, user could mouse over to check the sample label for each points.
+The text for each point is organized as “sample_name:observed_label:predicted_label”.
+The color to the points are categorized by the observed label and the shape by the predicted label.</p>
+
+<p>If user found an outlier sample and removed it, we suggest to re-run Step 2 and Step 3 to see whether the data got cleaner after the remove of outlier.</p>
 
 <h2 id="step-4-prepare-files-to-run-sjaracne-sjaracne-prep">Step 4: Prepare files to run SJARACNe (sjaracne-prep)</h2>
 <p><strong>Purpose: download SJARACNe needed database to local folders and prepare files to run SJARACNe.</strong></p>

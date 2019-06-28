@@ -12,9 +12,9 @@ getDE.BID.2G(eset, output_id_column = NULL, G1 = NULL, G0 = NULL,
 \arguments{
 \item{eset}{ExpressionSet class object, contains gene expression data or driver activity data.}
 
-\item{output_id_column}{character, the column names of fData(eset).
+\item{output_id_column}{character, the column names of Biobase::fData(eset).
 This option is useful when the \code{eset} expression matrix is at transcript-level, and user is expecting to see the gene-level comparison statistics.
-If NULL, rownames of the fData(eset) will be used.
+If NULL, rownames of the Biobase::fData(eset) will be used.
 Default is NULL.}
 
 \item{G1}{a vector of characters, the sample names of experimental group.}
@@ -81,7 +81,7 @@ res3 <- getDE.BID.2G(tmp_eset,output_id_column='gene',
 analysis.par <- list()
 analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
 NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
-phe_info <- pData(analysis.par$cal.eset)
+phe_info <- Biobase::pData(analysis.par$cal.eset)
 each_subtype <- 'G4'
 G0  <- rownames(phe_info)[which(phe_info$`subgroup`!=each_subtype)] # get sample list for G0
 G1  <- rownames(phe_info)[which(phe_info$`subgroup`==each_subtype)] # get sample list for G1

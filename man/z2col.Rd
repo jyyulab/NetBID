@@ -31,5 +31,5 @@ Return a vector of color codes.
 }
 \examples{
 t1 <- sort(rnorm(mean=0,sd=2,n=100))
-image(as.matrix(t1),col=z2col(t1))
+graphics::image(as.matrix(t1),col=z2col(t1))
 }

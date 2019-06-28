@@ -1,33 +1,68 @@
 # NetBID2
 Network-based Bayesian Inference of Drivers, Version II
 
+# Version 0.1.2 Update Notes:
+
+1. Create two "lazy mode" functions, NetBID.lazyMode.DriverVisualization(),NetBID.lazyMode.DriverEstimation()
+
+2. Add warning message for all functions
+
+3. Let color code set by user-defined, with two options: use_color,pre_define passed to get.class.color(). 
+The modified functions are: 
+draw.2D(), draw.2D.interactive(), draw.2D.text(), draw.3D(), draw.2D.ellipse(), draw.eset.QC(), draw.heatmap(), draw.categoryValue(), 
+
+4. Add package information in calling functions to avoid possible conflict of function names
+
+5. Re-write the cal.Activity(), add in Matrix Cross Products, which will accelerate calculation time but it is memory consuming. memory_constrain option could be set.
+
+6. Modify the draw.eset.QC(), add correlation plot. Modify draw.network.QC(), add html_info_limit. 
+
+7. Add draw.2D.interactive(), and add option "2D.interactive" to draw.pca.kmeans(), draw.umap.kmeans()
+
+8. Add functions to judge abnormal values.
+
+9. modify option name from network --> target_list in generate.masterTable()
+
+10. add option geneSymbol_column for SJAracne.prepare()
+
+11. rebuild on R 3.6.0
+
 # Install
 
 ## remote install (not available yet)
 
 library(devtools)
+library(BiocManager)
 
-install_github("jyyulab/NetBID-dev",ref='master') 
+# set repos, for R version 3.6.0, Bioconductor version 3.9
 
-or download the release version from https://github.com/jyyulab/NetBID-dev/releases/download/NetBID2-R/NetBID2_0.1.1.tar.gz
+local({
+  r <- getOption("repos")
+  r["CRAN"] <- "https://cran.rstudio.com/"
+  r["BioCsoft"] <- "https://bioconductor.org/packages/3.9/bioc"
+  r["BioCann"] <- "https://bioconductor.org/packages/3.9/data/annotation"
+  r["BioCexp"] <- "https://bioconductor.org/packages/3.9/data/experiment"
+  options(repos = r)
+})
+
+devtools::install_github("jyyulab/NetBID-dev",ref='master',dependencies='Depends') 
+
+or download the release version from https://github.com/jyyulab/NetBID-dev/releases/download/NetBID2-R/NetBID2_0.1.2.tar.gz
 
 ## local install
 
+pull the repos from github and install locally:
+
+devtools::install(pkg='.',dependencies=TRUE) ## Install the package with dependencies.
+devtools::install_deps(pkg = ".", dependencies = TRUE) ## Install package dependencies if needed.
+
 download the directory to your workspace and then run:
 
-devtools::install(pkg='.') ## please input the path to the directory
-
-or get the source package file from server ('/research/projects/yu3grp/Network_JY/yu3grp/NetBID2/NetBID2_0.1.1.tar.gz') and install locally by:
-
-install.packages('NetBID2_0.1.1.tar.gz',repos=NULL) ## path to the directory
-
-or directly install:
-
-install.packages('/research/projects/yu3grp/Network_JY/yu3grp/NetBID2/NetBID2_0.1.1.tar.gz',repos=NULL)
+install.packages('NetBID2_0.1.2.tar.gz',repos=NULL,dependencies=TRUE) ## 
 
 # Manual & Tutorial
 
-manual: NetBID2_0.1.1.pdf
+manual: NetBID2_0.1.2.pdf
 
 tutorial: https://jyyulab.github.io/NetBID-dev/
 

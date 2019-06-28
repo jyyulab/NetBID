@@ -51,8 +51,8 @@ the more samples are gathered in the corresponding label.
 network.par <- list()
 network.par$out.dir.DATA <- system.file('demo1','network/DATA/',package = "NetBID2")
 NetBID.loadRData(network.par=network.par,step='exp-QC')
-mat <- exprs(network.par$net.eset)
-phe <- pData(network.par$net.eset)
+mat <- Biobase::exprs(network.par$net.eset)
+phe <- Biobase::pData(network.par$net.eset)
 intgroup <- 'subgroup'
 pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,
                              obs_label=get_obs_label(phe,intgroup),

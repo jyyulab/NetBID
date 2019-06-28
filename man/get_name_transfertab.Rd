@@ -5,7 +5,8 @@
 \title{Convert Original Gene ID into Target Gene ID}
 \usage{
 get_name_transfertab(use_genes = NULL, transfer_tab = NULL,
-  from_type = NULL, to_type = NULL, ignore_version = FALSE)
+  from_type = NULL, to_type = NULL, ignore_version = FALSE,
+  ignore_order = FALSE)
 }
 \arguments{
 \item{use_genes}{a vector of characters, the genes for ID conversion.}
@@ -14,12 +15,14 @@ get_name_transfertab(use_genes = NULL, transfer_tab = NULL,
 
 \item{from_type}{character, the attribute name match the current ID type (the type of use_genes).
 Such as "ensembl_gene_id", "ensembl_gene_id_version", "ensembl_transcript_id", "ensembl_transcript_id_version" or "refseq_mrna".
-The "attribute" is inherited from the biomaRt package. For details, user can call \code{listAttributes()} to see all available attributes in the selected dataset.
+The "attribute" is inherited from the biomaRt package. For details, user can call \code{biomaRt::listAttributes()} to see all available attributes in the selected dataset.
 If NULL, will use the first column of \code{transfer_tab}.}
 
 \item{to_type}{character, the attribute name to convert into. If NULL, will use the second column of \code{transfer_tab}.}
 
 \item{ignore_version}{logical, if TRUE and \code{from_type} is "ensembl_gene_id_version" or "ensembl_transcript_id_version", the version will be ignored. Default is FALSE.}
+
+\item{ignore_order}{logical, whether need to ignore the output order to match the input list of \code{use_genes}. Default is FALSE.}
 }
 \value{
 Return a vector of converted gene IDs.

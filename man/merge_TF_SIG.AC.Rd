@@ -19,19 +19,32 @@ Return an ExpressionSet object.
 and adds "_TF" or "_SIG" suffix to drivers for easier distinction.
 }
 \examples{
-analysis.par <- list()
-analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
-NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
+if(exists('analysis.par')==TRUE) rm(analysis.par)
+network.dir <- sprintf('\%s/demo1/network/',system.file(package = "NetBID2")) # use demo
+network.project.name <- 'project_2019-02-14' # demo project name
+project_main_dir <- 'test/'
+project_name <- 'test_driver'
+analysis.par  <- NetBID.analysis.dir.create(project_main_dir=project_main_dir,
+                                            project_name=project_name,
+                                            network_dir=network.dir,
+                                            network_project_name=network.project.name)
+analysis.par$tf.network  <- get.SJAracne.network(network_file=analysis.par$tf.network.file)
+analysis.par$sig.network <- get.SJAracne.network(network_file=analysis.par$sig.network.file)
+## get eset (here for demo, use network.par$net.eset)
+network.par <- list()
+network.par$out.dir.DATA <- system.file('demo1','network/DATA/',package = "NetBID2")
+NetBID.loadRData(network.par=network.par,step='exp-QC')
+analysis.par$cal.eset <- network.par$net.eset
 ac_mat_TF <- cal.Activity(target_list=analysis.par$tf.network$target_list,
-                       cal_mat=exprs(analysis.par$cal.eset),
+                       cal_mat=Biobase::exprs(analysis.par$cal.eset),
                        es.method='weightedmean')
 ac_mat_SIG <- cal.Activity(target_list=analysis.par$tf.network$target_list,
-                       cal_mat=exprs(analysis.par$cal.eset),
+                       cal_mat=Biobase::exprs(analysis.par$cal.eset),
                        es.method='weightedmean')
 analysis.par$ac.tf.eset  <- generate.eset(exp_mat=ac_mat_TF,
-                                          phenotype_info=pData(analysis.par$cal.eset))
+                                          phenotype_info=Biobase::pData(analysis.par$cal.eset))
 analysis.par$ac.sig.eset <- generate.eset(exp_mat=ac_mat_SIG,
-                                          phenotype_info=pData(analysis.par$cal.eset))
+                                          phenotype_info=Biobase::pData(analysis.par$cal.eset))
 analysis.par$merge.ac.eset <- merge_TF_SIG.AC(TF_AC=analysis.par$ac.tf.eset,
                                           SIG_AC=analysis.par$ac.sig.eset)
 }

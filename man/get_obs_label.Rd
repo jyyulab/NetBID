@@ -29,7 +29,7 @@ This is a helper function for data visualization.
 analysis.par <- list()
 analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
 NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
-phe_info <- pData(analysis.par$cal.eset)
+phe_info <- Biobase::pData(analysis.par$cal.eset)
 use_obs_class <- get_obs_label(phe_info = phe_info,'subgroup')
 print(use_obs_class)
 \dontrun{

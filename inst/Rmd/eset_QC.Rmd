@@ -7,69 +7,18 @@ output:
 ```{r include=FALSE}
 library(NetBID2)
 library(kableExtra)
-draw.meanSdPlot <- function(eset){
-    exp_mat <- exprs(eset)
-    mean_g <- apply(exp_mat,1,mean)
-    mean_g <- rank(mean_g)
-    sd_g <- apply(exp_mat,1,sd)
-    n <- 50
-    mean_g_c <- cut(mean_g,breaks = n)
-    sd_g_c <- cut(sd_g,breaks = n)
-    mat <- table(cbind(list(mean_g_c,sd_g_c)))
-    tmp1 <- aggregate(sd_g,list(mean_g_c),mean); rownames(tmp1) <- tmp1$Group.1
-    sd_g_v <- tmp1[levels(mean_g_c),'x']
-    #
-    mean_g_l <- t(sapply(levels(mean_g_c),function(x)as.numeric(strsplit(gsub('\\(|\\]','\\1',x),',')[[1]])))
-    sd_g_l <- t(sapply(levels(sd_g_c),function(x)as.numeric(strsplit(gsub('\\(|\\]','\\1',x),',')[[1]])))
-    mean_g_l_m <- rowMeans(mean_g_l)
-    sd_g_l_m <- rowMeans(sd_g_l)
-    # col=get_transparent(brewer.pal(8,'Set1')[2],alpha=0.1)
-    par(mai=c(1,1,1,2))
-    dat <- spline(x=mean_g_l_m,y=sd_g_v,n=n*10)
-    plot(y~x,data=dat,type='l',col=brewer.pal(8,'Set1')[1],lwd=2,xlab='rank(mean)',ylab='sd',
-         ylim=c(0,max(sd_g)),xlim=c(0,max(mean_g)),cex.lab=1.2)
-    pp <- par()$usr
-    ##
-    ag <- 30
-    r <- max(mean_g)/(2*nrow(mat))
-    rx <- r/cos(ag*pi/180)*par.pos2inch()[1] # x-inch
-    ry <- rx
-    x1 <- c(rx*cos(ag*pi/180),rx*cos(ag*pi/180),0,-rx*cos(ag*pi/180),-rx*cos(ag*pi/180),0,rx*cos(ag*pi/180))
-    y1 <- c(ry*sin(ag*pi/180),-ry*sin(ag*pi/180),-ry,-ry*sin(ag*pi/180),+ry*sin(ag*pi/180),ry,ry*sin(ag*pi/180))
-    #print(x1/par.pos2inch()[1]);print(y1/par.pos2inch()[2])
-    simplehexbin <- function(x,y,r,col){
-       polygon(x=x+x1/par.pos2inch()[1],y=y+y1/par.pos2inch()[2],col=col,border = 'white',lwd=0.1)
-    }
-    mm <- max(as.numeric(mat))
-    cc <- colorRampPalette(brewer.pal(9,'Blues')[c(2:9)])(mm)
-    cc <- rev(cc)
-    for(i in 1:nrow(mat)){
-      for(j in 1:ncol(mat)){
-        if(mat[i,j]>0){
-          if(j%%2==0) simplehexbin(x=mean_g_l_m[i],y=sd_g_l_m[j],col=cc[mat[i,j]])
-          if(j%%2==1) simplehexbin(x=mean_g_l_m[i]-r,y=sd_g_l_m[j],col=cc[mat[i,j]])
-        }
-      }
-    }
-    lines(y~x,data=dat,col=brewer.pal(8,'Set1')[1],lwd=2)
-    ypos <- seq(pp[4]-par.char2pos()[2]*2,pp[3]+(pp[4]-pp[3])/2,length.out=length(cc)+1)
-    text(x=pp[2]+par.char2pos()[1]*1.5,y=pp[4]-par.char2pos()[2],pos=4,'Count',xpd=TRUE)
-    rect(xleft=pp[2]+par.char2pos()[1],xright=pp[2]+par.char2pos()[1]*1.5,ybottom=ypos[1:(length(ypos)-1)],ytop=ypos[2:length(ypos)],col=rev(cc),border=NA,xpd=TRUE)
-    text(x=pp[2]+par.char2pos()[1]*1.5,y=quantile(ypos,probs=c(0,0.5,1)),c(1,round(mm/2),mm),xpd=TRUE,pos=4)
-    return(TRUE)
-  }
 ```
 
 ```{r echo=FALSE}
 dt <- pData(eset)
 if(nrow(dt)<20){
-kable(dt,align = "c") %>%
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed")) %>%
-  scroll_box(width = "100%", height = "100%")
+kableExtra::kable(dt,align = "c") %>%
+  kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed")) %>%
+  kableExtra::scroll_box(width = "100%", height = "100%")
 }else{
-  kable(dt,align = "c") %>%
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed")) %>%
-  scroll_box(width = "100%", height = "500px")
+  kableExtra::kable(dt,align = "c") %>%
+  kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed")) %>%
+  kableExtra::scroll_box(width = "100%", height = "500px")
 }
 ```
 
@@ -82,45 +31,65 @@ in which `r length(intgroup)` sample class: `r intgroup` will used for basic clu
 Distance between samples is calculated by dist2().
 
 ```{r echo=FALSE,fig.width=12, fig.height=12}
-nrow <- ceiling(length(intgroup)/2)
-par(mfrow = c(nrow, 2))
-par(mar = c(6, 6, 6, 6))
-    m <- dist2.mod(use_mat)
-    #dend <- as.dendrogram(hclust(as.dist(m), method = "single"))
-    #ord <- order.dendrogram(dend)
-    #m <- m[ord, ord]
-    res <- draw.heatmap(mat=m,phenotype_info = pData(eset),use_phe=intgroup)
+if('heatmap' %in% choose_plot){
+  nrow <- ceiling(length(intgroup)/2)
+  par(mfrow = c(nrow, 2))
+  par(mar = c(6, 6, 6, 6))
+  m <- dist2.mod(use_mat)
+  res <- draw.heatmap(mat=m,phenotype_info = pData(eset),use_phe=intgroup)
+}else{
+  message('No selection for Heatmap!')
+}
+
 ```
 
 ## Part II: PCA plot for samples
 
 Original expression matrix is transformed by PCA (principal component analysis) and the first two components are visualized.  
 
-```{r echo=FALSE, fig.width=12, fig.height=6}
-nrow <- ceiling(length(intgroup)/2)
-par(mfrow = c(nrow, 2))
-   pca <- prcomp(t(na.omit(use_mat)))
-   for (i in 1:length(intgroup)) {
-      class_label <- pData(eset)[,intgroup[i]]
-      class_label[which(is.na(class_label)==TRUE)] <- 'NA'
-      par(mar = c(3, 2, 3, 4))
-      draw.2D(as.data.frame(pca$x)$PC1,as.data.frame(pca$x)$PC2,class_label=class_label,
-              xlab=sprintf('PC1(%s%s variance)',format(summary(pca)$importance[2,'PC1']*100,digits=3),'%'),
-              ylab=sprintf('PC2(%s%s variance)',format(summary(pca)$importance[2,'PC2']*100,digits=3),'%'),
-              legend_cex=0.8,main=sprintf('%s',intgroup[i]))
-      par(mar = c(3, 2, 3, 2))
-      draw.2D.ellipse(as.data.frame(pca$x)$PC1,as.data.frame(pca$x)$PC2,class_label=class_label,
-                      xlab=sprintf('PC1(%s%s variance)',format(summary(pca)$importance[2,'PC1']*100,digits=3),'%'),
-                      ylab=sprintf('PC2(%s%s variance)',format(summary(pca)$importance[2,'PC2']*100,digits=3),'%'),
-                      legend_cex=0.8,main=sprintf('%s',intgroup[i]))
-    }
+```{r Code Chunk, echo=FALSE,fig.width=12, fig.height=12}
+if('pca' %in% choose_plot){
+  if(pca_plot_type=='2D.interactive') {
+    l <- htmltools::tagList()
+     for (i in 1:length(intgroup)) {
+       w1 <- unique(get_obs_label(pData(eset),intgroup[i]))
+       if(length(w1)<=6){
+                l[[i]] <- draw.pca.kmeans(use_mat,obs_label=get_obs_label(pData(eset),intgroup[i]),
+                                 verbose=FALSE,main=intgroup[i],plot_type = pca_plot_type,use_color=use_color,pre_define=pre_define)
+       }else{
+         message(sprintf('No support for original clusters size larger than 6 (here %s has %s unique groups), please directly call draw.pca.kmeans() or draw.2D.interactive() for visualization! ',intgroup[i],length(w1)))
+       }
+     }
+    plotly:::layout(l)
+  }
+}else{
+    message('No selection for PCA plot!')
+}
+```
+
+
+```{r echo=FALSE, results="hide", fig.width=12, fig.height=6}
+if('pca' %in% choose_plot){
+  if(pca_plot_type!='2D.interactive') {
+      pp <- 0.3+0.7-(ncol(use_mat)-10)*(0.7/900)
+      if(ncol(use_mat)<=10) pp <- 1
+      if(ncol(use_mat)>1000) pp <- 0.3
+      for (i in 1:length(intgroup)) {
+       tmp1 <- draw.pca.kmeans(use_mat,obs_label=get_obs_label(pData(eset),intgroup[i]),
+                               verbose=FALSE,point_cex=pp,main=intgroup[i],plot_type = pca_plot_type)
+     }
+  }
+}else{
+    message('No selection for PCA plot!')
+}
 ```
 
 ## Part III: Density plot
 
 The density for the expression value in each sample is ploted with colored grouped by the sample class. 
 
-```{r echo=FALSE ,fig.width=12, fig.height=8}
+```{r echo=FALSE ,results="hide", fig.width=12, fig.height=7}
+if('density' %in% choose_plot){
 nrow <- ceiling(length(intgroup)/2)
 par(mfrow = c(nrow, 2))
 par(mar = c(3, 3, 3, 3))
@@ -140,17 +109,35 @@ for(i in 1:length(intgroup)){
       legend('topright',legend=unique(class_label),
              fill = cls_cc[unique(class_label)],
              xpd = TRUE,border = NA,bty = 'n',horiz = FALSE)
-    }
+}
+}else{
+  message('No selection for Density plot!')
+}
+
 ```
 
-## Part IV: MeanSd plot
+## Part IV: Correlation plot (`r correlation_strategy`)
 
-The standard deviations versus means for each probe/transcript/gene is plotted. 
+```{r echo=FALSE,fig.width=12, fig.height=12}
+if('correlation' %in% choose_plot){
+  par(mar=c(3,3,3,3))
+  for(i in 1:length(intgroup)){
+    class_label <- get_obs_label(pData(eset),intgroup[i])
+    draw.correlation(use_mat,class_label,main=intgroup[i],correlation_strategy=correlation_strategy,plot_all_point=plot_all_point)
+  }
+}else{
+  message('No selection for Correlation plot!')
+}
+```
+
+
+
+## Part V: MeanSd Plot
 
 ```{r echo=FALSE,fig.width=8, fig.height=8}
-    draw.meanSdPlot(eset)
+if('meansd' %in% choose_plot){
+  draw.meanSdPlot(eset)
+}else{
+  message('No selection for MeanSd plot!')
+}
 ```
-
-
-
-

@@ -53,7 +53,7 @@ new_eset <- update_eset.feature(use_eset=eset,
                                 merge_method='median',
                                 distribute_method='equal'
                                 )
-print(exprs(eset)[test_transfer_table$Gene,])
-print(exprs(new_eset))
+print(Biobase::exprs(eset)[test_transfer_table$Gene,])
+print(Biobase::exprs(new_eset))
 
 }

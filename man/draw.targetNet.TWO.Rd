@@ -6,8 +6,8 @@
 \usage{
 draw.targetNet.TWO(source1_label = "", source2_label = "",
   source1_z = NULL, source2_z = NULL, edge_score1 = NULL,
-  edge_score2 = NULL, arrow1_direction = "out",
-  arrow2_direction = "out", label_cex = 0.7, source_cex = 1,
+  edge_score2 = NULL, arrow_direction1 = "out",
+  arrow_direction2 = "out", label_cex = 0.7, source_cex = 1,
   pdf_file = NULL, total_possible_target = NULL, show_test = FALSE,
   n_layer = 1, alphabetical_order = FALSE)
 }
@@ -28,9 +28,9 @@ The range of the numeric value is from -1 to 1. Positive value means it is posit
 \item{edge_score2}{a named vector of numerics, indicating the correlation between the seconde driver and its target genes.
 The range of the numeric value is from -1 to 1. Positive value means it is positively-regulated by driver and vice versa. The names of the vector are gene names.}
 
-\item{arrow1_direction}{character, the arrow direction for first driver. Users can choose between "in" and "out". Default is "out".}
+\item{arrow_direction1}{character, the arrow direction for first driver. Users can choose between "in" and "out". Default is "out".}
 
-\item{arrow2_direction}{character, the arrow direction for second driver. Users can choose between "in" and "out". Default is "out".}
+\item{arrow_direction2}{character, the arrow direction for second driver. Users can choose between "in" and "out". Default is "out".}
 
 \item{label_cex}{numeric, giving the amount by which the text of target gene names should be magnified relative to the default. Default is 0.7.}
 

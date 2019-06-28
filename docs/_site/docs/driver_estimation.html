@@ -121,7 +121,10 @@
 
 <p><strong>retrieve potential drivers for interested phenotype and generate a master table for drivers</strong>.</p>
 
-<p>The complete demo script for network construction can be found here, 
+<p>One “lazy mode” function without flexiable options is available for this part of analysis: <code class="highlighter-rouge">NetBID.lazyMode.DriverEstimation()</code>. 
+User could check the manual for this function and try the demo code for usage.</p>
+
+<p>The complete step-by-step demo script for network construction can be found here, 
 <a href="https://github.com/jyyulab/NetBID-dev/blob/master/demo_scripts/pipeline_analysis_demo1.R">pipeline_analysis_demo1.R</a>.</p>
 
 <hr />
@@ -261,18 +264,18 @@ If one didn’t follow the pipeline, just pass the directory of network to <code
 
 <p><strong>Generate an HTML QC report for the constructed network, using <code class="highlighter-rouge">igraph_obj</code>.</strong></p>
 
-<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">draw.network.QC</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">tf.network</span><span class="o">$</span><span class="n">igraph_obj</span><span class="p">,</span><span class="n">outdir</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.QC</span><span class="p">,</span><span class="n">prefix</span><span class="o">=</span><span class="s1">'TF_net_'</span><span class="p">)</span><span class="w">
-</span><span class="n">draw.network.QC</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">sig.network</span><span class="o">$</span><span class="n">igraph_obj</span><span class="p">,</span><span class="n">outdir</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.QC</span><span class="p">,</span><span class="n">prefix</span><span class="o">=</span><span class="s1">'SIG_net_'</span><span class="p">)</span><span class="w">
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">draw.network.QC</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">tf.network</span><span class="o">$</span><span class="n">igraph_obj</span><span class="p">,</span><span class="n">outdir</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.QC</span><span class="p">,</span><span class="n">prefix</span><span class="o">=</span><span class="s1">'TF_net_'</span><span class="p">,</span><span class="n">html_info_limit</span><span class="o">=</span><span class="kc">FALSE</span><span class="p">)</span><span class="w">
+</span><span class="n">draw.network.QC</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">sig.network</span><span class="o">$</span><span class="n">igraph_obj</span><span class="p">,</span><span class="n">outdir</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.QC</span><span class="p">,</span><span class="n">prefix</span><span class="o">=</span><span class="s1">'SIG_net_'</span><span class="p">,</span><span class="n">html_info_limit</span><span class="o">=</span><span class="kc">TRUE</span><span class="p">)</span><span class="w">
 </span></code></pre></div></div>
 
 <p>Two QC reports have been created. One for the transcription factor <a href="TF_net_netQC.html">TF network</a>, the other one is for signaling factor <a href="SIG_net_netQC.html">SIG network</a>.</p>
 
 <p><strong>- What information can you get from the HTML QC report of network?</strong></p>
 <ul>
-  <li>A table for network. It shows some basic statistics to characterize the target network, including size, diameter and centrality etc.</li>
+  <li>A table for network. It shows some basic statistics to characterize the target network, including size and centrality etc.</li>
   <li>A table for drivers. It shows detailed statistics for all drivers in the network.</li>
-  <li>A density over histogram to show the distribution of the degree of nodes.</li>
-  <li>A scatter plot to check if the network is scale-free.</li>
+  <li>A density over histogram to show the distribution of the degree of nodes and the target size of all drivers. The average target size around several hundreds may be good by experience.</li>
+  <li>A scatter plot to check if the network is scale-free. It is good but not necessary for a gene regulatory network to have the scale-free topology feature.</li>
 </ul>
 
 <p><strong>Second, merge TF-network and SIG-network.</strong>
@@ -492,7 +495,7 @@ Here are the details,</p>
 </span><span class="n">analysis.par</span><span class="o">$</span><span class="n">transfer_tab</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">transfer_tab</span><span class="w">
 </span><span class="c1"># Creat the final master table</span><span class="w">
 </span><span class="n">analysis.par</span><span class="o">$</span><span class="n">final_ms_tab</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">generate.masterTable</span><span class="p">(</span><span class="n">use_comp</span><span class="o">=</span><span class="n">all_comp</span><span class="p">,</span><span class="n">DE</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">DE</span><span class="p">,</span><span class="n">DA</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">DA</span><span class="p">,</span><span class="w">
-                                               </span><span class="n">network</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.network</span><span class="o">$</span><span class="n">target_list</span><span class="p">,</span><span class="w">
+                                               </span><span class="n">target_list</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.network</span><span class="o">$</span><span class="n">target_list</span><span class="p">,</span><span class="w">
                                                </span><span class="n">tf_sigs</span><span class="o">=</span><span class="n">tf_sigs</span><span class="p">,</span><span class="n">z_col</span><span class="o">=</span><span class="s1">'Z-statistics'</span><span class="p">,</span><span class="n">display_col</span><span class="o">=</span><span class="nf">c</span><span class="p">(</span><span class="s1">'logFC'</span><span class="p">,</span><span class="s1">'P.Value'</span><span class="p">),</span><span class="w">
                                                </span><span class="n">main_id_type</span><span class="o">=</span><span class="s1">'external_gene_name'</span><span class="p">)</span><span class="w">
 </span></code></pre></div></div>

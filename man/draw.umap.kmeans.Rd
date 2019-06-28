@@ -7,7 +7,8 @@
 draw.umap.kmeans(mat = NULL, all_k = NULL, obs_label = NULL,
   legend_pos = "topleft", legend_cex = 0.8,
   kmeans_strategy = "basic", choose_k_strategy = "ARI",
-  plot_type = "2D.ellipse", point_cex = 1, return_type = "optimal")
+  plot_type = "2D.ellipse", point_cex = 1, return_type = "optimal",
+  main = "", verbose = TRUE, use_color = NULL, pre_define = NULL)
 }
 \arguments{
 \item{mat}{numeric matrix, the expression matrix. Rows are genes/features, columns are samples. Columns will be clustered based on row features.}
@@ -26,7 +27,8 @@ draw.umap.kmeans(mat = NULL, all_k = NULL, obs_label = NULL,
 \item{choose_k_strategy}{character, method to choose the K-value. Users can choose from "ARI (adjusted rand index)", "NMI (normalized mutual information)" and "Jaccard".
 Default is "ARI".}
 
-\item{plot_type}{character, type of the plot. Users can choose from "2D", "2D.ellipse", "2D.text" and "3D". Default is "2D.ellipse".}
+\item{plot_type}{character, type of the plot.
+Users can choose from "2D","2D.interactive", "2D.ellipse", "2D.text" and "3D". Default is "2D.ellipse".}
 
 \item{point_cex}{numeric, giving the amount by which the size of the data points should be magnified relative to the default. Default is 1.}
 
@@ -34,9 +36,18 @@ Default is "ARI".}
 "all", all the K-values in all_k will be returned.
 "optimal", only the K-value yielding the optimal classification result will be returned.
 Default is "optimal".}
+
+\item{main}{character, title for the plot.}
+
+\item{verbose}{logical, if TRUE, print out detailed information during calculation. Default is TRUE.}
+
+\item{use_color}{a vector of color codes, colors to be assigned to each member of display label. Default is brewer.pal(9, 'Set1').}
+
+\item{pre_define}{a vector of characters, pre-defined color codes for a certain input (e.g. c("blue", "red") with names c("A", "B")). Default is NULL.}
 }
 \value{
 Return a vector of the predicted label (if \code{return_type} is "optimal") and a list of all possible K-values (if \code{return_type} is "all").
+If plot_type='2D.interactive', will return a plotly class object for interactive display.
 }
 \description{
 \code{draw.umap.kmeans} is a function to visualize the cluster result for the input data matrix. It is mainly used for check sample clustering result.
@@ -46,15 +57,20 @@ Warning, it is not suggested to use when sample size is small.
 network.par <- list()
 network.par$out.dir.DATA <- system.file('demo1','network/DATA/',package = "NetBID2")
 NetBID.loadRData(network.par=network.par,step='exp-QC')
-mat <- exprs(network.par$net.eset)
-phe <- pData(network.par$net.eset)
+mat <- Biobase::exprs(network.par$net.eset)
+phe <- Biobase::pData(network.par$net.eset)
 intgroup <- get_int_group(network.par$net.eset)
-for(i in 1:length(intgroup)){
+for(i in 1:base::length(intgroup)){
  print(intgroup[i])
  pred_label <- draw.umap.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,intgroup[i]))
- print(table(list(pred_label=pred_label,obs_label=get_obs_label(phe,intgroup[i]))))
+ print(base::table(list(pred_label=pred_label,obs_label=get_obs_label(phe,intgroup[i]))))
 }
 pred_label <- draw.umap.kmeans(mat=mat,all_k = NULL,
                              obs_label=get_obs_label(phe,intgroup[i]),
                              kmeans_strategy='consensus')
+## interactive display
+draw.umap.kmeans(mat=mat,all_k = NULL,
+               obs_label=get_obs_label(phe,'subgroup'),
+               plot_type='2D.interactive',
+               pre_define=c('WNT'='blue','SHH'='red','G4'='green'))
 }

@@ -4,10 +4,10 @@
 \alias{SJAracne.prepare}
 \title{Prepare Data Files for Running SJARACNe}
 \usage{
-SJAracne.prepare(eset, use.samples = rownames(pData(eset)),
+SJAracne.prepare(eset, use.samples = rownames(Biobase::pData(eset)),
   TF_list = NULL, SIG_list = NULL, SJAR.main_dir = "",
   SJAR.project_name = "", IQR.thre = 0.5, IQR.loose_thre = 0.1,
-  add_options = "")
+  add_options = "", geneSymbol_column = NULL)
 }
 \arguments{
 \item{eset}{an ExpressionSet class object, which contains the expression matrix.}
@@ -27,6 +27,9 @@ SJAracne.prepare(eset, use.samples = rownames(pData(eset)),
 \item{IQR.loose_thre}{numeric, the IQR filter threshold to filter for all driver(TF/SIG) genes.}
 
 \item{add_options}{additional option for running SJARACNe.}
+
+\item{geneSymbol_column}{character, the column name in fdata(eset) which contains gene symbol.
+If NULL, will use the main ID in exprs(eset) to fulfill the "geneSymbol" column. Default is NULL.}
 }
 \description{
 \code{SJAracne.prepare} prepares data files for running SJAracne. SJARACNe is a scalable software tool for gene network reverse engineering from big data.
@@ -41,10 +44,10 @@ network.par$out.dir.DATA <- system.file('demo1','network/DATA/',package = "NetBI
 NetBID.loadRData(network.par=network.par,step='exp-QC')
 db.preload(use_level='gene',use_spe='human',update=FALSE)
 use_gene_type <- 'external_gene_name' ## this should user-defined !!!
-use_genes <- rownames(fData(network.par$net.eset))
+use_genes <- rownames(Biobase::fData(network.par$net.eset))
 use_list  <- get.TF_SIG.list(use_genes,use_gene_type=use_gene_type)
 #select sample for analysis
-phe <- pData(network.par$net.eset)
+phe <- Biobase::pData(network.par$net.eset)
 use.samples <- rownames(phe) ## use all samples, or choose to use some samples
 prj.name <- network.par$project.name # can use other names, if need to run different use samples
 network.par$out.dir.SJAR <- 'test' ## set the directory

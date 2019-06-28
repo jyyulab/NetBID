@@ -8,7 +8,8 @@ draw.categoryValue(ac_val = NULL, exp_val = NULL,
   use_obs_class = NULL, category_color = NULL,
   stripchart_color = get_transparent("black", 0.7), strip_cex = 1,
   class_order = NULL, class_srt = 90, class_cex = 1,
-  pdf_file = NULL, main_ac = "", main_exp = "", main_cex = 1)
+  pdf_file = NULL, main_ac = "", main_exp = "", main_cex = 1,
+  use_color = NULL, pre_define = NULL)
 }
 \arguments{
 \item{ac_val}{a vector of numerics, the activity values of the selected driver across all samples.}
@@ -39,6 +40,10 @@ If NULL, will use the alphabetical order of the category (subgroup). Default is 
 \item{main_exp}{character, the main title of the plot to show expression values. Default is "".}
 
 \item{main_cex}{numeric, giving the amount by which the text of the main title should be magnified relative to the default. Default is 1.}
+
+\item{use_color}{a vector of color codes, colors to be assigned to each member of display label. Default is brewer.pal(9, 'Set1').}
+
+\item{pre_define}{a vector of characters, pre-defined color codes for a certain input (e.g. c("blue", "red") with names c("A", "B")). Default is NULL.}
 }
 \value{
 Return a logical value. If TRUE, the plot has been created successfully.
@@ -64,11 +69,11 @@ sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
                                label_cex = 0.5)
 driver_list <- rownames(sig_driver)
 use_driver <- driver_list[3]
-exp_mat <- exprs(analysis.par$cal.eset)
+exp_mat <- Biobase::exprs(analysis.par$cal.eset)
 ## expression,the rownames could match originalID
-ac_mat  <- exprs(analysis.par$merge.ac.eset)
+ac_mat  <- Biobase::exprs(analysis.par$merge.ac.eset)
 ## activity,the rownames could match originalID_label
-phe_info <- pData(analysis.par$cal.eset)
+phe_info <- Biobase::pData(analysis.par$cal.eset)
 use_obs_class <- get_obs_label(phe_info = phe_info,'subgroup')
 draw.categoryValue(ac_val=ac_mat[use_driver,],
                    exp_val=exp_mat[ms_tab[use_driver,'originalID'],],
@@ -76,7 +81,8 @@ draw.categoryValue(ac_val=ac_mat[use_driver,],
                    class_order=c('WNT','SHH','G4'),
                    class_srt=30,
                    main_ac = ms_tab[use_driver,'gene_label'],
-                   main_exp=ms_tab[use_driver,'geneSymbol'])
+                   main_exp=ms_tab[use_driver,'geneSymbol'],
+                   pre_define=c('WNT'='blue','SHH'='red','G4'='green'))
 \dontrun{
 analysis.par <- list()
 analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
@@ -93,9 +99,11 @@ sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
                                label_cex = 0.5)
 driver_list <- rownames(sig_driver)
 use_driver <- driver_list[3]
-exp_mat <- exprs(analysis.par$cal.eset) ## expression,the rownames could match originalID
-ac_mat  <- exprs(analysis.par$merge.ac.eset) ## activity,the rownames could match originalID_label
-phe_info <- pData(analysis.par$cal.eset)
+exp_mat <- Biobase::exprs(analysis.par$cal.eset)
+## rownames could match originalID
+ac_mat  <- Biobase::exprs(analysis.par$merge.ac.eset)
+## rownames could match originalID_label
+phe_info <- Biobase::pData(analysis.par$cal.eset)
 use_obs_class <- get_obs_label(phe_info = phe_info,'subgroup')
 analysis.par$out.dir.PLOT <- getwd() ## directory for saving the pdf files
 draw.categoryValue(ac_val=ac_mat[use_driver,],

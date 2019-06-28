@@ -66,24 +66,33 @@ R, version >= 3.4.0
 - From github,
 
 ```R
+local({
+  r <- getOption("repos")
+  r["CRAN"] <- "https://cran.rstudio.com/"
+  r["BioCsoft"] <- "https://bioconductor.org/packages/3.9/bioc"
+  r["BioCann"] <- "https://bioconductor.org/packages/3.9/data/annotation"
+  r["BioCexp"] <- "https://bioconductor.org/packages/3.9/data/experiment"
+  options(repos = r)
+})
 library(devtools)
-install_github("jyyulab/NetBID-dev",ref='master')
+library(BiocManager)
+devtools::install_github("jyyulab/NetBID-dev",ref='master',dependencies='Depends') 
 ```
 
-- From source package [NetBID2_0.1.1.tar.gz](https://github.com/jyyulab/NetBID-dev/releases/download/NetBID2-R/NetBID2_0.1.1.tar.gz),
+- From source package [NetBID2_0.1.2.tar.gz](https://github.com/jyyulab/NetBID-dev/releases/download/NetBID2-R/NetBID2_0.1.2.tar.gz),
 
 ```R
-install.packages('NetBID2_0.1.1.tar.gz',repos=NULL)
+install.packages('NetBID2_0.1.2.tar.gz',repos=NULL)
 ```
 
 ---
 
 ## Design manual
 
-The manual of all the NetBID2 functions is linked here [NetBID2_0.1.1.pdf](https://github.com/jyyulab/NetBID-dev/blob/master/NetBID2_0.1.1.pdf). 
+The manual of all the NetBID2 functions is linked here [NetBID2_0.1.2.pdf](https://github.com/jyyulab/NetBID-dev/blob/master/NetBID2_0.1.2.pdf). 
 Every function has its own demo scripts to demonstrate its functionality.
 
-All these 67 functions can be grouped into their corresponding function modules,
+All these 70 functions can be grouped into their corresponding function modules,
 
 ![function group](function_group.png)
 

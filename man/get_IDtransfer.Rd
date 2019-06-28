@@ -10,7 +10,7 @@ get_IDtransfer(from_type = NULL, to_type = NULL, add_type = NULL,
 \arguments{
 \item{from_type}{character, the attribute name match the current ID type (the type of \code{use_genes}).
 Such as "ensembl_gene_id", "ensembl_gene_id_version", "ensembl_transcript_id", "ensembl_transcript_id_version" or "refseq_mrna".
-The "attribute" is inherited from the biomaRt package. For details, user can call \code{listAttributes()} to display all available attributes in the selected dataset.}
+The "attribute" is inherited from the biomaRt package. For details, user can call \code{biomaRt::listAttributes()} to display all available attributes in the selected dataset.}
 
 \item{to_type}{character, the attribute name to convert into.}
 

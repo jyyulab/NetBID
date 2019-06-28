@@ -51,8 +51,10 @@ mark_gene <- list(WNT=c('WIF1','TNC','GAD1','DKK2','EMX2'),
                  SHH=c('PDLIM3','EYA1','HHIP','ATOH1','SFRP1'),
                  Group3=c('IMPG2','GABRA5','EGFL11','NRL','MAB21L2','NPR3','MYC'),
                  Group4=c('KCNA1','EOMES','KHDRBS2','RBM24','UNC5D'))
-mark_col <- get.class.color(names(mark_gene))
+mark_col <- get.class.color(names(mark_gene),
+            pre_define=c('WNT'='blue','SHH'='red',
+            'Group3'='yellow','Group4'='green'))
 outfile <- 'test_out.xlsx'
-out2excel(ms_tab,out.xlsx = out_file,mark_gene,mark_col)
+out2excel(ms_tab,out.xlsx = outfile,mark_gene,mark_col)
 }
 }

@@ -5,13 +5,12 @@
 \title{Calculate Differential Expression (DE) or Differential Activity (DA) by Using Bayesian Inference}
 \usage{
 bid(mat = NULL, use_obs_class = NULL, class_order = NULL,
-  class_ordered = TRUE, method = c("MLE", "Bayesian"),
-  family = gaussian, pooling = c("full", "no", "partial"),
-  prior.V.scale = 0.02, prior.R.nu = 1, prior.G.nu = 2,
-  nitt = 13000, burnin = 3000, thin = 10, std = TRUE,
-  logTransformed = TRUE, log.base = 2, average.method = "geometric",
-  pseudoCount = 0, return_model = FALSE, use_seed = 999,
-  verbose = FALSE)
+  class_ordered = TRUE, method = "Bayesian", family = gaussian,
+  pooling = "full", prior.V.scale = 0.02, prior.R.nu = 1,
+  prior.G.nu = 2, nitt = 13000, burnin = 3000, thin = 10,
+  std = TRUE, logTransformed = TRUE, log.base = 2,
+  average.method = "geometric", pseudoCount = 0,
+  return_model = FALSE, use_seed = 999, verbose = FALSE)
 }
 \arguments{
 \item{mat}{matrix, the expression/activity matrix of IDs (gene/transcript/probe) from one gene. Rows are IDs, columns are samples.

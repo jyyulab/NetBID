@@ -6,7 +6,9 @@
 \usage{
 draw.eset.QC(eset, outdir = ".", do.logtransform = FALSE,
   intgroup = NULL, prefix = "", choose_plot = c("heatmap", "pca",
-  "density", "meansd"), generate_html = TRUE)
+  "density", "correlation"), generate_html = TRUE,
+  correlation_strategy = "pearson", plot_all_point = FALSE,
+  pca_plot_type = "2D.ellipse", use_color = NULL, pre_define = NULL)
 }
 \arguments{
 \item{eset}{ExpressionSet class, quality control analysis target.}
@@ -22,12 +24,24 @@ Default is NULL.}
 \item{prefix}{character, the prefix for the QC figures' name. Default is "".}
 
 \item{choose_plot}{a vector of characters,
-choose one or many from 'heatmap', 'pca', 'density' and 'meansd' plots.
+choose one or many from 'heatmap', 'pca', 'density','correlation' and 'meansd' plots.
 Only useful when generate_html=FALSE.
-Default is all.}
+Default is 'heatmap', 'pca', 'density' and 'correlation'}
 
 \item{generate_html}{logical, if TRUE, it will generate a html file by R Markdown. Otherwise, it will generate separate PDF files.
 Default is TRUE.}
+
+\item{correlation_strategy}{character, the strategy to calculate the sample correlation,
+choose from 'pearson' and 'spearman'. Default is 'pearson'.}
+
+\item{plot_all_point}{logical, if TRUE, the scatterplot will plot all points in the correlation,
+otherwise will plot the main trend for reducing the figure size. Default is FALSE.}
+
+\item{pca_plot_type}{character, plot type for pca. Users can choose from "2D","2D.interactive", "2D.ellipse", "2D.text" and "3D". Default is "2D.ellipse".}
+
+\item{use_color}{a vector of color codes, colors to be assigned to each member of display label. Default is brewer.pal(9, 'Set1').}
+
+\item{pre_define}{a vector of characters, pre-defined color codes for a certain input (e.g. c("blue", "red") with names c("A", "B")). Default is NULL.}
 }
 \description{
 \code{draw.eset.QC} is a function to draw a set of plots for quality control analysis.
@@ -40,6 +54,10 @@ network.par$out.dir.DATA <- system.file('demo1','network/DATA/',package = "NetBI
 NetBID.loadRData(network.par=network.par,step='exp-QC')
 intgroups <- get_int_group(network.par$net.eset)
 network.par$out.dir.QC <- getwd() ## set the output directory
-draw.eset.QC(network.par$net.eset,outdir=network.par$out.dir.QC,intgroup=intgroups)
+draw.eset.QC(network.par$net.eset,outdir=network.par$out.dir.QC,intgroup=intgroups,
+             pre_define=c('WNT'='blue','SHH'='red','G4'='green'))
+draw.eset.QC(network.par$net.eset,outdir=network.par$out.dir.QC,intgroup=intgroups,
+             pre_define=c('WNT'='blue','SHH'='red','G4'='green'),
+             pca_plot_type = '2D.interactive',choose_plot = 'pca')
 }
 }

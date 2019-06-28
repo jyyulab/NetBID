@@ -5,7 +5,8 @@
 \title{QC Tables and Plots for Network Object}
 \usage{
 draw.network.QC(igraph_obj, outdir = NULL, prefix = "",
-  directed = TRUE, weighted = FALSE, generate_html = TRUE)
+  directed = TRUE, weighted = FALSE, generate_html = TRUE,
+  html_info_limit = TRUE)
 }
 \arguments{
 \item{igraph_obj}{igraph object, created by \code{get.SJAracne.network}.}
@@ -21,6 +22,8 @@ draw.network.QC(igraph_obj, outdir = NULL, prefix = "",
 \item{generate_html}{logical, if TRUE, a html file will be created by R Markdown.
 If FALSE, plots will be save as separated PDFs.
 Default is TRUE.}
+
+\item{html_info_limit}{logical, if TRUE, the statistics for network QC html will be limited. Default is TRUE.}
 }
 \value{
 Return a logical value. If TRUE, success in creating QC tables and plots.

@@ -7,7 +7,8 @@
 draw.MICA(outdir = NULL, prjname = NULL, all_k = NULL,
   obs_label = NULL, legend_pos = "topleft", legend_cex = 0.8,
   point_cex = 1, plot_type = "2D.ellipse", choose_k_strategy = "ARI",
-  visualization_type = "tsne", return_type = "optimal")
+  visualization_type = "tsne", return_type = "optimal", main = "",
+  verbose = TRUE, use_color = NULL, pre_define = NULL)
 }
 \arguments{
 \item{outdir}{character, the output directory for running MICA.}
@@ -35,6 +36,14 @@ Users can choose from "ARI (adjusted rand index)", "NMI (normalized mutual infor
 \item{return_type}{character, the type of result returned. Users can choose "optimal" or "all".
 "all", all the K-values in all_k will be returned.
 "optimal", only the K-value yielding the optimal classification result will be returned. Default is "optimal".}
+
+\item{main}{character, title for the plot.}
+
+\item{verbose}{logical, if TRUE, print out detailed information during calculation. Default is TRUE.}
+
+\item{use_color}{a vector of color codes, colors to be assigned to each member of display label. Default is brewer.pal(9, 'Set1').}
+
+\item{pre_define}{a vector of characters, pre-defined color codes for a certain input (e.g. c("blue", "red") with names c("A", "B")). Default is NULL.}
 }
 \value{
 Return a vector of the predicted label (if return_type is "optimal") and a list of all possible K- values (if return_type is "all").
@@ -44,4 +53,5 @@ Return a vector of the predicted label (if return_type is "optimal") and a list 
 Users need to give the MICA project information (directory and name), and the samples real labels.
 MICA returns the K-value that yields the best clustering performance. Users can pick one comparison score to show in the plot, "ARI", "NMI" or "Jaccard".
 MICA is not suggested, when sample size is small.
+This function may not work well for the updated version of MICA.
 }

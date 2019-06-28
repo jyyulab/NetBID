@@ -4,7 +4,7 @@
 \alias{load.exp.RNASeq.demoSalmon}
 \title{Load Gene Expression Set from Salmon Output (demo version)}
 \usage{
-load.exp.RNASeq.demoSalmon(salmon_dir = "", tx2gene = NULL,
+load.exp.RNASeq.demoSalmon(salmon_dir = NULL, tx2gene = NULL,
   use_phenotype_info = NULL, use_sample_col = NULL,
   use_design_col = NULL, return_type = "tpm", merge_level = "gene")
 }
@@ -20,17 +20,19 @@ If NULL, will read in one of the transcript names from Salmon's results. Note, i
 
 \item{use_design_col}{character, the column name, indicating which column in \code{use_phenotype_info} should be used as the design feature for samples.}
 
-\item{return_type}{character, the class of the return object. Users can choose from "txi","counts","tpm",’"eset" and "dds".
+\item{return_type}{character, the class of the return object.
 "txi" is the output of tximport. It is a list containing three matrices, abundance, counts and length.
 "counts" is the matrix of raw count.
 "tpm" is the raw tpm.
+"fpm", "cpm" is the fragments/counts per million mapped fragments (fpm/cpm).
+"raw-dds" is the DESeqDataSet class object, which is the original one without processing.
 "dds" is the DESeqDataSet class object, which is processed by DESeq.
 "eset" is the ExpressionSet class object, which is processed by DESeq and vst.
 Default is "tpm".}
 
 \item{merge_level}{character, users can choose between "gene" and "transcript".
 "gene", the original salmon results will be mapped to the transcriptome and the expression matrix will be merged to the gene level.
-This only works when using e.g. "gencode.v29.transcripts.fa" from GENCODE as the reference.}
+This only works when using e.g. "gencode.vXX.transcripts.fa" from GENCODE as the reference.}
 }
 \description{
 \code{load.exp.RNASeq.demoSalmon} is a function to read in Salmon results and convert it to eSet/DESeqDataSet class object.

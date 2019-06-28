@@ -14,7 +14,7 @@ get_IDtransfer_betweenSpecies(from_spe = "human", to_spe = "mouse",
 
 \item{from_type}{character, the attribute name match the current ID type (the type of \code{use_genes}).
 Such as "ensembl_gene_id", "ensembl_gene_id_version", "ensembl_transcript_id", "ensembl_transcript_id_version" or "refseq_mrna".
-The "attribute" is inherited from the \code{biomaRt} package. For details, user can call \code{listAttributes()} function to display all available attributes in the selected dataset.}
+The "attribute" is inherited from the \code{biomaRt} package. For details, user can call \code{biomaRt::listAttributes()} function to display all available attributes in the selected dataset.}
 
 \item{to_type}{character, the attribute name match the target ID type.}
 
