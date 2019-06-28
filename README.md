@@ -31,11 +31,9 @@ draw.2D(), draw.2D.interactive(), draw.2D.text(), draw.3D(), draw.2D.ellipse(), 
 
 ## remote install (not available yet)
 
+```R
 library(devtools)
 library(BiocManager)
-
-
-```R
 # set repos, for R version 3.6.0, Bioconductor version 3.9
 local({
   r <- getOption("repos")
