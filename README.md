@@ -36,6 +36,7 @@ library(BiocManager)
 
 # set repos, for R version 3.6.0, Bioconductor version 3.9
 
+```R
 local({
   r <- getOption("repos")
   r["CRAN"] <- "https://cran.rstudio.com/"
@@ -44,8 +45,8 @@ local({
   r["BioCexp"] <- "https://bioconductor.org/packages/3.9/data/experiment"
   options(repos = r)
 })
-
 devtools::install_github("jyyulab/NetBID-dev",ref='master',dependencies='Depends') 
+```
 
 or download the release version from https://github.com/jyyulab/NetBID-dev/releases/download/NetBID2-R/NetBID2_0.1.2.tar.gz
 
@@ -53,12 +54,16 @@ or download the release version from https://github.com/jyyulab/NetBID-dev/relea
 
 pull the repos from github and install locally:
 
+```R
 devtools::install(pkg='.',dependencies=TRUE) ## Install the package with dependencies.
 devtools::install_deps(pkg = ".", dependencies = TRUE) ## Install package dependencies if needed.
+```
 
 download the directory to your workspace and then run:
 
+```R
 install.packages('NetBID2_0.1.2.tar.gz',repos=NULL,dependencies=TRUE) ## 
+```
 
 # Manual & Tutorial
 
