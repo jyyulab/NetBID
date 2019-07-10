@@ -7,9 +7,10 @@
 NetBID.lazyMode.DriverEstimation(project_main_dir = NULL,
   project_name = NULL, tf.network.file = NULL,
   sig.network.file = NULL, cal.eset = NULL, main_id_type = NULL,
-  cal.eset_main_id_type = NULL, transfer_tab = NULL, intgroup = NULL,
-  G1_name = NULL, G0_name = NULL, comp_name = NULL, do.QC = TRUE,
-  return_analysis.par = TRUE)
+  cal.eset_main_id_type = NULL, use_level = "gene",
+  transfer_tab = NULL, intgroup = NULL, G1_name = NULL,
+  G0_name = NULL, comp_name = NULL, do.QC = TRUE,
+  DE_strategy = "bid", return_analysis.par = TRUE)
 }
 \arguments{
 \item{project_main_dir}{character, name or absolute path of the main working directory for driver analysis.}
@@ -30,6 +31,8 @@ For details, user can call \code{biomaRt::listAttributes()} to display all avail
 Such as "ensembl_gene_id", "ensembl_gene_id_version", "ensembl_transcript_id", "ensembl_transcript_id_version" or "refseq_mrna".
 For details, user can call \code{biomaRt::listAttributes()} to display all available attributes in the selected dataset.}
 
+\item{use_level}{character, users can choose "transcript" or "gene". Default is "gene".}
+
 \item{transfer_tab}{data.frame, the ID conversion table. Users can call \code{get_IDtransfer} to get this table.
 Only useful when "cal.eset_main_id_type" does not equal to "main_id_type".
 This is mainly for converting ID for cal.eset, must include "cal.eset_main_id_type" and "main_id_type".
@@ -44,6 +47,8 @@ If NULL, will automatically generate it.}
 \item{comp_name}{character, the name of the comparison of interest.}
 
 \item{do.QC}{logical, if TRUE, will perform network QC and activity eSet QC plots. Default is TRUE.}
+
+\item{DE_strategy}{character, use limma or bid to calculate differentiated expression/activity. Default is 'bid'.}
 
 \item{return_analysis.par}{logical, if TRUE, will return the complicated list object analysis.par.}
 }

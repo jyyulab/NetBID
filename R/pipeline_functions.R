@@ -403,12 +403,12 @@ get_IDtransfer <- function(from_type=NULL,to_type=NULL,add_type=NULL,use_genes=N
     message(sprintf('%s not in the attributes for %s, please check and re-try !',to_type,dataset));return(FALSE)
   }
   ori_from_type <- from_type
+  ori_use_genes <- use_genes
   if(from_type %in% c('ensembl_gene_id_version','ensembl_transcript_id_version')){
     if(ignore_version==FALSE){
       message(sprintf('Attention: %s in %s will be updated with new version number, please check the output.
                       If lots of missing, try to set ignore_version=TRUE and try again !',from_type,dataset));
     }else{
-      ori_use_genes <- use_genes
       from_type <- gsub('(.*)_version','\\1',from_type)
       if(is.null(use_genes)==FALSE) use_genes <- gsub('(.*)\\..*','\\1',use_genes)
     }
@@ -423,10 +423,10 @@ get_IDtransfer <- function(from_type=NULL,to_type=NULL,add_type=NULL,use_genes=N
   }else{
     tmp1 <- biomaRt::getBM(attributes=c(from_type,to_type,add_type),values=use_genes,mart=mart,filters=from_type)
   }
-  if(ori_from_type %in% c('ensembl_gene_id_version','ensembl_transcript_id_version') & is.null(use_genes)==FALSE){
+  if(ori_from_type %in% c('ensembl_gene_id_version','ensembl_transcript_id_version') & is.null(use_genes)==FALSE & ignore_version==TRUE){
     tmp2 <- data.frame(ori_from_type=ori_use_genes,from_type=use_genes,stringsAsFactors=FALSE)
     names(tmp2) <- c(ori_from_type,from_type)
-    tmp1 <- base::merge(tmp2,tmp1,by.y=from_type,by.x=from_type)[c(from_type,to_type,ori_from_type)]
+    tmp1 <- base::merge(tmp2,tmp1,by.y=from_type,by.x=from_type)[c(from_type,to_type,add_type,ori_from_type)]
   }
   w1 <- apply(tmp1,1,function(x)base::length(which(is.na(x)==TRUE | x=="")))
   transfer_tab <- tmp1[which(w1==0),]
@@ -607,7 +607,7 @@ get_IDtransfer2symbol2type <- function(from_type=NULL,use_genes=NULL,dataset=NUL
     message(sprintf('%s not in the attributes for %s, please check and re-try !',from_type,dataset));return(FALSE)
   }
   if(use_level=='gene') tmp1 <- get_IDtransfer(from_type=from_type,to_type='external_gene_name',add_type='gene_biotype',use_genes=use_genes,dataset=dataset,ignore_version=ignore_version)
-  if(use_level=='transcript')   tmp1 <- get_IDtransfer(from_type=from_type,to_type='external_gene_name',add_type='transcript_biotype',use_genes=use_genes,dataset=dataset,ignore_version=ignore_version)
+  if(use_level=='transcript')   tmp1 <- get_IDtransfer(from_type=from_type,to_type='external_transcript_name',add_type='transcript_biotype',use_genes=use_genes,dataset=dataset,ignore_version=ignore_version)
   transfer_tab <- tmp1
   return(transfer_tab)
 }
@@ -1283,6 +1283,8 @@ merge_eset <- function(eset1,eset2,
   #rmat <- rmat[choose1, ]
   phe1 <- Biobase::pData(eset1)
   phe2 <- Biobase::pData(eset2)
+  phe1 <- apply(phe1,2,clean_charVector)
+  phe2 <- apply(phe2,2,clean_charVector)
   if(base::length(use_col)==0){
     use_col <- base::intersect(colnames(phe1),colnames(phe2))
   }
@@ -1301,6 +1303,7 @@ merge_eset <- function(eset1,eset2,
   if (remove_batch == TRUE) {
     rmat <- limma::removeBatchEffect(rmat,batch=rphe[[group_col_name]])
   }
+  if(class(rphe)=='list'){rphe <- as.data.frame(rphe,stringsAsFactors=FALSE); rownames(rphe) <- colnames(rmat)}
   reset <- generate.eset(rmat,phenotype_info = rphe, annotation_info = 'combine')
   return(reset)
 }
@@ -1454,7 +1457,7 @@ update_eset.phenotype <- function(use_eset=NULL,use_phenotype_info=NULL,use_samp
   if(is.null(use_phenotype_info)) use_phenotype_info <- Biobase::pData(use_eset)
   if(is.null(use_sample_col)==FALSE){
     if(!use_sample_col %in% colnames(use_phenotype_info)){
-      message(sprintf('%s not in the colnames of use_phenotype_info, please re-try!',use_sample_col));return(use_eset)
+      stop(sprintf('%s not in the colnames of use_phenotype_info, please re-try!',use_sample_col));#return(use_eset)
     }
   }
   if(is.null(use_col)) use_col <- colnames(use_phenotype_info)
@@ -1483,7 +1486,7 @@ update_eset.phenotype <- function(use_eset=NULL,use_phenotype_info=NULL,use_samp
     p1 <- use_phenotype_info[,w1]
     colnames(p1)[4:ncol(p1)] <- gsub('(.*):ch1','\\1',colnames(p1)[4:ncol(p1)])
     colnames(p1)[3] <- gsub('(.*)_ch1','\\1',colnames(p1)[3])
-    rownames(p1) <- use_phenotype_info[,use_sample_col]
+    if(is.null(use_sample_col)==FALSE) rownames(p1) <- use_phenotype_info[,use_sample_col]
     if(base::length(w1)>1) p1 <- as.data.frame(apply(p1,2,clean_charVector),stringsAsFactors=FALSE)
     if(base::length(w1)==1) p1 <- as.data.frame(clean_charVector(p1),stringsAsFactors=FALSE)
     new_phenotype_info <- p1;
@@ -1840,8 +1843,8 @@ get_igraph2matrix <- function(gr=NULL,es.method = 'weightedmean'){
   }
   return(mat1)
 }
-get_gr2driver <- function(gr){
-  d1 <- igraph::degree(gr,mode='out')
+get_gr2driver <- function(gr,mode='out'){
+  d1 <- igraph::degree(gr,mode=mode)
   names(d1[which(d1>0)])
 }
 
@@ -4425,12 +4428,12 @@ draw.MICA <- function(outdir=NULL,prjname=NULL,all_k=NULL,obs_label=NULL,
                       use_color=NULL,pre_define=NULL) {
   #
   all_input_para <- c('outdir','prjname','obs_label','legend_pos','legend_cex','plot_type','point_cex','choose_k_strategy','visualization_type',
-                      'return_type','main','verbose')
+                      'return_type','main','verbose','all_k')
   check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
   if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
   check_res <- c(check_option('verbose',c(TRUE,FALSE),envir=environment()),
                  check_option('plot_type',c("2D", "2D.ellipse","2D.text","3D"),envir=environment()),
-                 check_option('kmeans_strategy',c('basic','consensus'),envir=environment()),
+                 check_option('choose_k_strategy',c('ARI','NMI','Jaccard'),envir=environment()),
                  check_option('visualization_type',c('tsne','umap','mds'),envir=environment()),
                  check_option('return_type',c('optimal','all'),envir=environment()),
                  check_option('legend_pos',c("bottomright", "bottom", "bottomleft", "left", "topleft", "top", "topright", "right","center"),envir=environment()))
@@ -4909,19 +4912,23 @@ draw.NetBID <- function(DA_list=NULL,DE_list=NULL,main_id=NULL,top_number=30,
     if(is.null(pdf_file)==FALSE) pdf(pdf_file,width=geneWidth+textWidth1+0.3+textWidth2+par.char2inch()[1]*8,height=2+geneHeight)
     graphics::layout(t(as.matrix(c(rep(1,ncol(mat1)),rep(2,ncol(mat2))))))
     par(mai=c(1,geneWidth,1,0))
+    mm <- max(abs(c(dd_DE_Z,dd_DA_Z)),na.rm=TRUE)
 
-    draw.heatmap.local(dd_DA_Z,inner_line=TRUE,out_line=TRUE,col_srt=col_srt,display_text_mat=mat1,row_cex=row_cex,column_cex=column_cex,text_cex=text_cex,text_col='down',inner_col='white')
+    draw.heatmap.local(dd_DA_Z,inner_line=TRUE,out_line=TRUE,col_srt=col_srt,display_text_mat=mat1,
+                       row_cex=row_cex,column_cex=column_cex,text_cex=text_cex,text_col='down',inner_col='white',bb_max=mm)
     pp <- par()$usr; graphics::rect(xleft=pp[1],xright=pp[2],ybottom=pp[4],ytop=pp[4]+2*(pp[4]-pp[3])/nrow(mat1),border='black',col='light grey',xpd=TRUE);
     graphics::text(x=pp[1]/2+pp[2]/2,y=pp[4]+1*(pp[4]-pp[3])/nrow(mat1),labels=sprintf('NetBID\n(Differential activity:%s)',DA_display_col),xpd=TRUE,cex=column_cex)
 
     par(mai=c(1,0.3,1,par.char2inch()[1]*8))
-    draw.heatmap.local(dd_DE_Z,inner_line=TRUE,out_line=TRUE,col_srt=col_srt,display_text_mat=mat2,row_cex=row_cex,column_cex=column_cex,text_cex=text_cex,text_col='down',inner_col='white')
+    draw.heatmap.local(dd_DE_Z,inner_line=TRUE,out_line=TRUE,col_srt=col_srt,display_text_mat=mat2,
+                       row_cex=row_cex,column_cex=column_cex,text_cex=text_cex,text_col='down',inner_col='white',bb_max=mm)
     pp <- par()$usr; graphics::rect(xleft=pp[1],xright=pp[2],ybottom=pp[4],ytop=pp[4]+2*(pp[4]-pp[3])/nrow(mat1),border='black',col='light grey',xpd=TRUE);
     graphics::text(x=pp[1]/2+pp[2]/2,y=pp[4]+1*(pp[4]-pp[3])/nrow(mat1),labels=sprintf('Differential expression:%s',DE_display_col),xpd=TRUE,cex=column_cex)
 
     #legend
     cc1 <- grDevices::colorRampPalette(c(brewer.pal(9,'Blues')[8],'white',brewer.pal(9,'Reds')[7]))(5)
-    draw.colorbar(col=rev(cc1),min_val=-base::max(abs(dd_DE_Z),na.rm=TRUE),max_val=base::max(abs(dd_DE_Z),na.rm=TRUE),n=5,xleft=pp[2]+par.char2pos()[1]*2,
+    draw.colorbar(col=rev(cc1),min_val=-mm,max_val=mm,
+                  n=5,xleft=pp[2]+par.char2pos()[1]*2,
                   xright=pp[2]+par.char2pos()[1]*3,ytop=pp[3]+(pp[4]-pp[3])/2,ybottom=pp[3]+(pp[4]-pp[3])/2-par.char2pos()[2]*5*text_cex*0.8,cex=text_cex*0.8)
   }
   if(is.null(pdf_file)==FALSE){plot_part(ori=TRUE);plot_part(ori=TRUE,before_off=TRUE);while (!is.null(dev.list()))  dev.off()} else {plot_part()}
@@ -4930,14 +4937,16 @@ draw.NetBID <- function(DA_list=NULL,DE_list=NULL,main_id=NULL,top_number=30,
 
 ### local functions to draw heatmap
 draw.heatmap.local <- function(mat,inner_line=FALSE,out_line=TRUE,inner_col='black',
-                               n=20,col_srt=60,display_text_mat=NULL,row_cex=1,column_cex=1,text_cex=1,text_col='up'){
+                               n=20,col_srt=60,display_text_mat=NULL,row_cex=1,column_cex=1,text_cex=1,text_col='up',
+                               bb_max=NULL){
   if(ncol(mat)>1) mat1 <- mat[nrow(mat):1,] else mat1 <- as.matrix(mat[nrow(mat):1,])
   if(is.null(display_text_mat)==FALSE){
     if(ncol(display_text_mat)>1) display_text_mat <- display_text_mat[nrow(display_text_mat):1,] else display_text_mat <- as.matrix(display_text_mat[nrow(display_text_mat):1,])
   }
   colnames(mat1) <- colnames(mat)
   cc1 <- grDevices::colorRampPalette(c(brewer.pal(9,'Blues')[8],'white',brewer.pal(9,'Reds')[7]))(n*2)
-  bb1 <- base::seq(0,base::max(abs(mat1),na.rm=TRUE),length.out=n)
+  if(is.null(bb_max)==TRUE) bb_max <- base::max(abs(mat1),na.rm=TRUE)
+  bb1 <- base::seq(0,bb_max,length.out=n)
   #mat1[which(is.na(mat1)==TRUE)] <- 0;
   if(out_line==TRUE) graphics::image(t(mat1),col=cc1,breaks=sort(c(-bb1,0,bb1)),xaxt='n',yaxt='n')
   if(out_line==FALSE) graphics::image(t(mat1),col=cc1,breaks=sort(c(-bb1,0,bb1)),xaxt='n',yaxt='n',bty='n')
@@ -5947,11 +5956,13 @@ draw.bubblePlot <- function(driver_list=NULL,show_label=driver_list,Z_val=NULL,d
   #rownames(transfer_tab) <- transfer_tab[,1]
   target_gene <- lapply(driver_list,function(x){
     x1 <- target_list[[x]]$target
-    x1 <- x1[which(x1 %in% transfer_tab[,1])]
-    x2 <- transfer_tab[which(transfer_tab[,1] %in% x1),]
-    x3 <- x2[which(x2[,3]=='protein_coding'),]
-    target <- base::unique(x2[,2])
-    target_pc <- base::unique(x3[,2])
+    w1 <- which.max(unlist(lapply(transfer_tab,function(x)length(intersect(x,x1)))))
+    w2 <- which(colnames(transfer_tab) %in% c('gene_biotype','transcript_biotype'))[1]
+    x1 <- x1[which(x1 %in% transfer_tab[,w1])]
+    x2 <- transfer_tab[which(transfer_tab[,w1] %in% x1),]
+    x3 <- x2[which(x2[,w2]=='protein_coding'),]
+    target <- base::unique(x2[,'external_gene_name'])
+    target_pc <- base::unique(x3[,'external_gene_name'])
     return(list(target,target_pc))
   })
   names(target_gene) <- driver_list
@@ -6273,10 +6284,10 @@ draw.GSEA <- function(rank_profile=NULL,use_genes=NULL,use_direction=NULL,main="
     graphics::abline(v=w1,lty=2,col='grey')
     graphics::text(w1,-mm/4,sprintf('Zero cross at %d',w1),adj=0.5)
     if(is.null(use_direction)==FALSE){
-      graphics::legend(w1,pp[3]-(pp[4]-pp[3])/4,lty=1,lwd=2,c('Enrichment profile/Hits (positive)','Enrichment profile/Hits (negative)','Ranking metric scores'),
+      graphics::legend(pp[1]/2+pp[2]/2,pp[3]-(pp[4]-pp[3])/4,lty=1,lwd=2,c('Enrichment profile/Hits (positive)','Enrichment profile/Hits (negative)','Ranking metric scores'),
              col=c(pos_col,neg_col,'grey'),xpd=TRUE,horiz=TRUE,xjust=0.5,cex=annotation_cex,bty='n')
     }else{
-      graphics::legend(w1,pp[3]-(pp[4]-pp[3])/4,lty=1,lwd=2,c('Enrichment profile','Hits','Ranking metric scores'),
+      graphics::legend(pp[1]/2+pp[2]/2,pp[3]-(pp[4]-pp[3])/4,lty=1,lwd=2,c('Enrichment profile','Hits','Ranking metric scores'),
              col=c('green','black','grey'),xpd=TRUE,horiz=TRUE,xjust=0.5,cex=annotation_cex,bty='n')
     }
     pm <- par()$usr
@@ -6285,7 +6296,8 @@ draw.GSEA <- function(rank_profile=NULL,use_genes=NULL,use_direction=NULL,main="
     use_col <- z2col(rank_profile,sig_thre = 0,n_len = 100,blue_col='blue',red_col='red')
     graphics::image(x=as.matrix(1:r_len),col=use_col,bty='n',xaxt='n',yaxt='n',xlim=c(pm[1],pm[2])/r_len)
     graphics::abline(v=use_pos/r_len,col='grey')
-    graphics::text(0,0.5,pos=2,sprintf('Size:%s',base::length(use_pos)),xpd=TRUE)
+    pp <- par()$usr
+    graphics::text(0,pp[3]/2+pp[4]/2,pos=2,sprintf('Size:%s',base::length(use_pos)),xpd=TRUE)
     ## mark gene position; 3
     par(mar=c(0,6,0,2))
     graphics::plot(1,col='white',xlab="",ylab="",bty='n',xlim=c(1,r_len),ylim=c(0,1),xaxt='n',yaxt='n',xaxs='i')
@@ -6295,6 +6307,8 @@ draw.GSEA <- function(rank_profile=NULL,use_genes=NULL,use_direction=NULL,main="
       graphics::segments(y0=1,y1=0.5,x0=use_pos_P,x1=use_pos_P,col=pos_col)
       graphics::segments(y0=0,y1=0.5,x0=use_pos_N,x1=use_pos_N,col=neg_col)
       graphics::abline(h=0.5,col='light grey')
+      graphics::text(0,0.75,pos=2,sprintf('Pos_Size:%s',base::length(use_pos_P)),xpd=TRUE)
+      graphics::text(0,0.25,pos=2,sprintf('Neg_Size:%s',base::length(use_pos_N)),xpd=TRUE)
     }else{
       graphics::abline(v=use_pos)
     }
@@ -7249,16 +7263,16 @@ draw.categoryValue <- function(ac_val=NULL,exp_val=NULL,use_obs_class=NULL,categ
   if(is.null(ac_val)==FALSE){
     ddf <- data.frame(data=ac_val,class=factor(use_obs_class,levels=class_order))
     a <- boxplot(data~class,data=ddf,ylab='Activity Value',col=class_col1,outline=FALSE,border='dark grey',cex.lab=1.2,names=NA,bty='n',
-                 ylim=c(base::min(ddf$data),base::max(ddf$data)),main=main_ac,cex.main=main_cex)
+                 ylim=c(base::min(ddf$data),base::max(ddf$data)),main=main_ac,cex.main=main_cex,xlab='')
     graphics::text(1:base::length(class_order),par()$usr[3]-(par()$usr[4]-par()$usr[3])/20,adj=0.5+class_srt/180,class_order,srt=class_srt,xpd=TRUE,cex=class_cex)
-    stripchart(data~class,data=ddf,add=TRUE,pch=16,method='jitter',vertical=TRUE,col=stripchart_color,cex=strip_cex)
+    graphics::stripchart(data~class,data=ddf,add=TRUE,pch=16,method='jitter',vertical=TRUE,col=stripchart_color,cex=strip_cex)
   }
   if(is.null(exp_val)==FALSE){
     ddf <- data.frame(data=exp_val,class=factor(use_obs_class,levels=class_order))
     a <- boxplot(data~class,data=ddf,col=class_col1,ylab='Expression Value',outline=FALSE,border='dark grey',cex.lab=1.2,names=NA,bty='n',
-                 ylim=c(base::min(ddf$data),base::max(ddf$data)),main=main_exp,cex.main=main_cex)
+                 ylim=c(base::min(ddf$data),base::max(ddf$data)),main=main_exp,cex.main=main_cex,xlab='')
     graphics::text(1:base::length(class_order),par()$usr[3]-(par()$usr[4]-par()$usr[3])/20,adj=0.5+class_srt/180,class_order,srt=class_srt,xpd=TRUE,cex=class_cex)
-    stripchart(data~class,data=ddf,add=TRUE,pch=16,method='jitter',vertical=TRUE,col=stripchart_color,cex=strip_cex)
+    graphics::stripchart(data~class,data=ddf,add=TRUE,pch=16,method='jitter',vertical=TRUE,col=stripchart_color,cex=strip_cex)
   }
   graphics::layout(1)
   if(is.null(pdf_file)==FALSE) dev.off()
@@ -8002,7 +8016,7 @@ update_SJAracne.network <- function(network_list=NULL,
 #' @export
 draw.network.QC <- function(igraph_obj,outdir=NULL,prefix="",directed=TRUE,weighted=FALSE,generate_html=TRUE,html_info_limit=TRUE){
   #
-  all_input_para <- c('igraph_obj','prefix','directed','weighted','generate_html','html_info_simple')
+  all_input_para <- c('igraph_obj','prefix','directed','weighted','generate_html','html_info_limit')
   check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
   if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
   check_res <- c(check_option('directed',c(TRUE,FALSE),envir=environment()),
@@ -8663,9 +8677,24 @@ NetBID.lazyMode.DriverVisualization <- function(analysis.par=NULL,intgroup=NULL,
   if(exists('db_info')==FALSE){
     message('Please run db.preload() first to load in db_info !');return(FALSE)
   }
-  if(is.null(transfer_tab)==TRUE){
-    transfer_tab <- get_IDtransfer2symbol2type(from_type=main_id_type,use_genes = NULL)
+  if(is.null(transfer_tab)==TRUE & 'transfer_tab' %in% names(analysis.par)){
+    transfer_tab <- analysis.par$transfer_tab
   }
+  use_genes = base::unique(c(analysis.par$final_ms_tab$originalID,
+                             analysis.par$merge.network$network_dat$target))
+  if(is.null(transfer_tab)==TRUE){
+    message('Begin get transfer table at gene level (for gene function enrichment analysis )')
+    transfer_tab <- get_IDtransfer2symbol2type(from_type=main_id_type,use_genes = use_genes,use_level = 'gene',ignore_version = TRUE)
+  }else{
+    if(!'external_gene_name' %in% colnames(transfer_tab) & !'external_transcript_name' %in% colnames(transfer_tab)){
+      message('Begin get transfer table at gene level (for gene function enrichment analysis )')
+      transfer_tab <- get_IDtransfer2symbol2type(from_type=main_id_type,use_genes = use_genes,use_level = 'gene',ignore_version = TRUE)
+    }
+    if(!'external_gene_name' %in% colnames(transfer_tab) & 'external_transcript_name' %in% colnames(transfer_tab)){
+      transfer_tab$external_gene_name <- gsub('(.*)-.*','\\1',transfer_tab$external_transcript_name)
+    }
+  }
+  print(str(transfer_tab))
   if(exists('all_gs2gene')==FALSE){
     message('Please run gs.preload() first to load in all_gs2gene or prepare the same format of this object!');return(FALSE)
   }
@@ -8758,11 +8787,17 @@ NetBID.lazyMode.DriverVisualization <- function(analysis.par=NULL,intgroup=NULL,
   print('Begin EachTopDA_CateBox plot by draw.categoryValue() ')
   pdf(sprintf('%s/%s_EachTopDA_CateBox.pdf',analysis.par$out.dir.PLOT,use_comp),width=8,height=8)
   for(each_driver in driver_list){
-    draw.categoryValue(ac_val   = ac_mat[ms_tab[each_driver,'originalID_label'],],
-                       exp_val  = exp_mat[ms_tab[each_driver,'originalID'],],
-                       main_ac  = sprintf("%s\n(P.Value:%s)",ms_tab[each_driver,'gene_label'],get_z2p(driver_DA_Z[each_driver])),
-                       main_exp = sprintf("%s\n(P.Value:%s)",ms_tab[each_driver,'geneSymbol'],get_z2p(driver_DE_Z[each_driver])),
-                       use_obs_class=get_obs_label(phe,intgroup))
+    if(ms_tab[each_driver,'originalID'] %in% rownames(exp_mat)){
+      draw.categoryValue(ac_val   = ac_mat[ms_tab[each_driver,'originalID_label'],],
+                         exp_val  = exp_mat[ms_tab[each_driver,'originalID'],],
+                         main_ac  = sprintf("%s\n(P.Value:%s)",ms_tab[each_driver,'gene_label'],get_z2p(driver_DA_Z[each_driver])),
+                         main_exp = sprintf("%s\n(P.Value:%s)",ms_tab[each_driver,'geneSymbol'],get_z2p(driver_DE_Z[each_driver])),
+                         use_obs_class=get_obs_label(phe,intgroup))
+    }else{
+      draw.categoryValue(ac_val   = ac_mat[ms_tab[each_driver,'originalID_label'],],
+                         main_ac  = sprintf("%s\n(P.Value:%s)",ms_tab[each_driver,'gene_label'],get_z2p(driver_DA_Z[each_driver])),
+                         use_obs_class=get_obs_label(phe,intgroup))
+    }
   }
   dev.off()
   print(sprintf('Finish EachTopDA_CateBox plot by draw.categoryValue(), please check %s',sprintf('%s/%s_EachTopDA_CateBox.pdf',analysis.par$out.dir.PLOT,use_comp)))
@@ -8776,8 +8811,13 @@ NetBID.lazyMode.DriverVisualization <- function(analysis.par=NULL,intgroup=NULL,
       es <- base::cbind(es,es)
       colnames(es) <- c('Sample1','Sample2')
       tmp_eset <- generate.eset(es)
-      tmp_eset <- update_eset.feature(tmp_eset,use_feature_info = transfer_tab,
-                                      from_feature = colnames(transfer_tab)[1],to_feature = colnames(transfer_tab)[2])
+      if('external_transcript_name' %in% names(transfer_tab)){
+        tmp_eset <- update_eset.feature(tmp_eset,use_feature_info = transfer_tab,
+                                        from_feature = main_id_type,to_feature = 'external_transcript_name')
+      }else{
+        tmp_eset <- update_eset.feature(tmp_eset,use_feature_info = transfer_tab,
+                                        from_feature = main_id_type,to_feature = 'external_gene_name')
+      }
       es <- Biobase::exprs(tmp_eset)[,1];names(es) <- rownames(Biobase::exprs(tmp_eset))
     }
     if(base::length(es)<30){n_layer=1;label_cex=1;}
@@ -8813,6 +8853,7 @@ NetBID.lazyMode.DriverVisualization <- function(analysis.par=NULL,intgroup=NULL,
 #' @param cal.eset_main_id_type character, the type of cal.eset's ID. It comes from the attribute name in biomaRt package.
 #' Such as "ensembl_gene_id", "ensembl_gene_id_version", "ensembl_transcript_id", "ensembl_transcript_id_version" or "refseq_mrna".
 #' For details, user can call \code{biomaRt::listAttributes()} to display all available attributes in the selected dataset.
+#' @param use_level character, users can choose "transcript" or "gene". Default is "gene".
 #' @param transfer_tab data.frame, the ID conversion table. Users can call \code{get_IDtransfer} to get this table.
 #' Only useful when "cal.eset_main_id_type" does not equal to "main_id_type".
 #' This is mainly for converting ID for cal.eset, must include "cal.eset_main_id_type" and "main_id_type".
@@ -8822,6 +8863,7 @@ NetBID.lazyMode.DriverVisualization <- function(analysis.par=NULL,intgroup=NULL,
 #' @param G0_name character, the name of control group (e.g. "Female"), must be the character in \code{intgroup}.
 #' @param comp_name character, the name of the comparison of interest.
 #' @param do.QC logical, if TRUE, will perform network QC and activity eSet QC plots. Default is TRUE.
+#' @param DE_strategy character, use limma or bid to calculate differentiated expression/activity. Default is 'bid'.
 #' @param return_analysis.par logical, if TRUE, will return the complicated list object analysis.par.
 #'
 #' @examples
@@ -8855,19 +8897,24 @@ NetBID.lazyMode.DriverVisualization <- function(analysis.par=NULL,intgroup=NULL,
 NetBID.lazyMode.DriverEstimation <- function(project_main_dir=NULL,project_name=NULL,
                                              tf.network.file=NULL,sig.network.file=NULL,
                                              cal.eset=NULL,
-                                             main_id_type=NULL,cal.eset_main_id_type=NULL,
+                                             main_id_type=NULL,cal.eset_main_id_type=NULL,use_level='gene',
                                              transfer_tab=NULL,
                                              intgroup=NULL,G1_name=NULL,G0_name=NULL,comp_name=NULL,
-                                             do.QC=TRUE,return_analysis.par=TRUE){
+                                             do.QC=TRUE,DE_strategy='bid',return_analysis.par=TRUE){
   #
   if(exists('analysis.par')==TRUE){
     message('analysis.par is occupied in the current session,please manually run: rm(analysis.par) and re-try, otherwise will not change !');
     return(analysis.par)
   }
   all_input_para <- c('project_main_dir','project_name','tf.network.file','sig.network.file','cal.eset',
-                      'main_id_type','cal.eset_main_id_type','intgroup','G1_name','G0_name')
+                      'main_id_type','cal.eset_main_id_type','intgroup','G1_name','G0_name','DE_strategy','use_level')
   check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
   if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+
+  check_res <- c(check_option('DE_strategy',c('limma','bid'),envir=environment()),
+                 check_option('use_level',c('gene','transcript'),envir=environment()))
+  if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+
   if(exists('tf_sigs')==FALSE){
     message('Please run db.preload() first to load in db_info !');return(FALSE)
   }
@@ -8915,7 +8962,8 @@ NetBID.lazyMode.DriverEstimation <- function(project_main_dir=NULL,project_name=
     if(is.null(transfer_tab)==FALSE){
       transfer_tab1 <- transfer_tab
     }else{
-      transfer_tab1 <- get_IDtransfer(from_type = cal.eset_main_id_type,to_type=main_id_type,use_genes=rownames(Biobase::exprs(cal.eset)))
+      transfer_tab1 <- get_IDtransfer(from_type = cal.eset_main_id_type,to_type=main_id_type,use_genes=rownames(Biobase::exprs(cal.eset)),
+                                      ignore_version=TRUE)
     }
     cal.eset <- update_eset.feature(cal.eset,use_feature_info = transfer_tab1,
                                     from_feature = cal.eset_main_id_type,to_feature = main_id_type)
@@ -8927,15 +8975,23 @@ NetBID.lazyMode.DriverEstimation <- function(project_main_dir=NULL,project_name=
   analysis.par$merge.ac.eset <- generate.eset(exp_mat=ac_mat,phenotype_info = phe)
   if(do.QC==TRUE) draw.eset.QC(analysis.par$merge.ac.eset,outdir = analysis.par$out.dir.QC,prefix = 'AC_')
   print('Finish calculate activity ')
-  print('Begin prepare ID transfer table to external_gene_name ')
+  print(sprintf('Begin prepare ID transfer table to external_%s_name',use_level))
+  use_genes = base::unique(c(analysis.par$final_ms_tab$originalID,
+                             analysis.par$merge.network$network_dat$target))
   transfer_tab <- get_IDtransfer2symbol2type(from_type=main_id_type,
-                                             use_genes = base::unique(c(analysis.par$merge.network$network_dat$source,
-                                                                  analysis.par$merge.network$network_dat$target)))
+                                             use_genes = use_genes,
+                                             use_level=use_level,ignore_version=TRUE)
+  print(str(transfer_tab))
   print('Finish prepare ID transfer table ')
   # DE/DA
   print(sprintf('Begin get DE/DA for %s by getDE.limma.2G() ',comp_name))
-  de <- getDE.limma.2G(cal.eset,G1 = G1,G0=G0,G1_name=G1_name,G0_name=G0_name)
-  da <- getDE.limma.2G(analysis.par$merge.ac.eset,G1 = G1,G0=G0,G1_name=G1_name,G0_name=G0_name)
+  if(DE_strategy=='limma'){
+    de <- getDE.limma.2G(cal.eset,G1 = G1,G0=G0,G1_name=G1_name,G0_name=G0_name)
+    da <- getDE.limma.2G(analysis.par$merge.ac.eset,G1 = G1,G0=G0,G1_name=G1_name,G0_name=G0_name)
+  }else{
+    de <- getDE.BID.2G(cal.eset,G1 = G1,G0=G0,G1_name=G1_name,G0_name=G0_name)
+    da <- getDE.BID.2G(analysis.par$merge.ac.eset,G1 = G1,G0=G0,G1_name=G1_name,G0_name=G0_name)
+  }
   DE <- list(de); DA <- list(da); names(DE) <- names(DA) <- comp_name
   print(sprintf('Finish get DE/DA for %s',comp_name))
   #
