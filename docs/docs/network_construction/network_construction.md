@@ -123,7 +123,8 @@ Installing and setting the environment for pandoc, one can call `Sys.setenv(RSTU
 
 ```R
 # QC for the raw eset
-draw.eset.QC(network.par$net.eset,outdir=network.par$out.dir.QC,intgroup=NULL,do.logtransform=FALSE,prefix='beforeQC_')
+draw.eset.QC(network.par$net.eset,outdir=network.par$out.dir.QC,intgroup=NULL,do.logtransform=FALSE,prefix='beforeQC_',
+             pre_define=c('WNT'='blue','SHH'='red','G4'='green'),pca_plot_type='2D.interactive')
 ```
 
 **- What information can you get from the HTML QC report?**  ([before_QC.html](beforeQC_QC.html))
@@ -276,7 +277,8 @@ net_eset <- generate.eset(exp_mat=mat, phenotype_info=pData(network.par$net.eset
 # Updata network.par with new eset
 network.par$net.eset <- net_eset
 # QC for the normalized eset
-draw.eset.QC(network.par$net.eset,outdir=network.par$out.dir.QC,intgroup=NULL,do.logtransform=FALSE,prefix='afterQC_')
+draw.eset.QC(network.par$net.eset,outdir=network.par$out.dir.QC,intgroup=NULL,do.logtransform=FALSE,prefix='afterQC_',
+             pre_define=c('WNT'='blue','SHH'='red','G4'='green'),pca_plot_type='2D.interactive')
 # Save Step 2 network.par as RData
 NetBID.saveRData(network.par = network.par,step='exp-QC')
 ```
@@ -308,7 +310,7 @@ Otherwise, Z-transformation is suggested to be performed before combining these 
 
 ## Step 3: Check sample cluster analysis, optional (exp-cluster)
 **Purpose: check if the highly variable genes can be used to perform good sample cluster analysis (predicted labels vs. real labels).**
-This step is not necessary to perform NetBID2. Just creat plots for visualization, no modifiction to the data.
+This step is not necessary to perform NetBID2. Just create plots for visualization, no modification to the data.
 
 Please skip the following line if you didn't close R session after completed Step 1 and Step 2.
 
@@ -346,7 +348,8 @@ Wrap the filtered genes into a temporary ExpressionSet object and create a HTML 
 tmp_net_eset <- generate.eset(exp_mat=mat, phenotype_info=pData(network.par$net.eset)[colnames(mat),],
                           feature_info=fData(network.par$net.eset)[rownames(mat),], annotation_info=annotation(network.par$net.eset))
 # QC plot for IQR filtered eset
-draw.eset.QC(tmp_net_eset,outdir=network.par$out.dir.QC,intgroup=NULL,do.logtransform=FALSE,prefix='Cluster_')
+draw.eset.QC(tmp_net_eset,outdir=network.par$out.dir.QC,intgroup=NULL,do.logtransform=FALSE,prefix='Cluster_',
+             pre_define=c('WNT'='blue','SHH'='red','G4'='green'),pca_plot_type='2D.interactive')
 ```
 
 The following scripts provide various ways to visualize and check if the IQR filter selected genes can be used to perform good sample cluster analysis (observed labels vs. predicted labels). 
@@ -376,7 +379,7 @@ All three functions can either return the K-value yielding the optimal result (s
 # Cluster analysis using Kmeans and plot result using PCA biplot (pca+kmeans in 2D)
 for(i in 1:length(intgroup)){
   print(intgroup[i])
-  pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,intgroup[i]))
+  pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,intgroup[i]),pre_define=c('WNT'='blue','SHH'='red','G4'='green'))
 }
 ```
 
@@ -385,17 +388,17 @@ for(i in 1:length(intgroup)){
 
 ```R
 use_int <- 'subgroup'
-pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,use_int),plot_type='2D')
+pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,use_int),plot_type='2D',pre_define=c('WNT'='blue','SHH'='red','G4'='green'))
 ```
 
 ![sample_cluster_1](sample_cluster_1.png)
 
 Above is a side-by-side basic scatter plot of samples. The categories of observed labels (left figure) and predicted labels (right figure) are distinguished by color.
-The calculated statistics on top of the right figure quantifies the similarity between observed labels an predicted labels. 
+The calculated statistics on top of the right figure quantifies the similarity between observed labels predicted labels. 
 ARI is short for "adjusted rand index", ranges from 0 to 1. Higher ARI value indicates higher similarity. For details, please check `get_clustComp()`. 
 
 ```R
-pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,use_int),plot_type='2D.ellipse')
+pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,use_int),plot_type='2D.ellipse',pre_define=c('WNT'='blue','SHH'='red','G4'='green'))
 ```
 
 ![sample_cluster_2](sample_cluster_2.png)
@@ -403,7 +406,7 @@ pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,u
 Above is a side-by-side scatter plot with an ellipse drawn around each cluster of samples. Each ellipse is marked with its cluster label.
 
 ```R
-pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,use_int),plot_type='3D')
+pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,use_int),plot_type='3D',pre_define=c('WNT'='blue','SHH'='red','G4'='green'))
 ```
 
 ![sample_cluster_4](sample_cluster_4.png)

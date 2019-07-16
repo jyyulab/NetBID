@@ -191,7 +191,8 @@ Use `draw.eset.QC()` to create the HTML QC report [QC for AC](AC_QC.html) of `an
 
 ```R
 # QC plot for activity eset
-draw.eset.QC(analysis.par$merge.ac.eset,outdir=analysis.par$out.dir.QC,intgroup=NULL,do.logtransform=FALSE,prefix='AC_')
+draw.eset.QC(analysis.par$merge.ac.eset,outdir=analysis.par$out.dir.QC,intgroup=NULL,do.logtransform=FALSE,prefix='AC_',
+             pre_define=c('WNT'='blue','SHH'='red','G4'='green'),pca_plot_type='2D.interactive')
 ```
 
 **Last, save `analysis.par`.**
