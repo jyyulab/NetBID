@@ -8,9 +8,7 @@ permalink: /docs/pre_request
 
 # Pre-requested R packages
 
-**R version >= 3.4.0**
-
-The package is developed on R 3.5.1, and has been tested on 3.4.0.
+**R version >= 3.6.0**
 
 Following is the description for dependent R packages, mainly for developers to better understand the code in NetBID2.
 
@@ -33,6 +31,7 @@ Users do not need to digest the information below.
 |plotrix|draw.ellipse|Visualization|drawing ellipse|
 |umap|umap|Visualization|data dimension reduction and visualization|
 |ComplexHeatmap|Heatmap|Visualization|heatmap drawing|
+|plotly|-|Visualization|For interactive plot|
 |ordinal|clm,clmm|bid|Cumulative Link Mixed Models|
 |MCMCglmm|MCMCglmm|bid|Multivariate Generalized Linear Mixed Models|
 |arm|bayesglm|bid|Bayesian generalized linear models|

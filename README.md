@@ -9,7 +9,7 @@ Network-based Bayesian Inference of Drivers, Version II
 
 3. Let color code set by user-defined, with two options: use_color,pre_define passed to get.class.color(). 
 The modified functions are: 
-draw.2D(), draw.2D.interactive(), draw.2D.text(), draw.3D(), draw.2D.ellipse(), draw.eset.QC(), draw.heatmap(), draw.categoryValue(), 
+draw.2D(), draw.2D.interactive(), draw.2D.text(), draw.3D(), draw.2D.ellipse(), draw.eset.QC(), draw.pca.keans(), draw.umap.kmeans(), draw.heatmap(), draw.categoryValue(), 
 
 4. Add package information in calling functions to avoid possible conflict of function names
 

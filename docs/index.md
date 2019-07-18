@@ -56,7 +56,7 @@ It inherites all the main functions from NetBID, and provides many more function
 
 ### Dependencies
 
-R, version >= 3.4.0
+R, version >= 3.6.0
 
 [Pre-request R packages](docs/pre_request)
 

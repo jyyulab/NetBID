@@ -2498,8 +2498,8 @@ merge_TF_SIG.network <- function(TF_network=NULL,SIG_network=NULL){
   n_SIG$source <- base::paste(n_SIG$source,'SIG',sep='_')
   net_dat <- base::rbind(n_TF,n_SIG)
   igraph_obj <- graph_from_data_frame(net_dat[,c('source','target','MI')],directed=TRUE)
-  igraph_obj <- set_edge_attr(igraph_obj,'weight',index=E(igraph_obj),value=net_dat[,'MI'])
-  igraph_obj <- set_edge_attr(igraph_obj,'sign',index=E(igraph_obj),value=sign(net_dat[,'spearman']))
+  if('MI' %in% colnames(net_dat)) igraph_obj <- set_edge_attr(igraph_obj,'weight',index=E(igraph_obj),value=net_dat[,'MI'])
+  if('spearman' %in% colnames(net_dat)) igraph_obj <- set_edge_attr(igraph_obj,'sign',index=E(igraph_obj),value=sign(net_dat[,'spearman']))
   return(list(network_dat=net_dat,target_list=target_list_combine,igraph_obj=igraph_obj))
 }
 
@@ -5118,7 +5118,7 @@ draw.heatmap <- function(mat=NULL,use_genes=rownames(mat),use_gene_label=use_gen
                          use_color=NULL,pre_define=NULL,
                          ...){
   #
-  all_input_para <- c('mat','use_genes','use_gene_label','use_samples','use_sample_label','phenotype_info','use_phe','main','scale',
+  all_input_para <- c('mat','use_genes','use_gene_label','use_samples','use_sample_label','main','scale',
                       'cluster_rows','cluster_columns','show_row_names','show_column_names','clustering_distance_rows','clustering_distance_columns')
   check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
   if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
@@ -6304,8 +6304,8 @@ draw.GSEA <- function(rank_profile=NULL,use_genes=NULL,use_direction=NULL,main="
     if(is.null(use_direction)==FALSE){
       use_pos_P <- which(names(rank_profile) %in% pos_genes)
       use_pos_N <- which(names(rank_profile) %in% neg_genes)
-      graphics::segments(y0=1,y1=0.5,x0=use_pos_P,x1=use_pos_P,col=pos_col)
-      graphics::segments(y0=0,y1=0.5,x0=use_pos_N,x1=use_pos_N,col=neg_col)
+      if(length(use_pos_P)>0) graphics::segments(y0=1,y1=0.5,x0=use_pos_P,x1=use_pos_P,col=pos_col)
+      if(length(use_pos_N)>0) graphics::segments(y0=0,y1=0.5,x0=use_pos_N,x1=use_pos_N,col=neg_col)
       graphics::abline(h=0.5,col='light grey')
       graphics::text(0,0.75,pos=2,sprintf('Pos_Size:%s',base::length(use_pos_P)),xpd=TRUE)
       graphics::text(0,0.25,pos=2,sprintf('Neg_Size:%s',base::length(use_pos_N)),xpd=TRUE)
@@ -7722,7 +7722,7 @@ draw.targetNet.TWO <- function(source1_label="",source2_label="",
 #' @param total_possible_target numeric or a vector of characters. If input is numeric, it is the total number of possible target genes.
 #' If input is a vector of characters, it is the background list of all possible target genes.
 #'
-#' @return Return statistics of the testing, including the \code{P.Value}, \code{Odds_Ratio} and \code{Intersected_Nuumber}.
+#' @return Return statistics of the testing, including the \code{P.Value}, \code{Odds_Ratio} and \code{Intersected_Number}.
 #'
 #' @examples
 #' source1_label <- 'test1'
@@ -7841,8 +7841,8 @@ get.SJAracne.network <- function(network_file=NULL){
   net_dat      <- read.delim(file=network_file,stringsAsFactors = FALSE)
   target_list  <- get_net2target_list(net_dat)
   igraph_obj   <- graph_from_data_frame(net_dat[,c('source','target')],directed=TRUE) ## add edge weight ???
-  igraph_obj   <- set_edge_attr(igraph_obj,'weight',index=E(igraph_obj),value=net_dat[,'MI'])
-  igraph_obj   <- set_edge_attr(igraph_obj,'sign',index=E(igraph_obj),value=sign(net_dat[,'spearman']))
+  if('MI' %in% colnames(net_dat)) igraph_obj   <- set_edge_attr(igraph_obj,'weight',index=E(igraph_obj),value=net_dat[,'MI'])
+  if('spearman' %in% colnames(net_dat)) igraph_obj   <- set_edge_attr(igraph_obj,'sign',index=E(igraph_obj),value=sign(net_dat[,'spearman']))
   return(list(network_dat=net_dat,target_list=target_list,igraph_obj=igraph_obj))
 }
 
@@ -7974,8 +7974,8 @@ update_SJAracne.network <- function(network_list=NULL,
   # keep all genes in all* to be in the igraph
   net_dat <- net_dat[which(net_dat$source %in% all_possible_drivers & net_dat$target %in% all_possible_targets),] ## filter by all
   igraph_obj   <- graph_from_data_frame(net_dat[,c('source','target')],directed=directed,vertices = all_possible_nodes) ##
-  if(weighted==TRUE) igraph_obj <- set_edge_attr(igraph_obj,'weight',index=E(igraph_obj),value=net_dat[,'MI'])
-  if(directed==TRUE) igraph_obj   <- set_edge_attr(igraph_obj,'sign',index=E(igraph_obj),value=sign(net_dat[,'spearman']))
+  if(weighted==TRUE & 'MI' %in% colnames(net_dat)) igraph_obj <- set_edge_attr(igraph_obj,'weight',index=E(igraph_obj),value=net_dat[,'MI'])
+  if(directed==TRUE & 'spearman' %in% colnames(net_dat)) igraph_obj   <- set_edge_attr(igraph_obj,'sign',index=E(igraph_obj),value=sign(net_dat[,'spearman']))
   target_list  <- get_net2target_list(net_dat)
   return(list(network_dat=net_dat,target_list=target_list,igraph_obj=igraph_obj))
 }
@@ -8939,7 +8939,8 @@ NetBID.lazyMode.DriverEstimation <- function(project_main_dir=NULL,project_name=
   print('Begin create workspace by NetBID.analysis.dir.create() ')
   analysis.par <- NetBID.analysis.dir.create(project_main_dir=project_main_dir,
                                              project_name=project_name,
-                                             tf.network.file=tf.network.file,sig.network.file=sig.network.file)
+                                             tf.network.file=tf.network.file,
+                                             sig.network.file=sig.network.file)
   print('Finish create workspace')
   # read in network
   print('Begin read in network from file by get.SJAracne.network() ')
