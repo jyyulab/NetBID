@@ -82,7 +82,7 @@ devtools::install_github("jyyulab/NetBID-dev",ref='master',dependencies='Depends
 - From source package [NetBID2_0.1.2.tar.gz](https://github.com/jyyulab/NetBID-dev/releases/download/0.1.2/NetBID2_0.1.2.tar.gz),
 
 ```R
-install.packages('NetBID2_0.1.2.tar.gz',repos=NULL)
+devtools::install_local('NetBID2_0.1.2.tar.gz')
 ```
 
 ---
