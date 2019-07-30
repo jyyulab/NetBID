@@ -136,7 +136,7 @@ if('correlation' %in% choose_plot){
 
 ```{r echo=FALSE,fig.width=8, fig.height=8}
 if('meansd' %in% choose_plot){
-  draw.meanSdPlot(eset)
+  res <- draw.meanSdPlot(eset)
 }else{
   message('No selection for MeanSd plot!')
 }

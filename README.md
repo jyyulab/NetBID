@@ -61,7 +61,7 @@ devtools::install_deps(pkg = ".", dependencies = TRUE) ## Install package depend
 download the directory to your workspace and then run:
 
 ```R
-install.packages('NetBID2_0.1.2.tar.gz',repos=NULL,dependencies=TRUE) ## 
+devtools::install_local('NetBID2_0.1.2.tar.gz') ## 
 ```
 
 # Manual & Tutorial

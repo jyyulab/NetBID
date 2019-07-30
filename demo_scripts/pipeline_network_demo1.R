@@ -29,7 +29,8 @@ net_eset <- update_eset.phenotype(use_eset=net_eset,use_phenotype_info=pData(net
 network.par$net.eset <- net_eset
 
 # QC for the raw eset
-draw.eset.QC(network.par$net.eset,outdir=network.par$out.dir.QC,intgroup=NULL,do.logtransform=FALSE,prefix='beforeQC_')
+draw.eset.QC(network.par$net.eset,outdir=network.par$out.dir.QC,intgroup=NULL,do.logtransform=FALSE,prefix='beforeQC_',
+             pre_define=c('WNT'='blue','SHH'='red','G4'='green'),pca_plot_type='2D.interactive')
 
 # Save Step 1 network.par as RData
 NetBID.saveRData(network.par = network.par,step='exp-load')
@@ -73,7 +74,8 @@ net_eset <- generate.eset(exp_mat=mat, phenotype_info=pData(network.par$net.eset
 network.par$net.eset <- net_eset
 
 # QC for the normalized eset
-draw.eset.QC(network.par$net.eset,outdir=network.par$out.dir.QC,intgroup=NULL,do.logtransform=FALSE,prefix='afterQC_')
+draw.eset.QC(network.par$net.eset,outdir=network.par$out.dir.QC,intgroup=NULL,do.logtransform=FALSE,prefix='afterQC_',
+             pre_define=c('WNT'='blue','SHH'='red','G4'='green'),pca_plot_type='2D.interactive')
 
 # Save Step 2 network.par as RData
 NetBID.saveRData(network.par = network.par,step='exp-QC')
@@ -94,7 +96,8 @@ mat <- mat[choose1,]
 tmp_net_eset <- generate.eset(exp_mat=mat, phenotype_info=pData(network.par$net.eset)[colnames(mat),],
                               feature_info=fData(network.par$net.eset)[rownames(mat),], annotation_info=annotation(network.par$net.eset))
 # QC plot for IQR filtered eset
-draw.eset.QC(tmp_net_eset,outdir=network.par$out.dir.QC,intgroup=NULL,do.logtransform=FALSE,prefix='Cluster_')
+draw.eset.QC(tmp_net_eset,outdir=network.par$out.dir.QC,intgroup=NULL,do.logtransform=FALSE,prefix='Cluster_',
+             pre_define=c('WNT'='blue','SHH'='red','G4'='green'),pca_plot_type='2D.interactive')
 
 # The following scripts provide various ways to visualize and check if the IQR filter selected genes
 # can be used to perform good sample cluster analysis (predicted labels vs. real labels). Figures will be displayed instead of saving as files.
@@ -106,7 +109,8 @@ intgroup <- get_int_group(network.par$net.eset)
 # Cluster analysis using Kmean and plot result using PCA biplot (pca+kmeans in 2D)
 for(i in 1:length(intgroup)){
   print(intgroup[i])
-  pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,intgroup[i]))
+  pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,intgroup[i]),
+                                pre_define=c('WNT'='blue','SHH'='red','G4'='green'))
 }
 # Cluster analysis using Kmeans and plot result using PCA (pca+kmeans in 3D)
 for(i in 1:length(intgroup)){
@@ -116,10 +120,10 @@ for(i in 1:length(intgroup)){
 }
 # Pick one phenotype column "subgroup" from the demo eset and show various plots NetBID2 can create
 use_int <- 'subgroup'
-pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,use_int),plot_type='2D')
-pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,use_int),plot_type='2D.ellipse')
-pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,use_int),plot_type='2D.text')
-pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,use_int),plot_type='3D')
+pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,use_int),plot_type='2D',pre_define=c('WNT'='blue','SHH'='red','G4'='green'))
+pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,use_int),plot_type='2D.ellipse',pre_define=c('WNT'='blue','SHH'='red','G4'='green'))
+pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,use_int),plot_type='2D.text',pre_define=c('WNT'='blue','SHH'='red','G4'='green'))
+pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,use_int),plot_type='3D',pre_define=c('WNT'='blue','SHH'='red','G4'='green'))
 print(table(list(pred_label=pred_label,obs_label=get_obs_label(phe, use_int))))
 draw.clustComp(pred_label,obs_label=get_obs_label(phe,use_int),outlier_cex=1,low_K=10)
 

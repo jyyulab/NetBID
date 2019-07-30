@@ -419,11 +419,12 @@ NetBID.saveRData(analysis.par=analysis.par,step='ms-tab')
 
 - `out2excel()` can save multiple master tables as excel sheets in one EXCEL file.
 - For one master table, it consists of three parts:
-  - The first six columns are `gene_label`, `geneSymbol`, `originalID`, `originalID_label`, `funcType` and `Size`.
+  - The first six columns are `originalID_label`, `originalID`, `gene_label`, `geneSymbol`, `funcType` and `Size`.
+    - `originalID_label` is the original ID type with suffix "_TF" or "_SIG", which should match the the ID type in `analysis.par$merge.network`, 
+    - `originalID` is the original ID type used in network construction, which should match the ID type in `analysis.par$cal.eset`, `analysis.par$DE`.
     - `gene_label` is the driver's gene symbol or transcript symbol, with suffix "_TF" or "_SIG" to show driver's type. 
     - `geneSymbol` is the driver's gene symbol or transcript symbol, without suffix.
-    - `originalID` is the original ID type used in network construction, which should match the ID type in `analysis.par$cal.eset`, `analysis.par$DE`.
-    - `originalID_label` is the original ID type with suffix "_TF" or "_SIG", which should match the the ID type in `analysis.par$merge.network`, `analysis.par$merge.ac.eset`,`analysis.par$DA`.
+`analysis.par$merge.ac.eset`,`analysis.par$DA`.
     - **`originalID_label`** is the only column to ensure unique ID for row record.
     - `funcType` is either "TF" or "SIG" to mark driver's type. 
     - `Size` is number of target genes for the driver. 

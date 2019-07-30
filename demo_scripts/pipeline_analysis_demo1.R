@@ -54,7 +54,9 @@ analysis.par$merge.ac.eset <- generate.eset(exp_mat=ac_mat,phenotype_info=pData(
                                             feature_info=NULL,annotation_info='activity in net-dataset')
 
 # QC plot for activity eset
-draw.eset.QC(analysis.par$merge.ac.eset,outdir=analysis.par$out.dir.QC,intgroup=NULL,do.logtransform=FALSE,prefix='AC_')
+draw.eset.QC(analysis.par$merge.ac.eset,outdir=analysis.par$out.dir.QC,intgroup=NULL,do.logtransform=FALSE,prefix='AC_',
+             pre_define=c('WNT'='blue','SHH'='red','G4'='green'),pca_plot_type='2D.interactive')
+
 
 # Save Step 2 analysis.par as RData
 NetBID.saveRData(analysis.par=analysis.par,step='act-get')

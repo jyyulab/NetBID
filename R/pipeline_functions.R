@@ -2618,8 +2618,10 @@ generate.masterTable <- function(use_comp=NULL,DE=NULL,DA=NULL,
     gene_label <-base::paste(tmp1[rn,'external_gene_name'],funcType,sep = '_')
   }
   #
-  label_info <- data.frame('gene_label'=gene_label,'geneSymbol'=geneSymbol,
-                           'originalID'=rn,'originalID_label'=rn_label,'funcType'=funcType,'Size'=use_size,stringsAsFactors=FALSE)
+  #label_info <- data.frame('gene_label'=gene_label,'geneSymbol'=geneSymbol,
+  #                         'originalID'=rn,'originalID_label'=rn_label,'funcType'=funcType,'Size'=use_size,stringsAsFactors=FALSE)
+  label_info <- data.frame('originalID_label'=rn_label,'originalID'=rn,'gene_label'=gene_label,'geneSymbol'=geneSymbol,
+                           'funcType'=funcType,'Size'=use_size,stringsAsFactors=FALSE)
   add_info <- tmp1[rn,]
   #
   combine_info <- lapply(use_comp,function(x){
@@ -5692,7 +5694,7 @@ draw.funcEnrich.cluster <- function(funcEnrich_res=NULL,top_number=30,Pv_col='Or
   funcEnrich_res <- funcEnrich_res[which(funcEnrich_res[,Pv_col]<=Pv_thre),]
   if(nrow(funcEnrich_res)>top_number) funcEnrich_res <- funcEnrich_res[1:top_number,]
   pv_val <- funcEnrich_res[,Pv_col]; names(pv_val) <- rownames(funcEnrich_res)
-  all_g2s <- sapply(funcEnrich_res[,item_col],function(x1)unlist(strsplit(x1,';')))
+  all_g2s <- lapply(funcEnrich_res[,item_col],function(x1)unlist(strsplit(x1,';')))
   names(all_g2s) <- funcEnrich_res[,name_col]
   mat1 <- t(list2mat(all_g2s))
   mat1 <- mat1[rev(funcEnrich_res[,name_col]),]
@@ -6355,10 +6357,11 @@ draw.GSEA <- function(rank_profile=NULL,use_genes=NULL,use_direction=NULL,main="
       }
       annotation <- sprintf("%s\nKS test p-value:%s",es,pv)
     }
+    pp <- par()$usr
     if(es_res$RES[base::which.max(abs(es_res$RES))]>0)
-      graphics::text(r_len,base::max(y2)-par.char2pos()[2],annotation,pos=2,cex=annotation_cex,xpd=TRUE)
+      graphics::text(r_len,pp[4]-2*par.char2pos()[2],annotation,pos=2,cex=annotation_cex,xpd=TRUE)
     else
-      graphics::text(0,base::min(y2)+par.char2pos()[2],annotation,pos=4,cex=annotation_cex,xpd=TRUE)
+      graphics::text(0,pp[3]+2*par.char2pos()[2],annotation,pos=4,cex=annotation_cex,xpd=TRUE)
   }
   if(is.null(pdf_file)==FALSE){plot_part(ori=TRUE);dev.off()} else {plot_part()}
   return(TRUE)
@@ -7346,7 +7349,7 @@ draw.targetNet <- function(source_label="",source_z=NULL,edge_score=NULL,
                            label_cex=0.7,source_cex=1,
                            pdf_file=NULL,arrow_direction='out',n_layer=1,alphabetical_order=FALSE){
   #
-  all_input_para <- c('source_label','source_z','edge_score','label_cex','source_cex',
+  all_input_para <- c('source_label','edge_score','label_cex','source_cex',
                       'arrow_direction','n_layer','alphabetical_order')
   check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
   if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}

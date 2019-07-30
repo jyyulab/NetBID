@@ -110,13 +110,15 @@ draw.heatmap(mat=exp_mat,use_genes=ms_tab[driver_list,'originalID'],use_gene_lab
              use_samples=colnames(exp_mat),use_sample_label=phe_info[colnames(exp_mat),'geo_accession'],
              phenotype_info=phe_info,use_phe=c('gender','pathology','subgroup','age'),main='Expression for Top drivers',scale='row',
              cluster_rows=TRUE,cluster_columns=TRUE,clustering_distance_rows='pearson',clustering_distance_columns='pearson',
-             row_names_gp = gpar(fontsize = 12),pdf_file=sprintf('%s/heatmap_demo1.pdf',analysis.par$out.dir.PLOT))
+             row_names_gp = gpar(fontsize = 12),pdf_file=sprintf('%s/heatmap_demo1.pdf',analysis.par$out.dir.PLOT),
+             pre_define=c('WNT'='blue','SHH'='red','G4'='green'))
 
 draw.heatmap(mat=ac_mat,use_genes=driver_list,use_gene_label=ms_tab[driver_list,'gene_label'],
              use_samples=colnames(exp_mat),use_sample_label=phe_info[colnames(exp_mat),'geo_accession'],
              phenotype_info=phe_info,use_phe=c('gender','pathology','subgroup','age'),main='Activity for Top drivers',scale='row',
              cluster_rows=TRUE,cluster_columns=TRUE,clustering_distance_rows='pearson',clustering_distance_columns='pearson',
-             row_names_gp = gpar(fontsize = 12),pdf_file=sprintf('%s/heatmap_demo2.pdf',analysis.par$out.dir.PLOT))
+             row_names_gp = gpar(fontsize = 12),pdf_file=sprintf('%s/heatmap_demo2.pdf',analysis.par$out.dir.PLOT),
+             pre_define=c('WNT'='blue','SHH'='red','G4'='green'))
 
 # Draw heatmaps using top DE genes
 gene_list <- rownames(sig_gene)
@@ -124,13 +126,15 @@ draw.heatmap(mat=exp_mat,use_genes=ms_tab[gene_list,'originalID'],use_gene_label
              use_samples=colnames(exp_mat),use_sample_label=phe_info[colnames(exp_mat),'geo_accession'],
              phenotype_info=phe_info,use_phe=c('gender','pathology','subgroup','age'),main='Expression for Top drivers',scale='row',
              cluster_rows=TRUE,cluster_columns=TRUE,clustering_distance_rows='pearson',clustering_distance_columns='pearson',
-             row_names_gp = gpar(fontsize = 12),pdf_file=sprintf('%s/heatmap_demo3.pdf',analysis.par$out.dir.PLOT))
+             row_names_gp = gpar(fontsize = 12),pdf_file=sprintf('%s/heatmap_demo3.pdf',analysis.par$out.dir.PLOT),
+             pre_define=c('WNT'='blue','SHH'='red','G4'='green'))
 
 draw.heatmap(mat=ac_mat,use_genes= gene_list,use_gene_label=ms_tab[gene_list,'gene_label'],
              use_samples=colnames(exp_mat),use_sample_label=phe_info[colnames(exp_mat),'geo_accession'],
              phenotype_info=phe_info,use_phe=c('gender','pathology','subgroup','age'),main='Activity for Top drivers',scale='row',
              cluster_rows=TRUE,cluster_columns=TRUE,clustering_distance_rows='pearson',clustering_distance_columns='pearson',
-             row_names_gp = gpar(fontsize = 12),pdf_file=sprintf('%s/heatmap_demo4.pdf',analysis.par$out.dir.PLOT))
+             row_names_gp = gpar(fontsize = 12),pdf_file=sprintf('%s/heatmap_demo4.pdf',analysis.par$out.dir.PLOT),
+             pre_define=c('WNT'='blue','SHH'='red','G4'='green'))
 
 ### QI.4: What are the biological functions of these top DA drivers ?
 
@@ -262,16 +266,19 @@ test.targetNet.overlap(source1_label=ms_tab[use_driver,'gene_label'],source2_lab
 use_obs_class <- get_obs_label(phe_info = phe_info,'subgroup')
 draw.categoryValue(ac_val=ac_mat[use_driver,],exp_val=exp_mat[ms_tab[use_driver,'originalID'],],use_obs_class=use_obs_class,
                    class_order=c('WNT','SHH','G4'),class_srt=30,main_ac = ms_tab[use_driver,'gene_label'],main_exp=ms_tab[use_driver,'geneSymbol'],
-                   pdf_file=sprintf('%s/categoryValue_demo1.pdf',analysis.par$out.dir.PLOT))
+                   pdf_file=sprintf('%s/categoryValue_demo1.pdf',analysis.par$out.dir.PLOT),
+                   pre_define=c('WNT'='blue','SHH'='red','G4'='green'))
 #
 draw.categoryValue(ac_val=ac_mat[use_driver,],exp_val=NULL,use_obs_class=use_obs_class,class_order=c('WNT','SHH','G4'),
-                   pdf_file=sprintf('%s/categoryValue_demo2.pdf',analysis.par$out.dir.PLOT))
+                   pdf_file=sprintf('%s/categoryValue_demo2.pdf',analysis.par$out.dir.PLOT),
+                   pre_define=c('WNT'='blue','SHH'='red','G4'='green'))
 
 #
 use_obs_class <- get_obs_label(phe_info = phe_info,c('subgroup','gender'))
 draw.categoryValue(ac_val=ac_mat[use_driver,],exp_val=exp_mat[ms_tab[use_driver,'originalID'],],use_obs_class=use_obs_class,
                    class_srt=30,main_ac = ms_tab[use_driver,'gene_label'],main_exp=ms_tab[use_driver,'geneSymbol'],
-                   pdf_file=sprintf('%s/categoryValue_demo3.pdf',analysis.par$out.dir.PLOT))
+                   pdf_file=sprintf('%s/categoryValue_demo3.pdf',analysis.par$out.dir.PLOT),
+                   pre_define=c('WNT'='blue','SHH'='red','G4'='green'))
 
 ### QII.4: What are the functions of the target genes of this selected driver ?
 
@@ -317,7 +324,8 @@ sig_gs <- draw.volcanoPlot(dat= DA_gs_bid,label_col='ID',logFC_col='logFC',
 
 # Draw heatmap for top significant gene sets
 draw.heatmap(mat=ac_gs[sig_gs$ID,],pdf_file=sprintf('%s/heatmap_GS.pdf',analysis.par$out.dir.PLOT),scale='row',
-             phenotype_info=phe_info,use_phe=c('gender','subgroup'))
+             phenotype_info=phe_info,use_phe=c('gender','subgroup'),
+             pre_define=c('WNT'='blue','SHH'='red','G4'='green'))
 
 # Draw GSEA plot for top significant gene sets
 DE <- analysis.par$DE[[comp_name]]
@@ -354,7 +362,8 @@ draw.GSEA(rank_profile=DE_profile,use_genes=use_target_genes,
 use_obs_class <- get_obs_label(phe_info = phe_info,'subgroup')
 draw.categoryValue(ac_val=ac_gs[use_gs,],use_obs_class=use_obs_class,
                    class_order=c('WNT','SHH','G4'),class_srt=30,pdf_file=sprintf('%s/categoryValue_GS_demo1.pdf',analysis.par$out.dir.PLOT),
-                   main_ac= use_gs,main_cex=0.8)
+                   main_ac= use_gs,main_cex=0.8,
+                   pre_define=c('WNT'='blue','SHH'='red','G4'='green'))
 
 ### QIII.2: How to find drivers share significantly overlapped target genes ?
 

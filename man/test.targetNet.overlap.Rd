@@ -20,7 +20,7 @@ test.targetNet.overlap(source1_label = NULL, source2_label = NULL,
 If input is a vector of characters, it is the background list of all possible target genes.}
 }
 \value{
-Return statistics of the testing, including the \code{P.Value}, \code{Odds_Ratio} and \code{Intersected_Nuumber}.
+Return statistics of the testing, including the \code{P.Value}, \code{Odds_Ratio} and \code{Intersected_Number}.
 }
 \description{
 \code{test.targetNet.overlap} performs Fisher's exact test to see whether the target genes from two drivers are significantly intersected.
