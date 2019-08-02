@@ -6313,14 +6313,15 @@ draw.GSEA <- function(rank_profile=NULL,use_genes=NULL,use_direction=NULL,main="
       es_res_pos <- get_ES(rank_profile,pos_genes)
       es_res_neg <- get_ES(rank_profile,neg_genes)
       es_res <- es_res_pos
-      y2 <- base::seq(base::min(c(es_res_pos$RES,es_res_neg$RES)),base::max(c(es_res_pos$RES,es_res_neg$RES)),length.out=7); y2 <- round(y2,1)
+      #print(es_res_pos$RES);print(es_res_neg$RES)
+      y2 <- base::seq(base::min(c(es_res_pos$RES,es_res_neg$RES),na.rm=T),base::max(c(es_res_pos$RES,es_res_neg$RES),na.rm=T),length.out=7); y2 <- round(y2,1)
       graphics::plot(es_res_pos$RES,col=pos_col,xaxt='n',xlab="",ylab="",bty='n',
-           xlim=c(1,r_len),type='l',lwd=3,ylim=c(base::min(c(es_res_pos$RES,es_res_neg$RES)),base::max(y2)),main=main,xpd=TRUE,xaxs='i',las=1,cex.main=annotation_cex)
+           xlim=c(1,r_len),type='l',lwd=3,ylim=c(base::min(c(es_res_pos$RES,es_res_neg$RES),na.rm=T),base::max(y2)),main=main,xpd=TRUE,xaxs='i',las=1,cex.main=annotation_cex)
       lines(es_res_neg$RES,col=neg_col,lwd=3,xpd=TRUE)
       w1 <- base::which.max(abs(es_res_pos$RES));
-      graphics::segments(x0=w1,x1=w1,y0=0,y1=es_res_pos$RES[w1],lty=2,col='grey')
+      if(w1>0) graphics::segments(x0=w1,x1=w1,y0=0,y1=es_res_pos$RES[w1],lty=2,col='grey')
       w1 <- base::which.max(abs(es_res_neg$RES));
-      graphics::segments(x0=w1,x1=w1,y0=0,y1=es_res_neg$RES[w1],lty=2,col='grey')
+      if(w1>0) graphics::segments(x0=w1,x1=w1,y0=0,y1=es_res_neg$RES[w1],lty=2,col='grey')
     }else{
       es_res <- get_ES(rank_profile,use_genes)
       y2 <- base::seq(base::min(es_res$RES),base::max(es_res$RES),length.out=7); y2 <- round(y2,1)
@@ -6378,6 +6379,8 @@ get_ES <- function(rank_profile=NULL,use_genes=NULL,weighted.score.type=1){
   RES <- cumsum(tag.indicator * correl.vector * norm.tag - no.tag.indicator * norm.no.tag)
   max.ES <- base::max(RES)
   min.ES <- base::min(RES)
+  if(is.na(max.ES)==TRUE) max.ES <- 0
+  if(is.na(min.ES)==TRUE) min.ES <- 0
   if (max.ES > - min.ES) {
     #      ES <- max.ES
     ES <- signif(max.ES, digits = 5)
@@ -8778,11 +8781,13 @@ NetBID.lazyMode.DriverVisualization <- function(analysis.par=NULL,intgroup=NULL,
   print(sprintf('Finish TopDA_BubblePlot plot by draw.bubblePlot(), please check %s',sprintf('%s/%s_TopDA_BubblePlot.pdf',analysis.par$out.dir.PLOT,use_comp)))
   ## detailed for top
   pf <- DE$logFC; names(pf)<-DE$ID
-  print('Begin EachTopDA_GSEA plot by draw.GSEA() ')
+  print('Begin Each TopDA_GSEA plot by draw.GSEA() ')
   pdf(sprintf('%s/%s_EachTopDA_GSEA.pdf',analysis.par$out.dir.PLOT,use_comp),width=8,height=8)
   for(each_driver in driver_list){
+    use_direction <- NULL
+    if('spearman' %in% colnames(analysis.par$merge.network$target_list[[each_driver]])) use_direction = sign(analysis.par$merge.network$target_list[[each_driver]]$spearman)
     draw.GSEA(rank_profile = pf,use_genes = analysis.par$merge.network$target_list[[each_driver]]$target,
-              use_direction = sign(analysis.par$merge.network$target_list[[each_driver]]$spearman),
+              use_direction = use_direction,
               annotation=sprintf('P.Value:%s',get_z2p(driver_DA_Z[each_driver])),
               left_annotation = sprintf('High in %s',G1),
               right_annotation = sprintf('High in %s',G0),main=ms_tab[each_driver,'gene_label'])
@@ -8811,7 +8816,11 @@ NetBID.lazyMode.DriverVisualization <- function(analysis.par=NULL,intgroup=NULL,
   print('Begin EachTopDA_TargetNet plot by draw.targetNet() ')
   pdf(sprintf('%s/%s_EachTopDA_TargetNet.pdf',analysis.par$out.dir.PLOT,use_comp),width=8,height=8)
   for(each_driver in driver_list){
-    es <- analysis.par$merge.network$target_list[[each_driver]]$MI*sign(analysis.par$merge.network$target_list[[each_driver]]$spearman);
+    if('spearman' %in% colnames(analysis.par$merge.network$target_list[[each_driver]])){
+      es <- analysis.par$merge.network$target_list[[each_driver]]$MI*sign(analysis.par$merge.network$target_list[[each_driver]]$spearman);
+    }else{
+      es <- rep(1,length.out=length(analysis.par$merge.network$target_list[[each_driver]]$target))
+    }
     names(es) <- analysis.par$merge.network$target_list[[each_driver]]$target
     if(main_id_type!='external_gene_name'){
       es <- base::cbind(es,es)
