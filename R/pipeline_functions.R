@@ -1404,10 +1404,10 @@ update_eset.feature <- function(use_eset=NULL,use_feature_info=NULL,from_feature
     w2 <- which(t1 %in% names(tw1)) ## need to merge
     w0 <- base::setdiff(1:base::length(t1),w2) ## do not need to merge
     mat_new_0 <- mat[f1[w0],]; rownames(mat_new_0) <- t1[w0]  ## mat do not need to merge
-    if(merge_method=='mean') tmp1 <- stats::aggregate(mat[f1[w2],],list(t1[w2]),function(x){base::mean(x,na.rm=TRUE)})
-    if(merge_method=='median') tmp1 <- stats::aggregate(mat[f1[w2],],list(t1[w2]),function(x){stats::median(x,na.rm=TRUE)})
-    if(merge_method=='max') tmp1 <- stats::aggregate(mat[f1[w2],],list(t1[w2]),function(x){base::max(x,na.rm=TRUE)})
-    if(merge_method=='min') tmp1 <- stats::aggregate(mat[f1[w2],],list(t1[w2]),function(x){base::min(x,na.rm=TRUE)})
+    if(merge_method=='mean') tmp1 <- stats::aggregate(mat[f1[w2],,drop=FALSE],list(t1[w2]),function(x){base::mean(x,na.rm=TRUE)})
+    if(merge_method=='median') tmp1 <- stats::aggregate(mat[f1[w2],,drop=FALSE],list(t1[w2]),function(x){stats::median(x,na.rm=TRUE)})
+    if(merge_method=='max') tmp1 <- stats::aggregate(mat[f1[w2],,drop=FALSE],list(t1[w2]),function(x){base::max(x,na.rm=TRUE)})
+    if(merge_method=='min') tmp1 <- stats::aggregate(mat[f1[w2],,drop=FALSE],list(t1[w2]),function(x){base::min(x,na.rm=TRUE)})
     mat_new_1 <- tmp1[,-1]; rownames(mat_new_1) <- tmp1[,1] ## mat merged
     mat_new <- base::rbind(mat_new_0,mat_new_1)
   }else{
@@ -1728,30 +1728,30 @@ cal.Activity <- function(target_list=NULL, igraph_obj = NULL, cal_mat=NULL, es.m
     }
   }
   ##
-  mat1_source <- mat1[all_source,]
+  mat1_source <- mat1[all_source,,drop=FALSE]
   w1 <- base::intersect(rownames(cal_mat),colnames(mat1_source))
   if(base::length(w1)==0){
-    message('No intersected genes cound for the cal_mat and target in the network, please check and re-try!');
+    message('No intersected genes found for the cal_mat and target in the network, please check and re-try!');
     return(FALSE)
   }
-  use_mat1_source <- mat1_source[,w1] ## network info
-  use_mat2_source <- mat2[all_source,w1] ## network binary info
+  use_mat1_source <- mat1_source[,w1,drop=FALSE] ## network info
+  use_mat2_source <- mat2[all_source,w1,drop=FALSE] ## network binary info
 
   ## weighted mean + mean
   if(es.method %in% c('weightedmean','mean')){
-    use_cal_mat <- cal_mat[w1,] ## expression info
+    use_cal_mat <- cal_mat[w1,,drop=FALSE] ## expression info
     out_mat <- use_mat1_source %*% use_cal_mat
     out_mat <- out_mat/Matrix::rowSums(use_mat2_source) ## get mean
   }
   ## absmean
   if(es.method == 'absmean'){
-    use_cal_mat <- cal_mat[w1,] ## expression info
+    use_cal_mat <- cal_mat[w1,,drop=FALSE] ## expression info
     out_mat <- use_mat1_source %*% abs(use_cal_mat)
     out_mat <- out_mat/Matrix::rowSums(use_mat2_source) ## get mean
   }
   ## maxmean
   if(es.method == 'maxmean'){
-    use_cal_mat <- cal_mat[w1,] ## expression info
+    use_cal_mat <- cal_mat[w1,,drop=FALSE] ## expression info
     use_cal_mat_pos <- use_cal_mat;use_cal_mat_pos[which(use_cal_mat_pos<0)] <- 0;
     use_cal_mat_neg <- use_cal_mat;use_cal_mat_neg[which(use_cal_mat_neg>0)] <- 0;
     out_mat_pos  <- use_mat1_source %*% use_cal_mat_pos
@@ -1770,7 +1770,7 @@ cal.Activity <- function(target_list=NULL, igraph_obj = NULL, cal_mat=NULL, es.m
   if(base::length(w1)==0){
     message('Fail in calculating activity, please check the ID type in cal_mat and target_list and try again !')
   }
-  ac.mat <- ac.mat[w1,]
+  ac.mat <- ac.mat[w1,,drop=FALSE]
   return(ac.mat)
 }
 
@@ -1801,10 +1801,10 @@ cal.Activity.old <- function(target_list=NULL, cal_mat=NULL, es.method = 'weight
       next
     }
     if (es.method != 'weightedmean')
-      ac.mat[i, ] <- apply(cal_mat[x2,], 2, es, es.method)
+      ac.mat[i, ] <- apply(cal_mat[x2,,drop=FALSE], 2, es, es.method)
     if (es.method == 'weightedmean') {
       weight <- x1$MI * sign(x1$spearman)
-      ac.mat[i, ] <- apply(cal_mat[x2,] * weight, 2, es, 'mean')
+      ac.mat[i, ] <- apply(cal_mat[x2,,drop=FALSE] * weight, 2, es, 'mean')
     }
   }
   rownames(ac.mat) <- names(all_target)
@@ -1907,12 +1907,12 @@ cal.Activity.GS <- function(use_gs2gene=all_gs2gene[c('H','CP:BIOCARTA','CP:REAC
       ac.mat[i, ] <- cal_mat[x2,]
       next
     }
-    ac.mat[i, ] <- apply(cal_mat[x2,], 2, es, es.method)
+    ac.mat[i, ] <- apply(cal_mat[x2,,drop=FALSE], 2, es, es.method)
   }
   rownames(ac.mat) <- names(use_gs2gene)
   colnames(ac.mat) <- colnames(cal_mat)
   w1 <- apply(ac.mat,1,function(x)base::length(which(is.na(x)==TRUE)))
-  ac.mat <- ac.mat[which(w1==0),]
+  ac.mat <- ac.mat[which(w1==0),,drop=FALSE]
   return(ac.mat)
 }
 
@@ -2022,8 +2022,7 @@ getDE.BID.2G <-function(eset,output_id_column=NULL,G1=NULL, G0=NULL,G1_name=NULL
   all_id <- base::unique(use_id)
   de <- lapply(all_id,function(x){
     w1 <- which(use_id==x)
-    x1 <- exp_mat[w1,]
-    if(base::length(w1)==1) x1 <- t(as.matrix(x1)) else x1 <- as.matrix(x1)
+    x1 <- exp_mat[w1,,drop=FALSE]
     bid(mat=x1,use_obs_class=comp,class_order=c(0,1),family=family,method=method,
         nitt=13000,burnin=3000,thin=1,pooling=pooling,class_ordered=FALSE,
         logTransformed=logTransformed,std=FALSE,average.method=c('geometric'),verbose=FALSE)
@@ -2037,14 +2036,9 @@ getDE.BID.2G <-function(eset,output_id_column=NULL,G1=NULL, G0=NULL,G1_name=NULL
   de <- de[order(de$P.Value),]
   tT <- de
   new_mat <- stats::aggregate(exp_mat,list(use_id),mean)[,-1]
-  tT <- tT[all_id,]
-  if(nrow(tT)==1){
-    exp_G1 <- base::mean(exp_mat[,G1]);
-    exp_G0 <- base::mean(exp_mat[,G0]);
-  }else{
-    exp_G1 <- base::rowMeans(new_mat[,G1]);
-    exp_G0 <- base::rowMeans(new_mat[,G0]);
-  }
+  tT <- tT[all_id,,drop=FALSE]
+  exp_G1 <- base::rowMeans(new_mat[,G1]);
+  exp_G0 <- base::rowMeans(new_mat[,G0]);
   tT <- base::cbind(tT,'Ave.G0'=exp_G0,'Ave.G1'=exp_G1)
   if(is.null(G0_name)==FALSE) colnames(tT) <- gsub('Ave.G0',paste0('Ave.',G0_name),colnames(tT))
   if(is.null(G1_name)==FALSE) colnames(tT) <- gsub('Ave.G1',paste0('Ave.',G1_name),colnames(tT))
@@ -2244,9 +2238,9 @@ getDE.limma.2G <- function(eset=NULL, G1=NULL, G0=NULL,G1_name=NULL,G0_name=NULL
   #
   all_samples <- colnames(Biobase::exprs(eset))
   use_samples <- c(G0, G1)
-  phe <- as.data.frame(Biobase::pData(eset)[use_samples, ]);
+  phe <- as.data.frame(Biobase::pData(eset)[use_samples, ,drop=FALSE]);
   rownames(phe) <- use_samples
-  new_eset <- generate.eset(exp_mat=Biobase::exprs(eset)[, use_samples],phenotype_info=phe, feature_info=Biobase::fData(eset))
+  new_eset <- generate.eset(exp_mat=Biobase::exprs(eset)[, use_samples,drop=F],phenotype_info=phe, feature_info=Biobase::fData(eset))
   new_mat  <- Biobase::exprs(new_eset)
   ##
   design.mat <-as.data.frame(matrix(NA, nrow = base::length(use_samples), ncol = 1))
@@ -2276,14 +2270,9 @@ getDE.limma.2G <- function(eset=NULL, G1=NULL, G0=NULL,G1_name=NULL,G0_name=NULL
     rownames(tT) <- rownames(new_mat)
   }
   tT <- base::cbind(ID=rownames(tT),tT,stringsAsFactors=FALSE)
-  tT <- tT[rownames(new_mat),]
-  if(nrow(tT)==1){
-    exp_G1 <- base::mean(new_mat[,G1]);
-    exp_G0 <- base::mean(new_mat[,G0]);
-  }else{
-    exp_G1 <- base::rowMeans(new_mat[,G1]);
-    exp_G0 <- base::rowMeans(new_mat[,G0]);
-  }
+  tT <- tT[rownames(new_mat),,drop=FALSE]
+  exp_G1 <- base::rowMeans(new_mat[,G1]);
+  exp_G0 <- base::rowMeans(new_mat[,G0]);
   w1 <- which(tT$P.Value<=0);
   if(base::length(w1)>0) tT$P.Value[w1] <- .Machine$double.xmin;
   z_val <- sapply(tT$P.Value*sign(tT$logFC),function(x)combinePvalVector(x,twosided = TRUE)[1])
@@ -2493,11 +2482,11 @@ merge_TF_SIG.network <- function(TF_network=NULL,SIG_network=NULL){
   target_list_combine <- c(TF_network$target_list,SIG_network$target_list)
   names(target_list_combine) <- rn_label
   n_TF <- TF_network$network_dat
-  n_TF$source <- base::paste(n_TF$source,'TF',sep='_')
+  if(nrow(n_TF)>0) n_TF$source <- base::paste(n_TF$source,'TF',sep='_')
   n_SIG <- SIG_network$network_dat
-  n_SIG$source <- base::paste(n_SIG$source,'SIG',sep='_')
+  if(nrow(n_SIG)>0) n_SIG$source <- base::paste(n_SIG$source,'SIG',sep='_')
   net_dat <- base::rbind(n_TF,n_SIG)
-  igraph_obj <- graph_from_data_frame(net_dat[,c('source','target','MI')],directed=TRUE)
+  igraph_obj <- graph_from_data_frame(net_dat[,c('source','target')],directed=TRUE)
   if('MI' %in% colnames(net_dat)) igraph_obj <- set_edge_attr(igraph_obj,'weight',index=E(igraph_obj),value=net_dat[,'MI'])
   if('spearman' %in% colnames(net_dat)) igraph_obj <- set_edge_attr(igraph_obj,'sign',index=E(igraph_obj),value=sign(net_dat[,'spearman']))
   return(list(network_dat=net_dat,target_list=target_list_combine,igraph_obj=igraph_obj))
@@ -3173,6 +3162,8 @@ z2col <- function(x,n_len=60,sig_thre=0.01,col_min_thre=0.01,col_max_thre=3,
                   blue_col=brewer.pal(9,'Set1')[2],
                   red_col=brewer.pal(9,'Set1')[1]){
   #
+  tmp_x <- setdiff(x,c(Inf,-Inf))
+  if(length(tmp_x)==0) return(ifelse(x>0,'red','blue'))
   all_input_para <- c('x','n_len','sig_thre','col_min_thre','col_max_thre','blue_col','red_col')
   check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
   if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
@@ -5779,7 +5770,7 @@ draw.funcEnrich.cluster <- function(funcEnrich_res=NULL,top_number=30,Pv_col='Or
     graphics::plot(1,xaxt='n',yaxt='n',bty='n',xlim=c(pp[1],pp[2]),ylim=c(pp[3],pp[4]),col='white',xlab="",ylab="")
     pp <- par()$usr;
     yy <- (pp[4]-pp[3])/base::length(gs_cluster)
-    pv_c <- z2col(qnorm(1-pv))
+    pv_c <- z2col(-qnorm(pv))
     graphics::rect(xleft=pp[1],xright=pp[2],ybottom=c(1:base::length(gs_cluster))*yy+pp[3]-yy,
          ytop=c(1:base::length(gs_cluster))*yy+pp[3],
          col=pv_c,border = NA)
@@ -7796,6 +7787,18 @@ get_net2target_list <- function(net_dat=NULL) {
   all_source <- base::unique(net_dat$source)
   all_target <- lapply(all_source, function(x) {
     n1 <- net_dat[which(net_dat$source == x), base::intersect(c('target', 'MI', 'spearman'),colnames(net_dat))]
+    if(class(n1)=='character') n1 <- data.frame('target'=n1,'MI'=1,'spearman'=1,stringsAsFactors=F)
+    n1 <- unique(n1)
+    if(length(unique(n1$target))!=length(n1$target)){ ## multiple
+      t1 <- table(n1$target)
+      w1 <- names(which(t1==1)); w2 <- names(which(t1>1))
+      w21 <- n1[which(n1$target %in% w1),]
+      w22 <- do.call(rbind,lapply(w2,function(x){
+        x1 <- n1[which(n1$target==x),]
+        x1 <- x1[which.max(x1$MI),]
+      }))
+      n1 <- rbind(w21,w22)
+    }
     rownames(n1) <- n1$target
     return(n1)
   })
@@ -8359,7 +8362,7 @@ bid <- function(mat=NULL,use_obs_class=NULL,class_order=NULL,class_ordered=TRUE,
   nna<-apply(!is.na(d),2,all)
   if(dim(d)[1]==1){ d <- t(as.matrix(d[,nna])); rownames(d) <- rownames(mat) }else{ d <- d[,nna]}
   ##generate data frame
-  d   <- melt(t(d))
+  d   <- reshape::melt(t(d))
   dat <- data.frame(response=d$value,treatment=rep(comp,base::length(base::unique(d$X2))),probe=d$X2)
   ##calculate FC
   n.levels<-base::length(base::unique(dat$probe)) ##
@@ -8906,8 +8909,7 @@ NetBID.lazyMode.DriverEstimation <- function(project_main_dir=NULL,project_name=
                                              do.QC=TRUE,DE_strategy='bid',return_analysis.par=TRUE){
   #
   if(exists('analysis.par')==TRUE){
-    message('analysis.par is occupied in the current session,please manually run: rm(analysis.par) and re-try, otherwise will not change !');
-    return(analysis.par)
+    stop('analysis.par is occupied in the current session,please manually run: rm(analysis.par) and re-try, otherwise will not change !');
   }
   all_input_para <- c('project_main_dir','project_name','tf.network.file','sig.network.file','cal.eset',
                       'main_id_type','cal.eset_main_id_type','intgroup','G1_name','G0_name','DE_strategy','use_level')
@@ -8950,8 +8952,8 @@ NetBID.lazyMode.DriverEstimation <- function(project_main_dir=NULL,project_name=
   analysis.par$tf.network <- get.SJAracne.network(analysis.par$tf.network.file)
   analysis.par$sig.network <- get.SJAracne.network(analysis.par$sig.network.file)
   print('Finish read in network from file')
-  if(do.QC==TRUE) draw.network.QC(analysis.par$tf.network$igraph_obj,outdir = analysis.par$out.dir.QC,prefix = 'TF_')
-  if(do.QC==TRUE) draw.network.QC(analysis.par$sig.network$igraph_obj,outdir = analysis.par$out.dir.QC,prefix = 'SIG_')
+  if(do.QC==TRUE & nrow(analysis.par$tf.network$network_dat)>0) draw.network.QC(analysis.par$tf.network$igraph_obj,outdir = analysis.par$out.dir.QC,prefix = 'TF_')
+  if(do.QC==TRUE & nrow(analysis.par$sig.network$network_dat)>0) draw.network.QC(analysis.par$sig.network$igraph_obj,outdir = analysis.par$out.dir.QC,prefix = 'SIG_')
   analysis.par$merge.network <- merge_TF_SIG.network(analysis.par$tf.network,analysis.par$sig.network)
   if(cal.eset_main_id_type!=main_id_type){
     message(sprintf('The ID type for the network is %s, and the ID type for the cal.eset is %s, need to transfer the ID type of cal.eset from %s to %s',
@@ -8973,9 +8975,11 @@ NetBID.lazyMode.DriverEstimation <- function(project_main_dir=NULL,project_name=
                                     from_feature = cal.eset_main_id_type,to_feature = main_id_type)
     message('Finish transforming the cal.eset ID ! ')
   }
-  print('Begin calculate activity by cal.Activity(), the default setting for es.method is weightedmean ')
+  es.method <- 'mean'
+  if('MI' %in% colnames(analysis.par$merge.network$network_dat) & 'spearman' %in% colnames(analysis.par$merge.network$network_dat)) es.method <- 'weightedmean'
+  print(sprintf('Begin calculate activity by cal.Activity(), the setting for es.method is %s ',es.method))
   ac_mat <- cal.Activity(igraph_obj = analysis.par$merge.network$igraph_obj,
-                         cal_mat = Biobase::exprs(cal.eset))
+                         cal_mat = Biobase::exprs(cal.eset),es.method=es.method)
   analysis.par$merge.ac.eset <- generate.eset(exp_mat=ac_mat,phenotype_info = phe)
   if(do.QC==TRUE) draw.eset.QC(analysis.par$merge.ac.eset,outdir = analysis.par$out.dir.QC,prefix = 'AC_')
   print('Finish calculate activity ')

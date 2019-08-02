@@ -136,6 +136,7 @@ Detailed statistics for all `r length(source_list)` drivers.
 ```{r echo=FALSE}
 dt <- do.call(cbind,net_detail)
 dt1 <- dt[source_list,]
+if(class(dt1)=='numeric'){dt1 <- t(as.matrix(dt1)); colnames(dt1) <- colnames(dt); rownames(dt1) <- source_list}
 if(nrow(dt1)<20){
 kableExtra::kable(dt1,align = "c") %>%
   kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed")) %>%
@@ -160,14 +161,19 @@ mm <- max(a$counts)/max(d1$y);mm1 <- seq(0,max(d1$y),length.out = 5);mm2 <- form
 lines(x=d1$x,y=d1$y*mm,col=get_transparent('red',0.5),lwd=1.5)
 axis(side=4,at=mm*mm1,labels=mm2,las=2);
 mtext(side=4,line = 6,'Density',cex=1.2)
+#
 d_out <- igraph::degree(net,mode = 'out')[source_list]
-a <- hist(d_out,breaks = 20,xlab='Degree',cex.lab=1.2,cex.axis=1.2,cex.main=1.2,
+if(length(d_out)>10){
+  a <- hist(d_out,breaks = 20,xlab='Degree',cex.lab=1.2,cex.axis=1.2,cex.main=1.2,
      main=sprintf('Density plot of target size for all %s drivers \n (Size from %s to %s; mean Size: %s, median Size: %s )',length(source_list),min(d_out),max(d_out),format(mean(d_out),digits=5),median(d_out)));
 d1 <- density(d_out)
 mm <- max(a$counts)/max(d1$y);mm1 <- seq(0,max(d1$y),length.out = 5);mm2 <- format(mm1,scientific=TRUE,digits=3);mm2[1]<-'0';
 lines(x=d1$x,y=d1$y*mm,col=get_transparent('red',0.5),lwd=1.5)
 axis(side=4,at=mm*mm1,labels=mm2,las=2);
 mtext(side=4,line = 6,'Density',cex=1.2)
+}else{
+  print(d_out)
+}
 ```
 
 ## Part IV: Scale free distribution checking
