@@ -84,11 +84,11 @@ draw.targetNet.TWO(source1_label=source1_label,
 source1_label <- 'test1'
 source1_z <- 1.96
 edge_score1 <- (sample(1:160,size=100,replace=TRUE)-80)/80
-names(edge_score1) <- sample(paste0('G',1:1000),size=80)
+names(edge_score1) <- sample(paste0('G',1:1000),size=100)
 source2_label <- 'test2'
 source2_z <- -2.36
 edge_score2 <- (sample(1:240,size=100,replace=TRUE)-120)/120
-names(edge_score2) <- sample(paste0('G',1:1000),size=120)
+names(edge_score2) <- sample(paste0('G',1:1000),size=100)
 analysis.par <- list()
 analysis.par$out.dir.PLOT <- getwd()
 draw.targetNet.TWO(source1_label=source1_label,

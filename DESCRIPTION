@@ -9,7 +9,7 @@ License: GPL (>= 2)
 Encoding: UTF-8
 LazyData: true
 Depends: 
-    R (>= 3.4.0),
+    R (>= 3.6.0),
     Matrix (>= 1.2-17),
     SummarizedExperiment (>= 1.14.0),
     lme4 (>= 1.1-21),

@@ -144,6 +144,7 @@ The tutorial contains three main parts, they can be followed by order or used in
 ## About the project
 
 For the detailed description of NetBID algorithm, please check our lab page [View Yu Lab@St. Jude](https://stjuderesearch.org/site/lab/yu).
+Email: xinran.dong@stjude.org or xinran.dong@foxmail.com
 
 ### License
 
