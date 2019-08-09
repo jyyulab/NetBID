@@ -2,9 +2,9 @@
 #' @importFrom GEOquery getGEO
 #' @importFrom RColorBrewer brewer.pal
 #' @importFrom plot3D scatter3D
-#' @importFrom plotrix draw.ellipse
+#' @importFrom plotrix draw.ellipse draw.circle
 #' @importFrom impute impute.knn
-#' @importFrom umap umap
+#' @importFrom umap umap umap.defaults
 #' @importFrom rhdf5 H5Fopen H5Fclose
 #' @importFrom DESeq2 DESeqDataSetFromTximport DESeq
 #' @importFrom ComplexHeatmap Heatmap
@@ -15,13 +15,13 @@
 #' @importFrom arm bayesglm
 #' @importFrom reshape melt
 #' @importFrom ordinal clm clmm
-#' @importFrom rmarkdown render
+#' @importFrom rmarkdown render pandoc_available html_document
 #' @importFrom Matrix rowSums
 #' @importFrom SummarizedExperiment assay
 #' @importFrom lme4 lmer
 #' @importFrom grDevices col2rgb colorRampPalette dev.off pdf rgb
 #' @importFrom graphics abline arrows axis barplot boxplot hist image layout legend lines mtext par points polygon rect segments strheight stripchart strwidth text
-#' @importFrom stats IQR aggregate as.dendrogram as.dist cutree density dist fisher.test gaussian glm hclust kmeans ks.test lm median model.matrix na.omit order.dendrogram p.adjust pchisq pnorm prcomp pt qnorm quantile sd
+#' @importFrom stats IQR aggregate as.dendrogram as.dist cutree density dist fisher.test gaussian glm hclust kmeans ks.test lm median model.matrix na.omit order.dendrogram p.adjust pchisq pnorm prcomp pt qnorm quantile sd splinefun
 #' @importFrom utils read.delim write.table
 
 ################################
@@ -3815,12 +3815,12 @@ draw.eset.QC <- function(eset,outdir = '.',do.logtransform = FALSE,intgroup=NULL
     use_mat <- log2(use_mat)
   }
   if(generate_html==TRUE){
-    if(pandoc_available()==FALSE){
+    if(rmarkdown::pandoc_available()==FALSE){
       stop('pandoc not available, please set Sys.setenv(RSTUDIO_PANDOC=$pandoc_installed_path), or set generate_html=FALSE')
     }
     output_rmd_file <- sprintf('%s/%sQC.Rmd',outdir,prefix)
     file.copy(from=system.file('Rmd/eset_QC.Rmd',package = "NetBID2"),to=output_rmd_file)
-    rmarkdown::render(output_rmd_file, html_document(toc = TRUE))
+    rmarkdown::render(output_rmd_file, rmarkdown::html_document(toc = TRUE))
     return(TRUE)
   }
   ## pca
@@ -3920,7 +3920,7 @@ draw.meanSdPlot <- function(eset){
   sd_g_l_m <- base::rowMeans(sd_g_l)
   # col=get_transparent(brewer.pal(8,'Set1')[2],alpha=0.1)
   par(mai=c(1,1,1,2))
-  dat <- spline(x=mean_g_l_m,y=sd_g_v,n=n*10)
+  dat <- stats::spline(x=mean_g_l_m,y=sd_g_v,n=n*10)
   graphics::plot(y~x,data=dat,type='l',col=brewer.pal(8,'Set1')[1],lwd=2,xlab='rank(mean)',ylab='sd',
        ylim=c(0,base::max(sd_g)),xlim=c(0,base::max(mean_g)),cex.lab=1.2)
   pp <- par()$usr
@@ -3967,7 +3967,7 @@ draw.correlation <- function(use_mat,class_label,main='',correlation_strategy='p
   uni_class <- base::unique(class_label)
   class_label <- class_label[order(factor(class_label,levels=uni_class))]
   use_mat <- use_mat[,names(class_label)]
-  cor_res <- cor(use_mat,method=correlation_strategy)
+  cor_res <- stats::cor(use_mat,method=correlation_strategy)
   cc1 <- get.class.color(class_label,use_color=use_color,pre_define=pre_define);
   cc1 <- get_transparent(cc1,0.5);
   p1 <- cumsum(base::table(class_label)[uni_class]); p1 <- c(0,p1)
@@ -4292,7 +4292,7 @@ draw.umap.kmeans <- function(mat=NULL,all_k=NULL,obs_label=NULL,
   if(base::length(base::setdiff(all_k,2:base::length(obs_label)))>0){
     message('some value in all_k exceed the maximum sample size, check and re-try !');return(FALSE);
   }
-  ori_cc <- umap.defaults;
+  ori_cc <- umap::umap.defaults;
   ori_cc$n_epochs <- 2000;
   ori_cc$n_neighbors <- base::min(15,round(ncol(mat)/2));
   if(plot_type=='3D') ori_cc$n_components <- 3
@@ -4529,7 +4529,7 @@ get_clustComp_MICA <- function(outdir, all_k, obs_label, prjname = NULL,strategy
   all_k_res <- list()
   for (k in all_k) {
     use_file <- sprintf('%s/%s_k%s_ClusterMem.txt',
-                        outdir,prjname,use_k,prjname)
+                        outdir,prjname,k,prjname)
     d1 <- read.delim(use_file, stringsAsFactors = FALSE)
     ##Score
     rownames(d1) <- d1$id
@@ -6075,7 +6075,7 @@ draw.bubblePlot <- function(driver_list=NULL,show_label=driver_list,Z_val=NULL,d
     cc_r <- matrix(z2col(f_mat2,n_len=30,sig_thre=qnorm(1-0.1)),ncol=ncol(f_mat2),byrow = FALSE)
     for(i in 1:nrow(f_mat1)){
       for(j in 1:ncol(f_mat1)){
-        draw.circle(i-0.5,j-0.5,radius=f_mat1[i,j]/2,col=cc_r[i,j])
+        plotrix::draw.circle(i-0.5,j-0.5,radius=f_mat1[i,j]/2,col=cc_r[i,j])
       }
     }
     ## draw circle legend
@@ -8073,14 +8073,14 @@ draw.network.QC <- function(igraph_obj,outdir=NULL,prefix="",directed=TRUE,weigh
   }
   net <- igraph_obj
   if(generate_html==TRUE){
-    if(pandoc_available()==FALSE){
+    if(rmarkdown::pandoc_available()==FALSE){
       stop('pandoc not available, please set Sys.setenv(RSTUDIO_PANDOC=$pandoc_installed_path), or set generate_html=FALSE')
     }
     directed <- directed
     weighted <- weighted
     output_rmd_file <- sprintf('%s/%snetQC.Rmd',outdir,prefix)
     file.copy(from=system.file('Rmd/net_QC.Rmd',package = "NetBID2"),to=output_rmd_file)
-    rmarkdown::render(output_rmd_file, html_document(toc = TRUE))
+    rmarkdown::render(output_rmd_file, rmarkdown::html_document(toc = TRUE))
     return(TRUE)
   }
   ###
@@ -8976,7 +8976,7 @@ NetBID.lazyMode.DriverEstimation <- function(project_main_dir=NULL,project_name=
   print('Current db info:')
   print(db_info)
   if(!intgroup %in% colnames(Biobase::pData(cal.eset))){
-    message(sprintf('%s not included in the Biobase::pData(cal.eset), please check and re-try!',use_comp));return(FALSE)
+    message(sprintf('%s not included in the Biobase::pData(cal.eset), please check and re-try!',intgroup));return(FALSE)
   }
   phe <- Biobase::pData(cal.eset)
   G1 <- rownames(phe)[which(phe[,intgroup]==G1_name)];G0 <- rownames(phe)[which(phe[,intgroup]==G0_name)];
