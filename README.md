@@ -1,122 +1,60 @@
-# NetBID2
-data-drivern Network-based Bayesian Inference of Drivers, Version II
+# NetBID 2.0
+NetBID (**Net**work-based **B**ayesian **I**nference of **D**rivers) is a data-driven system biology pipeline and toolkit for finding drivers from transcriptomics, proteomics and phosphoproteomics data, where the drivers can be either transcription facotrs (**TF**) or signaling factors (**SIG**).
 
-# Version 0.1.2 Update Notes:
+NetBID 2.0 is an upgraded version of [NetBID 1.0](https://github.com/jyyulab/NetBID/releases/tag/1.0.0) that has been published in [Nature]((https://www.nature.com/articles/s41586-018-0177-0)) in 2018. NetBID 2.0 inherites all the main functions from NetBID 1.0, and provides many more functions and pipelines to perform advanced end-to-end analyses.
 
-1. Create two "lazy mode" functions, NetBID.lazyMode.DriverVisualization(),NetBID.lazyMode.DriverEstimation()
+# Installation
 
-2. Add warning message for all functions
+Require ```R >= 3.6.0```. Other dependencies can be found in table [https://jyyulab.github.io/NetBID/docs/pre_request](https://jyyulab.github.io/NetBID/docs/pre_request).
 
-3. Let color code set by user-defined, with two options: use_color,pre_define passed to get.class.color(). 
-The modified functions are: 
-draw.2D(), draw.2D.interactive(), draw.2D.text(), draw.3D(), draw.2D.ellipse(), draw.eset.QC(), draw.pca.keans(), draw.umap.kmeans(), draw.heatmap(), draw.categoryValue(), 
+Installation instructions are in [Installation section](https://jyyulab.github.io/NetBID/) of the documentation.
 
-4. Add package information in calling functions to avoid possible conflict of function names
 
-5. Re-write the cal.Activity(), add in Matrix Cross Products, which will accelerate calculation time but it is memory consuming. memory_constrain option could be set.
+# Documentation & Guided Analyses
 
-6. Modify the draw.eset.QC(), add correlation plot. Modify draw.network.QC(), add html_info_limit. 
+Instructions, documentation, and tutorials can be found at: 
 
-7. Add draw.2D.interactive(), and add option "2D.interactive" to draw.pca.kmeans(), draw.umap.kmeans()
++ [https://jyyulab.github.io/NetBID/](https://jyyulab.github.io/NetBID/)
 
-8. Add functions to judge abnormal values.
+A PDF manual [NetBID_manual.pdf](https://github.com/jyyulab/NetBID/blob/master/NetBID_manual.pdf) can be found in the repository.
 
-9. modify option name from network --> target_list in generate.masterTable()
 
-10. add option geneSymbol_column for SJAracne.prepare()
+# Demos
+Demo scripts can be found in [demo_scripts](https://github.com/jyyulab/NetBID/tree/master/demo_scripts) directory.
 
-11. rebuild on R 3.6.0
+### Demo script for network generation 
+Summary of steps in pipeline_network_demo1.R:
 
-# Install
++ Step1: load in gene expression datasets for network construction (exp-load)
++ Step2: normalization for the exp dataset (exp-QC)
++ Step3: check sample cluster info, optional (exp-cluster)
++ Step4: prepare [SJARACNE](https://github.com/jyyulab/SJARACNe) (sjaracne-prep)
 
-## remote install (not available yet)
+### Demo script for network-based analysis
+Summary of steps in pipeline_analysis_demo1.R:
 
-```R
-library(devtools)
-library(BiocManager)
-# set repos, for R version 3.6.0, Bioconductor version 3.9
-local({
-  r <- getOption("repos")
-  r["CRAN"] <- "https://cran.rstudio.com/"
-  r["BioCsoft"] <- "https://bioconductor.org/packages/3.9/bioc"
-  r["BioCann"] <- "https://bioconductor.org/packages/3.9/data/annotation"
-  r["BioCexp"] <- "https://bioconductor.org/packages/3.9/data/experiment"
-  options(repos = r)
-})
++ Step1: load in gene expression datasets for analysis (exp-load,exp-cluster,exp-QC)
++ Step2: activity calculation (act-prep,act-get)
++ Step3: get DE/DA (act-DA)
++ Step4: generate master table (ms-tab)
 
-devtools::install_github("jyyulab/NetBID-dev",ref='master',dependencies='Depends') 
-```
+### Demo script for the following analyses, mainly focus on visualization
+Questions that the analyses in analysis_and_plot_demo1.R help to answer:
 
-or download the release version from https://github.com/jyyulab/NetBID-dev/releases/download/0.1.2/NetBID2_0.1.2.tar.gz
++ Part I: More details about the top drivers
+	1. How to get the top drivers with significant differential activity (DA) in the comparison between G4 vs. other subtypes?
+	2. How to interpret the significance of top DA drivers?
+	3. What is the expression/activity pattern of these top DA drivers across sample subtypes?
+	4. What are the biological functions of these top DA drivers?
+	5. What are the biological functions of the target genes of these top DA drivers?
 
-## local install
++ Part II: More details about the selected driver
+	1. How to interpret the significance of the selected driver?
+	2. How to visualize the network structure of the selected driver?
+	3. What is the expression/activity of this selected driver across subtypes of sample?
+	4. What are the functions of the target genes of this selected driver?
 
-pull the repos from github and install locally:
-
-```R
-devtools::install(pkg='.',dependencies=TRUE) ## Install the package with dependencies.
-devtools::install_deps(pkg = ".", dependencies = TRUE) ## Install package dependencies if needed.
-```
-
-download the directory to your workspace and then run:
-
-```R
-devtools::install_local('NetBID2_0.1.2.tar.gz') ## 
-```
-
-# Manual & Tutorial
-
-manual: NetBID2_0.1.2.pdf
-
-tutorial: https://jyyulab.github.io/NetBID-dev/
-
-# Demo
-in demo_scripts/ directory
-
-## demo scripts for network generation 
-pipeline_network_demo1.R
-* Step1: load in gene expression datasets for network construction (exp-load)
-* Step2: normalization for the exp dataset (exp-QC)
-* Step3: check sample cluster info, optional (exp-cluster)
-* Step4: prepare SJARACNE (sjaracne-prep)
-
-## demo scripts for network-based analysis
-pipeline_analysis_demo1.R
-* Step1: load in gene expression datasets for analysis (exp-load,exp-cluster,exp-QC)
-* Step2: activity calculation (act-prep,act-get)
-* Step3: get DE/DA (act-DA)
-* Step4: generate master table (ms-tab)
-
-## demo scripts for following analysis, mainly focus on visualization
-analysis_and_plot_demo1.R
-
-Part I: More details about the top drivers
-
-QI.1: How to get the top drivers with significant differential activity (DA) in the comparison between G4 vs. other subtypes ?
-
-QI.2: How to interpret the significance of top DA drivers ?
-
-QI.3: What is the expression/activity pattern of these top DA drivers across sample subtypes?
-
-QI.4: What are the biological functions of these top DA drivers ?
-
-QI.5: What are the biological functions of the target genes of these top DA drivers ?
-
-Part II: More details about the selected driver
-
-QII.1: How to interpret the significance of the selected driver ?
-
-QII.2: How to visualize the network structure of the selected driver ?
-
-QII.3: What is the expression/activity of this selected driver across subtypes of sample ?
-
-QII.4: What are the functions of the target genes of this selected driver ?
-
-Part III: Other analyses NetBID2 can do
-
-QIII.1: What are the activities of the curated gene sets across all samples ?
-
-QIII.2: How to find drivers share significantly overlapped target genes ?
-
-Q&A: How to modify the figure size created by draw. functions ?
++ Part III: Other analyses
+	1. What are the activities of the curated gene sets across all samples?
+	2. How to find drivers share significantly overlapped target genes?
 

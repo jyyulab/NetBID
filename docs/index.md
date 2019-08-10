@@ -1,16 +1,16 @@
 ---
 layout: default
-title: NetBID2
+title: NetBID 2.0
 nav_order: 1
-description: "NetBID2 overview and installation"
+description: "NetBID 2.0 overview and installation"
 permalink: /
 ---
 
       
-# NetBID2: data-driven Network-based Bayesian Inference of Drivers, Version 2
+# NetBID 2.0: Data-driven **Net**work-based **B**ayesian **I**nference of **D**rivers
 {: .fs-9 }
 
-Online tutorial and documentation of NetBID2.
+Documentation and Guided Analyses
 {: .fs-6 .fw-300 }
 
 [Get started now](#getting-started){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 } [View it on GitHub](https://github.com/jyyulab/NetBID-dev){: .btn .fs-5 }
@@ -19,12 +19,9 @@ Online tutorial and documentation of NetBID2.
 
 ## Overview
 
-NetBID is a data-driven system biology pipeline, using data-driven network-based Bayesian inference approach to find drivers from transcriptomics, proteomics and phosphoproteomics data.
+NetBID is a data-driven system biology pipeline, using data-driven network-based Bayesian inference approach to find drivers from transcriptomics, proteomics and phosphoproteomics data, where the drivers can be either transcription facotrs (**TF**) or signaling factors (**SIG**).
 
-The drivers can be either transcription facotrs (**TF**) or signaling factors (**SIG**).
-
-NetBID2 is the upgraded second version of NetBID. 
-It inherites all the main functions from NetBID, and provides many more functions and pipelines to perform an advanced end-to-end NetBID analysis.
+NetBID 2.0 is an upgraded version of [NetBID 1.0](https://github.com/jyyulab/NetBID/releases/tag/1.0.0) that has been published in [Nature]((https://www.nature.com/articles/s41586-018-0177-0)) in 2018. NetBID 2.0 inherites all the main functions from NetBID 1.0, and provides many more functions and pipelines to perform advanced end-to-end analyses.
 
 **More data processing functions:** 
 
@@ -61,11 +58,29 @@ R, version >= 3.6.0
 [Pre-request R packages](docs/pre_request)
 
 
-### Two ways to install NetBID2 R package
+### Install a released R package
 
-- From github,
+Download a released version from [https://github.com/jyyulab/NetBID/releases](https://github.com/jyyulab/NetBID/releases) and run:
 
 ```R
+devtools::install_local('NetBID2_2.0.1.tar.gz')
+```
+
+
+### Install from github master branch
+Clone the repository and install locally:
+
+```R
+devtools::install(pkg='.',dependencies=TRUE) ## Install the package with dependencies.
+devtools::install_deps(pkg = ".", dependencies = TRUE) ## Install package dependencies if needed.
+```
+
+Install without cloning the repository
+
+```R
+library(devtools)
+library(BiocManager)
+# set repos, for R version 3.6.0, Bioconductor version 3.9
 local({
   r <- getOption("repos")
   r["CRAN"] <- "https://cran.rstudio.com/"
@@ -74,22 +89,15 @@ local({
   r["BioCexp"] <- "https://bioconductor.org/packages/3.9/data/experiment"
   options(repos = r)
 })
-library(devtools)
-library(BiocManager)
+
 devtools::install_github("jyyulab/NetBID-dev",ref='master',dependencies='Depends') 
-```
-
-- From source package [NetBID2_0.1.2.tar.gz](https://github.com/jyyulab/NetBID-dev/releases/download/0.1.2/NetBID2_0.1.2.tar.gz),
-
-```R
-devtools::install_local('NetBID2_0.1.2.tar.gz')
 ```
 
 ---
 
 ## Design manual
 
-The manual of all the NetBID2 functions is linked here [NetBID2_0.1.2.pdf](https://github.com/jyyulab/NetBID-dev/blob/master/NetBID2_0.1.2.pdf). 
+The manual of all the NetBID2 functions is linked here [NetBID_manual.pdf](https://github.com/jyyulab/NetBID-dev/blob/master/NetBID_manual.pdf). 
 Every function has its own demo scripts to demonstrate its functionality.
 
 All these 70 functions can be grouped into their corresponding function modules,
