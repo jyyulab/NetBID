@@ -1,44 +1,21 @@
-Package: NetBID2
+Package: NetBID
 Type: Package
-Title: Network-based Bayesian Inference of Drivers, version 2
-Version: 0.1.2
-Authors@R: person('Xinran', 'Dong', email = 'xinran.dong@stjude.org', role = c('aut', 'cre'))
-Maintainer@R: person('Xinran', 'Dong', email = 'xinran.dong@stjude.org')
-Description: An integrative systems biology algorithm to infer drivers of phenotype based on data-driven context-specific network and Bayesian inference.
-License: GPL (>= 2)
+Title: Network-based Bayesian Inference of Drivers
+Version: 0.1.0
+Authors@R: person("Jiyang", "Yu", email = "jiyang.yu@stjude.org", role = c("aut", "cre"))
+Maintainer@R: person("Jiyang", "Yu", email = "jiyang.yu@stjude.org")
+Description: A integrative systems biolgy algorithm to infer driers of phenotype based on data-driven context-specific network and Bayesian inference.
+License: Apache 2.0
 Encoding: UTF-8
 LazyData: true
 Depends: 
-    R (>= 3.6.0),
-    Matrix (>= 1.2-17),
-    SummarizedExperiment (>= 1.14.0),
-    lme4 (>= 1.1-21),
-    Biobase (>= 2.38.0),
-    GEOquery (>= 2.46.15),
-    limma (>= 3.34.9),
-    impute (>= 1.52.0),
-    tximport (>= 1.6.0),
-    DESeq2 (>= 1.20.0),
-    ConsensusClusterPlus (>= 1.38.0),
-    aricode (>= 0.1.1),
-    igraph (>= 1.1.2),
-    RColorBrewer (>= 1.1-2),
-    plot3D (>= 1.1.1),
-    plotrix (>= 3.7-3),
-    umap (>= 0.2.0.0),
-    ComplexHeatmap (>= 1.17.1),
-    ordinal (>= 2019.4-25),
-    MCMCglmm (>= 2.26),
-    arm (>= 1.10-1),
-    reshape (>= 0.8.7),
-    biomaRt (>= 2.34.2),
-    GSVA (>= 1.22.4),
-    msigdbr (>= 6.2.1),
-    openxlsx (>= 4.1.0),
-    rmarkdown (>= 1.11),
-    kableExtra (>= 1.1.0)
-Imports:
-    rhdf5,
-    plotly
+    R (>= 3.4)
+Imports: 
+    arm,
+    dplyr,
+    Biobase,
+    Rcpp
 Suggests:
-RoxygenNote: 6.1.1
+    MCMCglmm,
+    lme4
+RoxygenNote: 6.0.1.9000
