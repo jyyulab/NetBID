@@ -1,13 +1,13 @@
 ---
 layout: default
-title: NetBID 2.0
+title: Overview and Installation
 nav_order: 1
 description: "NetBID 2.0 overview and installation"
 permalink: /
 ---
 
       
-# NetBID 2.0: Data-driven **Net**work-based **B**ayesian **I**nference of **D**rivers
+# NetBID 2.0: Data-driven Network-based Bayesian Inference of Drivers
 {: .fs-9 }
 
 Documentation and Guided Analyses
