@@ -11,7 +11,7 @@ Maintainer: Xinran Dong <xinran.dong@foxmail.com>,
             Jiyang Yu <jiyang.yu@stjude.org>, 
             Liang Ding <liang.ding@stjude.org>                
 Description: An integrative systems biology algorithm to infer drivers of phenotype based on data-driven context-specific network and Bayesian inference.
-License: Apache 2.0
+License: file LICENSE
 Encoding: UTF-8
 LazyData: true
 Depends: 
