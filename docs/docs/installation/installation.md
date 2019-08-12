@@ -23,8 +23,20 @@ Download a released version from [https://github.com/jyyulab/NetBID/releases](ht
 devtools::install_local('NetBID2_2.0.1.tar.gz')
 ```
 
-
 ### Install from github master branch
+
+```R
+# set repos, for R version 3.6.0, Bioconductor version 3.9
+local({
+  r <- getOption("repos")
+  r["CRAN"] <- "https://cran.rstudio.com/"
+  r["BioCsoft"] <- "https://bioconductor.org/packages/3.9/bioc"
+  r["BioCann"] <- "https://bioconductor.org/packages/3.9/data/annotation"
+  r["BioCexp"] <- "https://bioconductor.org/packages/3.9/data/experiment"
+  options(repos = r)
+})
+```
+
 Clone the repository and install locally:
 
 ```R
@@ -35,18 +47,6 @@ devtools::install_deps(pkg = ".", dependencies = TRUE) ## Install package depend
 Install without cloning the repository
 
 ```R
-library(devtools)
-library(BiocManager)
-# set repos, for R version 3.6.0, Bioconductor version 3.9
-local({
-  r <- getOption("repos")
-  r["CRAN"] <- "https://cran.rstudio.com/"
-  r["BioCsoft"] <- "https://bioconductor.org/packages/3.9/bioc"
-  r["BioCann"] <- "https://bioconductor.org/packages/3.9/data/annotation"
-  r["BioCexp"] <- "https://bioconductor.org/packages/3.9/data/experiment"
-  options(repos = r)
-})
-
 devtools::install_github("jyyulab/NetBID",ref='master',dependencies='Depends') 
 ```
 

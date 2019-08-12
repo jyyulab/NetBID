@@ -1,7 +1,7 @@
 ---
 title: "- Advanced analysis"
 layout: default
-nav_order: 6
+nav_order: 8
 permalink:  /docs/advanced_analysis
 ---
 

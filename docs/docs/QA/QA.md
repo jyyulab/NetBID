@@ -1,7 +1,7 @@
 ---
 layout: default
-title: Navigation&FAQ
-nav_order: 8
+title: "- Navigation"
+nav_order: 5
 has_children: false
 permalink: ../docs/QA
 ---

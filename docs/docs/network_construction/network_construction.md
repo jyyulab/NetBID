@@ -1,7 +1,7 @@
 ---
 layout: default
 title: "- Network construction"
-nav_order: 4
+nav_order: 6
 permalink: /docs/network_construction
 ---
 
