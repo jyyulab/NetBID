@@ -2,7 +2,6 @@
 layout: default
 title: "- Dependency"
 nav_order: 3
-has_children: false
 permalink: /docs/pre_request
 ---
 

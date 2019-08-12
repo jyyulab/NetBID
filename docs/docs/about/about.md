@@ -2,7 +2,6 @@
 layout: default
 title:  About
 nav_order: 9
-has_children: false
 permalink: /docs/about
 ---
 
