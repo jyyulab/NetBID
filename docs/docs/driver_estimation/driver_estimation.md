@@ -1,12 +1,11 @@
 ---
 layout: default
-title: Driver estimation
-nav_order: 3
-has_children: false
-permalink: /docs/driver_estimation
+title: "- Driver estimation"
+nav_order: 5
+permalink:  /docs/driver_estimation
 ---
 
-# Driver Estimation
+## Driver Estimation
 
 The purpose of this part: 
 

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+
+<html lang="en-us">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+  
+
+  <title>Installation - </title>
+  <link rel="stylesheet" href="http://localhost:4000/assets/css/just-the-docs.css">
+  
+  <script type="text/javascript" src="http://localhost:4000/assets/js/vendor/lunr.min.js"></script>
+  
+  <script type="text/javascript" src="http://localhost:4000/assets/js/just-the-docs.js"></script>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+
+<body>
+
+  <div class="page-wrap">
+    <div class="side-bar">
+      <a href="http://localhost:4000" class="site-title fs-6 lh-tight"></a>
+      <span class="fs-3"><button class="js-main-nav-trigger navigation-list-toggle btn btn-outline" type="button" data-text-toggle="Hide">Menu</button></span>
+      <div class="navigation main-nav js-main-nav">
+        <nav role="navigation" aria-label="Main navigation">
+  <ul class="navigation-list">
+    
+    
+      
+        
+          <li class="navigation-list-item">
+            
+            <a href="http://localhost:4000/" class="navigation-list-link">Overview</a>
+            
+          </li>
+        
+      
+    
+      
+        
+          <li class="navigation-list-item active">
+            
+            <a href="http://localhost:4000/docs/installation" class="navigation-list-link active">Installation</a>
+            
+          </li>
+        
+      
+    
+      
+        
+          <li class="navigation-list-item">
+            
+            <a href="http://localhost:4000/docs/user_guide" class="navigation-list-link">User Guide</a>
+            
+          </li>
+        
+      
+    
+      
+        
+          <li class="navigation-list-item">
+            
+            <a href="http://localhost:4000/docs/network_construction" class="navigation-list-link">- Network construction</a>
+            
+          </li>
+        
+      
+    
+      
+        
+          <li class="navigation-list-item">
+            
+            <a href="http://localhost:4000/docs/driver_estimation" class="navigation-list-link">- Driver estimation</a>
+            
+          </li>
+        
+      
+    
+      
+        
+          <li class="navigation-list-item">
+            
+            <a href="http://localhost:4000/docs/advanced_analysis" class="navigation-list-link">- Advanced analysis</a>
+            
+          </li>
+        
+      
+    
+      
+        
+          <li class="navigation-list-item">
+            
+            <a href="http://localhost:4000/docs/pre_request" class="navigation-list-link">Pre-requested</a>
+            
+          </li>
+        
+      
+    
+      
+        
+          <li class="navigation-list-item">
+            
+            <a href="http://localhost:4000/docs/QA" class="navigation-list-link">Navigation&FAQ</a>
+            
+          </li>
+        
+      
+    
+      
+        
+          <li class="navigation-list-item">
+            
+            <a href="http://localhost:4000/docs/about" class="navigation-list-link">About</a>
+            
+          </li>
+        
+      
+    
+  </ul>
+</nav>
+
+      </div>
+      <footer role="contentinfo" class="site-footer">
+        <p class="text-small text-grey-dk-000 mb-0">This site uses <a href="https://github.com/pmarsceill/just-the-docs">Just the Docs</a>, a documentation theme for Jekyll.</p>
+      </footer>
+    </div>
+    <div class="main-content-wrap">
+      <div class="page-header">
+        <div class="main-content">
+          
+          <div class="search js-search">
+            <div class="search-input-wrap">
+              <input type="text" class="js-search-input search-input" tabindex="0" placeholder="Search " aria-label="Search " autocomplete="off">
+              <svg width="14" height="14" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg" class="search-icon"><title>Search</title><g fill-rule="nonzero"><path d="M17.332 20.735c-5.537 0-10-4.6-10-10.247 0-5.646 4.463-10.247 10-10.247 5.536 0 10 4.601 10 10.247s-4.464 10.247-10 10.247zm0-4c3.3 0 6-2.783 6-6.247 0-3.463-2.7-6.247-6-6.247s-6 2.784-6 6.247c0 3.464 2.7 6.247 6 6.247z"/><path d="M11.672 13.791L.192 25.271 3.02 28.1 14.5 16.62z"/></g></svg>
+            </div>
+            <div class="js-search-results search-results-wrap"></div>
+          </div>
+          
+          
+        </div>
+      </div>
+      <div class="main-content js-main-content" tabindex="0">
+        
+          
+        
+        <div id="main-content" class="page-content" role="main">
+          <h2 id="installation">Installation</h2>
+
+<h3 id="dependencies">Dependencies</h3>
+
+<p>R, version &gt;= 3.6.0</p>
+
+<p><a href="docs/pre_request">Pre-request R packages</a></p>
+
+<h3 id="install-a-released-r-package">Install a released R package</h3>
+
+<p>Download a released version from <a href="https://github.com/jyyulab/NetBID/releases">https://github.com/jyyulab/NetBID/releases</a> and run:</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">devtools</span><span class="o">::</span><span class="n">install_local</span><span class="p">(</span><span class="s1">'NetBID2_2.0.1.tar.gz'</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<h3 id="install-from-github-master-branch">Install from github master branch</h3>
+<p>Clone the repository and install locally:</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">devtools</span><span class="o">::</span><span class="n">install</span><span class="p">(</span><span class="n">pkg</span><span class="o">=</span><span class="s1">'.'</span><span class="p">,</span><span class="n">dependencies</span><span class="o">=</span><span class="kc">TRUE</span><span class="p">)</span><span class="w"> </span><span class="c1">## Install the package with dependencies.</span><span class="w">
+</span><span class="n">devtools</span><span class="o">::</span><span class="n">install_deps</span><span class="p">(</span><span class="n">pkg</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"."</span><span class="p">,</span><span class="w"> </span><span class="n">dependencies</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">TRUE</span><span class="p">)</span><span class="w"> </span><span class="c1">## Install package dependencies if needed.</span><span class="w">
+</span></code></pre></div></div>
+
+<p>Install without cloning the repository</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">library</span><span class="p">(</span><span class="n">devtools</span><span class="p">)</span><span class="w">
+</span><span class="n">library</span><span class="p">(</span><span class="n">BiocManager</span><span class="p">)</span><span class="w">
+</span><span class="c1"># set repos, for R version 3.6.0, Bioconductor version 3.9</span><span class="w">
+</span><span class="n">local</span><span class="p">({</span><span class="w">
+  </span><span class="n">r</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">getOption</span><span class="p">(</span><span class="s2">"repos"</span><span class="p">)</span><span class="w">
+  </span><span class="n">r</span><span class="p">[</span><span class="s2">"CRAN"</span><span class="p">]</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="s2">"https://cran.rstudio.com/"</span><span class="w">
+  </span><span class="n">r</span><span class="p">[</span><span class="s2">"BioCsoft"</span><span class="p">]</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="s2">"https://bioconductor.org/packages/3.9/bioc"</span><span class="w">
+  </span><span class="n">r</span><span class="p">[</span><span class="s2">"BioCann"</span><span class="p">]</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="s2">"https://bioconductor.org/packages/3.9/data/annotation"</span><span class="w">
+  </span><span class="n">r</span><span class="p">[</span><span class="s2">"BioCexp"</span><span class="p">]</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="s2">"https://bioconductor.org/packages/3.9/data/experiment"</span><span class="w">
+  </span><span class="n">options</span><span class="p">(</span><span class="n">repos</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">r</span><span class="p">)</span><span class="w">
+</span><span class="p">})</span><span class="w">
+
+</span><span class="n">devtools</span><span class="o">::</span><span class="n">install_github</span><span class="p">(</span><span class="s2">"jyyulab/NetBID"</span><span class="p">,</span><span class="n">ref</span><span class="o">=</span><span class="s1">'master'</span><span class="p">,</span><span class="n">dependencies</span><span class="o">=</span><span class="s1">'Depends'</span><span class="p">)</span><span class="w"> 
+</span></code></pre></div></div>
+
+<hr />
+
+
+          
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

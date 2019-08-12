@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+
+<html lang="en-us">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+  
+
+  <title>User Guide - </title>
+  <link rel="stylesheet" href="http://localhost:4000/assets/css/just-the-docs.css">
+  
+  <script type="text/javascript" src="http://localhost:4000/assets/js/vendor/lunr.min.js"></script>
+  
+  <script type="text/javascript" src="http://localhost:4000/assets/js/just-the-docs.js"></script>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+
+<body>
+
+  <div class="page-wrap">
+    <div class="side-bar">
+      <a href="http://localhost:4000" class="site-title fs-6 lh-tight"></a>
+      <span class="fs-3"><button class="js-main-nav-trigger navigation-list-toggle btn btn-outline" type="button" data-text-toggle="Hide">Menu</button></span>
+      <div class="navigation main-nav js-main-nav">
+        <nav role="navigation" aria-label="Main navigation">
+  <ul class="navigation-list">
+    
+    
+      
+        
+          <li class="navigation-list-item">
+            
+            <a href="http://localhost:4000/" class="navigation-list-link">Overview</a>
+            
+          </li>
+        
+      
+    
+      
+        
+          <li class="navigation-list-item">
+            
+            <a href="http://localhost:4000/docs/installation" class="navigation-list-link">Installation</a>
+            
+          </li>
+        
+      
+    
+      
+        
+          <li class="navigation-list-item active">
+            
+            <a href="http://localhost:4000/docs/user_guide" class="navigation-list-link active">User Guide</a>
+            
+          </li>
+        
+      
+    
+      
+        
+          <li class="navigation-list-item">
+            
+            <a href="http://localhost:4000/docs/network_construction" class="navigation-list-link">- Network construction</a>
+            
+          </li>
+        
+      
+    
+      
+        
+          <li class="navigation-list-item">
+            
+            <a href="http://localhost:4000/docs/driver_estimation" class="navigation-list-link">- Driver estimation</a>
+            
+          </li>
+        
+      
+    
+      
+        
+          <li class="navigation-list-item">
+            
+            <a href="http://localhost:4000/docs/advanced_analysis" class="navigation-list-link">- Advanced analysis</a>
+            
+          </li>
+        
+      
+    
+      
+        
+          <li class="navigation-list-item">
+            
+            <a href="http://localhost:4000/docs/pre_request" class="navigation-list-link">Pre-requested</a>
+            
+          </li>
+        
+      
+    
+      
+        
+          <li class="navigation-list-item">
+            
+            <a href="http://localhost:4000/docs/QA" class="navigation-list-link">Navigation&FAQ</a>
+            
+          </li>
+        
+      
+    
+      
+        
+          <li class="navigation-list-item">
+            
+            <a href="http://localhost:4000/docs/about" class="navigation-list-link">About</a>
+            
+          </li>
+        
+      
+    
+  </ul>
+</nav>
+
+      </div>
+      <footer role="contentinfo" class="site-footer">
+        <p class="text-small text-grey-dk-000 mb-0">This site uses <a href="https://github.com/pmarsceill/just-the-docs">Just the Docs</a>, a documentation theme for Jekyll.</p>
+      </footer>
+    </div>
+    <div class="main-content-wrap">
+      <div class="page-header">
+        <div class="main-content">
+          
+          <div class="search js-search">
+            <div class="search-input-wrap">
+              <input type="text" class="js-search-input search-input" tabindex="0" placeholder="Search " aria-label="Search " autocomplete="off">
+              <svg width="14" height="14" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg" class="search-icon"><title>Search</title><g fill-rule="nonzero"><path d="M17.332 20.735c-5.537 0-10-4.6-10-10.247 0-5.646 4.463-10.247 10-10.247 5.536 0 10 4.601 10 10.247s-4.464 10.247-10 10.247zm0-4c3.3 0 6-2.783 6-6.247 0-3.463-2.7-6.247-6-6.247s-6 2.784-6 6.247c0 3.464 2.7 6.247 6 6.247z"/><path d="M11.672 13.791L.192 25.271 3.02 28.1 14.5 16.62z"/></g></svg>
+            </div>
+            <div class="js-search-results search-results-wrap"></div>
+          </div>
+          
+          
+        </div>
+      </div>
+      <div class="main-content js-main-content" tabindex="0">
+        
+          
+        
+        <div id="main-content" class="page-content" role="main">
+          <h2 id="user-guide">User guide</h2>
+
+<h3 id="design-manual">Design manual</h3>
+
+<p>The manual of all the NetBID functions is linked here <a href="https://github.com/jyyulab/NetBID-dev/blob/master/NetBID_manual.pdf">NetBID_manual.pdf</a>. 
+Every function has its own demo scripts to demonstrate its functionality.</p>
+
+<p>All these 70 functions can be grouped into their corresponding function modules,</p>
+
+<p><img src="function_group.png" alt="function group" /></p>
+
+<p><strong>Here are 4 functions we think are ESSENTIAL for the NetBID pipeline management:</strong></p>
+
+<ul>
+  <li>
+    <p><code class="highlighter-rouge">NetBID.network.dir.create()</code> helps users to create an organized working directory for the network construction step in NetBID analysis. It creates a hierarchcial working directory and returns a list containing this directory information.</p>
+  </li>
+  <li>
+    <p><code class="highlighter-rouge">NetBID.analysis.dir.create()</code>  helps users to create an organized working directory for the driver estimation step in NetBID analysis. It also creates a hierarchcial working directory and returns a list contains this directory information.</p>
+  </li>
+  <li>
+    <p><code class="highlighter-rouge">NetBID.saveRData()</code> helps users to save complicated list object generated by certain steps of NetBID’s pipeline. This function makes an easier data/pipeline management and reference.</p>
+  </li>
+  <li>
+    <p><code class="highlighter-rouge">NetBID.loadRData()</code> pairs with <code class="highlighter-rouge">NetBID.saveRData()</code>, it reloads previous saved Rdata, so users don’t need to re-run everything.</p>
+  </li>
+</ul>
+
+<p><strong>Here are 2 list objects we think are ESSENTIAL for the NetBID pipeline analysis:</strong></p>
+
+<ul>
+  <li><code class="highlighter-rouge">network.par</code> is a variable in the <strong>network construction part</strong>. It is created by <code class="highlighter-rouge">NetBID.network.dir.create()</code> with network construction directory information wrapped inside. This list object is used to store all the important results from the network construction pipeline. It can be saved as RData and reloaded back using <code class="highlighter-rouge">NetBID.saveRData()</code> and  <code class="highlighter-rouge">NetBID.loadRData()</code>.</li>
+  <li><code class="highlighter-rouge">analysis.par</code> is a variable in the <strong>driver analysis part</strong>. It is created by <code class="highlighter-rouge">NetBID.analysis.dir.create()</code> with driver estimation directory information wrapped inside. This list object is used to store all the important results from the driver estimation pipeline. It also can be saved as RData and reloaded back using <code class="highlighter-rouge">NetBID.saveRData()</code> and  <code class="highlighter-rouge">NetBID.loadRData()</code>.</li>
+</ul>
+
+<p>The workflow of each NetBID pipeline is summarized in the figure below,</p>
+
+<p><img src="pipeline_part.png" alt="pipeline part" /></p>
+
+<p><strong>We highly suggest new users to follow the pipeline for driver analysis and visualization.</strong> Details of the NetBID pipeline is shown and explained using a demo dataset in the following tutorial.
+Of course, most functions in NetBID are still flexible to use and perform specific needs for users.</p>
+
+<h2 id="tutorial">Tutorial</h2>
+
+<p>We choose the demo dataset from GEO database: <a href="https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE116028">GSE116028</a>.</p>
+
+<p>This microarray dataset contains 13 adult medulloblastoma (MB) samples. 
+Three phenotype subgroups of adult MB have been identified from distinguishabled expression profiles, clinical features, pathological features and prognosis.
+These subgroups together with their sample numbers are, 3 SHH, 4 WNT, and 6 Group4.
+Group4 tumors in adult have significantly worse progression-free and overall survival, compared to other molecular subtypes of tumor.
+Here, the goal is to <strong>find potential drivers in Group4 compared to other subtypes using NetBID</strong>. This may relate to specific clinical feature of Group4 MB subtype.</p>
+
+<p><strong>Though the dataset in the tutorial is microarray, NetBID is also capable to analyze RNA-Seq data. We will show in the tutorial below as well.</strong></p>
+
+<p>The tutorial contains three main parts, they can be followed by order or used independently:</p>
+
+<ol>
+  <li>
+    <p><a href="/docs/network_construction">Network construction</a></p>
+  </li>
+  <li>
+    <p><a href="/docs/driver_estimation">Driver estimation (master table generation)</a></p>
+  </li>
+  <li>
+    <p><a href="/docs/advanced_analysis">Advanced analysis (result visualization)</a></p>
+  </li>
+</ol>
+
+
+
+          
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

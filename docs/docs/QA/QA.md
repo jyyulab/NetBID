@@ -1,12 +1,14 @@
 ---
 layout: default
 title: Navigation&FAQ
-nav_order: 5
+nav_order: 8
 has_children: false
 permalink: ../docs/QA
 ---
 
-## Network Construction
+## Navigation & FAQ
+
+### Network Construction
 
 - [Step 0: Preparations](../docs/network_construction#step-0-preparations)
 - [Step 1: Load in gene expression datasets for network construction (exp-load)](../docs/network_construction#step-1-load-in-gene-expression-datasets-for-network-construction-exp-load)
@@ -20,7 +22,7 @@ permalink: ../docs/QA
 - [Step 4: Prepare files to run SJARACNe (sjaracne-prep)](../docs/network_construction#step-4-prepare-files-to-run-sjaracne-sjaracne-prep)
    - [Q&A: ID conversion](../docs/network_construction#id-conversion)
    
-## Driver Estimation
+### Driver Estimation
 
 - [Step 0: Preparations](../docs/driver_estimation#step-0-preparations)
 - [Step 1: Load in the expression dataset for analysis (exp-load, exp-cluster, exp-QC)](../docs/driver_estimation#step-1-load-in-the-expression-dataset-for-analysis-exp-load-exp-cluster-exp-qc)
@@ -31,7 +33,7 @@ permalink: ../docs/QA
 - [Step 4: Generate a master table for drivers (ms-tab)](../docs/driver_estimation#step-4-generate-a-master-table-for-drivers-ms-tab)
     - [Q&A: How to interpret and use the master table ?](../docs/driver_estimation#how-to-interpret-and-use-the-master-table-)
 
-## Advanced analysis
+### Advanced analysis
 
 - [Preparations](../docs/advanced_analysis#preparations)
 - [Part I: More details about the top drivers](../docs/advanced_analysis#part-i-more-details-about-the-top-drivers)

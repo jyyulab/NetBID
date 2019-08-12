@@ -7,7 +7,7 @@ NetBID 2.0 is an upgraded version of [NetBID 1.0](https://github.com/jyyulab/Net
 
 Require ```R >= 3.6.0```. Other dependencies can be found in table [https://jyyulab.github.io/NetBID/docs/pre_request](https://jyyulab.github.io/NetBID/docs/pre_request).
 
-Installation instructions are in [Installation section](https://jyyulab.github.io/NetBID/) of the documentation.
+Installation instructions are in [Installation section](https://jyyulab.github.io/NetBID/docs/installation) of the documentation.
 
 
 # Documentation & Guided Analyses
@@ -16,7 +16,7 @@ Instructions, documentation, and tutorials can be found at:
 
 + [https://jyyulab.github.io/NetBID/](https://jyyulab.github.io/NetBID/)
 
-A PDF manual [NetBID_manual.pdf](https://github.com/jyyulab/NetBID/blob/master/NetBID_manual.pdf) can be found in the repository.
+A PDF manual [NetBID_manual.pdf](https://github.com/jyyulab/NetBID/blob/master/NetBID2_manual.pdf) can be found in the repository.
 
 
 # Demos

@@ -1,12 +1,12 @@
 ---
 layout: default
 title: Pre-requested
-nav_order: 6
+nav_order: 8
 has_children: false
 permalink: /docs/pre_request
 ---
 
-# Pre-requested R packages
+## Pre-requested R packages
 
 **R version >= 3.6.0**
 

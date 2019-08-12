@@ -1,12 +1,11 @@
 ---
-title: "Advanced analysis"
+title: "- Advanced analysis"
 layout: default
-nav_order: 4
-permalink: /docs/advanced_analysis
-has_children: no
+nav_order: 6
+permalink:  /docs/advanced_analysis
 ---
 
-# Advanced analysis and visualization
+## Advanced analysis and visualization
 
 The purpose of this part: 
 

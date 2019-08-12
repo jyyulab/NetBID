@@ -1,15 +1,11 @@
 ---
-title: "Network construction"
 layout: default
-nav_order: 2
-output:
-  html_document:
-    df_print: paged
+title: "- Network construction"
+nav_order: 4
 permalink: /docs/network_construction
-has_children: no
 ---
 
-# Network Construction
+## Network Construction
 
 The purpose of this part:
 
@@ -35,7 +31,6 @@ The complete step-by-step demo script for network construction can be found here
    - [Q&A: ID conversion](#id-conversion)
    
 ----------
-
 
 ## Step 0: Preparations
 **Purpose: create an organized working directory for the network construction step in NetBID2 analysis.**
@@ -430,7 +425,7 @@ draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,use_int),
                 pre_define=c('WNT'='blue','SHH'='red','G4'='green'))
 ```
 
-<iframe width="600" height="400" frameborder="0" scrolling="no" src="network_construction/interactive.html"></iframe> 
+<iframe width="600" height="400" frameborder="0" scrolling="no" src="interactive.html"></iframe> 
 
 Above is the interactive plot, user could mouse over to check the sample label for each points.
 The text for each point is organized as "sample_name:observed_label:predicted_label".
