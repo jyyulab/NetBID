@@ -1,17 +1,11 @@
 Package: NetBID2
 Type: Package
-Title: data-driven Network-based Bayesian Inference of Drivers
-Version: 2.0.1
-Authors@R: c(person("Xinran", "Dong", role = c("aut", "cre"),
-                     email = "xinran.dong@foxmail.com"),
-              person("Jiyang", "Yu", role = "aut",email = "jiyang.yu@stjude.org"))
-Author: Xinran Dong [aut,cre],
-        Jiyang Yu [aut]
-Maintainer: Xinran Dong <xinran.dong@foxmail.com>, 
-            Jiyang Yu <jiyang.yu@stjude.org>, 
-            Liang Ding <liang.ding@stjude.org>                
+Title: Network-based Bayesian Inference of Drivers, version 2
+Version: 0.1.2
+Authors@R: person('Xinran', 'Dong', email = 'xinran.dong@stjude.org', role = c('aut', 'cre'))
+Maintainer@R: person('Xinran', 'Dong', email = 'xinran.dong@stjude.org')
 Description: An integrative systems biology algorithm to infer drivers of phenotype based on data-driven context-specific network and Bayesian inference.
-License: file LICENSE
+License: GPL (>= 2)
 Encoding: UTF-8
 LazyData: true
 Depends: 
