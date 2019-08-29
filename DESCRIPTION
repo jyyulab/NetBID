@@ -36,9 +36,9 @@ Depends:
     msigdbr (>= 6.2.1),
     openxlsx (>= 4.1.0),
     rmarkdown (>= 1.11),
-    kableExtra (>= 1.1.0)
+    kableExtra (>= 1.1.0),
+    rhdf5 (>= 2.28.0),
+    plotly (>= 4.9.0)
 Imports:
-    rhdf5,
-    plotly
 Suggests:
 RoxygenNote: 6.1.1
