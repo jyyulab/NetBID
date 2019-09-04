@@ -425,7 +425,7 @@ draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,use_int),
                 pre_define=c('WNT'='blue','SHH'='red','G4'='green'))
 ```
 
-<iframe width="600" height="400" frameborder="0" scrolling="no" src="interactive.html"></iframe> 
+<iframe width="600" height="400" frameborder="0" scrolling="no" src="/interactive.html"></iframe> 
 
 Above is the interactive plot, user could mouse over to check the sample label for each points.
 The text for each point is organized as "sample_name:observed_label:predicted_label".
