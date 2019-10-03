@@ -119,12 +119,12 @@ Installing and setting the environment for pandoc, one can call `Sys.setenv(RSTU
 ```R
 # QC for the raw eset
 draw.eset.QC(network.par$net.eset,outdir=network.par$out.dir.QC,intgroup=NULL,do.logtransform=FALSE,prefix='beforeQC_',
-             pre_define=c('WNT'='blue','SHH'='red','G4'='green'),pca_plot_type='2D.interactive')
+             pre_define=c('WNT'='blue','SHH'='red','G4'='green'),emb_plot_type='2D.interactive')
 ```
 
 **- What information can you get from the HTML QC report?**  ([before_QC.html](beforeQC_QC.html))
   - A table. It contains phenotype information of samples. Descriptive variables, such as number of samples and genes (probes/transcripts/...);
-  - A heatmap and a PCA biplot. All samples will be clustered using the raw expression values across all the genes as features. The aim of this is to check possible mis-labeled samples and the occurrence of batch effects; 
+  - A heatmap and a PCA/MDS/UMAP biplot. All samples will be clustered using the raw expression values across all the genes as features. The aim of this is to check possible mis-labeled samples and the occurrence of batch effects; 
   - A correlation plot for all sample pairs. This helps to check the correlation within group and between groups. 
   - A density plot. It shows the range and the distribution of the expression values. This also helps to judge if the original dataset has been log transformed;
 
@@ -273,14 +273,14 @@ net_eset <- generate.eset(exp_mat=mat, phenotype_info=pData(network.par$net.eset
 network.par$net.eset <- net_eset
 # QC for the normalized eset
 draw.eset.QC(network.par$net.eset,outdir=network.par$out.dir.QC,intgroup=NULL,do.logtransform=FALSE,prefix='afterQC_',
-             pre_define=c('WNT'='blue','SHH'='red','G4'='green'),pca_plot_type='2D.interactive')
+             pre_define=c('WNT'='blue','SHH'='red','G4'='green'),emb_plot_type='2D.interactive')
 # Save Step 2 network.par as RData
 NetBID.saveRData(network.par = network.par,step='exp-QC')
 ```
 
 **- What information can you get from the HTML QC report after QC steps?** ([after_QC.html](afterQC_QC.html))
   - A table. Compare the table with the one in Step 1. To see if a large amount of genes/samples has been removed;
-  - A heatmap and a PCA biplot. All samples will be clustered using the normalized expression values across all the genes as features. The aim of this is to check possible mis-labeled samples;
+  - A heatmap and a PCA/MDS/UMAP biplot. All samples will be clustered using the normalized expression values across all the genes as features. The aim of this is to check possible mis-labeled samples;
   - A correlation plot for all sample pairs. This helps to check the correlation within group and between groups. 
   - A density plot. Compare the table with the one in Step 1. To see if the low expressed genes have been removed;
 
@@ -344,7 +344,7 @@ tmp_net_eset <- generate.eset(exp_mat=mat, phenotype_info=pData(network.par$net.
                           feature_info=fData(network.par$net.eset)[rownames(mat),], annotation_info=annotation(network.par$net.eset))
 # QC plot for IQR filtered eset
 draw.eset.QC(tmp_net_eset,outdir=network.par$out.dir.QC,intgroup=NULL,do.logtransform=FALSE,prefix='Cluster_',
-             pre_define=c('WNT'='blue','SHH'='red','G4'='green'),pca_plot_type='2D.interactive')
+             pre_define=c('WNT'='blue','SHH'='red','G4'='green'),emb_plot_type='2D.interactive')
 ```
 
 The following scripts provide various ways to visualize and check if the IQR filter selected genes can be used to perform good sample cluster analysis (observed labels vs. predicted labels). 
@@ -366,7 +366,7 @@ intgroup <- get_int_group(network.par$net.eset)
 ```
 
 **Second, perform clustering analysis on all "cluster-meaningful" phenotype columns and draw plots.**
-for each phenotype column in the `intgroup`, user can choose `draw.pca.kmeans()` or `draw.umap.kmeans()` to cluster samples and visualize the result between the observed label vs. the predicted label. The clustering is performed by K-means, and the result can be plotted using PCA biplot or UMAP (Uniform Manifold Approximation and Projection). 
+for each phenotype column in the `intgroup`, user can choose `embedding_method` from 'pca','mds' and 'umap' in `draw.emb.kmeans()` to cluster samples and visualize the result between the observed label vs. the predicted label. The clustering is performed by K-means, and the result can be plotted using PCA/MDS biplot or UMAP (Uniform Manifold Approximation and Projection). 
 User can also choose another clustering method, [MICA](https://github.com/jyyulab/scMINER/tree/master/MICA), by calling `draw.MICA()`. 
 All three functions can either return the K-value yielding the optimal result (setting `return_type='optimal'`), or all the K-values (setting `return_type='all'`) used for clustering. 
 
@@ -374,7 +374,7 @@ All three functions can either return the K-value yielding the optimal result (s
 # Cluster analysis using Kmeans and plot result using PCA biplot (pca+kmeans in 2D)
 for(i in 1:length(intgroup)){
   print(intgroup[i])
-  pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,intgroup[i]),pre_define=c('WNT'='blue','SHH'='red','G4'='green'))
+  pred_label <- draw.emb.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,intgroup[i]),pre_define=c('WNT'='blue','SHH'='red','G4'='green'))
 }
 ```
 
@@ -383,7 +383,7 @@ for(i in 1:length(intgroup)){
 
 ```R
 use_int <- 'subgroup'
-pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,use_int),plot_type='2D',pre_define=c('WNT'='blue','SHH'='red','G4'='green'))
+pred_label <- draw.emb.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,use_int),plot_type='2D',pre_define=c('WNT'='blue','SHH'='red','G4'='green'))
 ```
 
 ![sample_cluster_1](sample_cluster_1.png)
@@ -393,7 +393,7 @@ The calculated statistics on top of the right figure quantifies the similarity b
 ARI is short for "adjusted rand index", ranges from 0 to 1. Higher ARI value indicates higher similarity. For details, please check `get_clustComp()`. 
 
 ```R
-pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,use_int),plot_type='2D.ellipse',pre_define=c('WNT'='blue','SHH'='red','G4'='green'))
+pred_label <- draw.emb.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,use_int),plot_type='2D.ellipse',pre_define=c('WNT'='blue','SHH'='red','G4'='green'))
 ```
 
 ![sample_cluster_2](sample_cluster_2.png)
@@ -401,7 +401,7 @@ pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,u
 Above is a side-by-side scatter plot with an ellipse drawn around each cluster of samples. Each ellipse is marked with its cluster label.
 
 ```R
-pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,use_int),plot_type='3D',pre_define=c('WNT'='blue','SHH'='red','G4'='green'))
+pred_label <- draw.emb.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,use_int),plot_type='3D',pre_define=c('WNT'='blue','SHH'='red','G4'='green'))
 ```
 
 ![sample_cluster_4](sample_cluster_4.png)
@@ -420,7 +420,7 @@ The darker the table cell is, the more samples are gathered in the corresponding
 However, in this demo dataset, no obvious outlier samples are observed. 
 
 ```R
-draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,use_int),
+draw.emb.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,use_int),
                 plot_type='2D.interactive',
                 pre_define=c('WNT'='blue','SHH'='red','G4'='green'))
 ```

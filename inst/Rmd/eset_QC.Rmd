@@ -43,50 +43,77 @@ if('heatmap' %in% choose_plot){
 
 ```
 
-## Part II: PCA plot for samples
+## Part II: Dimension Reduction plot for samples
 
-Original expression matrix is transformed by PCA (principal component analysis) and the first two components are visualized.  
+Original expression matrix is transformed and first two components/dimensions are visualized.  
 
 ```{r Code Chunk, echo=FALSE,fig.width=12, fig.height=12}
-if('pca' %in% choose_plot){
-  if(pca_plot_type=='2D.interactive') {
+emb_plot <- intersect(choose_plot,c('pca','mds','umap'))
+if(length(emb_plot)>0){
+  if(emb_plot_type=='2D.interactive') {
     l <- htmltools::tagList()
-     for (i in 1:length(intgroup)) {
-       w1 <- unique(get_obs_label(pData(eset),intgroup[i]))
-       if(length(w1)<=6){
-                l[[i]] <- draw.pca.kmeans(use_mat,obs_label=get_obs_label(pData(eset),intgroup[i]),
-                                 verbose=FALSE,main=intgroup[i],plot_type = pca_plot_type,use_color=use_color,pre_define=pre_define)
+      for(each_emb_method in emb_plot){
+        for (i in 1:length(intgroup)) {
+             w1 <- unique(get_obs_label(pData(eset),intgroup[i]))
+              if(length(w1)<=6){
+                l[[i]] <- draw.emb.kmeans(use_mat,embedding_method=each_emb_method,obs_label=get_obs_label(pData(eset),intgroup[i]),
+                                 verbose=FALSE,main=intgroup[i],plot_type = emb_plot_type,use_color=use_color,pre_define=pre_define)
        }else{
-         message(sprintf('No support for original clusters size larger than 6 (here %s has %s unique groups), please directly call draw.pca.kmeans() or draw.2D.interactive() for visualization! ',intgroup[i],length(w1)))
+         message(sprintf('No support for original clusters size larger than 6 (here %s has %s unique groups), please directly call draw.emb.kmeans() or draw.2D.interactive() for visualization! ',intgroup[i],length(w1)))
        }
-     }
+      }
+    }
     plotly:::layout(l)
   }
 }else{
-    message('No selection for PCA plot!')
+    message('No selection for Embedding (pca,mds,umap) plot!')
 }
 ```
 
 
 ```{r echo=FALSE, results="hide", fig.width=12, fig.height=6}
-if('pca' %in% choose_plot){
-  if(pca_plot_type!='2D.interactive') {
+emb_plot <- intersect(choose_plot,c('pca','mds','umap'))
+if(length(emb_plot)>0){
+  for(each_emb_method in emb_plot){
+  if(emb_plot_type!='2D.interactive') {
       pp <- 0.3+0.7-(ncol(use_mat)-10)*(0.7/900)
       if(ncol(use_mat)<=10) pp <- 1
       if(ncol(use_mat)>1000) pp <- 0.3
       for (i in 1:length(intgroup)) {
-       tmp1 <- draw.pca.kmeans(use_mat,obs_label=get_obs_label(pData(eset),intgroup[i]),
-                               verbose=FALSE,point_cex=pp,main=intgroup[i],plot_type = pca_plot_type)
+       tmp1 <- draw.emb.kmeans(use_mat,embedding_method=each_emb_method,obs_label=get_obs_label(pData(eset),intgroup[i]),
+                               verbose=FALSE,point_cex=pp,main=intgroup[i],plot_type = emb_plot_type)
      }
   }
+  }
 }else{
-    message('No selection for PCA plot!')
+    message('No selection for Embedding (pca,mds,umap) plot!')
 }
 ```
 
-## Part III: Density plot
 
-The density for the expression value in each sample is ploted with colored grouped by the sample class. 
+## Part III: Boxplot
+
+The boxplot for the expression value in each sample is displayed with colored grouped by the sample class. 
+
+```{r echo=FALSE ,results="hide", fig.width=14, fig.height=7}
+par(mar=c(4,10,4,10))
+for(i in 1:base::length(intgroup)){
+      class_label <- get_obs_label(Biobase::pData(eset),intgroup[i])
+      cls_cc <- get.class.color(class_label,use_color=use_color,pre_define=pre_define) ## get color for each label
+      graphics::boxplot(use_mat,col = cls_cc,ylab = "",xlab='Value',main = sprintf('Boxplot for %s',intgroup[i]),
+                     ylim=c(base::min(use_mat),
+                            base::max(use_mat)),horizontal=TRUE,las=2)
+      pp <- par()$usr
+      legend(pp[2],pp[4],legend=base::unique(class_label),
+             fill = cls_cc[base::unique(class_label)],
+             xpd = TRUE,border = NA,bty = 'n',horiz = FALSE)
+}
+```
+
+
+## Part IV: Density plot
+
+The density for the expression value in each sample is displayed with colored grouped by the sample class. 
 
 ```{r echo=FALSE ,results="hide", fig.width=12, fig.height=7}
 if('density' %in% choose_plot){
@@ -116,7 +143,7 @@ for(i in 1:length(intgroup)){
 
 ```
 
-## Part IV: Correlation plot (`r correlation_strategy`)
+## Part V: Correlation plot (`r correlation_strategy`)
 
 ```{r echo=FALSE,fig.width=12, fig.height=12}
 if('correlation' %in% choose_plot){
@@ -132,7 +159,7 @@ if('correlation' %in% choose_plot){
 
 
 
-## Part V: MeanSd Plot
+## Part VI: MeanSd Plot
 
 ```{r echo=FALSE,fig.width=8, fig.height=8}
 if('meansd' %in% choose_plot){

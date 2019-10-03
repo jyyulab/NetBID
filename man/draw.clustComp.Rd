@@ -43,7 +43,7 @@ Integer is the number of samples gathered in the corresponding label.
 Each row represents an observed label (e.g. one subgroup of disease), each column represents the predicted label created by classification algorithm (e.g K-means).
 }
 \details{
-The table provides more details about the side-by-side PCA biplot created by \code{draw.pca.kmeans}.
+The table provides more details about the side-by-side PCA biplot created by \code{draw.emb.kmeans}.
 The purpose is to find if any abnormal sample (outlier) exists. The darker the table cell is,
 the more samples are gathered in the corresponding label.
 }
@@ -54,7 +54,7 @@ NetBID.loadRData(network.par=network.par,step='exp-QC')
 mat <- Biobase::exprs(network.par$net.eset)
 phe <- Biobase::pData(network.par$net.eset)
 intgroup <- 'subgroup'
-pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,
+pred_label <- draw.emb.kmeans(mat=mat,all_k = NULL,
                              obs_label=get_obs_label(phe,intgroup),
                              kmeans_strategy='consensus')
 draw.clustComp(pred_label,get_obs_label(phe,intgroup),outlier_cex=1,low_K=2,use_col=TRUE)

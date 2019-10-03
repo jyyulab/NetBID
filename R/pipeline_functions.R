@@ -2559,7 +2559,8 @@ merge_TF_SIG.network <- function(TF_network=NULL,SIG_network=NULL){
 generate.masterTable <- function(use_comp=NULL,DE=NULL,DA=NULL,
                                  target_list=NULL,main_id_type=NULL,transfer_tab=NULL,
                                  tf_sigs=tf_sigs,
-                                 z_col='Z-statistics',display_col=c('logFC','P.Value'),column_order_stratey='type'){
+                                 z_col='Z-statistics',display_col=c('logFC','P.Value'),
+                                 column_order_stratey='type'){
   #
   all_input_para <- c('use_comp','DE','DA','target_list','main_id_type','tf_sigs','z_col','display_col','column_order_stratey')
   check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
@@ -2647,7 +2648,7 @@ generate.masterTable <- function(use_comp=NULL,DE=NULL,DA=NULL,
     })
     combine_info_DA <- do.call(base::cbind,tmp1)
     tmp1 <- lapply(col_ord,function(x){
-      combine_info_DE[,grep(sprintf('^%s\\.',x),colnames(combine_info_DA))]
+      combine_info_DE[,grep(sprintf('^%s\\.',x),colnames(combine_info_DE))]
     })
     combine_info_DE <- do.call(base::cbind,tmp1)
   }
@@ -3040,7 +3041,7 @@ get_jac <- function(pred_label, obs_label) {
 #' \code{draw.clustComp} draws a table to show each sample's observed label vs. its predicted label.
 #' Each row represents an observed label (e.g. one subgroup of disease), each column represents the predicted label created by classification algorithm (e.g K-means).
 #'
-#' The table provides more details about the side-by-side PCA biplot created by \code{draw.pca.kmeans}.
+#' The table provides more details about the side-by-side PCA biplot created by \code{draw.emb.kmeans}.
 #' The purpose is to find if any abnormal sample (outlier) exists. The darker the table cell is,
 #' the more samples are gathered in the corresponding label.
 #'
@@ -3069,7 +3070,7 @@ get_jac <- function(pred_label, obs_label) {
 #' mat <- Biobase::exprs(network.par$net.eset)
 #' phe <- Biobase::pData(network.par$net.eset)
 #' intgroup <- 'subgroup'
-#' pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,
+#' pred_label <- draw.emb.kmeans(mat=mat,all_k = NULL,
 #'                              obs_label=get_obs_label(phe,intgroup),
 #'                              kmeans_strategy='consensus')
 #' draw.clustComp(pred_label,get_obs_label(phe,intgroup),outlier_cex=1,low_K=2,use_col=TRUE)
@@ -3730,7 +3731,8 @@ draw.2D.ellipse <- function(X,Y,class_label,xlab='PC1',ylab='PC2',legend_cex=0.8
 #' QC plots for ExpressionSet class object.
 #'
 #' \code{draw.eset.QC} is a function to draw a set of plots for quality control analysis.
-#' 4 types of plots will be created, including heatmap, pca, density and meansd.
+#' 6 types of plots will be created, including heatmap, dimension reduction plots (pca, mds, umap),
+#' boxplot, density, correlation and meansd.
 #'
 #' @param eset ExpressionSet class, quality control analysis target.
 #' @param outdir character, the directory path for saving output files.
@@ -3740,16 +3742,17 @@ draw.2D.ellipse <- function(X,Y,class_label,xlab='PC1',ylab='PC2',legend_cex=0.8
 #' Default is NULL.
 #' @param prefix character, the prefix for the QC figures' name. Default is "".
 #' @param choose_plot a vector of characters,
-#' choose one or many from 'heatmap', 'pca', 'density','correlation' and 'meansd' plots.
-#' Only useful when generate_html=FALSE.
-#' Default is 'heatmap', 'pca', 'density' and 'correlation'
+#' choose one or many from 'heatmap', 'pca','mds','umap','boxplot', 'density','correlation' and 'meansd' plots.
+#' Default is 'heatmap', 'pca', 'boxplot','density' and 'correlation'
 #' @param generate_html logical, if TRUE, it will generate a html file by R Markdown. Otherwise, it will generate separate PDF files.
 #' Default is TRUE.
 #' @param correlation_strategy character, the strategy to calculate the sample correlation,
 #' choose from 'pearson' and 'spearman'. Default is 'pearson'.
 #' @param plot_all_point logical, if TRUE, the scatterplot will plot all points in the correlation,
 #' otherwise will plot the main trend for reducing the figure size. Default is FALSE.
-#' @param pca_plot_type character, plot type for pca. Users can choose from "2D","2D.interactive", "2D.ellipse", "2D.text" and "3D". Default is "2D.ellipse".
+#' @param emb_plot_type character, plot type for dimension reduction methods (pca, mds, umap).
+#' Users can choose from "2D","2D.interactive", "2D.ellipse", "2D.text" and "3D".
+#' Default is "2D.ellipse".
 #' @param use_color a vector of color codes, colors to be assigned to each member of display label. Default is brewer.pal(9, 'Set1').
 #' @param pre_define a vector of characters, pre-defined color codes for a certain input (e.g. c("blue", "red") with names c("A", "B")). Default is NULL.
 #' @examples
@@ -3763,26 +3766,29 @@ draw.2D.ellipse <- function(X,Y,class_label,xlab='PC1',ylab='PC2',legend_cex=0.8
 #'              pre_define=c('WNT'='blue','SHH'='red','G4'='green'))
 #' draw.eset.QC(network.par$net.eset,outdir=network.par$out.dir.QC,intgroup=intgroups,
 #'              pre_define=c('WNT'='blue','SHH'='red','G4'='green'),
-#'              pca_plot_type = '2D.interactive',choose_plot = 'pca')
+#'              emb_plot_type = '2D.interactive',choose_plot = 'pca')
 #' }
 #' @export
 draw.eset.QC <- function(eset,outdir = '.',do.logtransform = FALSE,intgroup=NULL,prefix = '',
-                         choose_plot=c('heatmap','pca','density','correlation'),generate_html=TRUE,
+                         choose_plot=c('heatmap','pca','boxplot','density','correlation'),
+                         generate_html=TRUE,
                          correlation_strategy='pearson',plot_all_point=FALSE,
-                         pca_plot_type='2D.ellipse',
+                         emb_plot_type='2D.ellipse',
                          use_color=NULL,pre_define=NULL) {
   #
-  all_input_para <- c('eset','outdir','do.logtransform','prefix','choose_plot','generate_html','correlation_strategy','plot_all_point')
+  all_input_para <- c('eset','outdir','do.logtransform','prefix','choose_plot',
+                      'generate_html','correlation_strategy','plot_all_point')
   check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
   if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
   check_res <- c(check_option('do.logtransform',c(TRUE,FALSE),envir=environment()),
                  check_option('plot_all_point',c(TRUE,FALSE),envir=environment()),
                  check_option('correlation_strategy',c('pearson','spearman'),envir=environment()),
-                 check_option('pca_plot_type',c('2D','2D.ellipse','3D','2D.text','2D.interactive'),envir=environment()))
+                 check_option('emb_plot_type',
+                              c('2D','2D.ellipse','3D','2D.text','2D.interactive'),envir=environment()))
   if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
-  w1 <- base::setdiff(choose_plot,c('heatmap','pca','density','correlation','meansd'))
+  w1 <- base::setdiff(choose_plot,c('heatmap','pca','mds','umap','boxplot','density','correlation','meansd'))
   if(base::length(w1)>0){
-    message(sprintf('Wrong input for choose_plot, %s not included (Only accept "heatmap","pca","density","correlation","meansd").
+    message(sprintf('Wrong input for choose_plot, %s not included (Only accept "heatmap","pca","mds","umap","boxplot","density","correlation","meansd").
                     Please check and re-try!',
                     w1));return(FALSE)
   }
@@ -3823,21 +3829,28 @@ draw.eset.QC <- function(eset,outdir = '.',do.logtransform = FALSE,intgroup=NULL
     rmarkdown::render(output_rmd_file, rmarkdown::html_document(toc = TRUE))
     return(TRUE)
   }
-  ## pca
-  if('pca' %in% choose_plot){
-    fp <- file.path(outdir, sprintf("%s%s.pdf", prefix, 'pca'))
-    pdf(fp, width = 12, height = 6)
-    pp <- 0.3+0.7-(ncol(use_mat)-10)*(0.7/900)
-    if(ncol(use_mat)<=10) pp <- 1
-    if(ncol(use_mat)>1000) pp <- 0.3
-    for (i in 1:base::length(intgroup)){
-      tmp1 <- draw.pca.kmeans(use_mat,obs_label=get_obs_label(Biobase::pData(eset),intgroup[i]),verbose=FALSE,point_cex=pp,main=intgroup[i],
-                              use_color=use_color,pre_define=pre_define,plot_type = pca_plot_type)
+  ## embedding plot
+  emb_plot <- intersect(choose_plot,c('pca','mds','umap'))
+  if(length(emb_plot)>0){
+    if(emb_plot_type=='2D.interactive'){
+      message('Please set generate_html=TRUE to get interactive plot!')
+      emb_plot_type <- '2D'
     }
-    dev.off()
-    message('Finish PCA plot !')
+    for(each_emb_method in emb_plot){
+      fp <- file.path(outdir, sprintf("%s%s.pdf", prefix, each_emb_method))
+      pdf(fp, width = 12, height = 6)
+      pp <- 0.3+0.7-(ncol(use_mat)-10)*(0.7/900)
+      if(ncol(use_mat)<=10) pp <- 1
+      if(ncol(use_mat)>1000) pp <- 0.3
+      for (i in 1:base::length(intgroup)){
+        tmp1 <- draw.emb.kmeans(use_mat,embedding_method=each_emb_method,obs_label=get_obs_label(Biobase::pData(eset),intgroup[i]),
+                                verbose=FALSE,point_cex=pp,main=intgroup[i],
+                                use_color=use_color,pre_define=pre_define,plot_type = emb_plot_type)
+      }
+      dev.off()
+      message(sprintf('Finish %s plot !',toupper(each_emb_method)))
+    }
   }
-
   ## heatmap
   if('heatmap' %in% choose_plot){
     fp <- file.path(outdir, sprintf("%s%s.pdf", prefix, 'heatmap'))
@@ -3859,6 +3872,26 @@ draw.eset.QC <- function(eset,outdir = '.',do.logtransform = FALSE,intgroup=NULL
     draw.meanSdPlot(eset)
     dev.off()
     message('Finish MeanSD plot !')
+  }
+
+  ## boxplot
+  if('boxplot' %in% choose_plot){
+    fp <- file.path(outdir, sprintf("%s%s.pdf", prefix, 'boxplot'))
+    pdf(fp, width = 14, height = 4+ncol(exprs(eset))/4)
+    par(mar=c(4,10,4,10))
+    for(i in 1:base::length(intgroup)){
+      class_label <- get_obs_label(Biobase::pData(eset),intgroup[i])
+      cls_cc <- get.class.color(class_label,use_color=use_color,pre_define=pre_define) ## get color for each label
+      graphics::boxplot(use_mat,col = cls_cc,ylab = "",xlab='Value',main = sprintf('Boxplot for %s',intgroup[i]),
+                     ylim=c(base::min(use_mat),
+                            base::max(use_mat)),horizontal=TRUE,las=2)
+      pp <- par()$usr
+      legend(pp[2],pp[4],legend=base::unique(class_label),
+             fill = cls_cc[base::unique(class_label)],
+             xpd = TRUE,border = NA,bty = 'n',horiz = FALSE)
+    }
+    dev.off()
+    message('Finish Boxplot !')
   }
 
   ## density
@@ -4001,7 +4034,7 @@ draw.correlation <- function(use_mat,class_label,main='',correlation_strategy='p
        ei_m <- (ei-mmin)/(mmax-mmin)
        ej_m <- (ej-mmin)/(mmax-mmin)
        if(plot_all_point==TRUE){
-         graphics::points(y=ei_m+i-1,x=ej_m+j-1,cex=0.1,pch=16,col=get_transparent('dark grey',0.4)) ## memory consuming !!!
+         graphics::points(y=ei_m+i-1,x=ej_m+j-1,cex=0.1,pch=16,col=get_transparent('dark grey',0.6)) ## memory consuming !!!
        }else{
          ei_mc <- cut(ei_m,breaks = bb)
          ej_mc <- cut(ej_m,breaks = bb)
@@ -4010,7 +4043,7 @@ draw.correlation <- function(use_mat,class_label,main='',correlation_strategy='p
          tt_thre <- mm_t/100
          for(ii in 1:(n_box-1)){
            for(jj in 1:(n_box-1)){
-             ap <- (tt[ii,jj]/mm_t)^(1/4); if(ap>0.9) ap <- 0.9
+             ap <- (tt[ii,jj]/mm_t)^(1/5); if(ap>0.9) ap <- 0.9
              if(tt[ii,jj]>tt_thre) graphics::points(y=bb[ii]+i-1,x=bb[jj]+j-1,col=get_transparent('black',ap),pch=16,cex=5/n_box)
            }
          }
@@ -4027,10 +4060,10 @@ draw.correlation <- function(use_mat,class_label,main='',correlation_strategy='p
 ##
 }
 
-#' Visualize the K-means Clustering Result by PCA Biplot
+#' Visualize the K-means Clustering Result by several dimension reduction and embedding methods.
 #'
-#' \code{draw.pca.kmeans} is a data visualization function to show the K-means clustering result of a data matrix.
-#' A PCA biplot is generated to visualize the clustering. Two biplots side-by-side will show the comparison
+#' \code{draw.emb.kmeans} is a data visualization function to show the K-means clustering result of a data matrix.
+#' A PCA/MDS/UMAP biplot is generated to visualize the clustering. Two biplots side-by-side will show the comparison
 #' between real observation labels (left) and the K-means predicted labels (right).
 #'
 #' This function is mainly used to check the sample clustering result, in aim to detect if any abnormal (outlier) sample(s) exsist.
@@ -4041,6 +4074,7 @@ draw.correlation <- function(use_mat,class_label,main='',correlation_strategy='p
 #' A comparision score (choose from ARI, NMI, Jaccard) will be calculated and shown in the figure.
 #'
 #' @param mat a numeric data matrix, the columns (e.g. sample) will be clustered using the feature (e.g. genes) rows.
+#' @param embedding_method character, embedding method, choose from pca, mds and umap. Default is pca.
 #' @param all_k a vector of integers, a pre-defined K value. K is the number of final clusters.
 #' If NULL, the function will try all possible K values. Default is NULL.
 #' @param obs_label a vector of characters, a vector describes each sample's selected phenotype information,
@@ -4076,31 +4110,32 @@ draw.correlation <- function(use_mat,class_label,main='',correlation_strategy='p
 #' intgroup <- get_int_group(network.par$net.eset)
 #' for(i in 1:base::length(intgroup)){
 #'  print(intgroup[i])
-#'  pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,intgroup[i]))
+#'  pred_label <- draw.emb.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,intgroup[i]))
 #'  print(base::table(list(pred_label=pred_label,obs_label=get_obs_label(phe,intgroup[i]))))
 #' }
-#' pred_label <- draw.pca.kmeans(mat=mat,all_k = NULL,
+#' pred_label <- draw.emb.kmeans(mat=mat,all_k = NULL,
 #'                              obs_label=get_obs_label(phe,'subgroup'),
 #'                              kmeans_strategy='consensus')
 #' ## interactive display
-#' draw.pca.kmeans(mat=mat,all_k = NULL,
+#' draw.emb.kmeans(mat=mat,all_k = NULL,
 #'                obs_label=get_obs_label(phe,'subgroup'),
 #'                plot_type='2D.interactive',
 #'                pre_define=c('WNT'='blue','SHH'='red','G4'='green'))
 #' @export
-draw.pca.kmeans <- function(mat=NULL,all_k=NULL,obs_label=NULL,legend_pos = 'topleft',legend_cex = 0.8,
+draw.emb.kmeans <- function(mat=NULL,embedding_method='pca',all_k=NULL,obs_label=NULL,legend_pos = 'topleft',legend_cex = 0.8,
                             plot_type='2D.ellipse',point_cex=1,
                             kmeans_strategy='basic',choose_k_strategy='ARI',
                             return_type='optimal',main='',verbose=TRUE,
                             use_color=NULL,pre_define=NULL){
   #
-  all_input_para <- c('mat','obs_label','legend_pos','legend_cex','plot_type','point_cex','kmeans_strategy','choose_k_strategy',
+  all_input_para <- c('mat','embedding_method','obs_label','legend_pos','legend_cex','plot_type','point_cex','kmeans_strategy','choose_k_strategy',
                       'return_type','main','verbose')
   check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
   if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
   check_res <- c(check_option('verbose',c(TRUE,FALSE),envir=environment()),
                  check_option('plot_type',c("2D","2D.interactive", "2D.ellipse","2D.text","3D"),envir=environment()),
                  check_option('kmeans_strategy',c('basic','consensus'),envir=environment()),
+                 check_option('embedding_method',c('pca','mds','umap'),envir=environment()),
                  check_option('choose_k_strategy',c('ARI','NMI','Jaccard'),envir=environment()),
                  check_option('return_type',c('optimal','all'),envir=environment()),
                  check_option('legend_pos',c("bottomright", "bottom", "bottomleft", "left", "topleft", "top", "topright", "right","center"),envir=environment()))
@@ -4113,9 +4148,27 @@ draw.pca.kmeans <- function(mat=NULL,all_k=NULL,obs_label=NULL,legend_pos = 'top
   if(base::length(base::setdiff(all_k,2:base::length(obs_label)))>0){
     message('some value in all_k exceed the maximum sample size, check and re-try !');return(FALSE);
   }
-  pca <- stats::prcomp(t(mat))
-  #pca <- stats::prcomp(na.exclude(t(mat)))
-  cluster_mat <- pca$x
+  if(embedding_method=='pca'){
+    pca <- stats::prcomp(t(mat))
+    cluster_mat <- pca$x
+  }
+  if(embedding_method=='mds'){
+    d <- dist(t(mat))
+    if(plot_type=='3D'){
+      fit <- cmdscale(d,eig=TRUE, k=3) # k is the number of dim
+      cluster_mat <- fit$points
+    }else{
+      fit <- cmdscale(d,eig=TRUE, k=2) # k is the number of dim
+      cluster_mat <- fit$points
+    }
+  }
+  if(embedding_method=='umap'){
+    ori_cc <- umap::umap.defaults;
+    ori_cc$n_epochs <- 2000;
+    ori_cc$n_neighbors <- base::min(15,round(ncol(mat)/2));
+    if(plot_type=='3D') ori_cc$n_components <- 3
+    cluster_mat <- umap::umap(as.matrix(t(mat)),config=ori_cc)$layout
+  }
   all_jac <- list()
   all_k_res <- list()
   if(kmeans_strategy=='basic'){
@@ -4143,43 +4196,50 @@ draw.pca.kmeans <- function(mat=NULL,all_k=NULL,obs_label=NULL,legend_pos = 'top
   pred_label <- all_k_res[[as.character(use_k)]]
   if(verbose==TRUE) message(sprintf('Best Score occurs when k=%s, with value=%s',use_k,all_jac[as.character(use_k)]))
   ##
-  d1 <- data.frame(id=colnames(mat),X=cluster_mat[,1],Y=cluster_mat[,2],Z=cluster_mat[,3],label=pred_label,stringsAsFactors=FALSE)
+  if(plot_type=='3D') d1 <- data.frame(id=colnames(mat),X=cluster_mat[,1],Y=cluster_mat[,2],Z=cluster_mat[,3],label=pred_label,stringsAsFactors=FALSE)
+  if(plot_type!='3D') d1 <- data.frame(id=colnames(mat),X=cluster_mat[,1],Y=cluster_mat[,2],label=pred_label,stringsAsFactors=FALSE)
+  xlab <- sprintf('Coordinate 1 (%s)',embedding_method);
+  ylab <- sprintf('Coordinate 2 (%s)',embedding_method);
+  zlab <- sprintf('Coordinate 3 (%s)',embedding_method);
+  if(embedding_method=='pca'){
+    xlab <- sprintf('PC1(%s%s variance)',format(summary(pca)$importance[2,'PC1']*100,digits=3),'%')
+    ylab <- sprintf('PC2(%s%s variance)',format(summary(pca)$importance[2,'PC2']*100,digits=3),'%')
+    if(plot_type=='3D') zlab <- sprintf('PC3(%s%s variance)',format(summary(pca)$importance[2,'PC3']*100,digits=3),'%')
+  }
   if(plot_type=='2D.interactive'){
     p <- draw.2D.interactive(d1$X,d1$Y,
                              sample_label=names(obs_label),
                              color_label=obs_label[d1$id],
                              shape_label=d1$label,
-                             xlab=sprintf('PC1(%s%s variance)',format(summary(pca)$importance[2,'PC1']*100,digits=3),'%'),
-                             ylab=sprintf('PC2(%s%s variance)',format(summary(pca)$importance[2,'PC2']*100,digits=3),'%'),
+                             xlab=xlab,
+                             ylab=ylab,
                              point_cex=point_cex,main=main,
                              use_color=use_color,pre_define=pre_define)
     return(p)
-    #if(return_type=='optimal') return(pred_label)
-    #if(return_type=='all') return(all_k_res)
   }
   graphics::layout(t(matrix(1:2)))
   if(plot_type=='2D.ellipse'){
     draw.2D.ellipse(d1$X,d1$Y,class_label=obs_label[d1$id],
-                    xlab=sprintf('PC1(%s%s variance)',format(summary(pca)$importance[2,'PC1']*100,digits=3),'%'),
-                    ylab=sprintf('PC2(%s%s variance)',format(summary(pca)$importance[2,'PC2']*100,digits=3),'%'),
+                    xlab=xlab,
+                    ylab=ylab,
                     legend_cex=legend_cex,point_cex=point_cex,main=main,
                     use_color=use_color,pre_define=pre_define)
     draw.2D.ellipse(d1$X,d1$Y,class_label=d1$label,
-                    xlab=sprintf('PC1(%s%s variance)',format(summary(pca)$importance[2,'PC1']*100,digits=3),'%'),
-                    ylab=sprintf('PC2(%s%s variance)',format(summary(pca)$importance[2,'PC2']*100,digits=3),'%'),
+                    xlab=xlab,
+                    ylab=ylab,
                     legend_cex=legend_cex,point_cex=point_cex,
                     main=sprintf('%s:%s',choose_k_strategy,format(all_jac[as.character(use_k)],digits=4)),
                     use_color=use_color,pre_define=pre_define)
   }
   if(plot_type=='2D'){
     draw.2D(d1$X,d1$Y,class_label=obs_label[d1$id],
-            xlab=sprintf('PC1(%s%s variance)',format(summary(pca)$importance[2,'PC1']*100,digits=3),'%'),
-            ylab=sprintf('PC2(%s%s variance)',format(summary(pca)$importance[2,'PC2']*100,digits=3),'%'),
+            xlab=xlab,
+            ylab=ylab,
             legend_cex=legend_cex,point_cex=point_cex,main=main,
             use_color=use_color,pre_define=pre_define)
     draw.2D(d1$X,d1$Y,class_label=d1$label,
-            xlab=sprintf('PC1(%s%s variance)',format(summary(pca)$importance[2,'PC1']*100,digits=3),'%'),
-            ylab=sprintf('PC2(%s%s variance)',format(summary(pca)$importance[2,'PC2']*100,digits=3),'%'),
+            xlab=xlab,
+            ylab=ylab,
             legend_cex=legend_cex,point_cex=point_cex,
             main=sprintf('%s:%s',choose_k_strategy,format(all_jac[as.character(use_k)],digits=4)),
             use_color=use_color,pre_define=pre_define)
@@ -4187,28 +4247,28 @@ draw.pca.kmeans <- function(mat=NULL,all_k=NULL,obs_label=NULL,legend_pos = 'top
 
   if(plot_type=='2D.text'){
     draw.2D.text(d1$X,d1$Y,class_label=obs_label[d1$id],class_text=d1$id,
-                 xlab=sprintf('PC1(%s%s variance)',format(summary(pca)$importance[2,'PC1']*100,digits=3),'%'),
-                 ylab=sprintf('PC2(%s%s variance)',format(summary(pca)$importance[2,'PC2']*100,digits=3),'%'),
+                 xlab=xlab,
+                 ylab=ylab,
                  legend_cex=legend_cex,point_cex=point_cex,main=main,
                  use_color=use_color,pre_define=pre_define)
     draw.2D.text(d1$X,d1$Y,class_label=d1$label,class_text=d1$id,
-                 xlab=sprintf('PC1(%s%s variance)',format(summary(pca)$importance[2,'PC1']*100,digits=3),'%'),
-                 ylab=sprintf('PC2(%s%s variance)',format(summary(pca)$importance[2,'PC2']*100,digits=3),'%'),
+                 xlab=xlab,
+                 ylab=ylab,
                  legend_cex=legend_cex,point_cex=point_cex,
                  main=sprintf('%s:%s',choose_k_strategy,format(all_jac[as.character(use_k)],digits=4)),
                  use_color=use_color,pre_define=pre_define)
   }
   if(plot_type=='3D'){
     draw.3D(d1$X,d1$Y,d1$Z,class_label=obs_label[d1$id],
-            xlab=sprintf('PC1(%s%s variance)',format(summary(pca)$importance[2,'PC1']*100,digits=3),'%'),
-            ylab=sprintf('PC2(%s%s variance)',format(summary(pca)$importance[2,'PC2']*100,digits=3),'%'),
-            zlab=sprintf('PC3(%s%s variance)',format(summary(pca)$importance[2,'PC3']*100,digits=3),'%'),
+            xlab=xlab,
+            ylab=ylab,
+            zlab=zlab,
             legend_cex=legend_cex,point_cex=point_cex,legend_pos=legend_pos,main=main,
             use_color=use_color,pre_define=pre_define)
     draw.3D(d1$X,d1$Y,d1$Z,class_label=d1$label,
-            xlab=sprintf('PC1(%s%s variance)',format(summary(pca)$importance[2,'PC1']*100,digits=3),'%'),
-            ylab=sprintf('PC2(%s%s variance)',format(summary(pca)$importance[2,'PC2']*100,digits=3),'%'),
-            zlab=sprintf('PC3(%s%s variance)',format(summary(pca)$importance[2,'PC3']*100,digits=3),'%'),
+            xlab=xlab,
+            ylab=ylab,
+            zlab=zlab,
             legend_cex=legend_cex,point_cex=point_cex,legend_pos=legend_pos,
             main=sprintf('%s:%s',choose_k_strategy,format(all_jac[as.character(use_k)],digits=4)),
             use_color=use_color,pre_define=pre_define)
@@ -4217,162 +4277,6 @@ draw.pca.kmeans <- function(mat=NULL,all_k=NULL,obs_label=NULL,legend_pos = 'top
   if(return_type=='optimal') return(pred_label)
   if(return_type=='all') return(all_k_res)
 }
-
-#' Draw Cluster Plot Using UMAP (visulization algorithm) and Kmeans (cluster algorithm).
-#'
-#' \code{draw.umap.kmeans} is a function to visualize the cluster result for the input data matrix. It is mainly used for check sample clustering result.
-#' Warning, it is not suggested to use when sample size is small.
-#'
-#' @param mat numeric matrix, the expression matrix. Rows are genes/features, columns are samples. Columns will be clustered based on row features.
-#' @param all_k a vector of integers, the pre-defined K-values. If NULL, will use all possible K. Default is NULL.
-#' @param obs_label a vector of characters, the observed sample labels or categories, name of the vector is sample names.
-#' @param legend_pos character, the legend position. Default is "topleft".
-#' @param legend_cex numeric, giving the amount by which the text of legend should be magnified relative to the default. Default is 0.8.
-#' @param plot_type character, type of the plot.
-#' Users can choose from "2D","2D.interactive", "2D.ellipse", "2D.text" and "3D". Default is "2D.ellipse".
-#' @param point_cex numeric, giving the amount by which the size of the data points should be magnified relative to the default. Default is 1.
-#' @param kmeans_strategy character, K-means clustering algorithm. Users can choose "basic" or "consensus".
-#' "consensus" is performed by \code{ConsensusClusterPlus}. Default is "basic".
-#' @param choose_k_strategy character, method to choose the K-value. Users can choose from "ARI (adjusted rand index)", "NMI (normalized mutual information)" and "Jaccard".
-#' Default is "ARI".
-#' @param return_type character, the type of result returned. Users can choose "optimal" or "all".
-#' "all", all the K-values in all_k will be returned.
-#' "optimal", only the K-value yielding the optimal classification result will be returned.
-#' Default is "optimal".
-#' @param main character, title for the plot.
-#' @param verbose logical, if TRUE, print out detailed information during calculation. Default is TRUE.
-#' @param use_color a vector of color codes, colors to be assigned to each member of display label. Default is brewer.pal(9, 'Set1').
-#' @param pre_define a vector of characters, pre-defined color codes for a certain input (e.g. c("blue", "red") with names c("A", "B")). Default is NULL.
-#'
-#' @return Return a vector of the predicted label (if \code{return_type} is "optimal") and a list of all possible K-values (if \code{return_type} is "all").
-#' If plot_type='2D.interactive', will return a plotly class object for interactive display.
-#' @examples
-#' network.par <- list()
-#' network.par$out.dir.DATA <- system.file('demo1','network/DATA/',package = "NetBID2")
-#' NetBID.loadRData(network.par=network.par,step='exp-QC')
-#' mat <- Biobase::exprs(network.par$net.eset)
-#' phe <- Biobase::pData(network.par$net.eset)
-#' intgroup <- get_int_group(network.par$net.eset)
-#' for(i in 1:base::length(intgroup)){
-#'  print(intgroup[i])
-#'  pred_label <- draw.umap.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,intgroup[i]))
-#'  print(base::table(list(pred_label=pred_label,obs_label=get_obs_label(phe,intgroup[i]))))
-#' }
-#' pred_label <- draw.umap.kmeans(mat=mat,all_k = NULL,
-#'                              obs_label=get_obs_label(phe,intgroup[i]),
-#'                              kmeans_strategy='consensus')
-#' ## interactive display
-#' draw.umap.kmeans(mat=mat,all_k = NULL,
-#'                obs_label=get_obs_label(phe,'subgroup'),
-#'                plot_type='2D.interactive',
-#'                pre_define=c('WNT'='blue','SHH'='red','G4'='green'))
-#' @export
-draw.umap.kmeans <- function(mat=NULL,all_k=NULL,obs_label=NULL,
-                             legend_pos = 'topleft',legend_cex = 0.8,
-                             kmeans_strategy='basic',choose_k_strategy='ARI',
-                             plot_type='2D.ellipse',point_cex=1,return_type='optimal',main='',verbose=TRUE,
-                             use_color=NULL,pre_define=NULL){
-  #
-  all_input_para <- c('mat','obs_label','legend_pos','legend_cex','plot_type','point_cex','kmeans_strategy','choose_k_strategy',
-                      'return_type','main','verbose')
-  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
-  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
-  check_res <- c(check_option('verbose',c(TRUE,FALSE),envir=environment()),
-                 check_option('plot_type',c("2D",'2D.interactive', "2D.ellipse","2D.text","3D"),envir=environment()),
-                 check_option('kmeans_strategy',c('basic','consensus'),envir=environment()),
-                 check_option('choose_k_strategy',c('ARI','NMI','Jaccard'),envir=environment()),
-                 check_option('return_type',c('optimal','all'),envir=environment()),
-                 check_option('legend_pos',c("bottomright", "bottom", "bottomleft", "left", "topleft", "top", "topright", "right","center"),envir=environment()))
-  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
-  obs_label <- clean_charVector(obs_label)
-  #
-  if(is.null(all_k)==TRUE){
-    all_k <- 2:base::min(base::length(obs_label)-1,2*base::length(base::unique(obs_label)))
-  }
-  if(base::length(base::setdiff(all_k,2:base::length(obs_label)))>0){
-    message('some value in all_k exceed the maximum sample size, check and re-try !');return(FALSE);
-  }
-  ori_cc <- umap::umap.defaults;
-  ori_cc$n_epochs <- 2000;
-  ori_cc$n_neighbors <- base::min(15,round(ncol(mat)/2));
-  if(plot_type=='3D') ori_cc$n_components <- 3
-  cluster_mat <- umap::umap(as.matrix(t(mat)),config=ori_cc)
-  #
-  all_jac <- list()
-  all_k_res <- list()
-  if(kmeans_strategy=='basic'){
-    for(k in all_k){
-      tmp_k <- list()
-      for(i in 1:10){
-        tmp_k[[i]] <- stats::kmeans(cluster_mat$layout,centers=as.numeric(k))$cluster
-      }
-      pred_label <- tmp_k
-      jac <- unlist(lapply(pred_label,function(x){get_clustComp(x, obs_label,strategy = choose_k_strategy)}))
-      top_i <- base::which.max(jac)
-      all_k_res[[as.character(k)]] <- tmp_k[[top_i]]
-    }
-  }else{
-    all_k_res <- get_consensus_cluster(mat=mat,all_k=all_k)
-  }
-  for(k in all_k){
-    pred_label <- all_k_res[[as.character(k)]]
-    jac <- get_clustComp(pred_label, obs_label,strategy = choose_k_strategy)
-    all_jac[[as.character(k)]] <- signif(jac,4)
-  }
-  if(verbose==TRUE) message('Optimal k is chosen by Score between predicted and observed label')
-  if(verbose==TRUE) print(all_jac)
-  use_k <- all_k[base::which.max(all_jac)]
-  if(verbose==TRUE) message(sprintf('Best Score occurs when k=%s, with value=%s',use_k,all_jac[as.character(use_k)]))
-  pred_label <- all_k_res[[as.character(use_k)]]
-
-  d1 <- data.frame(id=colnames(mat),X=cluster_mat$layout[,1],Y=cluster_mat$layout[,2],label=pred_label,stringsAsFactors=FALSE)
-  if(plot_type=='3D')   d1 <- data.frame(id=colnames(mat),X=cluster_mat$layout[,1],Y=cluster_mat$layout[,2],Z=cluster_mat$layout[,3],label=pred_label,stringsAsFactors=FALSE)
-  if(plot_type=='2D.interactive'){
-    p <- draw.2D.interactive(d1$X,d1$Y,
-                             sample_label=names(obs_label),
-                             color_label=obs_label[d1$id],
-                             shape_label=d1$label,
-                             xlab="",ylab="",
-                             point_cex=point_cex,main=main,
-                             use_color=use_color,pre_define=pre_define)
-    return(p)
-    #if(return_type=='optimal') return(pred_label)
-    #if(return_type=='all') return(all_k_res)
-  }
-  graphics::layout(t(matrix(1:2)))
-  if(plot_type=='2D.ellipse'){
-    draw.2D.ellipse(d1$X,d1$Y,class_label=obs_label[d1$id],xlab="",ylab="",legend_cex=legend_cex,point_cex=point_cex,
-                    use_color=use_color,pre_define=pre_define,main=main)
-    draw.2D.ellipse(d1$X,d1$Y,class_label=d1$label,xlab="",ylab="",legend_cex=legend_cex,point_cex=point_cex,
-                    main=sprintf('%s:%s',choose_k_strategy,format(all_jac[as.character(use_k)],digits=4)),
-                    use_color=use_color,pre_define=pre_define)
-  }
-  if(plot_type=='2D'){
-    draw.2D(d1$X,d1$Y,class_label=obs_label[d1$id],xlab="",ylab="",legend_cex=legend_cex,point_cex=point_cex,
-            use_color=use_color,pre_define=pre_define,main=main)
-    draw.2D(d1$X,d1$Y,class_label=d1$label,xlab="",ylab="",legend_cex=legend_cex,point_cex=point_cex,
-            main=sprintf('%s:%s',choose_k_strategy,format(all_jac[as.character(use_k)],digits=4)),
-            use_color=use_color,pre_define=pre_define)
-  }
-  if(plot_type=='2D.text'){
-    draw.2D.text(d1$X,d1$Y,class_label=obs_label[d1$id],class_text=d1$id,xlab='',ylab='',legend_cex=legend_cex,point_cex=point_cex,
-                 use_color=use_color,pre_define=pre_define,main=main)
-    draw.2D.text(d1$X,d1$Y,class_label=d1$label,class_text=d1$id,xlab='',ylab='',legend_cex=legend_cex,point_cex=point_cex,
-                 main=sprintf('%s:%s',choose_k_strategy,format(all_jac[as.character(use_k)],digits=4)),
-                 use_color=use_color,pre_define=pre_define)
-  }
-  if(plot_type=='3D'){
-    draw.3D(d1$X,d1$Y,d1$Z,class_label=obs_label[d1$id],xlab='',ylab='',zlab='',legend_cex=legend_cex,point_cex=point_cex,legend_pos=legend_pos,
-            use_color=use_color,pre_define=pre_define,main=main)
-    draw.3D(d1$X,d1$Y,d1$Z,class_label=d1$label,xlab='',ylab='',zlab='',legend_cex=legend_cex,point_cex=point_cex,legend_pos=legend_pos,
-            main=sprintf('%s:%s',choose_k_strategy,format(all_jac[as.character(use_k)],digits=4)),
-            use_color=use_color,pre_define=pre_define)
-  }
-  graphics::layout(1);
-  if(return_type=='optimal') return(pred_label)
-  if(return_type=='all') return(all_k_res)
-}
-
 
 ## get consensus Kmeans results, using M3C(toooo slow),ConsensusClusterPlus
 # return cluster results, RCSI score, P-value

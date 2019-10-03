@@ -6,9 +6,9 @@
 \usage{
 draw.eset.QC(eset, outdir = ".", do.logtransform = FALSE,
   intgroup = NULL, prefix = "", choose_plot = c("heatmap", "pca",
-  "density", "correlation"), generate_html = TRUE,
+  "boxplot", "density", "correlation"), generate_html = TRUE,
   correlation_strategy = "pearson", plot_all_point = FALSE,
-  pca_plot_type = "2D.ellipse", use_color = NULL, pre_define = NULL)
+  emb_plot_type = "2D.ellipse", use_color = NULL, pre_define = NULL)
 }
 \arguments{
 \item{eset}{ExpressionSet class, quality control analysis target.}
@@ -24,9 +24,8 @@ Default is NULL.}
 \item{prefix}{character, the prefix for the QC figures' name. Default is "".}
 
 \item{choose_plot}{a vector of characters,
-choose one or many from 'heatmap', 'pca', 'density','correlation' and 'meansd' plots.
-Only useful when generate_html=FALSE.
-Default is 'heatmap', 'pca', 'density' and 'correlation'}
+choose one or many from 'heatmap', 'pca','mds','umap','boxplot', 'density','correlation' and 'meansd' plots.
+Default is 'heatmap', 'pca', 'boxplot','density' and 'correlation'}
 
 \item{generate_html}{logical, if TRUE, it will generate a html file by R Markdown. Otherwise, it will generate separate PDF files.
 Default is TRUE.}
@@ -37,7 +36,9 @@ choose from 'pearson' and 'spearman'. Default is 'pearson'.}
 \item{plot_all_point}{logical, if TRUE, the scatterplot will plot all points in the correlation,
 otherwise will plot the main trend for reducing the figure size. Default is FALSE.}
 
-\item{pca_plot_type}{character, plot type for pca. Users can choose from "2D","2D.interactive", "2D.ellipse", "2D.text" and "3D". Default is "2D.ellipse".}
+\item{emb_plot_type}{character, plot type for dimension reduction methods (pca, mds, umap).
+Users can choose from "2D","2D.interactive", "2D.ellipse", "2D.text" and "3D".
+Default is "2D.ellipse".}
 
 \item{use_color}{a vector of color codes, colors to be assigned to each member of display label. Default is brewer.pal(9, 'Set1').}
 
@@ -45,7 +46,8 @@ otherwise will plot the main trend for reducing the figure size. Default is FALS
 }
 \description{
 \code{draw.eset.QC} is a function to draw a set of plots for quality control analysis.
-4 types of plots will be created, including heatmap, pca, density and meansd.
+6 types of plots will be created, including heatmap, dimension reduction plots (pca, mds, umap),
+boxplot, density, correlation and meansd.
 }
 \examples{
 \dontrun{
@@ -58,6 +60,6 @@ draw.eset.QC(network.par$net.eset,outdir=network.par$out.dir.QC,intgroup=intgrou
              pre_define=c('WNT'='blue','SHH'='red','G4'='green'))
 draw.eset.QC(network.par$net.eset,outdir=network.par$out.dir.QC,intgroup=intgroups,
              pre_define=c('WNT'='blue','SHH'='red','G4'='green'),
-             pca_plot_type = '2D.interactive',choose_plot = 'pca')
+             emb_plot_type = '2D.interactive',choose_plot = 'pca')
 }
 }
