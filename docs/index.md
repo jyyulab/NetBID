@@ -21,7 +21,7 @@ Documentation and Guided Analyses
 
 NetBID is a data-driven system biology pipeline, using data-driven network-based Bayesian inference approach to find drivers from transcriptomics, proteomics and phosphoproteomics data, where the drivers can be either transcription facotrs (**TF**) or signaling factors (**SIG**).
 
-**NetBID 2.0** is an upgraded version of [NetBID 1.0](https://github.com/jyyulab/NetBID/releases/tag/1.0.0) that has been published in [Nature](https://www.nature.com/articles/s41586-018-0177-0) in 2018. NetBID 2.0 inherites all the main functions from NetBID 1.0, and provides many more functions and pipelines to perform advanced end-to-end analyses.
+**NetBID 2.0** is an upgraded version of [NetBID 1.0](https://github.com/jyyulab/NetBID/releases/tag/1.0.0) that has been published in [Nature]((https://www.nature.com/articles/s41586-018-0177-0)) in 2018. NetBID 2.0 inherites all the main functions from NetBID 1.0, and provides many more functions and pipelines to perform advanced end-to-end analyses.
 
 ![SupFigure1](SupFigure1.jpg)
 
@@ -29,7 +29,7 @@ NetBID is a data-driven system biology pipeline, using data-driven network-based
 **More data processing functions:** 
 
 - Expression matrix pre-processing and quality assessment
-- SJARACNe-based network construction
+- SJARACNe-based network reconstruction
 - Activity calculation of drivers and gene sets
 - Discovery of differential expressed genes and differential activated drivers
 - Generation of the master table for drivers

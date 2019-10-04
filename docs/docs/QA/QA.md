@@ -7,30 +7,30 @@ permalink: /docs/QA
 
 ## Navigation & FAQ
 
-### Network Construction
+### Network reconstruction
 
-- [Step 0: Preparations](../docs/network_construction#step-0-preparations)
-- [Step 1: Load in gene expression datasets for network construction (exp-load)](../docs/network_construction#step-1-load-in-gene-expression-datasets-for-network-construction-exp-load)
-   - [Q&A: The choice of expression dataset for network construction](../docs/network_construction#the-choice-of-expression-data-set-for-network-construction)
-   - [Q&A: Input RNA-Seq dataset](../docs/network_construction#input-rna-seq-dataset)
-   - [Q&A: Input expression matrix not from GEO database](../docs/network_construction#input-expression-matrix-not-from-geo-database)
-- [Step 2: Normalization for the expression dataset (exp-QC)](../docs/network_construction#step-2-normalization-for-the-expression-dataset-exp-qc)
-   - [Q&A: QC for RNA-Seq dataset](../docs/network_construction#qc-for-rna-seq-dataset)
-   - [Q&A: Combine two datasets](../docs/network_construction#combine-two-datasets)
-- [Step 3: Check sample cluster information, optional (exp-cluster)](../docs/network_construction#step-3-check-sample-cluster-analysis-optional-exp-cluster)
-- [Step 4: Prepare files to run SJARACNe (sjaracne-prep)](../docs/network_construction#step-4-prepare-files-to-run-sjaracne-sjaracne-prep)
-   - [Q&A: ID conversion](../docs/network_construction#id-conversion)
+- [Step 0: Preparations](../docs/network_reconstruction#step-0-preparations)
+- [Step 1: Load in gene expression datasets for network reconstruction (exp-load)](../docs/network_reconstruction#step-1-load-in-gene-expression-datasets-for-network-reconstruction-exp-load)
+   - [Q&A: The choice of expression dataset for network reconstruction](../docs/network_reconstruction#the-choice-of-expression-data-set-for-network-reconstruction)
+   - [Q&A: Input RNA-Seq dataset](../docs/network_reconstruction#input-rna-seq-dataset)
+   - [Q&A: Input expression matrix not from GEO database](../docs/network_reconstruction#input-expression-matrix-not-from-geo-database)
+- [Step 2: Normalization for the expression dataset (exp-QC)](../docs/network_reconstruction#step-2-normalization-for-the-expression-dataset-exp-qc)
+   - [Q&A: QC for RNA-Seq dataset](../docs/network_reconstruction#qc-for-rna-seq-dataset)
+   - [Q&A: Combine two datasets](../docs/network_reconstruction#combine-two-datasets)
+- [Step 3: Check sample cluster information, optional (exp-cluster)](../docs/network_reconstruction#step-3-check-sample-cluster-analysis-optional-exp-cluster)
+- [Step 4: Prepare files to run SJARACNe (sjaracne-prep)](../docs/network_reconstruction#step-4-prepare-files-to-run-sjaracne-sjaracne-prep)
+   - [Q&A: ID conversion](../docs/network_reconstruction#id-conversion)
    
-### Driver Estimation
+### Driver inference
 
-- [Step 0: Preparations](../docs/driver_estimation#step-0-preparations)
-- [Step 1: Load in the expression dataset for analysis (exp-load, exp-cluster, exp-QC)](../docs/driver_estimation#step-1-load-in-the-expression-dataset-for-analysis-exp-load-exp-cluster-exp-qc)
-   - [Q&A: What to do if the ID types from network-construction dataset and analysis dataset are different?](../docs/driver_estimation#what-to-do-if-the-id-types-from-network-construction-dataset-and-analysis-dataset-are-different)
-- [Step 2: Read in network files and calcualte driver activity (act-get)](../docs/driver_estimation#step-2-read-in-network-files-and-calcualte-driver-activity-act-get)
-    - [Q&A: Why study driver’s activity ?](../docs/driver_estimation#why-study-drivers-activity-) 
-- [Step 3: Get differential expression (DE) / differential activity (DA) for drivers (act-DA)](../docs/driver_estimation#step-3-get-differential-expression-de--differential-activity-da-for-drivers-act-da)
-- [Step 4: Generate a master table for drivers (ms-tab)](../docs/driver_estimation#step-4-generate-a-master-table-for-drivers-ms-tab)
-    - [Q&A: How to interpret and use the master table ?](../docs/driver_estimation#how-to-interpret-and-use-the-master-table-)
+- [Step 0: Preparations](../docs/driver_inference#step-0-preparations)
+- [Step 1: Load in the expression dataset for analysis (exp-load, exp-cluster, exp-QC)](../docs/driver_inference#step-1-load-in-the-expression-dataset-for-analysis-exp-load-exp-cluster-exp-qc)
+   - [Q&A: What to do if the ID types from network-reconstruction dataset and analysis dataset are different?](../docs/driver_inference#what-to-do-if-the-id-types-from-network-reconstruction-dataset-and-analysis-dataset-are-different)
+- [Step 2: Read in network files and calcualte driver activity (act-get)](../docs/driver_inference#step-2-read-in-network-files-and-calcualte-driver-activity-act-get)
+    - [Q&A: Why study driver’s activity ?](../docs/driver_inference#why-study-drivers-activity-) 
+- [Step 3: Get differential expression (DE) / differential activity (DA) for drivers (act-DA)](../docs/driver_inference#step-3-get-differential-expression-de--differential-activity-da-for-drivers-act-da)
+- [Step 4: Generate a master table for drivers (ms-tab)](../docs/driver_inference#step-4-generate-a-master-table-for-drivers-ms-tab)
+    - [Q&A: How to interpret and use the master table ?](../docs/driver_inference#how-to-interpret-and-use-the-master-table-)
 
 ### Advanced analysis
 

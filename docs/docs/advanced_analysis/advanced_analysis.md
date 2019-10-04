@@ -54,7 +54,7 @@ Reload previous saved RData from `ms-tab` step. Here, we use the demo data from 
 Users can call `analysis.par$out.dir.PLOT` to see where the plots created by later pipeline will be saved, this can be modified.
 
 ```R
-# Give file path to reload `ms-tab` RData from driver estimation step
+# Give file path to reload `ms-tab` RData from driver inference step
 analysis.par <- list()
 # Here we use demo data from NetBID2 package
 analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
