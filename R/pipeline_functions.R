@@ -1287,8 +1287,8 @@ merge_eset <- function(eset1,eset2,
   #rmat <- rmat[choose1, ]
   phe1 <- Biobase::pData(eset1)
   phe2 <- Biobase::pData(eset2)
-  phe1 <- apply(phe1,2,clean_charVector)
-  phe2 <- apply(phe2,2,clean_charVector)
+  phe1 <- as.data.frame(apply(phe1,2,clean_charVector),stringsAsFactors=F)
+  phe2 <- as.data.frame(apply(phe2,2,clean_charVector),stringsAsFactors=F)
   if(base::length(use_col)==0){
     use_col <- base::intersect(colnames(phe1),colnames(phe2))
   }
