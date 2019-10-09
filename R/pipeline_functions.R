@@ -2037,7 +2037,6 @@ getDE.BID.2G <-function(eset,output_id_column=NULL,G1=NULL, G0=NULL,G1_name=NULL
   de$ID <- all_id
   de<-de[,c('ID','logFC','AveExpr','t','P.Value','adj.P.Val','Z-statistics')]
   rownames(de) <- de$ID
-  de <- de[order(de$P.Value),]
   tT <- de
   new_mat <- stats::aggregate(exp_mat,list(use_id),mean)[,-1]
   tT <- tT[all_id,,drop=FALSE]
@@ -8204,7 +8203,7 @@ SJAracne.prepare <-
 #' It is meaningful to set when one choose "Bayesian" as method and "partial" as pooling.
 #' Default is 10.
 #' @param std logical, if TRUE, the expression matrix will be normalized by column. Default is TRUE.
-#' @param logTransformed logical, if TRUE, log transformation will be performed. Default is TRUE.
+#' @param logTransformed logical, if TRUE, log transformation has been performed. Default is TRUE.
 #' @param log.base numeric, the base of log transformation when \code{do.logtransform} is set to TRUE. Default is 2.
 #' @param average.method character, the method applied to calculate FC (fold change). Users can choose between "geometric" and "arithmetic".
 #' Default is "geometric".

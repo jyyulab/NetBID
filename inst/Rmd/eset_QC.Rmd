@@ -101,8 +101,8 @@ for(i in 1:base::length(intgroup)){
       class_label <- get_obs_label(Biobase::pData(eset),intgroup[i])
       cls_cc <- get.class.color(class_label,use_color=use_color,pre_define=pre_define) ## get color for each label
       graphics::boxplot(use_mat,col = cls_cc,ylab = "",xlab='Value',main = sprintf('Boxplot for %s',intgroup[i]),
-                     ylim=c(base::min(use_mat),
-                            base::max(use_mat)),horizontal=TRUE,las=2)
+                     ylim=c(base::min(use_mat,na.rm=TRUE),
+                            base::max(use_mat,na.rm=TRUE)),horizontal=TRUE,las=2)
       pp <- par()$usr
       legend(pp[2],pp[4],legend=base::unique(class_label),
              fill = cls_cc[base::unique(class_label)],
@@ -125,9 +125,11 @@ for(i in 1:length(intgroup)){
       for (j in 1:ncol(use_mat)) {
         all_dens[[j]] <- density(use_mat[,j],na.rm=TRUE)
       }
-      plot(1,col = 'white',xlim=c(min(unlist(lapply(all_dens,function(x)min(x$x)))),max(unlist(lapply(all_dens,function(x)max(x$x))))),
+      plot(1,col = 'white',xlim=c(min(unlist(lapply(all_dens,function(x)min(x$x,na.rm=TRUE))),na.rm=TRUE),
+                                  max(unlist(lapply(all_dens,function(x)max(x$x,na.rm=TRUE))),na.rm=TRUE)),
            type = 'l',xlab = "",ylab='Density',main = sprintf('Density plot for %s',intgroup[i]),
-           ylim=c(min(unlist(lapply(all_dens,function(x)min(x$y)))),max(unlist(lapply(all_dens,function(x)max(x$y))))))
+           ylim=c(min(unlist(lapply(all_dens,function(x)min(x$y,na.rm=TRUE))),na.rm=TRUE),
+                  max(unlist(lapply(all_dens,function(x)max(x$y,na.rm=TRUE))),na.rm=TRUE)))
       class_label <- pData(eset)[,intgroup[i]]
       cls_cc <- get.class.color(class_label)
       for (j in 1:ncol(use_mat)) {
