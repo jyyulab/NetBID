@@ -7477,8 +7477,21 @@ draw.targetNet.TWO <- function(source1_label="",source2_label="",
   g2  <- base::setdiff(names(edge_score2),names(edge_score1))
   ec1 <- z2col(edge_score1*100,sig_thre=0,n_len=base::length(edge_score1),red_col=pos_col,blue_col=neg_col);names(ec1) <- names(edge_score1)
   ec2 <- z2col(edge_score2*100,sig_thre=0,n_len=base::length(edge_score2),red_col=pos_col,blue_col=neg_col);names(ec2) <- names(edge_score2)
-  ew1 <- 2*label_cex*(abs(edge_score1)-base::min(abs(edge_score1)))/(base::max(abs(edge_score1))-base::min(abs(edge_score1)))+label_cex/2; names(ew1) <- names(edge_score1)
-  ew2 <- 2*label_cex*(abs(edge_score2)-base::min(abs(edge_score2)))/(base::max(abs(edge_score2))-base::min(abs(edge_score2)))+label_cex/2; names(ew2) <- names(edge_score2)
+  if(base::max(abs(edge_score1)) - base::min(abs(edge_score1))==0){
+	  ew1 <- rep(2 * label_cex+ label_cex/2,length.out=length(edge_score1))
+  }else{
+	  ew1 <- 2 * label_cex * (abs(edge_score1) - base::min(abs(edge_score1)))/(base::max(abs(edge_score1)) - 
+										   base::min(abs(edge_score1))) + label_cex/2
+  }
+  names(ew1) <- names(edge_score1)
+  if(base::max(abs(edge_score2)) - base::min(abs(edge_score2))==0){
+	  ew2 <- rep(2 * label_cex+ label_cex/2,length.out=length(edge_score2))
+  }else{
+          ew2 <- 2 * label_cex * (abs(edge_score2) - base::min(abs(edge_score2)))/(base::max(abs(edge_score2)) -                                                              base::min(abs(edge_score2))) + label_cex/2
+  }
+  names(ew2) <- names(edge_score2)
+  #ew1 <- 2*label_cex*(abs(edge_score1)-base::min(abs(edge_score1)))/(base::max(abs(edge_score1))-base::min(abs(edge_score1)))+label_cex/2; names(ew1) <- names(edge_score1)
+  #ew2 <- 2*label_cex*(abs(edge_score2)-base::min(abs(edge_score2)))/(base::max(abs(edge_score2))-base::min(abs(edge_score2)))+label_cex/2; names(ew2) <- names(edge_score2)
   t2xy <- function(tt,radius=1,init.angle=0) {
     t2p <- pi*2 * tt + init.angle * pi/180
     list(x = radius * cos(t2p), y = radius * sin(t2p))
