@@ -4,12 +4,25 @@
 \alias{draw.funcEnrich.cluster}
 \title{Cluster Plot for Gene Set Enrichment Analysis Result}
 \usage{
-draw.funcEnrich.cluster(funcEnrich_res = NULL, top_number = 30,
-  Pv_col = "Ori_P", name_col = "#Name",
-  item_col = "Intersected_items", Pv_thre = 0.1, gs_cex = 0.7,
-  gene_cex = 0.8, pv_cex = 0.7, main = "", h = 0.95,
-  cluster_gs = TRUE, cluster_gene = TRUE, pdf_file = NULL,
-  use_genes = NULL, return_mat = FALSE)
+draw.funcEnrich.cluster(
+  funcEnrich_res = NULL,
+  top_number = 30,
+  Pv_col = "Ori_P",
+  name_col = "#Name",
+  item_col = "Intersected_items",
+  Pv_thre = 0.1,
+  gs_cex = 0.7,
+  gene_cex = 0.8,
+  pv_cex = 0.7,
+  main = "",
+  h = 0.95,
+  inner_color = brewer.pal(9, "Reds")[3],
+  cluster_gs = TRUE,
+  cluster_gene = TRUE,
+  pdf_file = NULL,
+  use_genes = NULL,
+  return_mat = FALSE
+)
 }
 \arguments{
 \item{funcEnrich_res}{data.frame,  containing the result of functional enrichment analysis.
@@ -36,6 +49,9 @@ Default is "Intersected_items".}
 \item{main}{character, an overall title for the plot.}
 
 \item{h}{numeric, the height where the cluster tree should be cut. The same parameter as \code{cutree}. Default is 0.95.}
+
+\item{inner_color}{character, the color code for the indexing box inside the main plot region.
+Default is brewer.pal(9,'Reds')[3]. If want to set the color by Z-score, could use `z2col` to generate the color code.}
 
 \item{cluster_gs}{logical, if TRUE, gene sets will be clustered. Default is TRUE.}
 

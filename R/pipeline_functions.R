@@ -5505,6 +5505,8 @@ draw.funcEnrich.bar <- function(funcEnrich_res=NULL,top_number=30,
 #' @param pv_cex numeric, giving the amount by which the text of P-values should be magnified relative to the default. Default is 0.7.
 #' @param main character, an overall title for the plot.
 #' @param h numeric, the height where the cluster tree should be cut. The same parameter as \code{cutree}. Default is 0.95.
+#' @param inner_color character, the color code for the indexing box inside the main plot region.
+#' Default is brewer.pal(9,'Reds')[3]. If want to set the color by Z-score, could use `z2col` to generate the color code.
 #' @param cluster_gs logical, if TRUE, gene sets will be clustered. Default is TRUE.
 #' @param cluster_gene logical, if TRUE, genes will be clustered. Default is TRUE.
 #' @param use_genes a vector of characters, a vector of gene symbols to display.
@@ -5592,8 +5594,11 @@ draw.funcEnrich.bar <- function(funcEnrich_res=NULL,top_number=30,
 #'                         cluster_gs=FALSE,cluster_gene = FALSE)
 #' }
 #' @export
-draw.funcEnrich.cluster <- function(funcEnrich_res=NULL,top_number=30,Pv_col='Ori_P',name_col='#Name',item_col='Intersected_items',Pv_thre=0.1,
-                                    gs_cex=0.7,gene_cex=0.8,pv_cex=0.7,main="",h=0.95,cluster_gs=TRUE,cluster_gene=TRUE,
+draw.funcEnrich.cluster <- function(funcEnrich_res=NULL,top_number=30,
+                                    Pv_col='Ori_P',name_col='#Name',item_col='Intersected_items',Pv_thre=0.1,
+                                    gs_cex=0.7,gene_cex=0.8,pv_cex=0.7,
+                                    main="",h=0.95,inner_color=brewer.pal(9,'Reds')[3],
+                                    cluster_gs=TRUE,cluster_gene=TRUE,
                                     pdf_file=NULL,use_genes=NULL,return_mat=FALSE){
   #
   all_input_para <- c('funcEnrich_res','Pv_col','item_col','Pv_thre','name_col',
@@ -5625,6 +5630,7 @@ draw.funcEnrich.cluster <- function(funcEnrich_res=NULL,top_number=30,Pv_col='Or
   cc1 <- grDevices::colorRampPalette(brewer.pal(8,'Dark2'))(base::length(base::unique(gs_cluster)))
   cc2 <- grDevices::colorRampPalette(brewer.pal(9,'Pastel1'))(base::length(base::unique(gene_cluster)))
   cc3 <- grDevices::colorRampPalette(brewer.pal(9,'Reds')[3:9])(100)
+  #inner_color <- cc3[1]
   # get gs order
   if(cluster_gs==TRUE) gs_cluster <- gs_cluster[h_gs$order]
   tmp2 <- vec2list(gs_cluster,sep=NULL)
@@ -5669,7 +5675,7 @@ draw.funcEnrich.cluster <- function(funcEnrich_res=NULL,top_number=30,Pv_col='Or
     #print(t(matrix(c(rep(1,geneWidth1),rep(2,pvWidth1),rep(3,gsWidth1)),byrow=TRUE)))
     #print(ww);print(hh)
     par(mai=c(0.5,0.5,geneHeight,0));
-    graphics::image(t(mat1),col=c('white',cc3[1]),xaxt='n',yaxt='n',bty='n')
+    graphics::image(t(mat1),col=c('white',inner_color),xaxt='n',yaxt='n',bty='n')
     pp <- par()$usr;
     gs_cs <- cumsum(base::table(gs_cluster)[base::unique(gs_cluster)])
     gene_cs <- cumsum(base::table(gene_cluster)[base::unique(gene_cluster)])
@@ -7480,7 +7486,7 @@ draw.targetNet.TWO <- function(source1_label="",source2_label="",
   if(base::max(abs(edge_score1)) - base::min(abs(edge_score1))==0){
 	  ew1 <- rep(2 * label_cex+ label_cex/2,length.out=length(edge_score1))
   }else{
-	  ew1 <- 2 * label_cex * (abs(edge_score1) - base::min(abs(edge_score1)))/(base::max(abs(edge_score1)) - 
+	  ew1 <- 2 * label_cex * (abs(edge_score1) - base::min(abs(edge_score1)))/(base::max(abs(edge_score1)) -
 										   base::min(abs(edge_score1))) + label_cex/2
   }
   names(ew1) <- names(edge_score1)
