@@ -5661,6 +5661,9 @@ draw.funcEnrich.cluster <- function(funcEnrich_res=NULL,top_number=30,
       mr <- 180/(geneWidth1+pvWidth1+gsWidth1)
       geneWidth1 <- round(geneWidth1*mr)
       pvWidth1 <- round(pvWidth1*mr)
+      if(pvWidth1 < 1){
+        pvWidth1 <- 1
+      }
       gsWidth1 <- ceiling(gsWidth1*mr)
     }
     #####
