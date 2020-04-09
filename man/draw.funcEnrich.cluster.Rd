@@ -51,7 +51,10 @@ Default is "Intersected_items".}
 \item{h}{numeric, the height where the cluster tree should be cut. The same parameter as \code{cutree}. Default is 0.95.}
 
 \item{inner_color}{character, the color code for the indexing box inside the main plot region.
-Default is brewer.pal(9,'Reds')[3]. If want to set the color by Z-score, could use `z2col` to generate the color code.}
+Could be one character or a character vector.
+If want to set the color by gene, could input the color code character with names set as genes.
+If want to set the color by Z-score, could use `z2col` to generate the color code.
+Default is brewer.pal(9,'Reds')[3].}
 
 \item{cluster_gs}{logical, if TRUE, gene sets will be clustered. Default is TRUE.}
 
@@ -92,6 +95,12 @@ res1 <- funcEnrich.Fisher(input_list=ms_tab[rownames(sig_driver),'geneSymbol'],
                           use_gs=c('H','C5'),Pv_thre=0.1,Pv_adj = 'none')
 draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 0.5,
                        gene_cex=0.9,pv_cex=0.8)
+DA_Z <- z2col(ms_tab[rownames(sig_driver),'Z.G4.Vs.others_DA'],
+        blue_col=brewer.pal(9,'Blues')[3],
+        red_col=brewer.pal(9,'Reds')[3],col_max_thre=6)
+names(DA_Z) <- ms_tab[rownames(sig_driver),'geneSymbol']
+draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 0.5,
+                       gene_cex=0.9,pv_cex=0.8,inner_color=DA_Z)
 draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=10,gs_cex = 0.6,
                        gene_cex=1,pv_cex=1,
                        cluster_gs=TRUE,cluster_gene = TRUE)

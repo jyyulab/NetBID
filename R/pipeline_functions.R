@@ -5506,7 +5506,10 @@ draw.funcEnrich.bar <- function(funcEnrich_res=NULL,top_number=30,
 #' @param main character, an overall title for the plot.
 #' @param h numeric, the height where the cluster tree should be cut. The same parameter as \code{cutree}. Default is 0.95.
 #' @param inner_color character, the color code for the indexing box inside the main plot region.
-#' Default is brewer.pal(9,'Reds')[3]. If want to set the color by Z-score, could use `z2col` to generate the color code.
+#' Could be one character or a character vector.
+#' If want to set the color by gene, could input the color code character with names set as genes.
+#' If want to set the color by Z-score, could use `z2col` to generate the color code.
+#' Default is brewer.pal(9,'Reds')[3].
 #' @param cluster_gs logical, if TRUE, gene sets will be clustered. Default is TRUE.
 #' @param cluster_gene logical, if TRUE, genes will be clustered. Default is TRUE.
 #' @param use_genes a vector of characters, a vector of gene symbols to display.
@@ -5537,6 +5540,12 @@ draw.funcEnrich.bar <- function(funcEnrich_res=NULL,top_number=30,
 #'                           use_gs=c('H','C5'),Pv_thre=0.1,Pv_adj = 'none')
 #' draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 0.5,
 #'                        gene_cex=0.9,pv_cex=0.8)
+#' DA_Z <- z2col(ms_tab[rownames(sig_driver),'Z.G4.Vs.others_DA'],
+#'         blue_col=brewer.pal(9,'Blues')[3],
+#'         red_col=brewer.pal(9,'Reds')[3],col_max_thre=6)
+#' names(DA_Z) <- ms_tab[rownames(sig_driver),'geneSymbol']
+#' draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=30,gs_cex = 0.5,
+#'                        gene_cex=0.9,pv_cex=0.8,inner_color=DA_Z)
 #' draw.funcEnrich.cluster(funcEnrich_res=res1,top_number=10,gs_cex = 0.6,
 #'                        gene_cex=1,pv_cex=1,
 #'                        cluster_gs=TRUE,cluster_gene = TRUE)
@@ -5602,7 +5611,8 @@ draw.funcEnrich.cluster <- function(funcEnrich_res=NULL,top_number=30,
                                     pdf_file=NULL,use_genes=NULL,return_mat=FALSE){
   #
   all_input_para <- c('funcEnrich_res','Pv_col','item_col','Pv_thre','name_col',
-                      'gs_cex','gene_cex','pv_cex','main','h','cluster_gs','cluster_gene','return_mat')
+                      'gs_cex','gene_cex','pv_cex','main','h','inner_color',
+                      'cluster_gs','cluster_gene','return_mat')
   check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
   if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
   check_res <- c(check_option('cluster_gs',c(TRUE,FALSE),envir=environment()),
@@ -5661,6 +5671,9 @@ draw.funcEnrich.cluster <- function(funcEnrich_res=NULL,top_number=30,
       mr <- 180/(geneWidth1+pvWidth1+gsWidth1)
       geneWidth1 <- round(geneWidth1*mr)
       pvWidth1 <- round(pvWidth1*mr)
+      if(pvWidth1<1){
+        pvWidth1 <- 1;
+      }
       gsWidth1 <- ceiling(gsWidth1*mr)
     }
     #####
@@ -5675,7 +5688,19 @@ draw.funcEnrich.cluster <- function(funcEnrich_res=NULL,top_number=30,
     #print(t(matrix(c(rep(1,geneWidth1),rep(2,pvWidth1),rep(3,gsWidth1)),byrow=TRUE)))
     #print(ww);print(hh)
     par(mai=c(0.5,0.5,geneHeight,0));
-    graphics::image(t(mat1),col=c('white',inner_color),xaxt='n',yaxt='n',bty='n')
+    if(length(inner_color)==1 | is.null(names(inner_color)==TRUE) | length(intersect(colnames(mat1),names(inner_color)))<1){ ## length 1 or without names
+      graphics::image(t(mat1),col=c('white',inner_color[1]),xaxt='n',yaxt='n',bty='n')
+    }else{
+      gene_order <- colnames(mat1)
+      mat2 <- mat1;
+      for(i in 1:ncol(mat2)){
+        mat2[which(mat2[,i]==1),i] <- i
+      }
+      w1 <- setdiff(names(inner_color),gene_order)
+      inner_color[w1] <- 'grey'
+      inner_color_mod <- inner_color[gene_order]
+      graphics::image(t(mat2),col=c('white',inner_color_mod),xaxt='n',yaxt='n',bty='n')
+    }
     pp <- par()$usr;
     gs_cs <- cumsum(base::table(gs_cluster)[base::unique(gs_cluster)])
     gene_cs <- cumsum(base::table(gene_cluster)[base::unique(gene_cluster)])
