@@ -4,9 +4,16 @@
 \alias{funcEnrich.Fisher}
 \title{Gene Set Enrichment Analysis by Fisher's Exact Test}
 \usage{
-funcEnrich.Fisher(input_list = NULL, bg_list = NULL, use_gs = NULL,
-  gs2gene = NULL, min_gs_size = 5, max_gs_size = 500,
-  Pv_adj = "fdr", Pv_thre = 0.1)
+funcEnrich.Fisher(
+  input_list = NULL,
+  bg_list = NULL,
+  use_gs = NULL,
+  gs2gene = NULL,
+  min_gs_size = 5,
+  max_gs_size = 500,
+  Pv_adj = "fdr",
+  Pv_thre = 0.1
+)
 }
 \arguments{
 \item{input_list}{a vector of characters, a vector of gene symbols. If gene symbols are not available, users can call \code{get_IDtransfer}
@@ -43,7 +50,7 @@ Return a data.frame, contains gene sets with significant enrichment statistics. 
 \item{Num_list}{Number of input genes for testing (filtered by the background list)}
 \item{Num_list_item}{Number of input genes annotated by the gene set (filtered by the background list)}
 \item{Ori_P}{Original P-value from Fisher's Exact Test}
-\item{Adj_p}{Adjusted P-value}
+\item{Adj_P}{Adjusted P-value}
 \item{Odds_Ratio}{Odds ratio from the 2*2 matrix used for Fisher's Exact Test}
 \item{Intersected_items}{A vector of the intersected genes, collapsed by ';'. Number is equal to Num_list_item}
 }

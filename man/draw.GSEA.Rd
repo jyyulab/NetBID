@@ -4,14 +4,23 @@
 \alias{draw.GSEA}
 \title{GSEA (Gene Set Enrichment Analysis) Plot for one Gene Set or one Driver}
 \usage{
-draw.GSEA(rank_profile = NULL, use_genes = NULL,
-  use_direction = NULL, main = "", pdf_file = NULL,
-  annotation = NULL, annotation_cex = 1.2, left_annotation = NULL,
-  right_annotation = NULL)
+draw.GSEA(
+  rank_profile = NULL,
+  use_genes = NULL,
+  use_direction = NULL,
+  main = "",
+  pdf_file = NULL,
+  annotation = NULL,
+  annotation_cex = 1.2,
+  left_annotation = NULL,
+  right_annotation = NULL
+)
 }
 \arguments{
 \item{rank_profile}{a named vector of numerics, the differential values (DE or DA) calculated from a sample comparison (e.g. "G4 vs. Others").
-Names of the vector must be gene names. The differential values can be "logFC" or "t-statistics".}
+Names of the vector must be gene names.
+For the DA, user could use `processDriverProfile()` to convert the DA profile into gene-name based profile.
+The differential values can be "logFC" or "t-statistics".}
 
 \item{use_genes}{a vector of characters, a vector of genes to display. The genes can either be annotated genes in gene set or the targe genes from a specific driver.
 The gene names must be a subset of \code{names(rank_profile)}.}
@@ -25,7 +34,9 @@ Users can get this vector by converting the signs of "spearman". If NULL, no reg
 
 \item{annotation}{character, the annotation set by users for easier reference.
 Normally the annotation is the P-value or other statistics to show the significance of the interested gene set or driver.
-If NULL, will perform a Kolmogorov-Smirnov test to get the significance value. Default is NULL.}
+If NULL, will perform a Kolmogorov-Smirnov test to get the significance value.
+If want to get the statistics from GSEA test, could use `funcEnrich.GSEA()` to get the statistics first.
+Default is NULL.}
 
 \item{annotation_cex}{numeric, giving the amount by which the text of annotation should be magnified relative to the default. Default is 1.2.}
 
@@ -44,6 +55,29 @@ analysis.par <- list()
 analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
 NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
 ms_tab <- analysis.par$final_ms_tab
+
+## draw for the most significant gene set
+# by driver's DA profile
+DA_profile <- processDriverProfile(Driver_name=ms_tab$gene_label,
+                                    Driver_profile=ms_tab$logFC.G4.Vs.others_DA,
+                                    choose_strategy='absmax',
+                                    return_type ='gene_statistics')
+res1 <- funcEnrich.GSEA(rank_profile=DA_profile,
+                         use_gs=c('H'),
+                         Pv_thre=0.1,Pv_adj = 'none')
+top_gs <- res1[1,'#Name'] ## draw for the top 1
+annot <- sprintf('NES: \%s \n Adjusted P-value: \%s',
+          signif(res1[1,'NES'],2),
+          signif(res1[1,'Adj_P'],2))
+draw.GSEA(rank_profile=DA_profile,
+          use_genes=all_gs2gene$H[[top_gs]],
+          main=sprintf('GSEA plot for gene set \%s',
+          top_gs),
+          annotation=annot,annotation_cex=1.2,
+          left_annotation='high in G4',
+          right_annotation='high in others')
+
+## draw for the most significant driver
 sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
                                logFC_col='logFC.G4.Vs.others_DA',
                                Pv_col='P.Value.G4.Vs.others_DA',

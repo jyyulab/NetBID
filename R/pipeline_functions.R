@@ -1852,6 +1852,87 @@ get_gr2driver <- function(gr,mode='out'){
   names(d1[which(d1>0)])
 }
 
+#' Clean Activity-based profile
+#'
+#' \code{processDriverProfile} is a helper function to pre-process Activity-based profile.
+#'
+#' @param Driver_profile a numeric vector, contain statistics for drivers
+#' (e.g driver's target size, driver's Z-statistics)
+#' @param Driver_name a character vector, contain name for drivers.
+#' The length of `Driver_profile` and `Driver_name` must be equal and the order of item must match.
+#' @param choose_strategy character, strategy of selection if duplicate driver name (e.g TP53_TF, TP53_SIG).
+#' Choose from "min","max","absmin","absmax". Default is "min".
+#' @param return_type character, strategy of return type.
+#' Choose from "driver_name","gene_name", "driver_statistics", "gene_statistics".
+#' If choose "*_name", only the name vector is returned.
+#' If choose "*_statistics", the statistics vector is returned with character name.
+#' Default is "driver_name".
+#' @examples
+#' analysis.par <- list()
+#' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
+#' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' ms_tab <- analysis.par$final_ms_tab
+#' Driver_profile <- ms_tab$P.Value.G4.Vs.WNT_DA
+#' Driver_name <- ms_tab$gene_label
+#' res1 <- processDriverProfile(Driver_profile=Driver_profile,
+#'                               Driver_name=Driver_name,
+#'                               choose_strategy='min')
+#' res2 <- processDriverProfile(Driver_profile=Driver_profile,
+#'                               Driver_name=Driver_name,
+#'                               return_type = 'gene_name',
+#'                               choose_strategy='min')
+#' Driver_profile <- ms_tab$Z.G4.Vs.WNT_DA
+#' res3 <- processDriverProfile(Driver_profile=Driver_profile,
+#'                               Driver_name=Driver_name,
+#'                               choose_strategy='absmax',
+#'                               return_type = 'driver_statistics')
+#' res4 <- processDriverProfile(Driver_profile=Driver_profile,
+#'                               Driver_name=Driver_name,
+#'                               choose_strategy='absmax',
+#'                               return_type = 'gene_statistics')
+#' driver_size <- ms_tab$Size
+#' res5 <- processDriverProfile(Driver_profile=driver_size,
+#'                               Driver_name=Driver_name,
+#'                               choose_strategy='max')
+#' @export
+processDriverProfile <- function(Driver_profile,Driver_name,
+                                  choose_strategy='min',
+                                  return_type='driver_name'){
+  all_input_para <- c('Driver_profile','Driver_name','choose_strategy')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  check_res <- c(check_option('choose_strategy',c('min','max','absmin','absmax'),envir=environment()),
+                 check_option('return_type',c('driver_name','gene_name','driver_statistics','gene_statistics'),envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+
+  ##
+  l1 <- length(Driver_profile)
+  l2 <- length(Driver_name)
+  if(l1!=l2 | l1==0 | l2==0){
+    message('Driver_profile and Driver_name need same length.
+            Please check Driver_profile, Driver_name, and re-try!');return(FALSE)
+  }
+  gene_name <- gsub('(.*)_(TF|SIG)',"\\1",Driver_name)
+  uni_gene_name <- unique(gene_name)
+  tmp1 <- lapply(uni_gene_name,function(x){
+    w1 <- which(gene_name == x)
+    x1 <- Driver_profile[w1]
+    x2 <- rank(x1)
+    x3 <- rank(abs(x1))
+    if(choose_strategy=='min'){w2 <- w1[which.min(x2)]}
+    if(choose_strategy=='max'){w2 <- w1[which.max(x2)]}
+    if(choose_strategy=='absmin'){w2 <- w1[which.min(x3)]}
+    if(choose_strategy=='absmax'){w2 <- w1[which.max(x3)]}
+    w2
+  })
+  remain_item <- unlist(tmp1)
+  if(return_type=='driver_name') new_vec <- Driver_name[remain_item]
+  if(return_type=='gene_name') new_vec <- gene_name[remain_item]
+  if(return_type=='driver_statistics'){new_vec <- Driver_profile[remain_item]; names(new_vec) <- Driver_name[remain_item]}
+  if(return_type=='gene_statistics'){new_vec <-  Driver_profile[remain_item]; names(new_vec) <- gene_name[remain_item]}
+  return(new_vec)
+}
+
 #' Calculate Activity Value for Gene Sets
 #'
 #' \code{cal.Activity.GS} calculates activity value for each gene set, and return a numeric matrix with rows of gene sets and columns of samples.
@@ -1859,6 +1940,8 @@ get_gr2driver <- function(gr,mode='out'){
 #' @param use_gs2gene list, contains elements of gene sets. Element name is gene set name, each element contains a vector of genes belong to that gene set.
 #' Default is using \code{all_gs2gene[c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG')]}, which is loaded from \code{gs.preload}.
 #' @param cal_mat numeric matrix, gene/transcript expression matrix.
+#' If want to input activity matrix, need to use `processDriverProfile()` to pre-process the dataset.
+#' Detailed could see demo.
 #' @param es.method character, method to calculate the activity value. Users can choose from "mean", "absmean", "maxmean", "gsva", "ssgsea", "zscore" and "plage".
 #' The details for using the last four options, users can check \code{gsva}. Default is "mean".
 #' @param std logical, if TRUE, the expression matrix will be normalized by column. Default is TRUE.
@@ -1875,6 +1958,27 @@ get_gr2driver <- function(gr,mode='out'){
 #' ## each row is a gene symbol, if not, must convert ID first
 #' ac_gs <- cal.Activity.GS(use_gs2gene = use_gs2gene,
 #'                         cal_mat = exp_mat_gene)
+#' ## if want to input activity-matrix
+#' ac_mat <- cal.Activity(target_list=analysis.par$merge.network$target_list,
+#'           cal_mat=Biobase::exprs(analysis.par$cal.eset),
+#'           es.method='weightedmean')
+#' # pre-process the activity matrix by selecting the one
+#' # with larger target size for duplicate drivers
+#' Driver_name <- rownames(ac_mat)
+#' driver_size <- ms_tab[Driver_name,]$Size
+#' use_driver <- processDriverProfile(Driver_profile=driver_size,
+#'                               Driver_name=Driver_name,
+#'                               choose_strategy='max',
+#'                               return_type='driver_name')
+#' use_driver_gene_name <-
+#'               processDriverProfile(Driver_profile=driver_size,
+#'                               Driver_name=Driver_name,
+#'                               choose_strategy='max',
+#'                               return_type='gene_name')
+#' ac_mat_gene <- ac_mat[use_driver,]
+#' rownames(ac_mat_gene) <- use_driver_gene_name
+#' driver_ac_gs <- cal.Activity.GS(use_gs2gene = use_gs2gene,
+#'                         cal_mat = ac_mat_gene)
 #' @export
 cal.Activity.GS <- function(use_gs2gene=all_gs2gene[c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG')], cal_mat=NULL, es.method = 'mean',std=TRUE) {
   #
@@ -5235,7 +5339,7 @@ vec2list <- function(input_v,sep=NULL){
 #' \item{Num_list}{Number of input genes for testing (filtered by the background list)}
 #' \item{Num_list_item}{Number of input genes annotated by the gene set (filtered by the background list)}
 #' \item{Ori_P}{Original P-value from Fisher's Exact Test}
-#' \item{Adj_p}{Adjusted P-value}
+#' \item{Adj_P}{Adjusted P-value}
 #' \item{Odds_Ratio}{Odds ratio from the 2*2 matrix used for Fisher's Exact Test}
 #' \item{Intersected_items}{A vector of the intersected genes, collapsed by ';'. Number is equal to Num_list_item}
 #'
@@ -5343,11 +5447,11 @@ funcEnrich.Fisher <- function(input_list=NULL,bg_list=NULL,
   pv <- as.data.frame(pv,stringsAsFactors=FALSE)
   colnames(pv) <- c('Total_item','Num_item','Num_list','Num_list_item','Ori_P','Odds_Ratio','Intersected_items')
   pv[1:6] <- lapply(pv[1:6],as.numeric)
-  pv$Adj_p <- p.adjust(pv$Ori_P,method=Pv_adj,n=base::length(all_gs))
+  pv$Adj_P <- p.adjust(pv$Ori_P,method=Pv_adj,n=base::length(all_gs))
   pv$`#Name` <- rownames(pv)
   pv <- pv[,c(9,1:5,8,6:7)]
   pv <- pv[order(pv$Ori_P),]
-  use_pv <- pv[which(pv$Adj_p<=Pv_thre),]
+  use_pv <- pv[which(pv$Adj_P<=Pv_thre),]
   return(use_pv)
 }
 
@@ -6066,13 +6170,193 @@ draw.bubblePlot <- function(driver_list=NULL,show_label=driver_list,Z_val=NULL,d
   return(TRUE)
 }
 
+
+#' Gene Set Enrichment Analysis by GSEA
+#'
+#' \code{funcEnrich.GSEA} performs gene set enrichment analysis to the input gene list, by using the GSEA Test.
+#'
+#' @param rank_profile a named vector of numerics, the differential values (DE or DA) calculated from a sample comparison (e.g. "G4 vs. Others").
+#' Names of the vector must be gene names.
+#' For the DA, user could use 'processDriverProfile()' to convert the DA profile into gene-name based profile.
+#' The differential values can be "logFC" or "t-statistics".
+#' @param gs2gene list, a list contains elements of gene sets.
+#' The name of the element is gene set, each element contains a vector of genes in that gene set.
+#' If NULL, will use \code{all_gs2gene}, which is created by function \code{gs.preload}. Default is NULL.
+#' @param use_gs a vector of characters, the names of gene sets.
+#' If \code{gs2gene} is NULL, \code{all_gs2gene} will be used. The \code{use_gs} must be the subset of \code{names(all_gs2gene)}.
+#' If "all", all the gene sets in \code{gs2gene} will be used.
+#' If user input his own \code{gs2gene} list, \code{use_gs} will be set to "all" as default.
+#' Default is c("H", "CP:BIOCARTA", "CP:REACTOME", "CP:KEGG").
+#' @param min_gs_size numeric, the minimum size of gene set to analysis. Default is 5.
+#' @param max_gs_size numeric, the maximum size of gene set to analysis. Default is 500.
+#' @param Pv_adj character, method to adjust P-value. Default is "fdr".
+#' For details, please check \code{p.adjust.methods}.
+#' @param Pv_thre numeric, threshold for the adjusted P-values. Default is 0.1.
+#' @param test_strategy choose from "KS" and "GSEA". Default is "GSEA".
+#' If "KS", will perform a Kolmogorov-Smirnov test to get the significance value.
+#' @param nperm numeric, number of random permutations. Default is 1000.
+#' This function only do gene-label based permutation reshuffling.
+#' @param use_seed integer, the random seed. Default is 999.
+#'
+#' @return Return a data.frame, contains gene sets with significant enrichment statistics.
+#' Column details are as follows (test_strategy=GSEA),
+#'
+#' \item{#Name}{Name of the enriched gene set}
+#' \item{Total_item}{Size in the profile}
+#' \item{Num_item}{Number of genes in the gene set (filtered by the profile list)}
+#' \item{Ori_P}{Original P-value from GSEA Test}
+#' \item{Adj_P}{Adjusted P-value}
+#' \item{ES}{Enrichment Score}
+#' \item{NES}{normalized Enrichment Score}
+#'
+#' @examples
+#' analysis.par <- list()
+#' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
+#' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
+#' ms_tab <- analysis.par$final_ms_tab
+#' ## get significant gene set by driver's DA profile
+#' DA_profile <- processDriverProfile(Driver_name=ms_tab$gene_label,
+#'                                     Driver_profile=ms_tab$logFC.G4.Vs.others_DA,
+#'                                     choose_strategy='absmax',
+#'                                     return_type ='gene_statistics')
+#' res1 <- funcEnrich.GSEA(rank_profile=DA_profile,
+#'                          use_gs=c('H'),
+#'                          Pv_thre=0.1,Pv_adj = 'none')
+#' \dontrun{
+#' }
+#' @export
+funcEnrich.GSEA <- function(rank_profile=NULL,
+                            use_gs=NULL,
+                            gs2gene=NULL,
+                            min_gs_size=5,max_gs_size=500,
+                            Pv_adj='fdr',Pv_thre=0.1,
+                            test_strategy='GSEA',
+                            nperm=1000,use_seed=999){
+  #
+  all_input_para <- c('rank_profile','min_gs_size','max_gs_size','Pv_adj','Pv_thre',
+                      'test_strategy','nperm','use_seed')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  check_res <- c(check_option('Pv_adj',c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY","fdr", "none"),envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  check_res <- c(check_option('test_strategy',c("GSEA","KS"),envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+
+  #
+  if(is.null(gs2gene)==TRUE){ ## use inner gs2gene
+    if(is.null(use_gs)==TRUE){
+      use_gs <- c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG')
+    }else{
+      if(use_gs[1] == 'all'){
+        use_gs <- c(all_gs2gene_info$Category,all_gs2gene_info$`Sub-Category`)
+      }
+    }
+    if(base::length(base::setdiff(use_gs,c(all_gs2gene_info$Category,all_gs2gene_info$`Sub-Category`)))>0){
+      message(sprintf('Input %s not in all_gs2gene, please check all_gs2gene_info (items in Category or Sub-Category) and re-try!',
+                      base::paste(base::setdiff(use_gs,c(all_gs2gene_info$Category,all_gs2gene_info$`Sub-Category`)),collapse=';')));
+      return(FALSE)
+    }
+    if(base::length(use_gs)>1){
+      gs2gene <- merge_gs(all_gs2gene,use_gs = use_gs)
+    }else{
+      gs2gene <- all_gs2gene[[use_gs]]
+    }
+  }else{
+    if(is.null(use_gs)==TRUE){
+      use_gs <- 'all'
+    }
+    if(base::length(use_gs)>1){
+      if(class(gs2gene[[1]])=='list') gs2gene <- merge_gs(gs2gene,use_gs = use_gs)
+    }else{
+      if(use_gs == 'all'){
+        if(class(gs2gene[[1]])=='list') gs2gene <- merge_gs(gs2gene,use_gs = names(gs2gene))
+      }else{
+        if(class(gs2gene[[1]])=='list') gs2gene <- gs2gene[[use_gs]]
+      }
+    }
+  }
+  all_gs <- names(gs2gene)
+  bg_list <- names(rank_profile)
+  if(!is.null(bg_list)){
+    use_gs2gene <- lapply(gs2gene,function(x){base::intersect(x,bg_list)})
+    names(use_gs2gene) <- names(gs2gene)
+  }else{
+    use_gs2gene <- gs2gene
+  }
+  bg_list <- base::unique(unlist(use_gs2gene))
+  ## size selection
+  s1 <- unlist(lapply(use_gs2gene,length))
+  w1 <- which(s1>=min_gs_size & s1<=max_gs_size)
+  use_gs2gene <- use_gs2gene[w1]
+  all_gs <- names(use_gs2gene) ## all tested gene set number
+
+  ## input filter
+  empty_vec <- as.data.frame(matrix(NA,ncol=7));
+  colnames(empty_vec) <- c('#Name','Total_item','Num_item','Ori_P','Adj_P','ES','NES')
+  if(length(bg_list)==0) return(empty_vec)
+  ## GSEA
+  pf1 <- sort(rank_profile,decreasing = T)
+  if(test_strategy=='GSEA'){
+    set.seed(seed = use_seed, kind = NULL)
+    pv <- lapply(names(use_gs2gene),function(x0){
+      message(sprintf('Calculate permutation for %s',x0))
+      x <- use_gs2gene[[x0]]
+      es <- get_ES(pf1,x)$ES ## ES
+      es.p <- unlist(lapply(1:nperm,function(x1){
+        get_ES(pf1,sample(names(pf1),size = length(x)))$ES
+      }))
+      if(es>0){
+        es.p.pos <- es.p[which(es.p>0)]
+        nes <- es/mean(es.p.pos)
+        pv  <- length(which(es.p.pos>=es))/length(es.p.pos)
+      }else{
+        es.p.neg <- es.p[which(es.p<0)]
+        nes <- es/abs(mean(es.p.neg))
+        pv  <- length(which(es.p.neg<=es))/length(es.p.neg)
+      }
+      return(c(length(x),pv,es,nes))
+    })
+    pv <- do.call(rbind,pv)
+    pv <- as.data.frame(pv,stringsAsFactors=FALSE)
+    colnames(pv) <-  c('Num_item','Ori_P','ES','NES')
+    rownames(pv) <- names(use_gs2gene)
+    pv$Adj_P <- p.adjust(pv$Ori_P,method=Pv_adj,n=base::length(all_gs))
+    pv$`#Name` <- rownames(pv)
+    pv$Total_item <- length(pf1)
+    pv <- pv[,c('#Name','Total_item','Num_item','Ori_P','Adj_P','ES','NES')]
+    pv <- pv[order(pv$Ori_P),]
+    use_pv <- pv[which(pv$Adj_P<=Pv_thre),]
+  }
+  if(test_strategy=='KS'){
+    pv <- lapply(names(use_gs2gene),function(x0){
+      message(sprintf('Calculate KS for %s',x0))
+      x <- use_gs2gene[[x0]]
+      res <- ks.test(pf1[x],pf1)
+      return(c(res$statistic,res$p.value,length(x)))
+    })
+    pv <- do.call(rbind,pv)
+    pv <- as.data.frame(pv,stringsAsFactors=FALSE)
+    rownames(pv) <- names(use_gs2gene)
+    colnames(pv) <-  c('D-statistics','Ori_P','Num_item')
+    pv$Adj_P <- p.adjust(pv$Ori_P,method=Pv_adj,n=base::length(all_gs))
+    pv$`#Name` <- rownames(pv)
+    pv$Total_item <- length(pf1)
+    pv <- pv[,c('#Name','Total_item','Num_item','Ori_P','Adj_P','D-statistics')]
+    pv <- pv[order(pv$Ori_P),]
+    use_pv <- pv[which(pv$Adj_P<=Pv_thre),]
+  }
+  return(use_pv)
+}
+
 #' GSEA (Gene Set Enrichment Analysis) Plot for one Gene Set or one Driver
 #'
 #' \code{draw.GSEA} draws a GSEA plot to analyze one gene set (with gene list annotated) or one driver (with list of target genes).
 #'
 #'
 #' @param rank_profile a named vector of numerics, the differential values (DE or DA) calculated from a sample comparison (e.g. "G4 vs. Others").
-#' Names of the vector must be gene names. The differential values can be "logFC" or "t-statistics".
+#' Names of the vector must be gene names.
+#' For the DA, user could use `processDriverProfile()` to convert the DA profile into gene-name based profile.
+#' The differential values can be "logFC" or "t-statistics".
 #' @param use_genes a vector of characters, a vector of genes to display. The genes can either be annotated genes in gene set or the targe genes from a specific driver.
 #' The gene names must be a subset of \code{names(rank_profile)}.
 #' @param use_direction a vector of numeric 1s and -1s, 1 is positive regulation from driver, -1 is negative regulation from driver.
@@ -6081,7 +6365,9 @@ draw.bubblePlot <- function(driver_list=NULL,show_label=driver_list,Z_val=NULL,d
 #' @param pdf_file character, the file path to save as PDF file. If NULL, no PDF file will be saved. Default is NULL.
 #' @param annotation character, the annotation set by users for easier reference.
 #' Normally the annotation is the P-value or other statistics to show the significance of the interested gene set or driver.
-#' If NULL, will perform a Kolmogorov-Smirnov test to get the significance value. Default is NULL.
+#' If NULL, will perform a Kolmogorov-Smirnov test to get the significance value.
+#' If want to get the statistics from GSEA test, could use `funcEnrich.GSEA()` to get the statistics first.
+#' Default is NULL.
 #' @param annotation_cex numeric, giving the amount by which the text of annotation should be magnified relative to the default. Default is 1.2.
 #' @param left_annotation character, annotation displayed on the left of the figure, representing left condition of the \code{rank_profile}. Default is "".
 #' @param right_annotation character, annotation displayed on the right of the figure, representing right condition of the \code{rank_profile}. Default is "".
@@ -6093,6 +6379,29 @@ draw.bubblePlot <- function(driver_list=NULL,show_label=driver_list,Z_val=NULL,d
 #' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
 #' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' ms_tab <- analysis.par$final_ms_tab
+#'
+#' ## draw for the most significant gene set
+#' # by driver's DA profile
+#' DA_profile <- processDriverProfile(Driver_name=ms_tab$gene_label,
+#'                                     Driver_profile=ms_tab$logFC.G4.Vs.others_DA,
+#'                                     choose_strategy='absmax',
+#'                                     return_type ='gene_statistics')
+#' res1 <- funcEnrich.GSEA(rank_profile=DA_profile,
+#'                          use_gs=c('H'),
+#'                          Pv_thre=0.1,Pv_adj = 'none')
+#' top_gs <- res1[1,'#Name'] ## draw for the top 1
+#' annot <- sprintf('NES: %s \n Adjusted P-value: %s',
+#'           signif(res1[1,'NES'],2),
+#'           signif(res1[1,'Adj_P'],2))
+#' draw.GSEA(rank_profile=DA_profile,
+#'           use_genes=all_gs2gene$H[[top_gs]],
+#'           main=sprintf('GSEA plot for gene set %s',
+#'           top_gs),
+#'           annotation=annot,annotation_cex=1.2,
+#'           left_annotation='high in G4',
+#'           right_annotation='high in others')
+#'
+#' ## draw for the most significant driver
 #' sig_driver <- draw.volcanoPlot(dat=ms_tab,label_col='gene_label',
 #'                                logFC_col='logFC.G4.Vs.others_DA',
 #'                                Pv_col='P.Value.G4.Vs.others_DA',

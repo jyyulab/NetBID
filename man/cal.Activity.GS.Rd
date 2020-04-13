@@ -4,15 +4,20 @@
 \alias{cal.Activity.GS}
 \title{Calculate Activity Value for Gene Sets}
 \usage{
-cal.Activity.GS(use_gs2gene = all_gs2gene[c("H", "CP:BIOCARTA",
-  "CP:REACTOME", "CP:KEGG")], cal_mat = NULL, es.method = "mean",
-  std = TRUE)
+cal.Activity.GS(
+  use_gs2gene = all_gs2gene[c("H", "CP:BIOCARTA", "CP:REACTOME", "CP:KEGG")],
+  cal_mat = NULL,
+  es.method = "mean",
+  std = TRUE
+)
 }
 \arguments{
 \item{use_gs2gene}{list, contains elements of gene sets. Element name is gene set name, each element contains a vector of genes belong to that gene set.
 Default is using \code{all_gs2gene[c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG')]}, which is loaded from \code{gs.preload}.}
 
-\item{cal_mat}{numeric matrix, gene/transcript expression matrix.}
+\item{cal_mat}{numeric matrix, gene/transcript expression matrix.
+If want to input activity matrix, need to use `processDriverProfile()` to pre-process the dataset.
+Detailed could see demo.}
 
 \item{es.method}{character, method to calculate the activity value. Users can choose from "mean", "absmean", "maxmean", "gsva", "ssgsea", "zscore" and "plage".
 The details for using the last four options, users can check \code{gsva}. Default is "mean".}
@@ -36,4 +41,25 @@ exp_mat_gene <- Biobase::exprs(analysis.par$cal.eset)
 ## each row is a gene symbol, if not, must convert ID first
 ac_gs <- cal.Activity.GS(use_gs2gene = use_gs2gene,
                         cal_mat = exp_mat_gene)
+## if want to input activity-matrix
+ac_mat <- cal.Activity(target_list=analysis.par$merge.network$target_list,
+          cal_mat=Biobase::exprs(analysis.par$cal.eset),
+          es.method='weightedmean')
+# pre-process the activity matrix by selecting the one
+# with larger target size for duplicate drivers
+Driver_name <- rownames(ac_mat)
+driver_size <- ms_tab[Driver_name,]$Size
+use_driver <- processDriverProfile(Driver_profile=driver_size,
+                              Driver_name=Driver_name,
+                              choose_strategy='max',
+                              return_type='driver_name')
+use_driver_gene_name <-
+              processDriverProfile(Driver_profile=driver_size,
+                              Driver_name=Driver_name,
+                              choose_strategy='max',
+                              return_type='gene_name')
+ac_mat_gene <- ac_mat[use_driver,]
+rownames(ac_mat_gene) <- use_driver_gene_name
+driver_ac_gs <- cal.Activity.GS(use_gs2gene = use_gs2gene,
+                        cal_mat = ac_mat_gene)
 }
