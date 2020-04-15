@@ -2141,9 +2141,10 @@ getDE.BID.2G <-function(eset,output_id_column=NULL,G1=NULL, G0=NULL,G1_name=NULL
   de$ID <- all_id
   de<-de[,c('ID','logFC','AveExpr','t','P.Value','adj.P.Val','Z-statistics')]
   rownames(de) <- de$ID
-  tT <- de
-  new_mat <- stats::aggregate(exp_mat,list(use_id),mean)[,-1]
-  tT <- tT[all_id,,drop=FALSE]
+  tT <- de;
+  tmp1 <- stats::aggregate(exp_mat,list(use_id),mean)
+  new_mat <- tmp1[,-1];rownames(new_mat) <- tmp1[,1]
+  tT <- tT[rownames(new_mat),,drop=FALSE]
   exp_G1 <- base::rowMeans(new_mat[,G1,drop=FALSE]);
   exp_G0 <- base::rowMeans(new_mat[,G0,drop=FALSE]);
   tT <- base::cbind(tT,'Ave.G0'=exp_G0,'Ave.G1'=exp_G1)
@@ -6390,7 +6391,7 @@ funcEnrich.GSEA <- function(rank_profile=NULL,
 #'                          use_gs=c('H'),
 #'                          Pv_thre=0.1,Pv_adj = 'none')
 #' top_gs <- res1[1,'#Name'] ## draw for the top 1
-#' annot <- sprintf('NES: %s \n Adjusted P-value: %s',
+#' annot <- sprintf('NES: %s \nAdjusted P-value: %s',
 #'           signif(res1[1,'NES'],2),
 #'           signif(res1[1,'Adj_P'],2))
 #' draw.GSEA(rank_profile=DA_profile,
@@ -7343,9 +7344,9 @@ draw.GSEA.NetBID.GS <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_t
     graphics::segments(x0=tt_left,x1=pp[2],y0=pp[4],y1=pp[4],xpd=TRUE)
     sst <- round(base::seq(0,mm,length.out=3))
     ss <- sst*tt/mm+tt_left
-    graphics::segments(x0=ss,x1=ss,y0=pp[4],y1=pp[4]+(pp[4]-pp[3])/150,xpd=TRUE)
-    graphics::text(x=ss,y=pp[4]+(pp[4]-pp[3])/100,srt=90,sst,xpd=TRUE,adj=0,cex=0.8)
-    text('Size',x=tt_left-tt/10,y=pp[4]+(pp[4]-pp[3])/50,adj=1,xpd=TRUE,cex=0.8)
+    graphics::segments(x0=ss,x1=ss,y0=pp[4],y1=pp[4]+0.3*(pp[4]-pp[3])/length(sig_gs_list),xpd=TRUE)
+    graphics::text(x=ss,y=pp[4]+0.4*(pp[4]-pp[3])/length(sig_gs_list),srt=90,sst,xpd=TRUE,adj=0,cex=0.8)
+    text('Size',x=tt_left-tt/10,y=pp[4]+(pp[4]-pp[3])/length(sig_gs_list),adj=1,xpd=TRUE,cex=0.8)
     ##
   }
   if(is.null(pdf_file)==FALSE){plot_part(ori=TRUE);plot_part(ori=TRUE,before_off=TRUE);while (!is.null(dev.list()))  dev.off();} else {plot_part()}

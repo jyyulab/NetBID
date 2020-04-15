@@ -66,7 +66,7 @@ res1 <- funcEnrich.GSEA(rank_profile=DA_profile,
                          use_gs=c('H'),
                          Pv_thre=0.1,Pv_adj = 'none')
 top_gs <- res1[1,'#Name'] ## draw for the top 1
-annot <- sprintf('NES: \%s \n Adjusted P-value: \%s',
+annot <- sprintf('NES: \%s \nAdjusted P-value: \%s',
           signif(res1[1,'NES'],2),
           signif(res1[1,'Adj_P'],2))
 draw.GSEA(rank_profile=DA_profile,

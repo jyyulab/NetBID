@@ -1,8 +1,8 @@
 ---
-title: "- Advanced analysis"
-layout: default
+title: '- Advanced analysis'
 nav_order: 8
-permalink:  /docs/advanced_analysis
+permalink: /docs/advanced_analysis
+layout: default
 ---
 
 ## Advanced analysis and visualization
@@ -632,7 +632,7 @@ draw.GSEA.NetBID.GS(DE=DE,name_col='ID',profile_col='t',profile_trend='pos2neg',
                  gs_DA_Z= DA_gs_bid[sig_gs$ID,'Z-statistics'],
                  use_gs2gene = use_gs2gene,
                  top_gs_number=20,target_col='RdBu',
-                 left_annotation = 'high in others',right_annotation = 'high in G4',
+                 left_annotation = 'high in G4',right_annotation = 'high in others',
                  main= comp_name,Z_sig_thre=1.64,profile_sig_thre = 0,
                  pdf_file=sprintf('%s/NetBID_GSEA_GS_demo1.pdf',analysis.par$out.dir.PLOT))
 ```
@@ -647,7 +647,7 @@ draw.GSEA.NetBID.GS(DE=DE,name_col='ID',profile_col='t',profile_trend='pos2neg',
                     gs_DA_Z= DA_gs_bid[sig_gs$ID,'Z-statistics'],
                     use_gs2gene = use_gs2gene,
                     top_gs_number=20,target_col='black',
-                    left_annotation = 'high in others',right_annotation = 'high in G4',
+                    left_annotation = 'high in G4',right_annotation = 'high in others',
                     main= comp_name,Z_sig_thre=1.64,profile_sig_thre = 0,
                     pdf_file=sprintf('%s/NetBID_GSEA_GS_demo2.pdf',analysis.par$out.dir.PLOT))
 ```
