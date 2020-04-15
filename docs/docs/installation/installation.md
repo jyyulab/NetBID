@@ -19,7 +19,7 @@ R, version >= 3.6.0
 Download a released version from [https://github.com/jyyulab/NetBID/releases](https://github.com/jyyulab/NetBID/releases) and run:
 
 ```R
-devtools::install_local('NetBID2_2.0.1.tar.gz')
+devtools::install_local('NetBID2_2.0.2.tar.gz')
 ```
 
 ### Install from github master branch

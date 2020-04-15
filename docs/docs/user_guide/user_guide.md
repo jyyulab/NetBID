@@ -12,7 +12,7 @@ permalink:  /docs/user_guide
 The manual of all the NetBID functions is linked here [NetBID_manual.pdf](https://github.com/jyyulab/NetBID-dev/blob/master/NetBID_manual.pdf). 
 Every function has its own demo scripts to demonstrate its functionality.
 
-All these 70 functions can be grouped into their corresponding function modules,
+All these 71 functions can be grouped into their corresponding function modules,
 
 ![function group](function_group.png)
 
