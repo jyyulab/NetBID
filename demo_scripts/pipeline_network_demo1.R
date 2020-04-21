@@ -70,7 +70,7 @@ mat <- mat[choose1,]
 net_eset <- generate.eset(exp_mat=mat, phenotype_info=pData(network.par$net.eset)[colnames(mat),],
                             feature_info=fData(network.par$net.eset)[rownames(mat),],
                             annotation_info=annotation(network.par$net.eset))
-# Updata network.par with new eset
+# Update network.par with new eset
 network.par$net.eset <- net_eset
 
 # QC for the normalized eset
