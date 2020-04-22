@@ -382,3 +382,32 @@ draw.bubblePlot(driver_list= driver_list,show_label=ms_tab[driver_list,'gene_lab
                 main='Bubbleplot for top driver targets')
 
 
+### QIII.3: How to perform functional enrichment analysis to top drivers ?
+analysis.par <- list()
+analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
+NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
+ms_tab <- analysis.par$final_ms_tab
+## get DA profile for drivers, if one driver has both _TF and _SIG,
+# choose one with larger Z-statistics
+DA_profile <- processDriverProfile(Driver_name=ms_tab$gene_label,
+                                   Driver_profile=ms_tab$logFC.G4.Vs.others_DA,
+                                   choose_strategy='absmax',
+                                   return_type ='gene_statistics')
+## perform GSEA for gene sets by DA profile
+res1 <- funcEnrich.GSEA(rank_profile=DA_profile,
+                        use_gs=c('H'),
+                        Pv_thre=0.1,Pv_adj = 'none')
+top_gs <- res1[1,'#Name'] ## draw for the top 1
+annot <- sprintf('NES: %s \nAdjusted P-value: %s',
+                 signif(res1[1,'NES'],2),
+                 signif(res1[1,'Adj_P'],2))
+draw.GSEA(rank_profile=DA_profile,
+          use_genes=all_gs2gene$H[[top_gs]],
+          main=sprintf('GSEA plot for gene set %s',
+                       top_gs),
+          annotation=annot,annotation_cex=1.2,
+          left_annotation='high in G4',
+          right_annotation='high in others')
+
+##
+
