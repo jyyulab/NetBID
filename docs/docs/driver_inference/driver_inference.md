@@ -11,7 +11,7 @@ The purpose of this part:
 
 **retrieve potential drivers for interested phenotype and generate a master table for drivers**.
 
-One "lazy mode" function without flexiable options is available for this part of analysis: `NetBID.lazyMode.DriverEstimation()`. 
+One "lazy mode" function without flexible  options is available for this part of analysis: `NetBID.lazyMode.DriverEstimation()`. 
 User could check the manual for this function and try the demo code for usage.
 
 The complete step-by-step demo script for driver inference can be found here, 
@@ -23,7 +23,7 @@ The complete step-by-step demo script for driver inference can be found here,
 - [Step 0: Preparations](#step-0-preparations)
 - [Step 1: Load in the expression dataset for analysis (exp-load, exp-cluster, exp-QC)](#step-1-load-in-the-expression-dataset-for-analysis-exp-load-exp-cluster-exp-qc)
    - [Q&A: What to do if the ID types from network-reconstruction dataset and analysis dataset are different?](#what-to-do-if-the-id-types-from-network-reconstruction-dataset-and-analysis-dataset-are-different)
-- [Step 2: Read in network files and calcualte driver activity (act-get)](#step-2-read-in-network-files-and-calcualte-driver-activity-act-get)
+- [Step 2: Read in network files and calculate  driver activity (act-get)](#step-2-read-in-network-files-and-calcualte-driver-activity-act-get)
     - [Q&A: Why study driver’s activity ?](#why-study-drivers-activity-) 
 - [Step 3: Get differential expression (DE) / differential activity (DA) for drivers (act-DA)](#step-3-get-differential-expression-de--differential-activity-da-for-drivers-act-da)
 - [Step 4: Generate a master table for drivers (ms-tab)](#step-4-generate-a-master-table-for-drivers-ms-tab)
@@ -46,7 +46,7 @@ the path of the network project `network.dir` should have been set. For details,
 The `network.project.name` is used to distinguish different network reconstruction jobs when using `SJAracne.prepare()`, under the main path of `network.dir`.
 By specifying `network.dir` and `network.project.name`, user should be able to retrieve the target network constructed by network reconstruction part in NetBID2 and SJARACNe.
 
-For the online tutorial, we have already prepared the demo dataset's network constructed by SJARACNe. So users don't need to run SJARACNe for the demo, and can direclty proceed to the following pipeline.
+For the online tutorial, we have already prepared the demo dataset's network constructed by SJARACNe. So users don't need to run SJARACNe for the demo, and can directly proceed to the following pipeline.
 
 ```R
 network.dir <- sprintf('%s/demo1/network/',system.file(package = "NetBID2")) # use demo network in the package
@@ -70,7 +70,7 @@ It also returns a list object, here named `analysis.par` with directory informat
 This list is an ESSENTIAL variable for driver inference step, all the important intermediate data generated later will be wrapped inside.
 
 ```R
-# Create a hierarchcial working directory and return a list contains the hierarchcial working directory information
+# Create a hierarchical working directory and return a list contains the hierarchical working directory information
 # This list object (analysis.par) is an ESSENTIAL variable in driver inference pipeline
 analysis.par  <- NetBID.analysis.dir.create(project_main_dir=project_main_dir, project_name=project_name,
                                             network_dir=network.dir, network_project_name=network.project.name)
@@ -205,7 +205,7 @@ NetBID.saveRData(analysis.par=analysis.par,step='act-get')
 ----------
 ### *Why study driver's activity ?*
 
-- Drivers, such as transcription factors (TF) bind to the enhancer or promoter regions of the target genes and regulate their expression level. Once the TF has been synthesized, there are still many steps between mRNA translation of a TF and the actual transcriptional regulation of target genes. The activity is controlled by most of the following processes, nuclear localization (import into the cell nucleaus), activation through signal-sensing domain (e.g. ligand binding or post-translational modifications: methylation, ubiquitination and phosphorylation, which is essential for dimerization and promoter binding), access to the DNA-binding site (epigenetic features of the genome), and interaction with other cofactors or TFs (form a complex). Thus, sometimes the expression trend and the activity pattern of a driver may be contradicted. Due to these "hidden effects, the analysis of the activity of a driver maybe more fruitful than the analysis its expression level.
+- Drivers, such as transcription factors (TF) bind to the enhancer or promoter regions of the target genes and regulate their expression level. Once the TF has been synthesized, there are still many steps between mRNA translation of a TF and the actual transcriptional regulation of target genes. The activity is controlled by most of the following processes, nuclear localization (import into the cell nucleus), activation through signal-sensing domain (e.g. ligand binding or post-translational modifications: methylation, ubiquitination and phosphorylation, which is essential for dimerization and promoter binding), access to the DNA-binding site (epigenetic features of the genome), and interaction with other cofactors or TFs (form a complex). Thus, sometimes the expression trend and the activity pattern of a driver may be contradicted. Due to these "hidden effects, the analysis of the activity of a driver maybe more fruitful than the analysis its expression level.
 
 ----------
 
@@ -355,7 +355,7 @@ users need to give their own path used to save `analysis.par` RData from Step 3.
 NetBID.loadRData(analysis.par=analysis.par,step='act-DA')
 ```
 
-**To create the final master table, users need to gather certian previous data and pass them to the parameters in `generate.masterTable()` function.**
+**To create the final master table, users need to gather previous data and pass them to the parameters in `generate.masterTable()` function.**
 Here are the details,
 - `use_comp`, the vector of multiple comparison names. It will be used as the columns of master table. If use all the comparisons, just call `names(analysis.par$DE)`.
 - `DE` and `DA`, if following the previous pipeline, just use `analysis.par$DE` and `analysis.par$DA`.

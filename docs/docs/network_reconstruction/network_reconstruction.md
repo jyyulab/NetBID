@@ -58,11 +58,11 @@ project_name <- sprintf('project_%s',current_date) # project name for the projec
 It also automatically creates three subfolders (QC, DATA and SJAR) within the project folder. 
 QC/, storing Quality Control related plots; DATA/, saving data in RData format; SJAR/, storing files needed for running SJAracne [SJARACNe](https://github.com/jyyulab/SJARACNe). 
 It also returns a list object, here named `network.par` with directory information wrapped inside. 
-This list is an ESSENTIAL varaible for network reconstruction, all the important intermediate data generated later on will be wrapped inside.
+This list is an ESSENTIAL variable for network reconstruction, all the important intermediate data generated later on will be wrapped inside.
 If the current environment already has this variable, the function will only report a warning message and return the existed `network.par`.  
 
 ```R
-# Create a hierarchcial working directory and return a list contains the hierarchcial working directory information
+# Create a hierarchical working directory and return a list contains the hierarchical working directory information
 # This list object (network.par) is an ESSENTIAL variable in network reconstruction pipeline
 network.par  <- NetBID.network.dir.create(project_main_dir=project_main_dir,project_name=project_name)
 ```
@@ -147,7 +147,7 @@ Here are some important factors need to be considered, when using the expression
 
    - The reasoning of using expression dataset to infer gene regulatory network is based on [SJARACNe](https://academic.oup.com/bioinformatics/advance-article/doi/10.1093/bioinformatics/bty907/5156064). 
    It uses the information-theoretic approach to eliminate the majority of indirect interactions inferred by co-expression methods. The more samples, the higher sensitivity and precision.
-   Typically, more than 100 samples is recommended. 
+   Typically, more than 100 samples are recommended. 
    - Large size public datasets from the same tissue, cell line or biological background are recommended to use as the expression datasets. Users can search through public databases, such as [GEO](#the-choice-of-expression-dataset-for-network-reconstruction) and [TCGA](#https://portal.gdc.cancer.gov). 
    - Computationally inferred networks cannot avoid to have false positive edges. Especially for edges with relatively low mutual information (MI) scores. Functional interpretation from the regulatory network will be explained in the [Driver inference](../docs/driver_inference) part. 
 
@@ -159,7 +159,7 @@ Here are some important factors need to be considered, when using the expression
 
 - NetBID2 provides two functions to load expression dataset from RNA-Seq, `load.exp.RNASeq.demo()` and `load.exp.RNASeq.demoSalmon()`. 
 **BUT** these two function are still in demo version, and don't support the complicated options in `tximport()` and `DESeq()`. 
-It's challenging due to the various output format from RNA-Seq (e.g. using different reference genomes). We suggest to use those well-developped tools in this case.
+It's challenging due to the various output format from RNA-Seq (e.g. using different reference genomes). We suggest to use those well-developed  tools in this case.
 
 - If users like to try `load.exp.RNASeq.demo()` and `load.exp.RNASeq.demoSalmon()`, be aware to the `return_type` in these functions. 
     - 'txi' is the output of `tximport()`. It is a list containing three matrices, abundance, counts and length. "counts" is the matrix of raw count.
@@ -289,9 +289,9 @@ NetBID.saveRData(network.par = network.par,step='exp-QC')
 ### *QC for RNA-Seq dataset*  
 - QC Step 1 to Step 3 are not suitable for RNA-Seq dataset, regardless of their pre-processing strategies. Only QC Step 4, "removing low expressed genes" is suggested to perform.
 For example, if one uses `load.exp.RNASeq.demo()` or `load.exp.RNASeq.demoSalmon()` with settings of `dds` or `eset`. There is no need for normalization.
-- If one uses the raw count data as the expression matrix, he can call `RNASeqCount.normalize.scale()` to perform normalizaiton, which is followed by "log2 transformation".
-- If one uses the FPKM (Fagments Per Kilobase Million), TPM (Transcripts Per Million), CPM (Counts Per Million), the "log2 transformation" from QC Step 2 is suggested.
-- The quality control analysis is different from case to case, NetBID2 only provides functions and tools to faciliate users to make their own decisions. Following the calling softwares' pipeline is strongly suggested.
+- If one uses the raw count data as the expression matrix, he can call `RNASeqCount.normalize.scale()` to perform normalization, which is followed by "log2 transformation".
+- If one uses the FPKM (Fragments  Per Kilobase Million), TPM (Transcripts Per Million), CPM (Counts Per Million), the "log2 transformation" from QC Step 2 is suggested.
+- The quality control analysis is different from case to case, NetBID2 only provides functions and tools to facilitate  users to make their own decisions. Following the calling software’s pipeline is strongly suggested.
 
 ----------
 ### *Combine two datasets*  
@@ -299,7 +299,7 @@ For example, if one uses `load.exp.RNASeq.demo()` or `load.exp.RNASeq.demoSalmon
 - If the two expression datasets come from the same platform and contain the same gene list, no Z-transformation will be performed. 
 Otherwise, Z-transformation is suggested to be performed before combining these two datasets.
 - The merged ExpressionSet class object will include a new phenotype column set by `group_col_name`, this column is used to distinguish each sample's original dataset. 
-- No batch effect will be removed during combination by default. It is strongly suggested to check the sample clustering results before trying to remove the batch (User could follow the pipeline in the following Step 3). Generally, batch effect exists for microarray dataset but not for RNA-Seq dataset with the same protocal. 
+- No batch effect will be removed during combination by default. It is strongly suggested to check the sample clustering results before trying to remove the batch (User could follow the pipeline in the following Step 3). Generally, batch effect exists for microarray dataset but not for RNA-Seq dataset with the same protocol. 
 
 ----------
 
@@ -356,7 +356,7 @@ Each column of the phenotype information data frame `pData(network.par$net.eset)
 For example, the "gender" column in the phenotype data frame, it has two categories, "Male" and "Female". This categorial information gives the observed labels to samples.
 If users don't know which phenotype columns to extract, `get_int_group` will extract all "cluster-meaningful" phenotype columns from the ExpressionSet object.
 For example, if "gender" column only contains "Female", it is meaningless to extract is to do cluster analysis, cause all samples will be clustered as one.
-Another example, if all samples have differnet age, it is meaningless to extract "age" column, cause all samples will be grouped separately.
+Another example, if all samples have different  age, it is meaningless to extract "age" column, cause all samples will be grouped separately.
 
 ```R
 # Extract phenotype information data frame from eset
@@ -406,7 +406,7 @@ pred_label <- draw.emb.kmeans(mat=mat,all_k = NULL,obs_label=get_obs_label(phe,u
 
 ![sample_cluster_4](sample_cluster_4.png)
 
-Above is a side-by-side scatter plot in 3D. Here, we use the first three principle component as axises.
+Above is a side-by-side scatter plot in 3D. Here, we use the first three principle component as axis.
 
 ```R
 print(table(list(pred_label=pred_label,obs_label=get_obs_label(phe, use_int))))
@@ -437,7 +437,7 @@ If user found an outlier sample and removed it, we suggest to re-run Step 2 and 
 ## Step 4: Prepare files to run SJARACNe (sjaracne-prep)
 **Purpose: download SJARACNe needed database to local folders and prepare files to run SJARACNe.**
 
-Please skip the following line if you didn't close R session after completed Step 1 and Step 2 (doesn't matter if you runned Step 3 or not).
+Please skip the following line if you didn't close R session after completed Step 1 and Step 2 (doesn't matter if you run Step 3 or not).
 
 Don't skip, if you have checked out and closed R session after completed the Step 1 and Step 2. Before start Step 4, please reload `network.par` RData from Step 2.
 `NetBID.loadRData()` reloads RData saved by `NetBID.saveRData()`. It prevents user from repeating former pipeline steps.
@@ -452,7 +452,7 @@ users need to give their own path used to save `network.par` RData from Step 2.
 NetBID.loadRData(network.par = network.par,step='exp-QC')
 ```
 
-**First, use `db.preload()` to download the transcription facotrs (TF) list and signaling factors (SIG) list, with species and level defined.**
+**First, use `db.preload()` to download the transcription factors (TF) list and signaling factors (SIG) list, with species and level defined.**
 
 For the TF and SIG list, NetBID2 has `external_gene_name` and `ensembl_gene_id` ID type files for human and mouse embedded in the package. (e.g. `MOUSE_SIG_ensembl_gene_id.txt` in `system.file(package = "NetBID2")/db/`). To use these files, just set `TF_list=NULL` or `SIG_list=NULL`. If users would like to use their own list, please pass them to `TF_list=NULL` or `SIG_list=NULL`. 
 

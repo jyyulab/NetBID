@@ -11,7 +11,7 @@ The purpose of this part:
 
 **further analysis and visualization of the significant drivers**.
 
-One "lazy mode" function without flexiable options is available for this part of analysis: `NetBID.lazyMode.DriverVisualization()`. 
+One "lazy mode" function without flexible  options is available for this part of analysis: `NetBID.lazyMode.DriverVisualization()`. 
 User could check the manual for this function and try the demo code for usage.
 
 The complete step-by-step demo script for result visualization can be found here, [analysis_and_plot_demo1.R](https://github.com/jyyulab/NetBID-dev/blob/master/demo_scripts/analysis_and_plot_demo1.R).
@@ -68,7 +68,7 @@ print(analysis.par$out.dir.PLOT)
 
 ### QI.1: How to get the top drivers with significant differential activity (DA) in the comparison between G4 vs. other subtypes ?
 
-First, retrive the master table element from the `analysis.par` super list, and pass it to a new variable `ms_tab`. 
+First, retrieve the master table element from the `analysis.par` super list, and pass it to a new variable `ms_tab`. 
 Filter out drivers with target size too small (e.g. <30) and too big (e.g. >1000).
 Define the comparison name `comp_name` as `G4.Vs.others`.
 
@@ -294,7 +294,7 @@ Similar to `db.preload()`, if users leave `main.dir=NULL`, the downloaded data w
 To check the detailed information of the downloaded gene sets, user can use the following scripts. Print `all_gs2gene_info` from the global variable `all_gs2gene`. The column `Category` and `Sub-Category` will be used as the label to extract gene sets categories.
 
 ```R
-# Download gene sets from MSigDB and save as RData, creat a global variable all_gs2gene
+# Download gene sets from MSigDB and save as RData, create a global variable all_gs2gene
 gs.preload(use_spe='Homo sapiens',update=FALSE)
 print(all_gs2gene_info)
 ```
@@ -320,7 +320,7 @@ res_down <- funcEnrich.Fisher(input_list=ms_tab[driver_list_down,'geneSymbol'],b
 out2excel(list(up=res_up,down=res_down),out.xlsx=sprintf('%s/fisher_res.xlsx',analysis.par$out.dir.PLOT))
 ```
 
-NetBID2 also designed two functions to visualze the gene set enrichment analysis for these top drivers: `draw.funcEnrich.bar()` and `draw.funcEnrich.cluster()`.
+NetBID2 also designed two functions to visualize  the gene set enrichment analysis for these top drivers: `draw.funcEnrich.bar()` and `draw.funcEnrich.cluster()`.
 
 - `draw.funcEnrich.bar()` draws a horizontal barplot to display the top enriched functions and the corresponding drivers (if set `display_genes=TRUE`).
 
@@ -417,7 +417,7 @@ draw.bubblePlot(driver_list= driver_list,show_label=ms_tab[rownames(sig_driver),
 
 ### QII.1: How to interpret the significance of the selected driver ?
 
-To study a single driver or some specific drivers, NetBID2 provides function `draw.GSEA()` to draw the classic GSEA plot, in order to faciliate the interpretation of the significance of target driver(s).
+To study a single driver or some specific drivers, NetBID2 provides function `draw.GSEA()` to draw the classic GSEA plot, in order to facilitate the interpretation of the significance of target driver(s).
 
 First, retrieve the differential expressed gene profile first.
 
