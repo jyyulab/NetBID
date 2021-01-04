@@ -19,6 +19,19 @@ Instructions, documentation, and tutorials can be found at:
 A PDF manual [NetBID_manual.pdf](https://github.com/jyyulab/NetBID/blob/master/NetBID_manual.pdf) can be found in the repository.
 
 
+# Docker
+We publish our lastest docker builds on DockerHub. You can pull the docker image by running the following command:
+
+```$ singularity pull docker://adamdingliang/netbid2:2.0.1```
+
+The docker image has build-in RStudio server that can be launched by
+
+```$ docker run -it netbid2:2.0.1```
+
+For interactive command line analysis, use the following command:
+
+```$ docker run -it netbid2:2.0.1 R```
+
 # Demos
 Demo scripts can be found in [demo_scripts](https://github.com/jyyulab/NetBID/tree/master/demo_scripts) directory.
 
