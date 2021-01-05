@@ -64,18 +64,6 @@ RUN apt-get update \
 
 EXPOSE 8787
 
-# RUN cp /etc/pam.d/login /etc/pam.d/rstudio
-# RUN echo "auth-required-user-group=analysts,admins,rstudio-users" >> /etc/rstudio/rserver.conf
-
-ARG USER=yulab
-ENV USER="${USER}"
-RUN apt-get update && apt install -y --no-install-recommends uuid
-
-# Create secure cookie key, define an explicit server-wide shared storage path, launch the server
-CMD mkdir -p ~/tmp/rstudio-server && touch ~/tmp/rstudio-server/secure-cookie-key-"${USER}" \
-    && echo `uuid` > ~/tmp/rstudio-server/secure-cookie-key-"${USER}" \
-    && chmod 0600 ~/tmp/rstudio-server/secure-cookie-key-"${USER}" \
-    # && echo "server-shared-storage-path=/home/rstudio-server/shared-storage" >> /etc/rstudio/rserver.conf \
-    && rserver --server-daemonize 0 --secure-cookie-key-file ~/tmp/rstudio-server/secure-cookie-key-"${USER}" "${@}"
-# CMD /usr/lib/rstudio-server/bin/rserver --server-daemonize=0 --auth-none=1 --server-user=$USER --server-app-armor-enabled=0
+# Launch R by default
+CMD R
 

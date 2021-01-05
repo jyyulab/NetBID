@@ -26,11 +26,11 @@ We publish our lastest docker builds on DockerHub. You can pull the docker image
 
 The docker image has build-in RStudio server that can be launched by
 
-```$ docker run -it netbid2:2.0.1```
+```$ docker run -it netbid2:2.0.1 rserver --server-daemonize 0```
 
 For interactive command line analysis, use the following command:
 
-```$ docker run -it netbid2:2.0.1 R```
+```$ docker run -it netbid2:2.0.1```
 
 # Demos
 Demo scripts can be found in [demo_scripts](https://github.com/jyyulab/NetBID/tree/master/demo_scripts) directory.
