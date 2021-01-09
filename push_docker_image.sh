@@ -1,1 +1,1 @@
-docker push adamdingliang/netbid2:2.0.1
+docker push jyyulab/netbid2:2.0.1

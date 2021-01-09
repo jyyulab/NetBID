@@ -22,7 +22,7 @@ A PDF manual [NetBID_manual.pdf](https://github.com/jyyulab/NetBID/blob/master/N
 # Docker
 We publish our lastest docker builds on DockerHub. You can pull the docker image by running the following command:
 
-```$ docker pull adamdingliang/netbid2:2.0.1```
+```$ docker pull jyyulab/netbid2:2.0.1```
 
 The docker image has build-in RStudio server that can be launched by
 
