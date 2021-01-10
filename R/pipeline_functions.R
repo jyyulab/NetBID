@@ -9320,3 +9320,169 @@ NetBID.lazyMode.DriverEstimation <- function(project_main_dir=NULL,project_name=
   if(return_analysis.par==TRUE) return(analysis.par) else return(TRUE)
 }
 
+#' Draw Oncoprint Plot to display the mutation information
+#'
+#' \code{draw.oncoprint} plots the heatmap to display the mutation information for samples.
+#'
+#' @param phenotype_info data.frame, phenotype of samples. Users can call \code{Biobase::pData(eset)} to create.
+#' @param Missense_column character, column names from \code{phenotype_info}.
+#' @param Missense_label, character, gene label for the Missense_column.
+#' @param Amplification_column character, column names from \code{phenotype_info}.
+#' @param Amplification_label, character, gene label for the Amplification_column.
+#' @param Deletion_column character, column names from \code{phenotype_info}.
+#' @param Deletion_label, character, gene label for the mDeletion_column.
+#' @param Sample_column character, column names from \code{phenotype_info}. If not NULL, will show sample names in the figure.
+#' @param main character, an overall title for the plot. Default is "".
+#' @param pdf_file character, the file path to save plot as PDF file. If NULL, no PDF file will be saved. Default is NULL.
+#' @param ..., for more options, please check \code{?oncoPrint} for more details.
+#'
+#' @return Return a logical value. If TRUE, the plot has been created successfully.
+#'
+#' @examples
+#' all_sample <- sprintf('Sample%s',1:30)
+#' group1_sample <- sample(all_sample,18) ## demo sample for KRAS missense mutation
+#' group2_sample <- sample(all_sample,12) ## demo sample for MYC amplification
+#' group3_sample <- sample(all_sample,10) ## demo sample for MYC missense mutation
+#' group4_sample <- sample(all_sample,1) ## demo sample for MYC deletion
+#' phenotype_info_demo <-
+#'   data.frame(sample =sprintf('Sample%s',1:30),
+#'              KRAS_MIS=ifelse(all_sample %in% group1_sample,1,0),
+#'              MYC_AMP=ifelse(all_sample %in% group2_sample,1,0),
+#'              MYC_MIS=ifelse(all_sample %in% group3_sample,1,0),
+#'              MYC_DEL=ifelse(all_sample %in% group4_sample,1,0))
+#' draw.oncoprint(phenotype_info=phenotype_info_demo,
+#'                Missense_column=c('KRAS_MIS','MYC_MIS'),Missense_label=c('KRAS','MYC'),
+#'                Amplification_column=c('MYC_AMP'),Amplification_label=c('MYC'),
+#'                Deletion_column=c('MYC_DEL'),Deletion_label=c('MYC'),
+#'                Sample_column='sample',
+#'                main="OncoPrint for the demo dataset")
+#' \dontrun{
+#'}
+#' @export
+draw.oncoprint <- function(phenotype_info=NULL,
+                           Missense_column=NULL,Missense_label=NULL,
+                           Amplification_column=NULL,Amplification_label=NULL,
+                           Deletion_column=NULL,Deletion_label=NULL,
+                           Sample_column=NULL,
+                           main="",pdf_file=NULL,
+                           ...){
+  #
+  all_input_para <- c('phenotype_info')
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
+  #
+  if(is.null(Missense_column)==TRUE & is.null(Amplification_column)==TRUE
+     & is.null(Deletion_column)==TRUE){
+    stop("At least one of the Missense/Amplication/Deletion columns is required")
+  }
+  if(length(Missense_column)!=length(Missense_label)){
+    stop('the length of Missense_column and Missense_label must be the same')
+  }
+  if(length(Amplification_column)!=length(Amplification_label)){
+    stop('the length of Amplification_column and Amplification_label must be the same')
+  }
+  if(length(Deletion_column)!=length(Deletion_label)){
+    stop('the length of Deletion_column and Deletion_label must be the same')
+  }
+  sample_name <- NULL;
+  if(is.null(Sample_column)==FALSE){
+    if(Sample_column %in% colnames(phenotype_info)){
+      sample_name <- phenotype_info[,Sample_column[1]]
+    }
+  }
+  ##
+  use_col <- rep(0,length.out=3);names(use_col) <- c('AMP','MIS','DEL')
+  all_col <- c(Missense_label,Amplification_label,Deletion_label)
+  uni_col <- unique(all_col)
+  ## each row is one label(gene), each column is one sample
+  mat <- matrix("  ",nrow=length(uni_col),ncol=nrow(phenotype_info));
+  colnames(mat) <- rownames(phenotype_info);
+  rownames(mat) <- uni_col;
+  if(is.null(Missense_column)==FALSE){
+    use_col['MIS'] <- 1;
+    for(i in 1:length(Missense_column)){
+      w1 <- which(phenotype_info[,Missense_column[i]]!=0)
+      for(w2 in w1){
+        if(mat[Missense_label[i],w2]==''){
+          mat[Missense_label[i],w2] <- 'MIS;'
+        }else{
+          mat[Missense_label[i],w2] <- sprintf('%s%s',mat[Missense_label[i],w2],'MIS;')
+        }
+      }
+    }
+  }
+  if(is.null(Amplification_column)==FALSE){
+    use_col['AMP'] <- 1;
+    for(i in 1:length(Amplification_column)){
+      w1 <- which(phenotype_info[,Amplification_column[i]]!=0)
+      for(w2 in w1){
+        if(mat[Amplification_label[i],w2]==''){
+          mat[Amplification_label[i],w2] <- 'AMP;'
+        }else{
+          mat[Amplification_label[i],w2] <- sprintf('%s%s',mat[Amplification_label[i],w2],'AMP;')
+        }
+      }
+    }
+  }
+  if(is.null(Deletion_column)==FALSE){
+    use_col['DEL'] <- 1;
+    for(i in 1:length(Deletion_column)){
+      w1 <- which(phenotype_info[,Deletion_column[i]]!=0)
+      for(w2 in w1){
+        if(mat[Deletion_label[i],w2]==''){
+          mat[Deletion_label[i],w2] <- 'DEL;'
+        }else{
+          mat[Deletion_label[i],w2] <- sprintf('%s%s',mat[Deletion_label[i],w2],'DEL;')
+        }
+      }
+    }
+  }
+  use_colname <- names(use_col)[which(use_col==1)]
+  use_colname_full <- c('Amplification','Missense','Deletion')[which(use_col==1)]
+  #
+  col = c(AMP=brewer.pal(8,'Set1')[1], ## red
+          MIS=brewer.pal(8,'Set1')[3], ## green
+          DEL=brewer.pal(8,'Set1')[2],  ## blue
+          OTHER='light grey')
+  #########################################################
+  if(is.null(pdf_file)==FALSE){
+    ww <- 0.15*ncol(mat)+4
+    hh <- nrow(mat)+2
+    pdf(pdf_file,width=ww,height=hh)
+  }
+  #
+  dxx <- 0.3
+  xx <- seq(1,ncol(mat));
+  if(is.null(sample_name)==FALSE){
+    plot(1,col='white',xlim=c(1,ncol(mat)*1.2),ylim=c(0,1+nrow(mat)),bty='n',
+         xaxt='n',yaxt='n',xlab='',ylab='',main=main)
+    text(x=xx,y=1-0.05,
+         sample_name,srt=60,xpd=T,adj=1)
+  }else{
+    plot(1,col='white',xlim=c(1,ncol(mat)*1.2),ylim=c(1,1+nrow(mat)),bty='n',
+         xaxt='n',yaxt='n',xlab='',ylab='',main=main)
+  }
+  for(i in 1:nrow(mat)){
+    rect(xleft=xx-dxx,xright=xx+dxx,
+         ybottom=i,ytop=i+0.8,xpd=TRUE,border=NA,col=col['OTHER'])
+    text(1,i+0.4,rownames(mat)[i],pos=2,xpd=T)
+    mm <- mat[i,]
+    w1 <- grep('AMP',mm)
+    if(length(w1)>0) rect(xleft=xx[w1]-dxx,xright=xx[w1]+dxx,
+                          ybottom=i,ytop=i+0.8,xpd=TRUE,border=NA,col=col['AMP'])
+    w1 <- grep('DEL',mm)
+    if(length(w1)>0) rect(xleft=xx[w1]-dxx,xright=xx[w1]+dxx,
+                          ybottom=i,ytop=i+0.8,xpd=TRUE,border=NA,col=col['DEL'])
+    w1 <- grep('MIS',mm)
+    if(length(w1)>0) rect(xleft=xx[w1]-dxx,xright=xx[w1]+dxx,
+                          ybottom=i+0.3,ytop=i+0.5,xpd=TRUE,border=NA,col=col['MIS'])
+  }
+  #
+  pp <- par()$usr
+  legend(y=nrow(mat)/2+0.5,x=1+ncol(mat),
+         fill = col[use_colname],use_colname_full,xpd=T,border=NA,bty='n',
+         yjust=0.5,xjust=0)
+  #
+  if(is.null(pdf_file)==FALSE) {while (!is.null(dev.list()))  dev.off();}
+  return(TRUE)
+}
