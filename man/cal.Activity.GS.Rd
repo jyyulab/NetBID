@@ -59,7 +59,7 @@ ac_mat <- cal.Activity(target_list=analysis.par$merge.network$target_list,
 # pre-process the activity matrix by selecting the one
 # with larger target size for duplicate drivers
 Driver_name <- rownames(ac_mat)
-ms_tab <- analysis.par$final_ms_table
+ms_tab <- analysis.par$final_ms_tab
 driver_size <- ms_tab[Driver_name,]$Size
 use_driver <- processDriverProfile(Driver_profile=driver_size,
                               Driver_name=Driver_name,
