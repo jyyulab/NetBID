@@ -1,0 +1,42 @@
+I"›<h2 id="installation">Installation</h2>
+
+<h3 id="dependencies">Dependencies</h3>
+
+<p>R, version &gt;= 3.6.0</p>
+
+<p><a href="docs/pre_request">Pre-request R packages</a></p>
+
+<h3 id="install-a-released-r-package">Install a released R package</h3>
+
+<p>Download a released version from <a href="https://github.com/jyyulab/NetBID/releases">https://github.com/jyyulab/NetBID/releases</a> and run:</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">devtools</span><span class="o">::</span><span class="n">install_local</span><span class="p">(</span><span class="s1">'NetBID2_2.0.2.tar.gz'</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<h3 id="install-from-github-master-branch">Install from github master branch</h3>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># set repos, for R version 3.6.0, Bioconductor version 3.9</span><span class="w">
+</span><span class="n">local</span><span class="p">({</span><span class="w">
+  </span><span class="n">r</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">getOption</span><span class="p">(</span><span class="s2">"repos"</span><span class="p">)</span><span class="w">
+  </span><span class="n">r</span><span class="p">[</span><span class="s2">"CRAN"</span><span class="p">]</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="s2">"https://cran.rstudio.com/"</span><span class="w">
+  </span><span class="n">r</span><span class="p">[</span><span class="s2">"BioCsoft"</span><span class="p">]</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="s2">"https://bioconductor.org/packages/3.9/bioc"</span><span class="w">
+  </span><span class="n">r</span><span class="p">[</span><span class="s2">"BioCann"</span><span class="p">]</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="s2">"https://bioconductor.org/packages/3.9/data/annotation"</span><span class="w">
+  </span><span class="n">r</span><span class="p">[</span><span class="s2">"BioCexp"</span><span class="p">]</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="s2">"https://bioconductor.org/packages/3.9/data/experiment"</span><span class="w">
+  </span><span class="n">options</span><span class="p">(</span><span class="n">repos</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">r</span><span class="p">)</span><span class="w">
+</span><span class="p">})</span><span class="w">
+</span></code></pre></div></div>
+
+<p>Install without cloning the repository</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">devtools</span><span class="o">::</span><span class="n">install_github</span><span class="p">(</span><span class="s2">"jyyulab/NetBID"</span><span class="p">,</span><span class="n">ref</span><span class="o">=</span><span class="s1">'master'</span><span class="p">,</span><span class="n">dependencies</span><span class="o">=</span><span class="s1">'Depends'</span><span class="p">)</span><span class="w"> 
+</span></code></pre></div></div>
+
+<p>Or Clone the repository and install locally:</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">devtools</span><span class="o">::</span><span class="n">install</span><span class="p">(</span><span class="n">pkg</span><span class="o">=</span><span class="s1">'.'</span><span class="p">,</span><span class="n">dependencies</span><span class="o">=</span><span class="kc">TRUE</span><span class="p">)</span><span class="w"> </span><span class="c1">## Install the package with dependencies.</span><span class="w">
+</span><span class="n">devtools</span><span class="o">::</span><span class="n">install_deps</span><span class="p">(</span><span class="n">pkg</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"."</span><span class="p">,</span><span class="w"> </span><span class="n">dependencies</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">TRUE</span><span class="p">)</span><span class="w"> </span><span class="c1">## Install package dependencies if needed.</span><span class="w">
+</span></code></pre></div></div>
+
+<hr />
+
+:ET

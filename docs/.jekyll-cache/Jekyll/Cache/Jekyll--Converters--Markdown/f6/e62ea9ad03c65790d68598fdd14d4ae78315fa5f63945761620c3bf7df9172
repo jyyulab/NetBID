@@ -1,0 +1,444 @@
+I";$<h2 id="driver-inference">Driver inference</h2>
+
+<p>The purpose of this part:</p>
+
+<p><strong>retrieve potential drivers for interested phenotype and generate a master table for drivers</strong>.</p>
+
+<p>One “lazy mode” function without flexiable options is available for this part of analysis: <code class="highlighter-rouge">NetBID.lazyMode.DriverEstimation()</code>. 
+User could check the manual for this function and try the demo code for usage.</p>
+
+<p>The complete step-by-step demo script for driver inference can be found here, 
+<a href="https://github.com/jyyulab/NetBID-dev/blob/master/demo_scripts/pipeline_analysis_demo1.R">pipeline_analysis_demo1.R</a>.</p>
+
+<hr />
+<h2 id="quick-navigation-for-this-page">Quick Navigation for this page</h2>
+
+<ul>
+  <li><a href="#step-0-preparations">Step 0: Preparations</a></li>
+  <li><a href="#step-1-load-in-the-expression-dataset-for-analysis-exp-load-exp-cluster-exp-qc">Step 1: Load in the expression dataset for analysis (exp-load, exp-cluster, exp-QC)</a>
+    <ul>
+      <li><a href="#what-to-do-if-the-id-types-from-network-reconstruction-dataset-and-analysis-dataset-are-different">Q&amp;A: What to do if the ID types from network-reconstruction dataset and analysis dataset are different?</a></li>
+    </ul>
+  </li>
+  <li><a href="#step-2-read-in-network-files-and-calcualte-driver-activity-act-get">Step 2: Read in network files and calcualte driver activity (act-get)</a>
+    <ul>
+      <li><a href="#why-study-drivers-activity-">Q&amp;A: Why study driver’s activity ?</a></li>
+    </ul>
+  </li>
+  <li><a href="#step-3-get-differential-expression-de--differential-activity-da-for-drivers-act-da">Step 3: Get differential expression (DE) / differential activity (DA) for drivers (act-DA)</a></li>
+  <li><a href="#step-4-generate-a-master-table-for-drivers-ms-tab">Step 4: Generate a master table for drivers (ms-tab)</a>
+    <ul>
+      <li><a href="#how-to-interpret-and-use-the-master-table-">Q&amp;A: How to interpret and use the master table ?</a></li>
+    </ul>
+  </li>
+</ul>
+
+<hr />
+
+<h2 id="step-0-preparations">Step 0: Preparations</h2>
+<p><strong>Purpose: create an organized working directory for the driver inference step in NetBID2 analysis.</strong></p>
+
+<p>Make sure you have NetBID2 package.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">library</span><span class="p">(</span><span class="n">NetBID2</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<p><strong>First, retrieve a constructed network for driver analysis.</strong>
+If user followed the <a href="../docs/network_construction">Network reconstruction</a> tutorial, 
+the path of the network project <code class="highlighter-rouge">network.dir</code> should have been set. For details, please check <a href="../docs/network_construction#step-0-preparations">Network reconstruction: Step 0</a>.
+The <code class="highlighter-rouge">network.project.name</code> is used to distinguish different network reconstruction jobs when using <code class="highlighter-rouge">SJAracne.prepare()</code>, under the main path of <code class="highlighter-rouge">network.dir</code>.
+By specifying <code class="highlighter-rouge">network.dir</code> and <code class="highlighter-rouge">network.project.name</code>, user should be able to retrieve the target network constructed by network reconstruction part in NetBID2 and SJARACNe.</p>
+
+<p>For the online tutorial, we have already prepared the demo dataset’s network constructed by SJARACNe. So users don’t need to run SJARACNe for the demo, and can direclty proceed to the following pipeline.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">network.dir</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'%s/demo1/network/'</span><span class="p">,</span><span class="n">system.file</span><span class="p">(</span><span class="n">package</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"NetBID2"</span><span class="p">))</span><span class="w"> </span><span class="c1"># use demo network in the package</span><span class="w">
+</span><span class="n">network.project.name</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="s1">'project_2019-02-14'</span><span class="w"> 
+</span></code></pre></div></div>
+<p><strong>Next, create directories and folders to save and organize your analysis results.</strong></p>
+
+<p>We have designed a function <code class="highlighter-rouge">NetBID.analysis.dir.create()</code> to handle the working directories, so users can have a better data organization. Similar to the one in network reconstruction.
+This function needs users to define the main working directory <code class="highlighter-rouge">project_main_dir</code> and the project’s name <code class="highlighter-rouge">project_name</code>. 
+To prevent previous project with the same <code class="highlighter-rouge">project_main_dir</code> and <code class="highlighter-rouge">project_name</code> from being rewrite, it is highly suggested to add a time tag to your <code class="highlighter-rouge">project_name</code>.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Define main working directory and project name</span><span class="w">
+</span><span class="n">project_main_dir</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="s1">'test/'</span><span class="w"> </span><span class="c1"># user defined main directory for the project, one main directory could</span><span class="w">
+</span><span class="n">current_date</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">format</span><span class="p">(</span><span class="n">Sys.time</span><span class="p">(),</span><span class="w"> </span><span class="s2">"%Y-%m-%d"</span><span class="p">)</span><span class="w"> </span><span class="c1"># optional, if user like to add current date to name the project folder</span><span class="w">
+</span><span class="n">project_name</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'driver_%s'</span><span class="p">,</span><span class="n">current_date</span><span class="p">)</span><span class="w"> </span><span class="c1"># project name for the project folders under main directory</span><span class="w">
+</span></code></pre></div></div>
+
+<p><code class="highlighter-rouge">NetBID.analysis.dir.create()</code> creates a main working directory with a subdirectory of the project. It also automatically creates three subfolders (QC, DATA and PLOT) within the project folder. QC/, storing Quality Control related plots; DATA/, saving data in RData format; PLOT/, storing output plots. 
+It also returns a list object, here named <code class="highlighter-rouge">analysis.par</code> with directory information wrapped inside. 
+This list is an ESSENTIAL variable for driver inference step, all the important intermediate data generated later will be wrapped inside.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Create a hierarchcial working directory and return a list contains the hierarchcial working directory information</span><span class="w">
+</span><span class="c1"># This list object (analysis.par) is an ESSENTIAL variable in driver inference pipeline</span><span class="w">
+</span><span class="n">analysis.par</span><span class="w">  </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">NetBID.analysis.dir.create</span><span class="p">(</span><span class="n">project_main_dir</span><span class="o">=</span><span class="n">project_main_dir</span><span class="p">,</span><span class="w"> </span><span class="n">project_name</span><span class="o">=</span><span class="n">project_name</span><span class="p">,</span><span class="w">
+                                            </span><span class="n">network_dir</span><span class="o">=</span><span class="n">network.dir</span><span class="p">,</span><span class="w"> </span><span class="n">network_project_name</span><span class="o">=</span><span class="n">network.project.name</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<h2 id="step-1-load-in-the-expression-dataset-for-analysis-exp-load-exp-cluster-exp-qc">Step 1: Load in the expression dataset for analysis (exp-load, exp-cluster, exp-QC)</h2>
+<p><strong>Purpose: load in the expression dataset for driver inference analysis step.</strong></p>
+
+<p>For driver inference, we will need an expression dataset containing the interested phenotype with proper control samples. Compared with the dataset used for network reconstruction, there is no strong requirement for large sample size. User could choose to use the same dataset in network reconstruction for this part but not necessary. For demo, we choose to use the same dataset here.</p>
+
+<p>If user choose to use the same dataset, no pre-processing of the dataset is required, since we saved the expression dataset after quality control as RData from network reconstruction part in NetBID2, we can load it back directly. Users need to assign <code class="highlighter-rouge">network.par$net.eset</code> to <code class="highlighter-rouge">analysis.par$cal.eset</code>, cause for driver inference step, the ESSENTIAL variable is <code class="highlighter-rouge">analysis.par</code>.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># If use the same expression dataset as in the network reconstruction, just reload it directly</span><span class="w">
+</span><span class="n">load</span><span class="p">(</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'%s/DATA/network.par.Step.exp-QC.RData'</span><span class="p">,</span><span class="n">network.dir</span><span class="p">))</span><span class="w"> </span><span class="c1"># RData saved after QC in the network reconstruction step</span><span class="w">
+</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">cal.eset</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">network.par</span><span class="o">$</span><span class="n">net.eset</span><span class="w">
+</span></code></pre></div></div>
+
+<p>If user choose to use a different dataset, please complete the first three steps in <a href="../docs/network_construction">Network reconstruction</a> first to process the dataset before further analysis.</p>
+
+<p>For persistent storage of data, and prevent the re-run of all previous steps. Users can checkout and save <code class="highlighter-rouge">analysis.par</code> as RData for this part.
+The function <code class="highlighter-rouge">NetBID.saveRData()</code> provide easier pipeline step checkout and reference. 
+Giving pipeline step name to <code class="highlighter-rouge">step</code>, the <code class="highlighter-rouge">analysis.par</code> will be saved with step name as <code class="highlighter-rouge">analysis.par$out.dir.DATA/analysis.par.Step.{exp-QC}.RData</code>.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Save Step 1 network.par as RData</span><span class="w">
+</span><span class="n">NetBID.saveRData</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">=</span><span class="n">analysis.par</span><span class="p">,</span><span class="n">step</span><span class="o">=</span><span class="s1">'exp-QC'</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<hr />
+<h3 id="what-to-do-if-the-id-types-from-network-reconstruction-dataset-and-analysis-dataset-are-different"><em>What to do if the ID types from network-reconstruction dataset and analysis dataset are different?</em></h3>
+
+<ul>
+  <li>
+    <p><strong>It is highly suggested to use the ID type from network-reconstruction dataset as the main ID type.</strong></p>
+  </li>
+  <li>
+    <p>The purpose of NetBID2 is to find potential drivers in a biological process of interest based on the data-driven gene regulatory network.  Each drivers’ activity is evaluated based on the network structure (its directly targeted genes). If a driver doesn’t exist in the pre-generated network, it will not be used in activity calculation. On the contrary, if a driver doesn’t exist in the analysis dataset, it can still have its activity been calculated (if its target genes’ expression values are available).</p>
+  </li>
+  <li>
+    <p>We strongly recommend to align the ID type from the analysis dataset to the network-reconstruction dataset using <code class="highlighter-rouge">update_eset.feature()</code>. The ID conversion table can be obtained from GPL files or <code class="highlighter-rouge">get_IDtransfer()</code> and <code class="highlighter-rouge">get_IDtransfer_betweenSpecies()</code>.</p>
+  </li>
+  <li>
+    <p>The most complicated situation is, the levels of network-reconstruction ID type and the analysis expression dataset are different (e.g. transcript level vs. gene level).
+NetBID2 provides <code class="highlighter-rouge">update_eset.feature()</code> to solve this problem, by assigning <code class="highlighter-rouge">distribute_method</code> and <code class="highlighter-rouge">merge_method</code> parameters.</p>
+  </li>
+</ul>
+
+<hr />
+
+<h2 id="step-2-read-in-network-files-and-calcualte-driver-activity-act-get">Step 2: Read in network files and calcualte driver activity (act-get)</h2>
+
+<p>Please skip the following line if you didn’t close R session after completed Step 1.</p>
+
+<p>Don’t skip, if you have checked out and closed R session after completed the Step 1. Before start Step 2, please reload <code class="highlighter-rouge">analysis.par</code> RData from Step 1.
+<code class="highlighter-rouge">NetBID.loadRData()</code> reloads RData saved by <code class="highlighter-rouge">NetBID.saveRData()</code>. It prevents user from repeating former pipeline steps.
+If the re-opened R session doesn’t have <code class="highlighter-rouge">analysis.par</code> in the environment, please comment off the first two command lines. It will create a temporary <code class="highlighter-rouge">analysis.par</code>
+with path of the saved Step 1 RData, <code class="highlighter-rouge">analysis.par$out.dir.DATA</code>. The path <code class="highlighter-rouge">test//driver_2019-05-06//DATA/</code> here is just an example, 
+users need to give their own path used to save <code class="highlighter-rouge">analysis.par</code> RData from Step 1.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Reload network.par RData from Step 1</span><span class="w">
+</span><span class="c1">#analysis.par &lt;- list()</span><span class="w">
+</span><span class="c1">#analysis.par$out.dir.DATA &lt;- 'test//driver_2019-05-06//DATA/'</span><span class="w">
+</span><span class="n">NetBID.loadRData</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">=</span><span class="n">analysis.par</span><span class="p">,</span><span class="n">step</span><span class="o">=</span><span class="s1">'exp-QC'</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<p><strong>Firstly, get the network constructed by <a href="https://github.com/jyyulab/SJARACNe">SJAracne</a>.</strong> If one followed the pipeline, the file path should be <code class="highlighter-rouge">analysis.par$tf.network.file</code> and <code class="highlighter-rouge">analysis.par$sig.network.file</code>.
+Use <code class="highlighter-rouge">get.SJAracne.network()</code> to read in the network information. 
+If one didn’t follow the pipeline, just pass the directory of network to <code class="highlighter-rouge">get.SJAracne.network()</code>.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">analysis.par</span><span class="o">$</span><span class="n">tf.network</span><span class="w">  </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">get.SJAracne.network</span><span class="p">(</span><span class="n">network_file</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">tf.network.file</span><span class="p">)</span><span class="w">
+</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">sig.network</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">get.SJAracne.network</span><span class="p">(</span><span class="n">network_file</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">sig.network.file</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<p><strong>More about <code class="highlighter-rouge">get.SJAracne.network()</code> and related function.</strong> It reads SJARACNe network reconstruction result and returns a list object contains three elements, <code class="highlighter-rouge">network_data</code>, <code class="highlighter-rouge">target_list</code> and <code class="highlighter-rouge">igraph_obj</code>. <code class="highlighter-rouge">network_dat</code> is a data.frame, contains all the information of the network SJARACNe constructed. <code class="highlighter-rouge">target_list</code> is a driver-to-target list object. Please check details in <code class="highlighter-rouge">get_net2target_list()</code>. <code class="highlighter-rouge">igraph_obj</code> is an igraph object used to save this directed and weighted network. Each edge of the network has two attributes, weight and sign. Weight is the “MI (mutual information)” value and sign is the sign of the spearman correlation coefficient (1, positive regulation; -1, negative regulation). To updata the network dataset, user can call <code class="highlighter-rouge">update_SJAracne.network()</code>. It updates the network object created by <code class="highlighter-rouge">get.SJAracne.network</code>, using constraints like statistical thresholds and interested gene list.</p>
+
+<p><strong>Generate an HTML QC report for the constructed network, using <code class="highlighter-rouge">igraph_obj</code>.</strong></p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">draw.network.QC</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">tf.network</span><span class="o">$</span><span class="n">igraph_obj</span><span class="p">,</span><span class="n">outdir</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.QC</span><span class="p">,</span><span class="n">prefix</span><span class="o">=</span><span class="s1">'TF_net_'</span><span class="p">,</span><span class="n">html_info_limit</span><span class="o">=</span><span class="kc">FALSE</span><span class="p">)</span><span class="w">
+</span><span class="n">draw.network.QC</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">sig.network</span><span class="o">$</span><span class="n">igraph_obj</span><span class="p">,</span><span class="n">outdir</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.QC</span><span class="p">,</span><span class="n">prefix</span><span class="o">=</span><span class="s1">'SIG_net_'</span><span class="p">,</span><span class="n">html_info_limit</span><span class="o">=</span><span class="kc">TRUE</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<p>Two QC reports have been created. One for the transcription factor <a href="TF_net_netQC.html">TF network</a>, the other one is for signaling factor <a href="SIG_net_netQC.html">SIG network</a>.</p>
+
+<p><strong>- What information can you get from the HTML QC report of network?</strong></p>
+<ul>
+  <li>A table for network. It shows some basic statistics to characterize the target network, including size and centrality etc.</li>
+  <li>A table for drivers. It shows detailed statistics for all drivers in the network.</li>
+  <li>A density over histogram to show the distribution of the degree of nodes and the target size of all drivers. The average target size around several hundreds may be good by experience.</li>
+  <li>A scatter plot to check if the network is scale-free. It is good but not necessary for a gene regulatory network to have the scale-free topology feature.</li>
+</ul>
+
+<p><strong>Second, merge TF-network and SIG-network.</strong>
+There are two ways to merge the networks. (1) Merge the networks first using <code class="highlighter-rouge">merge_TF_SIF.network()</code>, then calculate driver’s activity value. (2) Calculate the driver’s activity value in both TF-network and SIG-network, then merge them together using <code class="highlighter-rouge">merge_TF_SIG.AC()</code>. Both ways give the same result. 
+Drivers in the <code class="highlighter-rouge">analysis.par$merge.network</code> will have suffix of ‘_TF’ and ‘_SIG’ to distinguish the type of the driver. It is possible to see a driver with both ‘_TF’ and ‘_SIG’.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Merge network first</span><span class="w">
+</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.network</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">merge_TF_SIG.network</span><span class="p">(</span><span class="n">TF_network</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">tf.network</span><span class="p">,</span><span class="n">SIG_network</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">sig.network</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<p><strong>Third, get the activity matrix for all possible drivers using <code class="highlighter-rouge">cal.Activity()</code>.</strong> 
+Driver’s activity value quantifies its influence in a biological process. It is evaluated from the driver’s accumulative effects to its targets.
+The evaluation strategies are “mean””, “weighted mean”, “maxmean” and “absmean”. “Weighted mean” is the MI (mutual information) value with the sign of the spearman correlation. 
+For example, if users choose “weighted mean” to calcualte the activity of driver. The higher expression value of its positively-regulated genes and the lower expression value of its negatively-regulated genes, the higher activity value of that driver will be.
+If user would like to perform Z-transformation to the expression matrix before calculating the activity values, he can set <code class="highlighter-rouge">std=TRUE</code>.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Get activity matrix</span><span class="w">
+</span><span class="n">ac_mat</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">cal.Activity</span><span class="p">(</span><span class="n">target_list</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.network</span><span class="o">$</span><span class="n">target_list</span><span class="p">,</span><span class="n">cal_mat</span><span class="o">=</span><span class="n">exprs</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">cal.eset</span><span class="p">),</span><span class="n">es.method</span><span class="o">=</span><span class="s1">'weightedmean'</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+<p>Now, we have an activity matrix <code class="highlighter-rouge">ac_mat</code> for drivers. Rows are drivers, columns are samples. 
+Due to the similar way of data display, and same phenotype information sharing, we can wrap the activity matrix into the ExpressionSet class object, just like expression matrix.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Create eset using activity matrix</span><span class="w">
+</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.ac.eset</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">generate.eset</span><span class="p">(</span><span class="n">exp_mat</span><span class="o">=</span><span class="n">ac_mat</span><span class="p">,</span><span class="n">phenotype_info</span><span class="o">=</span><span class="n">pData</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">cal.eset</span><span class="p">)[</span><span class="n">colnames</span><span class="p">(</span><span class="n">ac_mat</span><span class="p">),],</span><span class="w">
+                                            </span><span class="n">feature_info</span><span class="o">=</span><span class="kc">NULL</span><span class="p">,</span><span class="n">annotation_info</span><span class="o">=</span><span class="s1">'activity in net-dataset'</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<p><strong>Fourth, create QC report for the activity matrix.</strong>
+Use <code class="highlighter-rouge">draw.eset.QC()</code> to create the HTML QC report <a href="AC_QC.html">QC for AC</a> of <code class="highlighter-rouge">analysis.par$merge.ac.eset</code>.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># QC plot for activity eset</span><span class="w">
+</span><span class="n">draw.eset.QC</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.ac.eset</span><span class="p">,</span><span class="n">outdir</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.QC</span><span class="p">,</span><span class="n">intgroup</span><span class="o">=</span><span class="kc">NULL</span><span class="p">,</span><span class="n">do.logtransform</span><span class="o">=</span><span class="kc">FALSE</span><span class="p">,</span><span class="n">prefix</span><span class="o">=</span><span class="s1">'AC_'</span><span class="p">,</span><span class="w">
+             </span><span class="n">pre_define</span><span class="o">=</span><span class="nf">c</span><span class="p">(</span><span class="s1">'WNT'</span><span class="o">=</span><span class="s1">'blue'</span><span class="p">,</span><span class="s1">'SHH'</span><span class="o">=</span><span class="s1">'red'</span><span class="p">,</span><span class="s1">'G4'</span><span class="o">=</span><span class="s1">'green'</span><span class="p">),</span><span class="n">pca_plot_type</span><span class="o">=</span><span class="s1">'2D.interactive'</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<p><strong>Last, save <code class="highlighter-rouge">analysis.par</code>.</strong>
+For persistent storage of data, and prevent the re-run of all previous steps. Users can checkout now and save <code class="highlighter-rouge">analysis.par</code> as RData for this part.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Save Step 2 analysis.par as RData</span><span class="w">
+</span><span class="n">NetBID.saveRData</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">=</span><span class="n">analysis.par</span><span class="p">,</span><span class="n">step</span><span class="o">=</span><span class="s1">'act-get'</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<hr />
+<h3 id="why-study-drivers-activity-"><em>Why study driver’s activity ?</em></h3>
+
+<ul>
+  <li>Drivers, such as transcription factors (TF) bind to the enhancer or promoter regions of the target genes and regulate their expression level. Once the TF has been synthesized, there are still many steps between mRNA translation of a TF and the actual transcriptional regulation of target genes. The activity is controlled by most of the following processes, nuclear localization (import into the cell nucleaus), activation through signal-sensing domain (e.g. ligand binding or post-translational modifications: methylation, ubiquitination and phosphorylation, which is essential for dimerization and promoter binding), access to the DNA-binding site (epigenetic features of the genome), and interaction with other cofactors or TFs (form a complex). Thus, sometimes the expression trend and the activity pattern of a driver may be contradicted. Due to these “hidden effects, the analysis of the activity of a driver maybe more fruitful than the analysis its expression level.</li>
+</ul>
+
+<hr />
+
+<h2 id="step-3-get-differential-expression-de--differential-activity-da-for-drivers-act-da">Step 3: Get differential expression (DE) / differential activity (DA) for drivers (act-DA)</h2>
+<p><strong>Purpose: get significantly differential expression (DE) and activity (DA) for all possible drivers between two phenotype groups.</strong></p>
+
+<p>Please skip the following line if you didn’t close R session after completed Step 1 and Step 2.</p>
+
+<p>Don’t skip, if you have checked out and closed R session after completed the Step 1 and Step 2. Before start Step 3, please reload <code class="highlighter-rouge">analysis.par</code> RData from Step 2.
+<code class="highlighter-rouge">NetBID.loadRData()</code> reloads RData saved by <code class="highlighter-rouge">NetBID.saveRData()</code>. It prevents user from repeating former pipeline steps.
+If the re-opened R session doesn’t have <code class="highlighter-rouge">analysis.par</code> in the environment, please comment off the first two command lines. It will create a temporary <code class="highlighter-rouge">analysis.par</code>
+with path of the saved Step 2 RData, <code class="highlighter-rouge">analysis.par$out.dir.DATA</code>. The path <code class="highlighter-rouge">test//driver_2019-05-06//DATA/</code> here is just an example, 
+users need to give their own path used to save <code class="highlighter-rouge">analysis.par</code> RData from Step 2.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Reload network.par RData from Step 2</span><span class="w">
+</span><span class="c1">#analysis.par &lt;- list()</span><span class="w">
+</span><span class="c1">#analysis.par$out.dir.DATA &lt;- 'test//driver_2019-05-06//DATA/'</span><span class="w">
+</span><span class="n">NetBID.loadRData</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">=</span><span class="n">analysis.par</span><span class="p">,</span><span class="n">step</span><span class="o">=</span><span class="s1">'act-get'</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<p><strong>To compare the drivers’ activity between two phenotype groups.</strong>
+In the demo dataset, one column of the phenotype data frame is “subgroup”. It contains 3 phenotype groups, <code class="highlighter-rouge">WNT</code>, <code class="highlighter-rouge">SHH</code> and <code class="highlighter-rouge">G4</code>. To compare the driver’s DE/DA between any two groups (<code class="highlighter-rouge">G1</code> vs. <code class="highlighter-rouge">G0</code> in the following functions), NetBID2 provides two major functions <code class="highlighter-rouge">getDE.BID.2G()</code> and <code class="highlighter-rouge">getDE.limma.2G()</code>. Users need to assign sample names from each group to <code class="highlighter-rouge">G1_name</code> and <code class="highlighter-rouge">G0_name</code>.
+In the script below, we compared between <code class="highlighter-rouge">G4.Vs.WNT</code> and <code class="highlighter-rouge">G4.Vs.SHH</code>. Each comparison has a name (highly suggested, will be displayed in the final master table), and the results are saved in <code class="highlighter-rouge">analysis.par$DE</code> and <code class="highlighter-rouge">analysis.par$DA</code>.</p>
+
+<p><strong>More detail.</strong>
+<code class="highlighter-rouge">getDE.BID.2G()</code> uses Bayesian Inference method to calculate DE and DA values, by setting <code class="highlighter-rouge">method='Bayesian'</code>. If set <code class="highlighter-rouge">method='MLE'</code>, it will take shorter time to calculate.
+If the input is RNA-Seq dataset, user can use <code class="highlighter-rouge">DE</code> output from <code class="highlighter-rouge">DESeq2</code>. Just pay attention to the column names, one column should be <code class="highlighter-rouge">Z-statistics</code>.
+If the phenotype is ordinal or more complicated, user can use <code class="highlighter-rouge">bid()</code> or <code class="highlighter-rouge">limma()</code> to analyze.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Create empty list to store comparison result</span><span class="w">
+</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">DE</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">list</span><span class="p">()</span><span class="w">
+</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">DA</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">list</span><span class="p">()</span><span class="w">
+
+</span><span class="c1"># First comparison: G4 vs. WNT</span><span class="w">
+</span><span class="n">comp_name</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="s1">'G4.Vs.WNT'</span><span class="w"> </span><span class="c1"># Each comparison must has a name</span><span class="w">
+</span><span class="c1"># Get sample names from each compared group</span><span class="w">
+</span><span class="n">phe_info</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">pData</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">cal.eset</span><span class="p">)</span><span class="w">
+</span><span class="n">G1</span><span class="w">  </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">rownames</span><span class="p">(</span><span class="n">phe_info</span><span class="p">)[</span><span class="n">which</span><span class="p">(</span><span class="n">phe_info</span><span class="o">$</span><span class="n">`subgroup`</span><span class="o">==</span><span class="s1">'G4'</span><span class="p">)]</span><span class="w"> </span><span class="c1"># Experiment group</span><span class="w">
+</span><span class="n">G0</span><span class="w">  </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">rownames</span><span class="p">(</span><span class="n">phe_info</span><span class="p">)[</span><span class="n">which</span><span class="p">(</span><span class="n">phe_info</span><span class="o">$</span><span class="n">`subgroup`</span><span class="o">==</span><span class="s1">'WNT'</span><span class="p">)]</span><span class="w"> </span><span class="c1"># Control group</span><span class="w">
+</span><span class="n">DE_gene_bid</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">getDE.BID.2G</span><span class="p">(</span><span class="n">eset</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">cal.eset</span><span class="p">,</span><span class="n">G1</span><span class="o">=</span><span class="n">G1</span><span class="p">,</span><span class="n">G0</span><span class="o">=</span><span class="n">G0</span><span class="p">,</span><span class="n">G1_name</span><span class="o">=</span><span class="s1">'G4'</span><span class="p">,</span><span class="n">G0_name</span><span class="o">=</span><span class="s1">'WNT'</span><span class="p">)</span><span class="w">
+</span><span class="n">DA_driver_bid</span><span class="w">   </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">getDE.BID.2G</span><span class="p">(</span><span class="n">eset</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.ac.eset</span><span class="p">,</span><span class="n">G1</span><span class="o">=</span><span class="n">G1</span><span class="p">,</span><span class="n">G0</span><span class="o">=</span><span class="n">G0</span><span class="p">,</span><span class="n">G1_name</span><span class="o">=</span><span class="s1">'G4'</span><span class="p">,</span><span class="n">G0_name</span><span class="o">=</span><span class="s1">'WNT'</span><span class="p">)</span><span class="w">
+</span><span class="c1"># Save comparison result to list element in analysis.par, with comparison name</span><span class="w">
+</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">DE</span><span class="p">[[</span><span class="n">comp_name</span><span class="p">]]</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">DE_gene_bid</span><span class="w">
+</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">DA</span><span class="p">[[</span><span class="n">comp_name</span><span class="p">]]</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">DA_driver_bid</span><span class="w">
+
+</span><span class="c1"># Second comparison: G4 vs. SHH</span><span class="w">
+</span><span class="n">comp_name</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="s1">'G4.Vs.SHH'</span><span class="w"> </span><span class="c1"># Each comparison must has a name</span><span class="w">
+</span><span class="c1"># Get sample names from each compared group</span><span class="w">
+</span><span class="n">phe_info</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">pData</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">cal.eset</span><span class="p">)</span><span class="w">
+</span><span class="n">G1</span><span class="w">  </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">rownames</span><span class="p">(</span><span class="n">phe_info</span><span class="p">)[</span><span class="n">which</span><span class="p">(</span><span class="n">phe_info</span><span class="o">$</span><span class="n">`subgroup`</span><span class="o">==</span><span class="s1">'G4'</span><span class="p">)]</span><span class="w"> </span><span class="c1"># Experiment group</span><span class="w">
+</span><span class="n">G0</span><span class="w">  </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">rownames</span><span class="p">(</span><span class="n">phe_info</span><span class="p">)[</span><span class="n">which</span><span class="p">(</span><span class="n">phe_info</span><span class="o">$</span><span class="n">`subgroup`</span><span class="o">==</span><span class="s1">'SHH'</span><span class="p">)]</span><span class="w"> </span><span class="c1"># Control group</span><span class="w">
+</span><span class="n">DE_gene_bid</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">getDE.BID.2G</span><span class="p">(</span><span class="n">eset</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">cal.eset</span><span class="p">,</span><span class="n">G1</span><span class="o">=</span><span class="n">G1</span><span class="p">,</span><span class="n">G0</span><span class="o">=</span><span class="n">G0</span><span class="p">,</span><span class="n">G1_name</span><span class="o">=</span><span class="s1">'G4'</span><span class="p">,</span><span class="n">G0_name</span><span class="o">=</span><span class="s1">'SHH'</span><span class="p">)</span><span class="w">
+</span><span class="n">DA_driver_bid</span><span class="w">   </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">getDE.BID.2G</span><span class="p">(</span><span class="n">eset</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.ac.eset</span><span class="p">,</span><span class="n">G1</span><span class="o">=</span><span class="n">G1</span><span class="p">,</span><span class="n">G0</span><span class="o">=</span><span class="n">G0</span><span class="p">,</span><span class="n">G1_name</span><span class="o">=</span><span class="s1">'G4'</span><span class="p">,</span><span class="n">G0_name</span><span class="o">=</span><span class="s1">'SHH'</span><span class="p">)</span><span class="w">
+</span><span class="c1"># Save comparison result to list element in analysis.par, with comparison name</span><span class="w">
+</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">DE</span><span class="p">[[</span><span class="n">comp_name</span><span class="p">]]</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">DE_gene_bid</span><span class="w">
+</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">DA</span><span class="p">[[</span><span class="n">comp_name</span><span class="p">]]</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">DA_driver_bid</span><span class="w">
+
+</span></code></pre></div></div>
+
+<p><strong>To combine multiple comparison results.</strong> Wrap all the comparison results into the <code class="highlighter-rouge">DE_list</code>, and pass it to <code class="highlighter-rouge">combineDE()</code>.
+It returns a list contains the combined DE/DA analysis. A data frame named “combine” inside the list is the combined analysis. Rows are genes/drivers, columns are combined statistics (e.g. “logFC”, “AveExpr”, “t”, “P.Value” etc.).</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">## Third comparison: G4 vs. others</span><span class="w">
+</span><span class="c1"># Combine the comparison results from `G4.Vs.WNT` and `G4.Vs.SHH`</span><span class="w">
+</span><span class="n">comp_name</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="s1">'G4.Vs.otherTwo'</span><span class="w"> </span><span class="c1"># Each comparison must has a name</span><span class="w">
+</span><span class="n">DE_gene_comb</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">combineDE</span><span class="p">(</span><span class="n">DE_list</span><span class="o">=</span><span class="nf">list</span><span class="p">(</span><span class="s1">'G4.Vs.WNT'</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">DE</span><span class="o">$</span><span class="n">`G4.Vs.WNT`</span><span class="p">,</span><span class="s1">'G4.Vs.SHH'</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">DE</span><span class="o">$</span><span class="n">`G4.Vs.SHH`</span><span class="p">))</span><span class="w">
+</span><span class="n">DA_driver_comb</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">combineDE</span><span class="p">(</span><span class="n">DE_list</span><span class="o">=</span><span class="nf">list</span><span class="p">(</span><span class="s1">'G4.Vs.WNT'</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">DA</span><span class="o">$</span><span class="n">`G4.Vs.WNT`</span><span class="p">,</span><span class="s1">'G4.Vs.SHH'</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">DA</span><span class="o">$</span><span class="n">`G4.Vs.SHH`</span><span class="p">))</span><span class="w">
+</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">DE</span><span class="p">[[</span><span class="n">comp_name</span><span class="p">]]</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">DE_gene_comb</span><span class="o">$</span><span class="n">combine</span><span class="w">
+</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">DA</span><span class="p">[[</span><span class="n">comp_name</span><span class="p">]]</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">DA_driver_comb</span><span class="o">$</span><span class="n">combine</span><span class="w">
+</span></code></pre></div></div>
+<p>NetBID2 also provides <code class="highlighter-rouge">draw.combineDE()</code> to visualize the top drivers with significant DE/DA from the combined comparison, with DE/DA values from seperate comparisons listed as well.
+Drivers are sorted based on the P-values from the third column, which is the combined comparison (<code class="highlighter-rouge">G4 vs. WNT+SHH</code>).</p>
+
+<ul>
+  <li>Driver table of top DE:</li>
+</ul>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Driver table of top DE</span><span class="w">
+</span><span class="n">draw.combineDE</span><span class="p">(</span><span class="n">DE_gene_comb</span><span class="p">)</span><span class="w">
+</span><span class="n">draw.combineDE</span><span class="p">(</span><span class="n">DE_gene_comb</span><span class="p">,</span><span class="n">pdf_file</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'%s/combineDE.pdf'</span><span class="p">,</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.PLOT</span><span class="p">))</span><span class="w"> </span><span class="c1"># Save it as PDF</span><span class="w">
+</span></code></pre></div></div>
+
+<p><img src="combineDE.png" alt="`combineDE`" /></p>
+
+<ul>
+  <li>Driver table of top DA:</li>
+</ul>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Driver table of top DA</span><span class="w">
+</span><span class="n">draw.combineDE</span><span class="p">(</span><span class="n">DA_driver_comb</span><span class="p">)</span><span class="w">
+</span><span class="n">draw.combineDE</span><span class="p">(</span><span class="n">DA_driver_comb</span><span class="p">,</span><span class="n">pdf_file</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'%s/combineDA.pdf'</span><span class="p">,</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.PLOT</span><span class="p">))</span><span class="w"> </span><span class="c1"># Save it as PDF</span><span class="w">
+</span></code></pre></div></div>
+
+<p><img src="combineDA.png" alt="`combineDA`" /></p>
+
+<p>Another way to perform the comparison between one group versus multiple groups, is to choose the sample names from multiple groups as <code class="highlighter-rouge">G0_name</code> parameter in the <code class="highlighter-rouge">getDE.BID.2G()</code>. 
+In this way, the user doesn’t need to call <code class="highlighter-rouge">combineDE</code>. But the final result may vary, due to the different statistical hypothesis.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Another way to do the third comparison: G4 vs. others</span><span class="w">
+</span><span class="n">comp_name</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="s1">'G4.Vs.others'</span><span class="w">
+</span><span class="c1"># Get sample names from each compared group</span><span class="w">
+</span><span class="n">phe_info</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">pData</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">cal.eset</span><span class="p">)</span><span class="w">
+</span><span class="n">G1</span><span class="w">  </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">rownames</span><span class="p">(</span><span class="n">phe_info</span><span class="p">)[</span><span class="n">which</span><span class="p">(</span><span class="n">phe_info</span><span class="o">$</span><span class="n">`subgroup`</span><span class="o">==</span><span class="s1">'G4'</span><span class="p">)]</span><span class="w"> </span><span class="c1"># Experiment group</span><span class="w">
+</span><span class="n">G0</span><span class="w">  </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">rownames</span><span class="p">(</span><span class="n">phe_info</span><span class="p">)[</span><span class="n">which</span><span class="p">(</span><span class="n">phe_info</span><span class="o">$</span><span class="n">`subgroup`</span><span class="o">!=</span><span class="s1">'G4'</span><span class="p">)]</span><span class="w"> </span><span class="c1"># Combine other groups as the Control group</span><span class="w">
+</span><span class="n">DE_gene_bid</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">getDE.BID.2G</span><span class="p">(</span><span class="n">eset</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">cal.eset</span><span class="p">,</span><span class="n">G1</span><span class="o">=</span><span class="n">G1</span><span class="p">,</span><span class="n">G0</span><span class="o">=</span><span class="n">G0</span><span class="p">,</span><span class="n">G1_name</span><span class="o">=</span><span class="s1">'G4'</span><span class="p">,</span><span class="n">G0_name</span><span class="o">=</span><span class="s1">'others'</span><span class="p">)</span><span class="w">
+</span><span class="n">DA_driver_bid</span><span class="w">   </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">getDE.BID.2G</span><span class="p">(</span><span class="n">eset</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.ac.eset</span><span class="p">,</span><span class="n">G1</span><span class="o">=</span><span class="n">G1</span><span class="p">,</span><span class="n">G0</span><span class="o">=</span><span class="n">G0</span><span class="p">,</span><span class="n">G1_name</span><span class="o">=</span><span class="s1">'G4'</span><span class="p">,</span><span class="n">G0_name</span><span class="o">=</span><span class="s1">'others'</span><span class="p">)</span><span class="w">
+</span><span class="c1"># Save comparison result to list element in analysis.par, with comparison name</span><span class="w">
+</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">DE</span><span class="p">[[</span><span class="n">comp_name</span><span class="p">]]</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">DE_gene_bid</span><span class="w">
+</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">DA</span><span class="p">[[</span><span class="n">comp_name</span><span class="p">]]</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">DA_driver_bid</span><span class="w">
+</span></code></pre></div></div>
+
+<p>Save the comparison results as RData.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Save Step 3 analysis.par as RData</span><span class="w">
+</span><span class="n">NetBID.saveRData</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">=</span><span class="n">analysis.par</span><span class="p">,</span><span class="n">step</span><span class="o">=</span><span class="s1">'act-DA'</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<p>Now, we have get the top differential expression (DE) and activity (DA) drivers from different comparisons. We can use <code class="highlighter-rouge">draw.NetBID()</code> to visualize the top drivers (top 30 by default). Here, the displayed statistics for NetBID is set at <code class="highlighter-rouge">P.Value</code> and <code class="highlighter-rouge">logFC</code> for differential expression (set by <code class="highlighter-rouge">DA_display_col</code> and <code class="highlighter-rouge">DE_display_col</code>).</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">draw.NetBID</span><span class="p">(</span><span class="n">DA_list</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">DA</span><span class="p">,</span><span class="n">DE_list</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">DE</span><span class="p">,</span><span class="n">main_id</span><span class="o">=</span><span class="s1">'G4.Vs.others'</span><span class="p">)</span><span class="w">
+</span><span class="n">draw.NetBID</span><span class="p">(</span><span class="n">DA_list</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">DA</span><span class="p">,</span><span class="n">DE_list</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">DE</span><span class="p">,</span><span class="n">main_id</span><span class="o">=</span><span class="s1">'G4.Vs.others'</span><span class="p">,</span><span class="n">pdf_file</span><span class="o">=</span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'%s/NetBID_TOP.pdf'</span><span class="p">,</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.PLOT</span><span class="p">),</span><span class="n">text_cex</span><span class="o">=</span><span class="m">0.8</span><span class="p">)</span><span class="w"> </span><span class="c1"># Save as PDF</span><span class="w">
+</span></code></pre></div></div>
+
+<p><img src="NetBID_TOP.png" alt="`NetBID_TOP`" /></p>
+
+<p>Users can customize the table above, by choosing which column to display DE or DA, or by choosing which comparison to display.</p>
+
+<h2 id="step-4-generate-a-master-table-for-drivers-ms-tab">Step 4: Generate a master table for drivers (ms-tab)</h2>
+<p><strong>Purpose: gather previous calculated data to create a final master table for all possible drivers.</strong></p>
+
+<p>Please skip the following line if you didn’t close R session after completed Step 1-3.</p>
+
+<p>Don’t skip, if you have checked out and closed R session after completed the Step 1-3. Before start Step 4, please reload <code class="highlighter-rouge">analysis.par</code> RData from Step 3.
+<code class="highlighter-rouge">NetBID.loadRData()</code> reloads RData saved by <code class="highlighter-rouge">NetBID.saveRData()</code>. It prevents user from repeating former pipeline steps.
+If the re-opened R session doesn’t have <code class="highlighter-rouge">analysis.par</code> in the environment, please comment off the first two command lines. It will create a temporary <code class="highlighter-rouge">analysis.par</code>
+with path of the saved Step 3 RData, <code class="highlighter-rouge">analysis.par$out.dir.DATA</code>. The path <code class="highlighter-rouge">test//driver_2019-05-06//DATA/</code> here is just an example, 
+users need to give their own path used to save <code class="highlighter-rouge">analysis.par</code> RData from Step 3.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Reload analysis.par RData from Step 3</span><span class="w">
+</span><span class="c1">#analysis.par &lt;- list()</span><span class="w">
+</span><span class="c1">#analysis.par$out.dir.DATA &lt;- 'test//driver_2019-05-06//DATA/'</span><span class="w">
+</span><span class="n">NetBID.loadRData</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">=</span><span class="n">analysis.par</span><span class="p">,</span><span class="n">step</span><span class="o">=</span><span class="s1">'act-DA'</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<p><strong>To create the final master table, users need to gather certian previous data and pass them to the parameters in <code class="highlighter-rouge">generate.masterTable()</code> function.</strong>
+Here are the details,</p>
+<ul>
+  <li><code class="highlighter-rouge">use_comp</code>, the vector of multiple comparison names. It will be used as the columns of master table. If use all the comparisons, just call <code class="highlighter-rouge">names(analysis.par$DE)</code>.</li>
+  <li><code class="highlighter-rouge">DE</code> and <code class="highlighter-rouge">DA</code>, if following the previous pipeline, just use <code class="highlighter-rouge">analysis.par$DE</code> and <code class="highlighter-rouge">analysis.par$DA</code>.</li>
+  <li><code class="highlighter-rouge">network</code>, the driver-to-target list. The names of the list elements are drivers. Each element is a data frame, usually contains three columns. “target”, target gene names; “MI”, mutual information; “spearman”, spearman correlation coefficient. If following the previous pipeline, just use <code class="highlighter-rouge">analysis.par$merge.network$target_list</code>.</li>
+  <li><code class="highlighter-rouge">tf_sigs</code>, contains all the detailed information of TF and Sig. Users need to call <code class="highlighter-rouge">db.preload()</code> for access.
+    <ul>
+      <li><code class="highlighter-rouge">db.preload()</code> reloads the TF/SIG gene lists into R workspace and saves it locally under db/ directory with specified species name and analysis level.</li>
+    </ul>
+  </li>
+  <li><code class="highlighter-rouge">z_col</code>, name of the column in <code class="highlighter-rouge">getDE.limma.2G()</code> and <code class="highlighter-rouge">getDE.BID.2G()</code> output data frame contains the Z-statistics. By default, it is “Z-statistics”.</li>
+  <li><code class="highlighter-rouge">display_col</code>, other driver’s statistical values for display. This must columns from the <code class="highlighter-rouge">getDE.limma.2G()</code> and <code class="highlighter-rouge">getDE.BID.2G()</code> output data frame. For example, “logFC” and “P.Value”.</li>
+  <li><code class="highlighter-rouge">main_id_type</code>, the type of driver’s ID, <strong>IMPORTANT</strong>. It comes from the attribute name in <code class="highlighter-rouge">biomaRt</code> package. Such as “ensembl_gene_id”, “ensembl_gene_id_version”, “ensembl_transcript_id”, “ensembl_transcript_id_version” or “refseq_mrna”. For details, please heck <a href="../network_construction#id-conversion">ID conversion section</a>.</li>
+  <li><code class="highlighter-rouge">transfer_tab</code>, the data frame for ID conversion. If NULL and <code class="highlighter-rouge">main_id_type</code> is not in the column names of <code class="highlighter-rouge">tf_sigs</code>, it will use the conversion table within the function. Users can also create their own ID conversion table. If user want to save it into <code class="highlighter-rouge">analysis.par</code>, we suggest to call <code class="highlighter-rouge">get_IDtransfer2symbol2type()</code> instead of <code class="highlighter-rouge">get_IDtransfer()</code> as the output of the former function could be used in more visualization functions (e.g <code class="highlighter-rouge">draw.bubblePlot()</code>).</li>
+  <li><code class="highlighter-rouge">column_order_stratey</code>, an option to order to the columns in the mater table. If set as <code class="highlighter-rouge">type</code>, the columns will be ordered by column type; If set as <code class="highlighter-rouge">comp</code>, the columns will be ordered by comparison.</li>
+</ul>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Reload data into R workspace, and saves it locally under db/ directory with specified species name and analysis level.</span><span class="w">
+</span><span class="n">db.preload</span><span class="p">(</span><span class="n">use_level</span><span class="o">=</span><span class="s1">'gene'</span><span class="p">,</span><span class="n">use_spe</span><span class="o">=</span><span class="s1">'human'</span><span class="p">,</span><span class="n">update</span><span class="o">=</span><span class="kc">FALSE</span><span class="p">)</span><span class="w">
+</span><span class="c1"># Get all comparison names</span><span class="w">
+</span><span class="n">all_comp</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">names</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">DE</span><span class="p">)</span><span class="w"> </span><span class="c1"># Users can use index or name to get target ones</span><span class="w">
+</span><span class="c1"># Prepare the conversion table (OPTIONAL)</span><span class="w">
+</span><span class="n">use_genes</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">unique</span><span class="p">(</span><span class="nf">c</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.network</span><span class="o">$</span><span class="n">network_dat</span><span class="o">$</span><span class="n">source.symbol</span><span class="p">,</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.network</span><span class="o">$</span><span class="n">network_dat</span><span class="o">$</span><span class="n">target.symbol</span><span class="p">))</span><span class="w">
+</span><span class="n">transfer_tab</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">get_IDtransfer2symbol2type</span><span class="p">(</span><span class="n">from_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'external_gene_name'</span><span class="p">,</span><span class="n">use_genes</span><span class="o">=</span><span class="n">use_genes</span><span class="p">)</span><span class="w">
+</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">transfer_tab</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">transfer_tab</span><span class="w">
+</span><span class="c1"># Creat the final master table</span><span class="w">
+</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">final_ms_tab</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">generate.masterTable</span><span class="p">(</span><span class="n">use_comp</span><span class="o">=</span><span class="n">all_comp</span><span class="p">,</span><span class="n">DE</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">DE</span><span class="p">,</span><span class="n">DA</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">DA</span><span class="p">,</span><span class="w">
+                                               </span><span class="n">target_list</span><span class="o">=</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">merge.network</span><span class="o">$</span><span class="n">target_list</span><span class="p">,</span><span class="w">
+                                               </span><span class="n">tf_sigs</span><span class="o">=</span><span class="n">tf_sigs</span><span class="p">,</span><span class="n">z_col</span><span class="o">=</span><span class="s1">'Z-statistics'</span><span class="p">,</span><span class="n">display_col</span><span class="o">=</span><span class="nf">c</span><span class="p">(</span><span class="s1">'logFC'</span><span class="p">,</span><span class="s1">'P.Value'</span><span class="p">),</span><span class="w">
+                                               </span><span class="n">main_id_type</span><span class="o">=</span><span class="s1">'external_gene_name'</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<p><strong>Please note</strong>, there may exist some drivers with only activity values but no expression values. This is due to the fact that the network-reconstruction dataset is different from the analysis dataset.</p>
+
+<p><strong>Save the final master table as EXCEL file.</strong> 
+NetBID2 provides <code class="highlighter-rouge">out2excel()</code> to save the master table as EXCEL, with multiple options to highlight interested data (e.g. marker genes, drivers with significant Z-values). 
+For more options, please check <code class="highlighter-rouge">?out2excel()</code>. <strong>Download the master table EXCEL file <a href="driver_ms_tab.xlsx">ms_tab.xlsx</a> here to see.</strong></p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Path and file name of the output EXCEL file</span><span class="w">
+</span><span class="n">out_file</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">sprintf</span><span class="p">(</span><span class="s1">'%s/%s_ms_tab.xlsx'</span><span class="p">,</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">out.dir.DATA</span><span class="p">,</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">project.name</span><span class="p">)</span><span class="w">
+</span><span class="c1"># Highlight marker genes</span><span class="w">
+</span><span class="n">mark_gene</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">list</span><span class="p">(</span><span class="n">WNT</span><span class="o">=</span><span class="nf">c</span><span class="p">(</span><span class="s1">'WIF1'</span><span class="p">,</span><span class="s1">'TNC'</span><span class="p">,</span><span class="s1">'GAD1'</span><span class="p">,</span><span class="s1">'DKK2'</span><span class="p">,</span><span class="s1">'EMX2'</span><span class="p">),</span><span class="w">
+                  </span><span class="n">SHH</span><span class="o">=</span><span class="nf">c</span><span class="p">(</span><span class="s1">'PDLIM3'</span><span class="p">,</span><span class="s1">'EYA1'</span><span class="p">,</span><span class="s1">'HHIP'</span><span class="p">,</span><span class="s1">'ATOH1'</span><span class="p">,</span><span class="s1">'SFRP1'</span><span class="p">),</span><span class="w">
+                  </span><span class="n">G4</span><span class="o">=</span><span class="nf">c</span><span class="p">(</span><span class="s1">'KCNA1'</span><span class="p">,</span><span class="s1">'EOMES'</span><span class="p">,</span><span class="s1">'KHDRBS2'</span><span class="p">,</span><span class="s1">'RBM24'</span><span class="p">,</span><span class="s1">'UNC5D'</span><span class="p">))</span><span class="w">
+</span><span class="c1"># Customize highlight color codes</span><span class="w">
+</span><span class="c1">#mark_col &lt;- get.class.color(names(mark_gene)) # this randomly assign color codes</span><span class="w">
+</span><span class="n">mark_col</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">list</span><span class="p">(</span><span class="n">G4</span><span class="o">=</span><span class="s1">'green'</span><span class="p">,</span><span class="s1">'WNT'</span><span class="o">=</span><span class="s1">'blue'</span><span class="p">,</span><span class="s1">'SHH'</span><span class="o">=</span><span class="s1">'red'</span><span class="p">)</span><span class="w">
+</span><span class="c1"># Save the final master table as EXCEL file</span><span class="w">
+</span><span class="n">out2excel</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">$</span><span class="n">final_ms_tab</span><span class="p">,</span><span class="n">out.xlsx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">out_file</span><span class="p">,</span><span class="n">mark_gene</span><span class="p">,</span><span class="n">mark_col</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<p>We’ve finished the driver inference part of NetBID2. We need to save the <code class="highlighter-rouge">analysis.par</code> as RData, cause it contains all the important results of driver inference.
+This is <strong>ESSENTIAL</strong> to run <a href="../docs/advanced_analysis">Advanced analysis</a> part of NetBID2 and <a href="https://github.com/jyyulab/NetBID_shiny">NetBID2 shiny server</a>. 
+The <code class="highlighter-rouge">analysis.par</code> list includes 13 elements (<code class="highlighter-rouge">main.dir</code>, <code class="highlighter-rouge">project.name</code>, <code class="highlighter-rouge">out.dir</code>, <code class="highlighter-rouge">out.dir.QC</code>, <code class="highlighter-rouge">out.dir.DATA</code>, <code class="highlighter-rouge">out.dir.PLOT</code>, <code class="highlighter-rouge">merge.network</code>, <code class="highlighter-rouge">cal.eset</code>, <code class="highlighter-rouge">merge.ac.eset</code>, <code class="highlighter-rouge">DE</code>, <code class="highlighter-rouge">DA</code>, <code class="highlighter-rouge">final_ms_tab</code>, <code class="highlighter-rouge">transfer_tab</code>). They will be used to run NetBID shiny server.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Save Step 4 analysis.par as RData, ESSENTIAL</span><span class="w">
+</span><span class="n">NetBID.saveRData</span><span class="p">(</span><span class="n">analysis.par</span><span class="o">=</span><span class="n">analysis.par</span><span class="p">,</span><span class="n">step</span><span class="o">=</span><span class="s1">'ms-tab'</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<hr />
+<h3 id="how-to-interpret-and-use-the-master-table-"><em>How to interpret and use the master table ?</em></h3>
+
+<ul>
+  <li><code class="highlighter-rouge">out2excel()</code> can save multiple master tables as excel sheets in one EXCEL file.</li>
+  <li>For one master table, it consists of three parts:</li>
+  <li>For one master table, it consists of three parts:
+    <ul>
+      <li>The first six columns are <code class="highlighter-rouge">gene_label</code>, <code class="highlighter-rouge">geneSymbol</code>, <code class="highlighter-rouge">originalID</code>, <code class="highlighter-rouge">originalID_label</code>, <code class="highlighter-rouge">funcType</code> and <code class="highlighter-rouge">Size</code>.
+        <ul>
+          <li><code class="highlighter-rouge">gene_label</code> is the driver’s gene symbol or transcript symbol, with suffix “_TF” or “_SIG” to show driver’s type.</li>
+          <li><code class="highlighter-rouge">geneSymbol</code> is the driver’s gene symbol or transcript symbol, without suffix.</li>
+          <li><code class="highlighter-rouge">originalID</code> is the original ID type used in network reconstruction, which should match the ID type in <code class="highlighter-rouge">analysis.par$cal.eset</code>, <code class="highlighter-rouge">analysis.par$DE</code>.</li>
+          <li><code class="highlighter-rouge">originalID_label</code> is the original ID type with suffix “_TF” or “_SIG”, which should match the the ID type in <code class="highlighter-rouge">analysis.par$merge.network</code>, <code class="highlighter-rouge">analysis.par$merge.ac.eset</code>,<code class="highlighter-rouge">analysis.par$DA</code>.</li>
+          <li><strong><code class="highlighter-rouge">originalID_label</code></strong> is the only column to ensure unique ID for row record.</li>
+          <li><code class="highlighter-rouge">funcType</code> is either “TF” or “SIG” to mark driver’s type.</li>
+          <li><code class="highlighter-rouge">Size</code> is number of target genes for the driver.</li>
+        </ul>
+      </li>
+      <li>The statistical columns are named as <code class="highlighter-rouge">prefix.comp_name_{DA or DE}</code>. The <code class="highlighter-rouge">prefix</code> can be <code class="highlighter-rouge">Z</code>, <code class="highlighter-rouge">P.Value</code>, <code class="highlighter-rouge">logFC</code> or <code class="highlighter-rouge">AveExpr</code> to indicate which statistical value is stored. The <code class="highlighter-rouge">comp_name</code> is the comparison name. For example, <code class="highlighter-rouge">Z.G4.Vs.WNT_DA</code> means the Z-statistics of the differential activity (DA) calculated from comparison between phenotype G4 and phenotype WNT. The color shade of the background indicated the significance of Z-statistics.</li>
+      <li>The next 13 columns (from <code class="highlighter-rouge">ensembl_gene_id</code> to <code class="highlighter-rouge">refseq_mrna</code>) are detailed information of genes.</li>
+      <li>The last columns (optional) are the detailed information of marker genes, users use <code class="highlighter-rouge">mark_strategy='add_column'</code> to set.</li>
+    </ul>
+  </li>
+  <li>Users can fileter drivers by target size, or sort the Z-statistics to get top significant drivers. NetBID2 also provides <a href="../docs/advanced_analysis">Advanced analysis</a> for advanced
+analysis and visualization.</li>
+</ul>
+
+<hr />
+
+:ET

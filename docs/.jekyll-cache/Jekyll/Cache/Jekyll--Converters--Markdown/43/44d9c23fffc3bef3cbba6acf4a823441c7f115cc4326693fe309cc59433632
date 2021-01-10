@@ -1,0 +1,83 @@
+I"ç<h2 id="navigation--faq">Navigation &amp; FAQ</h2>
+
+<h3 id="network-reconstruction">Network reconstruction</h3>
+
+<ul>
+  <li><a href="../docs/network_reconstruction#step-0-preparations">Step 0: Preparations</a></li>
+  <li><a href="../docs/network_reconstruction#step-1-load-in-gene-expression-datasets-for-network-reconstruction-exp-load">Step 1: Load in gene expression datasets for network reconstruction (exp-load)</a>
+    <ul>
+      <li><a href="../docs/network_reconstruction#the-choice-of-expression-data-set-for-network-reconstruction">Q&amp;A: The choice of expression dataset for network reconstruction</a></li>
+      <li><a href="../docs/network_reconstruction#input-rna-seq-dataset">Q&amp;A: Input RNA-Seq dataset</a></li>
+      <li><a href="../docs/network_reconstruction#input-expression-matrix-not-from-geo-database">Q&amp;A: Input expression matrix not from GEO database</a></li>
+    </ul>
+  </li>
+  <li><a href="../docs/network_reconstruction#step-2-normalization-for-the-expression-dataset-exp-qc">Step 2: Normalization for the expression dataset (exp-QC)</a>
+    <ul>
+      <li><a href="../docs/network_reconstruction#qc-for-rna-seq-dataset">Q&amp;A: QC for RNA-Seq dataset</a></li>
+      <li><a href="../docs/network_reconstruction#combine-two-datasets">Q&amp;A: Combine two datasets</a></li>
+    </ul>
+  </li>
+  <li><a href="../docs/network_reconstruction#step-3-check-sample-cluster-analysis-optional-exp-cluster">Step 3: Check sample cluster information, optional (exp-cluster)</a></li>
+  <li><a href="../docs/network_reconstruction#step-4-prepare-files-to-run-sjaracne-sjaracne-prep">Step 4: Prepare files to run SJARACNe (sjaracne-prep)</a>
+    <ul>
+      <li><a href="../docs/network_reconstruction#id-conversion">Q&amp;A: ID conversion</a></li>
+    </ul>
+  </li>
+</ul>
+
+<h3 id="driver-inference">Driver inference</h3>
+
+<ul>
+  <li><a href="../docs/driver_inference#step-0-preparations">Step 0: Preparations</a></li>
+  <li><a href="../docs/driver_inference#step-1-load-in-the-expression-dataset-for-analysis-exp-load-exp-cluster-exp-qc">Step 1: Load in the expression dataset for analysis (exp-load, exp-cluster, exp-QC)</a>
+    <ul>
+      <li><a href="../docs/driver_inference#what-to-do-if-the-id-types-from-network-reconstruction-dataset-and-analysis-dataset-are-different">Q&amp;A: What to do if the ID types from network-reconstruction dataset and analysis dataset are different?</a></li>
+    </ul>
+  </li>
+  <li><a href="../docs/driver_inference#step-2-read-in-network-files-and-calcualte-driver-activity-act-get">Step 2: Read in network files and calcualte driver activity (act-get)</a>
+    <ul>
+      <li><a href="../docs/driver_inference#why-study-drivers-activity-">Q&amp;A: Why study driver‚Äôs activity ?</a></li>
+    </ul>
+  </li>
+  <li><a href="../docs/driver_inference#step-3-get-differential-expression-de--differential-activity-da-for-drivers-act-da">Step 3: Get differential expression (DE) / differential activity (DA) for drivers (act-DA)</a></li>
+  <li><a href="../docs/driver_inference#step-4-generate-a-master-table-for-drivers-ms-tab">Step 4: Generate a master table for drivers (ms-tab)</a>
+    <ul>
+      <li><a href="../docs/driver_inference#how-to-interpret-and-use-the-master-table-">Q&amp;A: How to interpret and use the master table ?</a></li>
+    </ul>
+  </li>
+</ul>
+
+<h3 id="advanced-analysis">Advanced analysis</h3>
+
+<ul>
+  <li><a href="../docs/advanced_analysis#preparations">Preparations</a></li>
+  <li><a href="../docs/advanced_analysis#part-i-more-details-about-the-top-drivers">Part I: More details about the top drivers</a>
+    <ul>
+      <li><a href="../docs/advanced_analysis#qi1-how-to-get-the-top-drivers-with-significant-differential-activity-da-in-the-comparison-between-g4-vs-other-subtypes-">QI.1: How to get the top drivers with significant differential activity (DA) in the comparison between G4 vs. other subtypes ?</a></li>
+      <li><a href="../docs/advanced_analysis#qi2-how-to-interpret-the-significance-of-top-da-drivers-">QI.2: How to interpret the significance of top DA drivers ?</a></li>
+      <li><a href="../docs/advanced_analysis#qi3-what-is-the-expressionactivity-pattern-of-these-top-da-drivers-across-sample-subtypes">QI.3: What is the expression/activity pattern of these top DA drivers across sample subtypes?</a></li>
+      <li><a href="../docs/advanced_analysis#qi4-what-are-the-biological-functions-of-these-top-da-drivers-">QI.4: What are the biological functions of these top DA drivers ?</a></li>
+      <li><a href="../docs/advanced_analysis#qi5-what-are-the-biological-functions-of-the-target-genes-of-these-top-da-drivers-">QI.5: What are the biological functions of the target genes of these top DA drivers ?</a></li>
+    </ul>
+  </li>
+  <li><a href="../docs/advanced_analysis#part-ii-more-details-about-the-selected-driver">Part II: More details about the selected driver</a>
+    <ul>
+      <li><a href="../docs/advanced_analysis#qii1-how-to-interpret-the-significance-of-the-selected-driver-">QII.1: How to interpret the significance of the selected driver ?</a></li>
+      <li><a href="../docs/advanced_analysis#qii2-how-to-visualize-the-network-structure-of-the-selected-driver-">QII.2: How to visualize the network structure of the selected driver ?</a></li>
+      <li><a href="../docs/advanced_analysis#qii3-what-is-the-expressionactivity-of-this-selected-driver-across-subtypes-of-sample">QII.3: What is the expression/activity of this selected driver across subtypes of sample ?</a></li>
+      <li><a href="../docs/advanced_analysis#qii4-what-are-the-functions-of-the-target-genes-of-this-selected-driver-">QII.4: What are the functions of the target genes of this selected driver ?</a></li>
+    </ul>
+  </li>
+  <li><a href="../docs/advanced_analysis#part-iii-other-analyses-netbid2-can-do">Part III: Other analyses NetBID2 can do</a>
+    <ul>
+      <li><a href="../docs/advanced_analysis#qiii1-what-are-the-activities-of-the-curated-gene-sets-across-all-samples">QIII.1: What are the activities of the curated gene sets across all samples ?</a></li>
+      <li><a href="../docs/advanced_analysis#qiii2-how-to-find-drivers-share-significantly-overlapped-target-genes-">QIII.2: How to find drivers share significantly overlapped target genes ?</a>
+        <ul>
+          <li><a href="../docs/advanced_analysis#how-to-modify-the-figure-size-created-by-draw-functions-">Q&amp;A: How to modify the figure size created by <code class="highlighter-rouge">draw.</code> functions ?</a></li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+</ul>
+
+:ET

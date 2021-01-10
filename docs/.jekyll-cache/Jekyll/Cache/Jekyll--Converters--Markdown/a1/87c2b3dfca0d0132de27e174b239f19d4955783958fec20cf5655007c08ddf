@@ -1,0 +1,46 @@
+I"B	<h1 class="fs-9" id="netbid-20-data-driven-network-based-bayesian-inference-of-drivers">NetBID 2.0: Data-driven Network-based Bayesian Inference of Drivers</h1>
+
+<p class="fs-6 fw-300">Documentation and Guided Analyses</p>
+
+<p><a href="#getting-started" class="btn btn-primary fs-5 mb-4 mb-md-0 mr-2">Get started now</a> <a href="https://github.com/jyyulab/NetBID" class="btn fs-5">View it on GitHub</a></p>
+
+<hr />
+
+<h2 id="overview">Overview</h2>
+
+<p>NetBID is a data-driven system biology pipeline, using data-driven network-based Bayesian inference approach to find drivers from transcriptomics, proteomics and phosphoproteomics data, where the drivers can be either transcription facotrs (<strong>TF</strong>) or signaling factors (<strong>SIG</strong>).</p>
+
+<p><strong>NetBID 2.0</strong> is an upgraded version of <a href="https://github.com/jyyulab/NetBID/releases/tag/1.0.0">NetBID 1.0</a> that has been published in <a href="(https://www.nature.com/articles/s41586-018-0177-0)">Nature</a> in 2018. NetBID 2.0 inherites all the main functions from NetBID 1.0, and provides many more functions and pipelines to perform advanced end-to-end analyses.</p>
+
+<p><img src="SupFigure1.jpg" alt="SupFigure1" /></p>
+
+<p><strong>More data processing functions:</strong></p>
+
+<ul>
+  <li>Expression matrix pre-processing and quality assessment</li>
+  <li>SJARACNe-based network reconstruction</li>
+  <li>Activity calculation of drivers and gene sets</li>
+  <li>Discovery of differential expressed genes and differential activated drivers</li>
+  <li>Generation of the master table for drivers</li>
+  <li>For more data processing functions, please check NetBID2 PDF manual</li>
+</ul>
+
+<p><strong>More visualization functions:</strong></p>
+
+<ul>
+  <li>Unsupervised learning of samples, comparison between the predicted labels vs. the observed labels</li>
+  <li>Display drivers with significance profiles and target genes</li>
+  <li>Display selected drivers with more details and its sub-network structure</li>
+  <li>For more visualization functions, please check NetBID PDF manual</li>
+</ul>
+
+<p><strong>More supporting functions:</strong></p>
+
+<ul>
+  <li>Gene/transcript ID conversion</li>
+  <li>Gene function enrichment analysis &amp; visualization</li>
+  <li>Data and pipeline management</li>
+  <li>For more supporting functions, please check NetBID PDF manual</li>
+</ul>
+
+:ET
