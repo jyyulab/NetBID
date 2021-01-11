@@ -36,7 +36,8 @@ if('heatmap' %in% choose_plot){
   par(mfrow = c(nrow, 2))
   par(mar = c(6, 6, 6, 6))
   m <- dist2.mod(use_mat)
-  res <- draw.heatmap(mat=m,phenotype_info = pData(eset),use_phe=intgroup)
+  res <- draw.heatmap(mat=m,phenotype_info = pData(eset),use_phe=intgroup,
+                      pre_define = pre_define)
 }else{
   message('No selection for Heatmap!')
 }
