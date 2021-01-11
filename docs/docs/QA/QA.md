@@ -49,5 +49,6 @@ permalink: /docs/QA
 - [Part III: Other analyses NetBID2 can do](../docs/advanced_analysis#part-iii-other-analyses-netbid2-can-do)
     - [QIII.1: What are the activities of the curated gene sets across all samples ?](../docs/advanced_analysis#qiii1-what-are-the-activities-of-the-curated-gene-sets-across-all-samples)
     - [QIII.2: How to find drivers share significantly overlapped target genes ?](../docs/advanced_analysis#qiii2-how-to-find-drivers-share-significantly-overlapped-target-genes-)
+    - [QIII.3: How to draw oncoPrint figures for samples with different mutation information ?](#qiii3-how-to-draw-oncoprint-figures-for-samples-with-different-mutation-information-)
       - [Q&A: How to modify the figure size created by `draw.` functions ?](../docs/advanced_analysis#how-to-modify-the-figure-size-created-by-draw-functions-)
 
