@@ -707,6 +707,32 @@ draw.bubblePlot(driver_list= driver_list,show_label=ms_tab[driver_list,'gene_lab
 
 ![bubblePlot_overlap](bubblePlot_overlap.png)
 
+### QIII.3: How to draw oncoPrint figures for samples with different mutation information ?
+
+- Users could use `draw.oncoprint()` to draw oncoprint figures. 
+
+```R
+all_sample <- sprintf('Sample%s',1:30)
+group1_sample <- sample(all_sample,18) ## demo sample for KRAS missense mutation
+group2_sample <- sample(all_sample,12) ## demo sample for MYC amplification
+group3_sample <- sample(all_sample,10) ## demo sample for MYC missense mutation
+group4_sample <- sample(all_sample,1) ## demo sample for MYC deletion
+phenotype_info_demo <-
+  data.frame(sample =sprintf('Sample%s',1:30),
+             KRAS_MIS=ifelse(all_sample %in% group1_sample,1,0),
+             MYC_AMP=ifelse(all_sample %in% group2_sample,1,0),
+             MYC_MIS=ifelse(all_sample %in% group3_sample,1,0),
+             MYC_DEL=ifelse(all_sample %in% group4_sample,1,0))
+draw.oncoprint(phenotype_info=phenotype_info_demo,
+               Missense_column=c('KRAS_MIS','MYC_MIS'),Missense_label=c('KRAS','MYC'),
+               Amplification_column=c('MYC_AMP'),Amplification_label=c('MYC'),
+               Deletion_column=c('MYC_DEL'),Deletion_label=c('MYC'),
+               main="OncoPrint for the demo dataset")
+```
+
+![oncoprint_plot](oncoprint.png)
+
+
 -------
 ### *How to modify the figure size created by `draw.` functions ?*
 

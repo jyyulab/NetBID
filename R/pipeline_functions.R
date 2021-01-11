@@ -6377,6 +6377,7 @@ funcEnrich.GSEA <- function(rank_profile=NULL,
 #' @return Return a logical value. If TRUE, the plot has been created successfully.
 #'
 #' @examples
+#' gs.preload(use_spe='Homo sapiens',update=FALSE)
 #' analysis.par <- list()
 #' analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBID2")
 #' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
