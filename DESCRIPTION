@@ -1,9 +1,9 @@
 Package: NetBID2
 Type: Package
 Title: Network-based Bayesian Inference of Drivers, version 2
-Version: 0.1.2
-Authors@R: person('Xinran', 'Dong', email = 'xinran.dong@stjude.org', role = c('aut', 'cre'))
-Maintainer@R: person('Xinran', 'Dong', email = 'xinran.dong@stjude.org')
+Version: 2.0.3
+Authors@R: person('Xinran', 'Dong', email = 'xinran.dong@foxmail.com', role = c('aut', 'cre'))
+Maintainer@R: person('Xinran', 'Dong', email = 'xinran.dong@foxmail.com')
 Description: An integrative systems biology algorithm to infer drivers of phenotype based on data-driven context-specific network and Bayesian inference.
 License: GPL (>= 2)
 Encoding: UTF-8
@@ -41,4 +41,4 @@ Depends:
     plotly (>= 4.9.0)
 Imports:
 Suggests:
-RoxygenNote: 6.1.1
+RoxygenNote: 7.1.1
