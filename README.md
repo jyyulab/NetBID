@@ -22,7 +22,7 @@ A PDF manual [NetBID_manual.pdf](https://github.com/jyyulab/NetBID/blob/master/N
 # Docker
 We publish our lastest docker builds on DockerHub. You can pull the docker image by running the following command:
 
-```$ docker pull jyyulab/netbid2:2.0.1```
+```$ docker pull adamdingliang/netbid2:2.0.1```
 
 The docker image has build-in RStudio server that can be launched by
 
@@ -70,4 +70,5 @@ Questions that the analyses in analysis_and_plot_demo1.R help to answer:
 + Part III: Other analyses
 	1. What are the activities of the curated gene sets across all samples?
 	2. How to find drivers share significantly overlapped target genes?
+	3. How to draw oncoPrint figures for samples with different mutation information?
 
