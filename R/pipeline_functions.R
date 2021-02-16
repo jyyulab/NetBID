@@ -201,13 +201,17 @@ db.preload <- function(use_level='transcript',use_spe='human',update = FALSE,
     # for TF list
     filter_attr <- input_attr_type
     if(is.null(TF_list)){ ## use TF.txt in db/
-      TF_f <- sprintf('%s/%s_TF_%s.txt',db.dir,use_spe,filter_attr)
-      message(sprintf('Will use %s file as the input TF_list!',TF_f))
-      TF_list <- read.delim(TF_f,stringsAsFactors=FALSE,header=F)$V1
       if(use_spe != 'HUMAN' & use_spe != 'MOUSE'){ ## if spe not human/mouse
+        TF_f <- sprintf('%s/%s_TF_%s.txt',db.dir,'HUMAN',filter_attr)
+        message(sprintf('Will use %s file as the input TF_list!',TF_f))
+        TF_list <- read.delim(TF_f,stringsAsFactors=FALSE,header=F)$V1
         filter_attr <- 'external_gene_name'
         tmp1 <- biomaRt::getBM(attributes=c('hsapiens_homolog_associated_gene_name','external_gene_name'),values=TRUE,mart=mart,filters='with_hsapiens_homolog')
         TF_list <- base::unique(tmp1[which(tmp1[,1] %in% TF_list),2])
+      }else{
+        TF_f <- sprintf('%s/%s_TF_%s.txt',db.dir,use_spe,filter_attr)
+        message(sprintf('Will use %s file as the input TF_list!',TF_f))
+        TF_list <- read.delim(TF_f,stringsAsFactors=FALSE,header=F)$V1
       }
     }
     if(use_level=='transcript'){
@@ -220,13 +224,17 @@ db.preload <- function(use_level='transcript',use_spe='human',update = FALSE,
     }
     # for SIG list
     if(is.null(SIG_list)){
-      SIG_f <- sprintf('%s/%s_SIG_%s.txt',db.dir,use_spe,filter_attr)
-      message(sprintf('Will use %s file as the input SIG_list!',SIG_f))
-      SIG_list <- read.delim(SIG_f,stringsAsFactors=FALSE,header=F)$V1
       if(use_spe != 'HUMAN' & use_spe != 'MOUSE'){ ## if spe not human/mouse
+        SIG_f <- sprintf('%s/%s_SIG_%s.txt',db.dir,'HUMAN',filter_attr)
+        message(sprintf('Will use %s file as the input SIG_list!',SIG_f))
+        SIG_list <- read.delim(SIG_f,stringsAsFactors=FALSE,header=F)$V1
         filter_attr <- 'external_gene_name'
         tmp1 <- biomaRt::getBM(attributes=c('hsapiens_homolog_associated_gene_name','external_gene_name'),values=TRUE,mart=mart,filters='with_hsapiens_homolog')
         SIG_list <- base::unique(tmp1[which(tmp1[,1] %in% SIG_list),2])
+      }else{
+        SIG_f <- sprintf('%s/%s_SIG_%s.txt',db.dir,use_spe,filter_attr)
+        message(sprintf('Will use %s file as the input SIG_list!',SIG_f))
+        SIG_list <- read.delim(SIG_f,stringsAsFactors=FALSE,header=F)$V1
       }
     }
     if(use_level=='transcript'){
