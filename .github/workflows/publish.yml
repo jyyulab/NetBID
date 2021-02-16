@@ -36,6 +36,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           push: true
+          file: ./Dockerfile.cgc
           tags: |
             ghcr.io/${{ env.REPO_LOWER }}:latest
             ghcr.io/${{ env.REPO_LOWER }}:${{ env.SHORT_SHA }}

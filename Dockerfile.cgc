@@ -1,0 +1,39 @@
+FROM r-base
+
+ARG build_display
+ENV DISPLAY=$build_display
+
+RUN apt-get update && apt-get install -y \
+    gcc-8-base \
+    libcurl4-openssl-dev \  
+    libssl-dev \
+    libgit2-dev \ 
+    libxml2-dev \
+    curl \
+    pandoc \
+    file \  
+    r-cran-rcppeigen \
+    r-cran-rspectra \
+    r-cran-plotly \
+    r-bioc-rhdf5 \
+    r-bioc-rhdf5lib \
+    xvfb \
+    xauth \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /data 
+
+RUN R -e "install.packages('devtools')" --save
+
+RUN xvfb-run R -e "local({ \
+            r <- getOption(\"repos\"); \
+            r[\"CRAN\"] <- \"https://cran.rstudio.com/\"; \
+            r[\"BioCsoft\"] <- \"https://bioconductor.org/packages/3.9/bioc\"; \
+            r[\"BioCann\"] <- \"https://bioconductor.org/packages/3.9/data/annotation\"; \
+            r[\"BioCexp\"] <- \"https://bioconductor.org/packages/3.9/data/experiment\"; \
+            options(repos = r); \
+          }); \
+          devtools::install_github(\"jyyulab/NetBID\",ref=\"2.0.1\",dependencies=\"Depends\")" --save
+          
+ENTRYPOINT ["R"]
+CMD ["-q", "-e", "packageVersion(\"NetBID2\")"]
