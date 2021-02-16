@@ -35,14 +35,11 @@ jobs:
         id: docker_build
         uses: docker/build-push-action@v2
         with:
-          push: true
+          context: .
           file: ./Dockerfile.cgc
+          push: true
           tags: |
             ghcr.io/${{ env.REPO_LOWER }}:latest
             ghcr.io/${{ env.REPO_LOWER }}:${{ env.SHORT_SHA }}
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }} 
-      - 
-        name: Image digest
-        run: echo ${{ steps.docker_build.outputs.digest }}
-
