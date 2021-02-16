@@ -1,39 +1,28 @@
 FROM r-base
 
-ARG build_display
-ENV DISPLAY=$build_display
-
 RUN apt-get update && apt-get install -y \
-    gcc-8-base \
-    libcurl4-openssl-dev \  
-    libssl-dev \
-    libgit2-dev \ 
+    build-essential \
+    libcurl4-gnutls-dev \
     libxml2-dev \
-    curl \
-    pandoc \
-    file \  
-    r-cran-rcppeigen \
-    r-cran-rspectra \
-    r-cran-plotly \
-    r-bioc-rhdf5 \
-    r-bioc-rhdf5lib \
+    libssl-dev \
+    libgit2-dev \
+    libcairo2-dev \
+    libxt-dev \
     xvfb \
+    pandoc \ 
     xauth \
+    xfonts-base \
+    libssl1.1 \ 
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /data 
+# install R packages available in CRAN
+RUN R -e 'install.packages(c("dplyr", "devtools", "BiocManager", "plot3D"))'
 
-RUN R -e "install.packages('devtools')" --save
+# install R packages via Bioconductor
+RUN R -e 'BiocManager::install(c("biomaRt", "GSVA", "rhdf5", "ComplexHeatmap", "ConsensusClusterPlus", "DESeq2", "tximport", "impute", "limma", "GEOquery"))'
 
-RUN xvfb-run R -e "local({ \
-            r <- getOption(\"repos\"); \
-            r[\"CRAN\"] <- \"https://cran.rstudio.com/\"; \
-            r[\"BioCsoft\"] <- \"https://bioconductor.org/packages/3.9/bioc\"; \
-            r[\"BioCann\"] <- \"https://bioconductor.org/packages/3.9/data/annotation\"; \
-            r[\"BioCexp\"] <- \"https://bioconductor.org/packages/3.9/data/experiment\"; \
-            options(repos = r); \
-          }); \
-          devtools::install_github(\"jyyulab/NetBID\",ref=\"2.0.1\",dependencies=\"Depends\")" --save
-          
+# install NetBID2 from GitHub master branch
+RUN xvfb-run R -e 'devtools::install_github("jyyulab/NetBID", ref="master", dependencies="Depends")'
+
 ENTRYPOINT ["R"]
 CMD ["-q", "-e", "packageVersion(\"NetBID2\")"]
