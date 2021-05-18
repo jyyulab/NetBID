@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # install R packages available in CRAN
-RUN R -e 'install.packages(c("dplyr", "devtools", "BiocManager", "plot3D"))'
+RUN R -e 'install.packages(c("optparse", "dplyr", "devtools", "BiocManager", "plot3D"))'
 
 # install R packages via Bioconductor
 RUN R -e 'BiocManager::install(c("biomaRt", "GSVA", "rhdf5", "ComplexHeatmap", "ConsensusClusterPlus", "DESeq2", "tximport", "impute", "limma", "GEOquery"))'
