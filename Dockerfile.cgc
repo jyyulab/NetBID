@@ -24,5 +24,9 @@ RUN R -e 'BiocManager::install(c("biomaRt", "GSVA", "rhdf5", "ComplexHeatmap", "
 # install NetBID2 from GitHub master branch
 RUN xvfb-run R -e 'devtools::install_github("jyyulab/NetBID", ref="master", dependencies="Depends")'
 
-ENTRYPOINT ["R"]
-CMD ["-q", "-e", "packageVersion(\"NetBID2\")"]
+WORKDIR /data
+COPY IBC_CCDI .
+
+ENTRYPOINT ["Rscript"]
+CMD ["IBC_CCDI.R"]
+#CMD ["-q", "-e", "packageVersion(\"NetBID2\")"]
