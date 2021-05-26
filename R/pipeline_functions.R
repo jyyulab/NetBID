@@ -8878,11 +8878,13 @@ par.lineHeight2inch <- function(){
 }
 par.char2pos <- function(){par()$cxy}
 strheightMod <- function(s, units = "inch", cex = 1,ori=TRUE,mod=FALSE){
+  s <- s[which(is.na(s)==F)]
   if(ori==TRUE) return(strheight(s=s,units=units,cex=cex))
   if(units=='user') return(par.char2pos()[2]*cex)
   if(units=='inch' | units=='inches') return(par.char2inch()[2]*cex)
 }
 strwidthMod <- function(s, units = "inch", cex = 1,ori=TRUE,mod=FALSE){
+  s <- s[which(is.na(s)==F)]
   if(ori==TRUE) return(strwidth(s=s,units=units,cex=cex))
   if(mod==TRUE){
     plot.new()
