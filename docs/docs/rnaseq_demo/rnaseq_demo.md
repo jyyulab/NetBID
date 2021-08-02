@@ -1,30 +1,28 @@
 ---
 layout: default
-title: "- RNASeq_demo"
+title: "- RNASeq demo"
 nav_order: 9
 permalink:  /docs/rnaseq_demo
 ---
 
-## demo for RNASeq dataset
+## Demo for RNASeq dataset
 
 The purpose of this part: 
 
 **present a demo for RNASeq dataset**.
 
-The complete step-by-step demo script for driver inference can be found here, 
-[RNASeq_demo1.R](https://github.com/jyyulab/NetBID-dev/blob/master/demo_scripts/RNASeq_demo1.R).
+The RNASeq dataset is from [GSE164677](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE164677), which contains 59 Asian medulloblastoma and 4 normal tissues (para-tumor) including WNT, SHH, Group 3 and Group 4 medublastoma patients. Our purpose is to find hidden drivers in Group 4 medublastoma patients.
 
 ----------
 ## Quick Navigation for this page
 
-- [Step 0: Prepare working directory,reference files and softwares](#)
+- [Step 0: Prepare working directory,reference files and softwares](#step-0-prepare-working-directoryreference-files-and-softwares)
 - [Step 1: Download RNASeq dataset from GEO database](#)
-- [Step 2: Convert sra object to fastq files](#)
-- [Step 3: Run Salmon for quantifying the expression of transcripts](#)
-- [Step 4: Load Salmon results into R and convert to eSet object](#)
-- [Step 5: Run NetBID2 for network construction](#)
-- [Step 6: Run NetBID2 for hidden driver estimation](#)
-- [Step 7: Run NetBID2 or NetBIDshiny for result visualization](#)
+- [Step 2: Run Salmon for quantifying the expression of transcripts](#)
+- [Step 3: Load Salmon results into R and convert to eSet object](#)
+- [Step 4: Run NetBID2 for network construction](#)
+- [Step 5: Run NetBID2 for hidden driver estimation](#)
+- [Step 6: Run NetBID2 or NetBIDshiny for result visualization](#)
 
 ---------
 
@@ -83,11 +81,80 @@ III. Generate index files
 Generate the index files by running the salmon:
 
 ```{bash}
-cd $HOME/${project_name}
+cd $HOME/${project_name}/
 salmon index -t db/gencode.v38.transcripts.fa -i db/Salmon_index_hg38
 ```
 
-## Step 1: Download RNASeq dataset from GEO database
+IV: Download `sra-tools` and install
+
+GO TO: https://github.com/ncbi/sra-tools/releases
+
+Download the binary version of sra-tools, you could choose:
+https://github.com/ncbi/sra-tools/wiki/01.-Downloading-SRA-Toolkit
+
+You could download it in your server by the command:
+
+```{bash}
+cd $HOME/${project_name}/soft/
+wget http://ftp-trace.ncbi.nlm.nih.gov/sra/sdk/current/sratoolkit.current-centos_linux64.tar.gz
+tar -xvf sratoolkit.current-centos_linux64.tar.gz
+# set alias for prefetch
+alias prefetch='$HOME/${project_name}/soft/sratoolkit.2.11.0-centos_linux64/bin/prefetch'
+alias fastq-dump='$HOME/${project_name}/soft/sratoolkit.2.11.0-centos_linux64/bin/fastq-dump'
+```
+
+## Step 1: Download RNASeq dataset from GEO database and convert to fastq files
+
+I: Find and download SRA accession list.
+
+GO TO: https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE164677
+
+Find the SRA ID at the "Relations" section. Here the ID is "SRP301424". Click it and GO TO: https://www.ncbi.nlm.nih.gov/sra?term=SRP301424. At the page, click "Send to", choose "File", format select "Accession List", and click "Create File". 
+
+![fig1](fig1.png)
+
+Put the file "SraAccList.txt" into : $HOME/${project_name}/data/.
+
+II: Run `prefetch` to download files. 
+
+```{bash}
+cd $HOME/${project_name}/data/
+prefetch --option-file SraAccList.txt
+```
+
+III: Run `fastq-dump` to convert into fastq files. Here the original sequencing is pair-end.
+
+```{bash}
+cd $HOME/${project_name}
+# Usage: fastq-dump --split-3 --gzip <input.sra> -O <output directory>
+ls data/*/*sra | awk -F "\t" {'print "fastq-dump --gzip --split-3 "$1 " -O data/"'} >task/convert2fastq.sh
+sh task/convert2fastq.sh ## at this step, users could use parallel computing strategy
+```
+
+## Step 2: Run Salmon for quantifying the expression of transcripts
+
+Generate bash script to run `Salmon`.
+
+```{bash}
+cd $HOME/${project_name}
+# Usage: salmon quant -i <ref> -l A -1 <R1> -2 <R2> -o <output directory>
+ls data/*_1.fastq.gz | awk -F "/|_" {'print "salmon quant -i db/Salmon_index_hg38 -l A -1 data/"$2"_1.fastq.gz -2 data/"$2"_2.fastq.gz -o result/"$2'} >task/runSalmon.sh
+sh task/runSalmon.sh ## at this step, users could use parallel computing strategy
+```
+
+The result files are in the "result/<ID>/quant.sf". Users could check "result/<ID>/logs/salmon_quant.log" file to get the "Mapping rate". 
+
+## Step 3: Load Salmon results into R and convert to eSet object
+
+
+
+## Step 4: Run NetBID2 for network construction
+
+
+## Step 5: Run NetBID2 for hidden driver estimation
+
+
+## Step 6: Run NetBID2 or NetBIDshiny for result visualization
 
 
 
