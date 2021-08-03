@@ -47,9 +47,9 @@ touch README.txt ## create one readme file to record each command
 ```
 I: Download the human transcriptomic sequence from GENCODE:
 
-GO TO: https://www.gencodegenes.org/human/
+GO TO: [https://www.gencodegenes.org/human/](https://www.gencodegenes.org/human/)
 
-Download the fasta file: you could choose the newest version of the transcript sequence: (ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_31/gencode.v31.transcripts.fa.gz).
+Download the fasta file: you could choose the newest version of the transcript sequence: [ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_31/gencode.v31.transcripts.fa.gz](ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_31/gencode.v31.transcripts.fa.gz).
 
 You could download it in your server by the command:
 
@@ -61,10 +61,10 @@ gunzip gencode.v38.transcripts.fa.gz
 
 II: Download `salmon` and install
 
-GO TO: https://github.com/COMBINE-lab/salmon/releases
+GO TO: [https://github.com/COMBINE-lab/salmon/releases](https://github.com/COMBINE-lab/salmon/releases)
 
 Download the binary version of salmon, you could choose:
-https://github.com/COMBINE-lab/salmon/releases/download/v1.5.1/salmon-1.5.1_linux_x86_64.tar.gz
+[https://github.com/COMBINE-lab/salmon/releases/download/v1.5.1/salmon-1.5.1_linux_x86_64.tar.gz](https://github.com/COMBINE-lab/salmon/releases/download/v1.5.1/salmon-1.5.1_linux_x86_64.tar.gz)
 
 You could download it in your server by the command:
 
@@ -87,10 +87,10 @@ salmon index -t db/gencode.v38.transcripts.fa -i db/Salmon_index_hg38
 
 IV: Download `sra-tools` and install
 
-GO TO: https://github.com/ncbi/sra-tools/releases
+GO TO: [https://github.com/ncbi/sra-tools/releases](https://github.com/ncbi/sra-tools/releases)
 
-Download the binary version of sra-tools, you could choose:
-https://github.com/ncbi/sra-tools/wiki/01.-Downloading-SRA-Toolkit
+Download the binary version of sra-tools, you could choose: [https://github.com/ncbi/sra-tools/wiki/01.-Downloading-SRA-Toolkit](https://github.com/ncbi/sra-tools/wiki/01.-Downloading-SRA-Toolkit)
+
 
 You could download it in your server by the command:
 
@@ -107,9 +107,9 @@ alias fastq-dump='$HOME/${project_name}/soft/sratoolkit.2.11.0-centos_linux64/bi
 
 I: Find and download SRA accession list.
 
-GO TO: https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE164677
+GO TO: [https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE164677](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE164677)
 
-Find the SRA ID at the "Relations" section. Here the ID is "SRP301424". Click it and GO TO: https://www.ncbi.nlm.nih.gov/sra?term=SRP301424. At the page, click "Send to", choose "File", format select "Accession List", and click "Create File". 
+Find the SRA ID at the "Relations" section. Here the ID is "SRP301424". Click it and GO TO: [https://www.ncbi.nlm.nih.gov/sra?term=SRP301424](https://www.ncbi.nlm.nih.gov/sra?term=SRP301424). At the page, click "Send to", choose "File", format select "Accession List", and click "Create File". 
 
 ![fig1](fig1.png)
 
@@ -136,7 +136,7 @@ sh task/convert2fastq.sh ## at this step, users could use parallel computing str
 
 I. As the original experiments contain multiple lanes (runs), we need to download the "SraRunInfo" file from SRA database. 
 
-GO TO: https://www.ncbi.nlm.nih.gov/sra?term=SRP301424. At the page, click "Send to", choose "File", format select "RunInfo", and click "Create File". 
+GO TO: [https://www.ncbi.nlm.nih.gov/sra?term=SRP301424](https://www.ncbi.nlm.nih.gov/sra?term=SRP301424). At the page, click "Send to", choose "File", format select "RunInfo", and click "Create File". 
 
 ![fig2](fig2.png)
 
@@ -180,6 +180,7 @@ I: Open an R session, library `NetBID2` package. Use `load.exp.GEO` to load phen
 
 ```R
 library(NetBID2)
+# get the phenotype information from GEO
 gse <- load.exp.GEO(GSE='GSE164677',GPL='GPL11154',out.dir='result/')
 gse <- update_eset.phenotype(gse,use_col='GEO-auto')
 ```
