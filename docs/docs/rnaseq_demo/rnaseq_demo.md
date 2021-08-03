@@ -17,12 +17,12 @@ The RNASeq dataset is from [GSE164677](https://www.ncbi.nlm.nih.gov/geo/query/ac
 ## Quick Navigation for this page
 
 - [Step 0: Prepare working directory,reference files and softwares](#step-0-prepare-working-directoryreference-files-and-softwares)
-- [Step 1: Download RNASeq dataset from GEO database](#)
-- [Step 2: Run Salmon for quantifying the expression of transcripts](#)
-- [Step 3: Load Salmon results into R and convert to eSet object](#)
-- [Step 4: Run NetBID2 for network construction](#)
-- [Step 5: Run NetBID2 for hidden driver estimation](#)
-- [Step 6: Run NetBID2 or NetBIDshiny for result visualization](#)
+- [Step 1: Download RNASeq dataset from GEO database and convert to fastq files](#step-1-download-rnaseq-dataset-from-geo-database-and-convert-to-fastq-files)
+- [Step 2: Run Salmon for quantifying the expression of transcripts](#step-2-run-salmon-for-quantifying-the-expression-of-transcripts)
+- [Step 3: Load Salmon results into R and convert to eSet object](#step-3-load-salmon-results-into-r-and-convert-to-eset-object)
+- [Step 4: Run NetBID2 for network construction](#step-4-run-netbid2-for-network-construction)
+- [Step 5: Run NetBID2 for hidden driver estimation](#step-5-run-netbid2-for-hidden-driver-estimation)
+- [Step 6: Run NetBID2 or NetBIDshiny for result visualization](#step-6-run-netbid2-or-netbidshiny-for-result-visualization)
 
 ---------
 
@@ -127,24 +127,64 @@ III: Run `fastq-dump` to convert into fastq files. Here the original sequencing 
 ```{bash}
 cd $HOME/${project_name}
 # Usage: fastq-dump --split-3 --gzip <input.sra> -O <output directory>
-ls data/*/*sra | awk -F "\t" {'print "fastq-dump --gzip --split-3 "$1 " -O data/"'} >task/convert2fastq.sh
+ls data/*/*sra | awk -F "\t" {'print "soft/sratoolkit.2.11.0-centos_linux64/bin/fastq-dump --gzip --split-3 "$1 " -O data/"'} >task/convert2fastq.sh
 sh task/convert2fastq.sh ## at this step, users could use parallel computing strategy
+# e.g cat task/convert2fastq.sh | parallel -j 8 &
 ```
 
 ## Step 2: Run Salmon for quantifying the expression of transcripts
 
-Generate bash script to run `Salmon`.
+I. As the original experiments contain multiple lanes (runs), we need to download the "SraRunInfo" file from SRA database. 
+
+GO TO: https://www.ncbi.nlm.nih.gov/sra?term=SRP301424. At the page, click "Send to", choose "File", format select "RunInfo", and click "Create File". 
+
+![fig2](fig2.png)
+
+Put the file "SraRunInfo.csv" into : $HOME/${project_name}/data/.
+
+II. Generate bash script to run `Salmon`. Here, users may need to write a simple script to generate the salmon run script.
 
 ```{bash}
 cd $HOME/${project_name}
-# Usage: salmon quant -i <ref> -l A -1 <R1> -2 <R2> -o <output directory>
-ls data/*_1.fastq.gz | awk -F "/|_" {'print "salmon quant -i db/Salmon_index_hg38 -l A -1 data/"$2"_1.fastq.gz -2 data/"$2"_2.fastq.gz -o result/"$2'} >task/runSalmon.sh
-sh task/runSalmon.sh ## at this step, users could use parallel computing strategy
+# get GSM list
+awk -F ","  {'print $30'} data/SraRunInfo.csv | grep GSM | uniq >data/GSM.list
+# remove the task/runSalmon.sh if already exist
+if [ -e task/runSalmon.sh ]
+then
+    rm -f task/runSalmon.sh
+fi
+# create the task/runSalmon.sh file
+touch task/runSalmon.sh
+for each_GSM in `cat data/GSM.list`
+do
+  # for each GSM, find matched SRA id (multiple lanes)
+  srr_1=`grep $each_GSM data/SraRunInfo.csv | awk -F "," {'print "data/"$1"_1.fastq.gz"'} | tr '\n' ' '`
+  srr_2=`grep $each_GSM data/SraRunInfo.csv | awk -F "," {'print "data/"$1"_2.fastq.gz"'} | tr '\n' ' '`
+  # Usage: salmon quant -i <ref> -l A -1 <R1_lane1 R1_lane2 ...> -2 <R2_lane1 R2_lane2 ...> -o <output directory>
+  echo "soft/salmon-1.5.1_linux_x86_64/bin/salmon quant -i db/Salmon_index_hg38 -l A -1 $srr_1 -2 $srr_2 -o result/${each_GSM}" >>task/runSalmon.sh
+done
 ```
 
-The result files are in the "result/<ID>/quant.sf". Users could check "result/<ID>/logs/salmon_quant.log" file to get the "Mapping rate". 
+III. Run `Salmon` and check the result files. 
+
+```{bash}
+sh task/runSalmon.sh ## at this step, users could use parallel computing strategy
+# e.g cat task/runSalmon.sh | parallel -j 8 &
+```
+
+The result files are in the `result/$GSM_ID/quant.sf`. Users could check `result/$GSM_ID/logs/salmon_quant.log` file to get the "Mapping rate". 
 
 ## Step 3: Load Salmon results into R and convert to eSet object
+
+I: Open an R session, library `NetBID2` package. Use `load.exp.GEO` to load phenotype information from GEO database. 
+
+```R
+library(NetBID2)
+gse <- load.exp.GEO(GSE='GSE164677',GPL='GPL11154',out.dir='result/')
+gse <- update_eset.phenotype(gse,use_col='GEO-auto')
+```
+
+II. 
 
 
 
