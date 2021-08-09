@@ -460,10 +460,15 @@ out2excel(analysis.par$final_ms_tab,out.xlsx = out_file,mark_gene,mark_col)
 NetBID.saveRData(analysis.par=analysis.par,step='ms-tab')
 ```
 
+The main master table files could be found in "result/Chinese_MB/DATA/Chinese_MB_ms_tab.xlsx". The main RData file could be found in "result/Chinese_MB/DATA/analysis.par.Step.ms-tab.RData".
+
 ## Step 6: Run NetBID2 or NetBIDshiny for result visualization
 
-```R
+For drawing figures for the top drivers or selected driver, please follow the tutorial in [advanced_analysis](../docs/advanced_analysis). Another choice is to use NetBIDshiny to load a server for result visualization. 
 
+```R
+library(NetBIDshiny)
+NetBIDshiny.viewer(load_data_path = 'result/Chinese_MB/DATA/analysis.par.Step.ms-tab.RData')
 ```
 
 -------
