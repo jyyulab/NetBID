@@ -6675,20 +6675,15 @@ get_ES <- function(rank_profile=NULL,use_genes=NULL,weighted.score.type=1){
   return(list(ES = ES, arg.ES = arg.ES, RES = RES, indicator = tag.indicator))
 }
 ##
-get_z2p <- function(x,use_star=FALSE,digit_num=2){
-  x[which(is.na(x)==TRUE)] <- 0
-  #if(is.na(x[1])==TRUE) return('NA')
-  x <- abs(x)
-  x[which(is.na(x)==TRUE)] <- 0 ##
-  if(base::max(x)<5){
-    use_pv <- 1-pnorm(x)
+get_z2p_each <- function(x,use_star=FALSE,digit_num=2,twosided=T){
+  if(twosided==T) use_pv <- pnorm(x,lower.tail = F)*2 ## two-tail
+  if(twosided==F) use_pv <- pnorm(x,lower.tail = F) ## one-tail
+  if(as.character(use_pv)!='0'){
     use_p <- format(use_pv,digits=digit_num,scientific = TRUE)
   }else{
     low_p <- .Machine$double.xmin
-    low_z <- sapply(10^(-(1:(1+-log10(low_p)))),combinePvalVector)
-    use_pv <- sapply(x,function(x1){
-      low_z[2,which(low_z[1,]>=x1)[1]]}
-    )
+    low_z <- sapply(10^(-(1:(1+-log10(low_p)))),function(xx)combinePvalVector(xx,twosided = twosided))
+    use_pv <- low_z[2,which(low_z[1,]>=x)[1]]
     use_p <- format(use_pv, digits=3,scientific = TRUE)
     use_p[which(use_p=='NA')] <- '<1e-308'
     use_p <- as.character(use_p)
@@ -6698,6 +6693,13 @@ get_z2p <- function(x,use_star=FALSE,digit_num=2){
   x_star[which(use_pv<0.01)] <-'**'
   x_star[which(use_pv<0.001)] <-'***'
   if(use_star==TRUE) use_p<-paste0(use_p,x_star)
+  return(use_p)
+}
+get_z2p <- function(x,use_star=FALSE,digit_num=2,twosided=T){
+  x[which(is.na(x)==TRUE)] <- 0
+  x <- abs(x)
+  x[which(is.na(x)==TRUE)] <- 0 ##
+  use_p <- unlist(lapply(x,function(xx)get_z2p_each(xx,use_star=use_star,digit_num=digit_num,twosided=twosided)))
   return(use_p)
 }
 
@@ -8878,11 +8880,13 @@ par.lineHeight2inch <- function(){
 }
 par.char2pos <- function(){par()$cxy}
 strheightMod <- function(s, units = "inch", cex = 1,ori=TRUE,mod=FALSE){
+  s <- s[which(is.na(s)==F)]
   if(ori==TRUE) return(strheight(s=s,units=units,cex=cex))
   if(units=='user') return(par.char2pos()[2]*cex)
   if(units=='inch' | units=='inches') return(par.char2inch()[2]*cex)
 }
 strwidthMod <- function(s, units = "inch", cex = 1,ori=TRUE,mod=FALSE){
+  s <- s[which(is.na(s)==F)]
   if(ori==TRUE) return(strwidth(s=s,units=units,cex=cex))
   if(mod==TRUE){
     plot.new()

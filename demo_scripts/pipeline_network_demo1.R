@@ -29,8 +29,9 @@ net_eset <- update_eset.phenotype(use_eset=net_eset,use_phenotype_info=pData(net
 network.par$net.eset <- net_eset
 
 # QC for the raw eset
-draw.eset.QC(network.par$net.eset,outdir=network.par$out.dir.QC,intgroup=NULL,do.logtransform=FALSE,prefix='beforeQC_',
-             pre_define=c('WNT'='blue','SHH'='red','G4'='green'),dimension_reduction_plot_type='2D.interactive')
+draw.eset.QC(network.par$net.eset,outdir=network.par$out.dir.QC,intgroup=NULL,
+             do.logtransform=FALSE,prefix='beforeQC_',
+             pre_define=c('WNT'='blue','SHH'='red','G4'='green'),emb_plot_type='2D.interactive')
 
 # Save Step 1 network.par as RData
 NetBID.saveRData(network.par = network.par,step='exp-load')
