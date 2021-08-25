@@ -1,7 +1,6 @@
 {
     "class": "CommandLineTool",
     "cwlVersion": "v1.2",
-    "id": "cjrash/netbid/netbid/11",
     "baseCommand": [],
     "inputs": [
         {
