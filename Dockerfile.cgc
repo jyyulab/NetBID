@@ -28,5 +28,5 @@ WORKDIR /data
 COPY IBC_CCDI .
 
 ENTRYPOINT ["Rscript"]
-CMD ["IBC_CCDI.R"]
+CMD ["cloudAppNetBID.R"]
 #CMD ["-q", "-e", "packageVersion(\"NetBID2\")"]
