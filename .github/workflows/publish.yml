@@ -30,6 +30,13 @@ jobs:
           registry: ghcr.io
           username: ${{ secrets.CLOUDY_USERNAME }}
           password: ${{ secrets.CLOUDY_TOKEN }}
+      -
+        name: Login to Cancer Genomics Cloud Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: cgc-images.sbgenomics.com
+          username: ${{ secrets.CGC_USERNAME }}
+          password: ${{ secrets.CGC_TOKEN }}
       - 
         name: Build and push
         id: docker_build
@@ -41,5 +48,12 @@ jobs:
           tags: |
             ghcr.io/${{ env.REPO_LOWER }}:latest
             ghcr.io/${{ env.REPO_LOWER }}:${{ env.SHORT_SHA }}
+            ghcr.io/${{ env.REPO_LOWER }}:${{ github.event.release.tag_name }}
+            cgc-images.sbgenomics.com/${{ env.REPO_LOWER }}:latest
+            cgc-images.sbgenomics.com/${{ env.REPO_LOWER }}:${{ env.SHORT_SHA }}
+            cgc-images.sbgenomics.com/${{ env.REPO_LOWER }}:${{ github.event.release.tag_name }}
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }} 
+      - 
+        name: Image digest
+        run: echo ${{ steps.docker_build.outputs.digest }}
