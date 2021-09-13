@@ -1,18 +1,29 @@
-name: "Deploy to CGC"
+name: Deploy to CGC
 on:
   release:
-    types: [released, edited]
+    types:
+      - released
+      - edited
 jobs:
   cgc:
     runs-on: ubuntu-20.04
-    name: "Deploy"
+    name: Deploy
     steps:
       - uses: actions/checkout@v2
+      - name: Set the docker tag from Repo Tag
+        id: set_dockertag
+        env:
+          IMAGE: cgc-images.sbgenomics.com/stjude/netbid
+          VERSION_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          jq --arg image "${{ env.IMAGE }}:${{ env.VERSION_TAG }}" '(.requirements | .[] | select(.class == ("DockerRequirement")) | .dockerPull) |= $image' cgc/netbid.cwl > cgc/netbid.cwl.new
+          mv cgc/netbid.cwl.new cgc/netbid.cwl
+          cat cgc/netbid.cwl
       - id: cgcdeploy
+        if: ${{ !env.ACT }}
         uses: jordan-rash/cgc-go@v0.1.4
         with:
-          file_location: "cgc/netbid.cwl"
-          shortid: "stjude/netbid/netbid"
-        env: 
+          file_location: cgc/netbid.cwl
+          shortid: stjude/netbid/netbid
+        env:
           CGC_TOKEN: ${{ secrets.CGC_TOKEN }}
-    
