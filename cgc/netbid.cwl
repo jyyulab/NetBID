@@ -97,5 +97,5 @@
         }
     ],
     "stdout": "$(inputs.expression_set.nameroot).log",
-    "sbg:projectName": "netbid",
+    "sbg:projectName": "netbid"
 }
