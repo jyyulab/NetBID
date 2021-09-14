@@ -1,0 +1,32 @@
+FROM r-base
+
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libcurl4-gnutls-dev \
+    libxml2-dev \
+    libssl-dev \
+    libgit2-dev \
+    libcairo2-dev \
+    libxt-dev \
+    xvfb \
+    pandoc \ 
+    xauth \
+    xfonts-base \
+    libssl1.1 \ 
+    && rm -rf /var/lib/apt/lists/*
+
+# install R packages available in CRAN
+RUN R -e 'install.packages(c("optparse", "dplyr", "devtools", "BiocManager", "plot3D"))'
+
+# install R packages via Bioconductor
+RUN R -e 'BiocManager::install(c("biomaRt", "GSVA", "rhdf5", "ComplexHeatmap", "ConsensusClusterPlus", "DESeq2", "tximport", "impute", "limma", "GEOquery"))'
+
+# install NetBID2 from GitHub master branch
+RUN xvfb-run R -e 'devtools::install_github("jyyulab/NetBID", ref="master", dependencies="Depends")'
+
+WORKDIR /data
+COPY IBC_CCDI .
+
+ENTRYPOINT ["Rscript"]
+CMD ["cloudAppNetBID.R"]
+#CMD ["-q", "-e", "packageVersion(\"NetBID2\")"]
