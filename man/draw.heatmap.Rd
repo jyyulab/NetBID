@@ -4,14 +4,27 @@
 \alias{draw.heatmap}
 \title{Draw Heatmap Plot to Display the Expression Level or Activity Level of Genes and Drivers}
 \usage{
-draw.heatmap(mat = NULL, use_genes = rownames(mat),
-  use_gene_label = use_genes, use_samples = colnames(mat),
-  use_sample_label = use_samples, phenotype_info = NULL,
-  use_phe = NULL, main = "", scale = "none", pdf_file = NULL,
-  cluster_rows = TRUE, cluster_columns = TRUE, show_row_names = TRUE,
-  show_column_names = TRUE, clustering_distance_rows = "pearson",
-  clustering_distance_columns = "pearson", use_color = NULL,
-  pre_define = NULL, ...)
+draw.heatmap(
+  mat = NULL,
+  use_genes = rownames(mat),
+  use_gene_label = use_genes,
+  use_samples = colnames(mat),
+  use_sample_label = use_samples,
+  phenotype_info = NULL,
+  use_phe = NULL,
+  main = "",
+  scale = "none",
+  pdf_file = NULL,
+  cluster_rows = TRUE,
+  cluster_columns = TRUE,
+  show_row_names = TRUE,
+  show_column_names = TRUE,
+  clustering_distance_rows = "pearson",
+  clustering_distance_columns = "pearson",
+  use_color = NULL,
+  pre_define = NULL,
+  ...
+)
 }
 \arguments{
 \item{mat}{numeric matrix, the expression/activity matrix. Rows are genes or drivers, columns are selected samples.}

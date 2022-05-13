@@ -4,9 +4,16 @@
 \alias{merge_eset}
 \title{Merge Two ExpressionSet Class Objects into One}
 \usage{
-merge_eset(eset1, eset2, group1 = NULL, group2 = NULL,
-  group_col_name = "original_group", use_col = NULL,
-  remove_batch = FALSE, std = FALSE)
+merge_eset(
+  eset1,
+  eset2,
+  group1 = NULL,
+  group2 = NULL,
+  group_col_name = "original_group",
+  use_col = NULL,
+  remove_batch = FALSE,
+  std = FALSE
+)
 }
 \arguments{
 \item{eset1}{ExpressionSet class, the first ExpressionSet.}

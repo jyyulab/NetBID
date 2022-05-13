@@ -4,9 +4,18 @@
 \alias{draw.2D.ellipse}
 \title{Visualize Sample Clustering Result in 2D Plot with Ellipse}
 \usage{
-draw.2D.ellipse(X, Y, class_label, xlab = "PC1", ylab = "PC2",
-  legend_cex = 0.8, main = "", point_cex = 1, use_color = NULL,
-  pre_define = NULL)
+draw.2D.ellipse(
+  X,
+  Y,
+  class_label,
+  xlab = "PC1",
+  ylab = "PC2",
+  legend_cex = 0.8,
+  main = "",
+  point_cex = 1,
+  use_color = NULL,
+  pre_define = NULL
+)
 }
 \arguments{
 \item{X}{a vector of numerics, the x coordinates of points in the plot. If user would like to creat a PCA biplot, this parameter should be the first component.}

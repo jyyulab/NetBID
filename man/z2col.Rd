@@ -4,9 +4,15 @@
 \alias{z2col}
 \title{Set Color Scale for Z Statistics Value}
 \usage{
-z2col(x, n_len = 60, sig_thre = 0.01, col_min_thre = 0.01,
-  col_max_thre = 3, blue_col = brewer.pal(9, "Set1")[2],
-  red_col = brewer.pal(9, "Set1")[1])
+z2col(
+  x,
+  n_len = 60,
+  sig_thre = 0.01,
+  col_min_thre = 0.01,
+  col_max_thre = 3,
+  blue_col = brewer.pal(9, "Set1")[2],
+  red_col = brewer.pal(9, "Set1")[1]
+)
 }
 \arguments{
 \item{x}{a vector of numerics, a vector of Z statistics.}

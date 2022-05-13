@@ -4,12 +4,21 @@
 \alias{update_SJAracne.network}
 \title{Update Network List Object Using Constraints}
 \usage{
-update_SJAracne.network(network_list = NULL,
-  all_possible_drivers = NULL, all_possible_targets = NULL,
-  force_all_drivers = TRUE, force_all_targets = TRUE, min_MI = 0,
-  max_p.value = 1, min_spearman_value = 0, min_pearson_value = 0,
-  spearman_sign_use = c(1, -1), pearson_sign_use = c(1, -1),
-  directed = TRUE, weighted = TRUE)
+update_SJAracne.network(
+  network_list = NULL,
+  all_possible_drivers = NULL,
+  all_possible_targets = NULL,
+  force_all_drivers = TRUE,
+  force_all_targets = TRUE,
+  min_MI = 0,
+  max_p.value = 1,
+  min_spearman_value = 0,
+  min_pearson_value = 0,
+  spearman_sign_use = c(1, -1),
+  pearson_sign_use = c(1, -1),
+  directed = TRUE,
+  weighted = TRUE
+)
 }
 \arguments{
 \item{network_list}{list, the network list object created by \code{get.SJAracne.network}.

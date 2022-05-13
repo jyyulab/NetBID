@@ -4,8 +4,13 @@
 \alias{load.exp.GEO}
 \title{Download Gene Expression Series From GEO Database with Platform Specified}
 \usage{
-load.exp.GEO(out.dir = NULL, GSE = NULL, GPL = NULL, getGPL = TRUE,
-  update = FALSE)
+load.exp.GEO(
+  out.dir = NULL,
+  GSE = NULL,
+  GPL = NULL,
+  getGPL = TRUE,
+  update = FALSE
+)
 }
 \arguments{
 \item{out.dir}{character, the file path used to save the GSE RData. If the data already exsits, it will be loaded from this path.}

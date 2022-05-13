@@ -101,6 +101,7 @@ clean_charVector <- function(x){
 #' If NULL, will be \code{system.file(package = "NetBID2")}. Default is NULL.
 #' @param db.dir character, a path for saving the RData.
 #' Default is \code{db} directory under the \code{main.dir}, if \code{main.dir} is provided.
+#' @param useCache Boolean, parameter pass to \code{getBM()} indicating whether the results cache should be used. Setting to FALSE will disable reading and writing of the cache.
 #'
 #' @return Return TRUE if loading is successful, otherwise return FALSE. Two variables will be loaded into R workspace, \code{tf_sigs} and \code{db_info}.
 #' @examples
@@ -114,7 +115,7 @@ clean_charVector <- function(x){
 db.preload <- function(use_level='transcript',use_spe='human',update = FALSE,
                        TF_list=NULL,SIG_list=NULL,input_attr_type='external_gene_name',
                        main.dir=NULL,
-                       db.dir=sprintf("%s/db/",main.dir)){
+                       db.dir=sprintf("%s/db/",main.dir),useCache = TRUE){
   all_input_para <- c('use_level','use_spe','update')
   check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
   if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
@@ -206,7 +207,7 @@ db.preload <- function(use_level='transcript',use_spe='human',update = FALSE,
         message(sprintf('Will use %s file as the input TF_list!',TF_f))
         TF_list <- read.delim(TF_f,stringsAsFactors=FALSE,header=F)$V1
         filter_attr <- 'external_gene_name'
-        tmp1 <- biomaRt::getBM(attributes=c('hsapiens_homolog_associated_gene_name','external_gene_name'),values=TRUE,mart=mart,filters='with_hsapiens_homolog')
+        tmp1 <- biomaRt::getBM(attributes=c('hsapiens_homolog_associated_gene_name','external_gene_name'),values=TRUE,mart=mart,filters='with_hsapiens_homolog',useCache = useCache)
         TF_list <- base::unique(tmp1[which(tmp1[,1] %in% TF_list),2])
       }else{
         TF_f <- sprintf('%s/%s_TF_%s.txt',db.dir,use_spe,filter_attr)
@@ -216,11 +217,11 @@ db.preload <- function(use_level='transcript',use_spe='human',update = FALSE,
     }
     if(use_level=='transcript'){
       message(sprintf('Begin read TF list information from ensembl for %s !',use_spe))
-      TF_info  <- biomaRt::getBM(attributes = ensembl.attr.transcript,values=TF_list, mart=mart, filters=filter_attr)
+      TF_info  <- biomaRt::getBM(attributes = ensembl.attr.transcript,values=TF_list, mart=mart, filters=filter_attr,useCache = useCache)
     }
     if(use_level=='gene'){
       message(sprintf('Begin read TF list information from ensembl for %s !',use_spe))
-      TF_info  <- biomaRt::getBM(attributes = ensembl.attr.gene,values=TF_list, mart=mart, filters=filter_attr)
+      TF_info  <- biomaRt::getBM(attributes = ensembl.attr.gene,values=TF_list, mart=mart, filters=filter_attr,useCache = useCache)
     }
     # for SIG list
     if(is.null(SIG_list)){
@@ -229,7 +230,7 @@ db.preload <- function(use_level='transcript',use_spe='human',update = FALSE,
         message(sprintf('Will use %s file as the input SIG_list!',SIG_f))
         SIG_list <- read.delim(SIG_f,stringsAsFactors=FALSE,header=F)$V1
         filter_attr <- 'external_gene_name'
-        tmp1 <- biomaRt::getBM(attributes=c('hsapiens_homolog_associated_gene_name','external_gene_name'),values=TRUE,mart=mart,filters='with_hsapiens_homolog')
+        tmp1 <- biomaRt::getBM(attributes=c('hsapiens_homolog_associated_gene_name','external_gene_name'),values=TRUE,mart=mart,filters='with_hsapiens_homolog',useCache = useCache)
         SIG_list <- base::unique(tmp1[which(tmp1[,1] %in% SIG_list),2])
       }else{
         SIG_f <- sprintf('%s/%s_SIG_%s.txt',db.dir,use_spe,filter_attr)
@@ -239,11 +240,11 @@ db.preload <- function(use_level='transcript',use_spe='human',update = FALSE,
     }
     if(use_level=='transcript'){
       message(sprintf('Begin read SIG list information from ensembl for %s !',use_spe))
-      SIG_info  <- biomaRt::getBM(attributes = ensembl.attr.transcript,values=SIG_list, mart=mart, filters=filter_attr)
+      SIG_info  <- biomaRt::getBM(attributes = ensembl.attr.transcript,values=SIG_list, mart=mart, filters=filter_attr,useCache = useCache)
     }
     if(use_level=='gene'){
       message(sprintf('Begin read SIG list information from ensembl for %s !',use_spe))
-      SIG_info  <- biomaRt::getBM(attributes = ensembl.attr.gene,values=SIG_list, mart=mart, filters=filter_attr)
+      SIG_info  <- biomaRt::getBM(attributes = ensembl.attr.gene,values=SIG_list, mart=mart, filters=filter_attr,useCache = useCache)
     }
     # check input not in the list
     miss_TF  <- base::unique(base::setdiff(TF_list,TF_info[[filter_attr]]))
@@ -372,6 +373,7 @@ get.TF_SIG.list <- function(use_genes=NULL,
 #' @param ignore_version logical, if it is set to TRUE and \code{from_type} is "ensembl_gene_id_version" or "ensembl_transcript_id_version",
 #' the version of the original ID will be ignored in ID mapping.
 #' Default is FALSE.
+#' @param useCache Boolean, parameter pass to \code{getBM()} indicating whether the results cache should be used. Setting to FALSE will disable reading and writing of the cache.
 #'
 #' @return
 #' Return a data frame for ID conversion.
@@ -392,7 +394,7 @@ get.TF_SIG.list <- function(use_genes=NULL,
 #' \dontrun{
 #' }
 #' @export
-get_IDtransfer <- function(from_type=NULL,to_type=NULL,add_type=NULL,use_genes=NULL,dataset=NULL,ignore_version=FALSE){
+get_IDtransfer <- function(from_type=NULL,to_type=NULL,add_type=NULL,use_genes=NULL,dataset=NULL,ignore_version=FALSE,useCache = TRUE){
   #
   all_input_para <- c('from_type','to_type')
   check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
@@ -426,14 +428,14 @@ get_IDtransfer <- function(from_type=NULL,to_type=NULL,add_type=NULL,use_genes=N
     }
   }
   if(is.null(use_genes)==TRUE | base::length(use_genes)>100){
-    tmp1 <- biomaRt::getBM(attributes=c(from_type,to_type,add_type),values=1,mart=mart,filters='strand')
-    tmp2 <- biomaRt::getBM(attributes=c(from_type,to_type,add_type),values=-1,mart=mart,filters='strand')
+    tmp1 <- biomaRt::getBM(attributes=c(from_type,to_type,add_type),values=1,mart=mart,filters='strand',useCache = useCache)
+    tmp2 <- biomaRt::getBM(attributes=c(from_type,to_type,add_type),values=-1,mart=mart,filters='strand',useCache = useCache)
     tmp1 <- base::rbind(tmp1,tmp2)
     if(is.null(use_genes)==FALSE){
       tmp1 <- tmp1[which(tmp1[,1] %in% use_genes),]
     }
   }else{
-    tmp1 <- biomaRt::getBM(attributes=c(from_type,to_type,add_type),values=use_genes,mart=mart,filters=from_type)
+    tmp1 <- biomaRt::getBM(attributes=c(from_type,to_type,add_type),values=use_genes,mart=mart,filters=from_type,useCache = useCache)
   }
   if(ori_from_type %in% c('ensembl_gene_id_version','ensembl_transcript_id_version') & is.null(use_genes)==FALSE & ignore_version==TRUE){
     tmp2 <- data.frame(ori_from_type=ori_use_genes,from_type=use_genes,stringsAsFactors=FALSE)
@@ -460,6 +462,7 @@ get_IDtransfer <- function(from_type=NULL,to_type=NULL,add_type=NULL,use_genes=N
 #' @param to_type character, the attribute name match the target ID type.
 #' @param use_genes a vector of characters, the genes for ID conversion. Must be the genes with ID type of \code{from_type}, and from species \code{from_spe}.
 #' If NULL, all the possible genes will be shown in the conversion table. Default is NULL.
+#' @param useCache Boolean, parameter pass to \code{getBM()} indicating whether the results cache should be used. Setting to FALSE will disable reading and writing of the cache.
 #'
 #' @return Return a data frame for ID conversion, from one species to another.
 #'
@@ -487,7 +490,7 @@ get_IDtransfer <- function(from_type=NULL,to_type=NULL,add_type=NULL,use_genes=N
 #' @export
 get_IDtransfer_betweenSpecies <- function(from_spe='human',to_spe='mouse',
                                           from_type=NULL,to_type=NULL,
-                                          use_genes=NULL){
+                                          use_genes=NULL,useCache = TRUE){
   #
   all_input_para <- c('from_spe','to_spe','from_type','to_type')
   check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
@@ -545,7 +548,7 @@ get_IDtransfer_betweenSpecies <- function(from_spe='human',to_spe='mouse',
   }
   tmp1 <- get_IDtransfer(from_type=from_type,to_type='external_gene_name',use_genes=use_genes,dataset=from_spe_ds)
   tmp2 <- biomaRt::getBM(attributes=c(cn3,'external_gene_name'),values=TRUE,
-                mart=mart2,filters=sprintf('with_%s_homolog',cn1))
+                mart=mart2,filters=sprintf('with_%s_homolog',cn1),useCache = useCache)
   colnames(tmp1) <- sprintf('%s_%s',colnames(tmp1),from_spe)
   colnames(tmp2) <- sprintf('%s_%s',colnames(tmp2),to_spe)
   tmp3 <- base::merge(tmp1,tmp2,by.x=sprintf('external_gene_name_%s',from_spe),by.y=sprintf('%s_%s',cn3,to_spe))
@@ -1608,7 +1611,8 @@ RNASeqCount.normalize.scale <- function(mat,
   options(digits = 2 + nchar(m))
   fac <- m / s
   for (i in 1:base::length(s)) {
-    d[, i] <- round(d[, i] * fac[i], 0)
+    d[, i] <- d[, i] * fac[i]
+    #d[, i] <- round(d[, i] * fac[i], 0)
   }
   if (!all(d > 0))
     d <- d + pseudoCount
@@ -2392,6 +2396,8 @@ getDE.limma.2G <- function(eset=NULL, G1=NULL, G0=NULL,G1_name=NULL,G0_name=NULL
   exp_G0 <- base::rowMeans(new_mat[,G0,drop=FALSE]);
   w1 <- which(tT$P.Value<=0);
   if(base::length(w1)>0) tT$P.Value[w1] <- .Machine$double.xmin;
+  w1 <- which(tT$logFC==0) ## 2022-05-13
+  if(base::length(w1)>0){tT$logFC[w1] <- .Machine$double.xmin;} ## remove zero for logFC
   z_val <- sapply(tT$P.Value*sign(tT$logFC),function(x)combinePvalVector(x,twosided = TRUE)[1])
   if(is.null(random_effect)==TRUE){
     tT <- base::cbind(tT,'Z-statistics'=z_val,'Ave.G0'=exp_G0,'Ave.G1'=exp_G1)
@@ -4689,6 +4695,10 @@ draw.volcanoPlot <- function(dat=NULL,label_col=NULL,logFC_col=NULL,Pv_col=NULL,
     yyy <- c(1,round(base::seq(1,base::max(y)*1.5,length.out=base::min(base::length(y),5)))) ## max:5
     graphics::axis(side=2,at=c(0,yyy),labels=c(1,format(10^-yyy,scientific = TRUE)),las=2)
     graphics::mtext(side=2,line = 4,ylab,cex=1.2)
+    w1 <- which(x==0) ## 2022-05-13
+    if(base::length(w1)>0){x[w1] <- .Machine$double.xmin;} ## remove zero for logFC
+    w1 <- which(dat[,Pv_col]==0) ## 2022-05-13
+    if(base::length(w1)>0){dat[w1,Pv_col] <- .Machine$double.xmin;} ## remove zero for logFC
     z_val <- sapply(dat[,Pv_col]*sign(x),combinePvalVector)[1,]
     if(logFC_thre>0){graphics::abline(v=logFC_thre,lty=2,lwd=0.5);graphics::abline(v=-logFC_thre,lty=2,lwd=0.5)}
     if(Pv_thre<1) graphics::abline(h=-log10(Pv_thre),lty=2,lwd=0.5);

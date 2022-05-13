@@ -4,9 +4,19 @@
 \alias{draw.2D.interactive}
 \title{Visualize Sample Clustering Result in 2D Plot with interactive mode}
 \usage{
-draw.2D.interactive(X, Y, sample_label = NULL, color_label = NULL,
-  shape_label = NULL, xlab = "PC1", ylab = "PC2", main = "",
-  point_cex = 1, use_color = NULL, pre_define = NULL)
+draw.2D.interactive(
+  X,
+  Y,
+  sample_label = NULL,
+  color_label = NULL,
+  shape_label = NULL,
+  xlab = "PC1",
+  ylab = "PC2",
+  main = "",
+  point_cex = 1,
+  use_color = NULL,
+  pre_define = NULL
+)
 }
 \arguments{
 \item{X}{a vector of numerics, the x coordinates of points in the plot. If user would like to create a PCA biplot, this parameter should be the first component.}

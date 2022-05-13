@@ -4,12 +4,23 @@
 \alias{draw.categoryValue}
 \title{Scatter Box Plot of Driver's Expression Values and Activity Values across Subgroup of Samples}
 \usage{
-draw.categoryValue(ac_val = NULL, exp_val = NULL,
-  use_obs_class = NULL, category_color = NULL,
-  stripchart_color = get_transparent("black", 0.7), strip_cex = 1,
-  class_order = NULL, class_srt = 90, class_cex = 1,
-  pdf_file = NULL, main_ac = "", main_exp = "", main_cex = 1,
-  use_color = NULL, pre_define = NULL)
+draw.categoryValue(
+  ac_val = NULL,
+  exp_val = NULL,
+  use_obs_class = NULL,
+  category_color = NULL,
+  stripchart_color = get_transparent("black", 0.7),
+  strip_cex = 1,
+  class_order = NULL,
+  class_srt = 90,
+  class_cex = 1,
+  pdf_file = NULL,
+  main_ac = "",
+  main_exp = "",
+  main_cex = 1,
+  use_color = NULL,
+  pre_define = NULL
+)
 }
 \arguments{
 \item{ac_val}{a vector of numerics, the activity values of the selected driver across all samples.}

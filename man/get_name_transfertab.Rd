@@ -4,9 +4,14 @@
 \alias{get_name_transfertab}
 \title{Convert Original Gene ID into Target Gene ID}
 \usage{
-get_name_transfertab(use_genes = NULL, transfer_tab = NULL,
-  from_type = NULL, to_type = NULL, ignore_version = FALSE,
-  ignore_order = FALSE)
+get_name_transfertab(
+  use_genes = NULL,
+  transfer_tab = NULL,
+  from_type = NULL,
+  to_type = NULL,
+  ignore_version = FALSE,
+  ignore_order = FALSE
+)
 }
 \arguments{
 \item{use_genes}{a vector of characters, the genes for ID conversion.}

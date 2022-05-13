@@ -4,11 +4,21 @@
 \alias{draw.NetBID}
 \title{Create Plot to show Differential Expression and Differential Activity Analysis of Top Drivers}
 \usage{
-draw.NetBID(DA_list = NULL, DE_list = NULL, main_id = NULL,
-  top_number = 30, DA_display_col = "P.Value",
-  DE_display_col = "logFC", z_col = "Z-statistics", digit_num = 2,
-  row_cex = 1, column_cex = 1, text_cex = 1, col_srt = 60,
-  pdf_file = NULL)
+draw.NetBID(
+  DA_list = NULL,
+  DE_list = NULL,
+  main_id = NULL,
+  top_number = 30,
+  DA_display_col = "P.Value",
+  DE_display_col = "logFC",
+  z_col = "Z-statistics",
+  digit_num = 2,
+  row_cex = 1,
+  column_cex = 1,
+  text_cex = 1,
+  col_srt = 60,
+  pdf_file = NULL
+)
 }
 \arguments{
 \item{DA_list}{list, contains the differential activity (DA) analysis result.}

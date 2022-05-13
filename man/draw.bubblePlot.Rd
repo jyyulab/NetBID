@@ -4,14 +4,30 @@
 \alias{draw.bubblePlot}
 \title{Heat Bubble Matrix Plot for Top Drivers in NetBID2 Analysis}
 \usage{
-draw.bubblePlot(driver_list = NULL, show_label = driver_list,
-  Z_val = NULL, driver_type = NULL, target_list = NULL,
-  transfer2symbol2type = NULL, bg_list = NULL, min_gs_size = 5,
-  max_gs_size = 500, gs2gene = NULL, use_gs = NULL,
-  display_gs_list = NULL, Pv_adj = "none", Pv_thre = 0.1,
-  top_geneset_number = 30, top_driver_number = 30, pdf_file = NULL,
-  main = "", mark_gene = NULL, driver_cex = 1, gs_cex = 1,
-  only_return_mat = FALSE)
+draw.bubblePlot(
+  driver_list = NULL,
+  show_label = driver_list,
+  Z_val = NULL,
+  driver_type = NULL,
+  target_list = NULL,
+  transfer2symbol2type = NULL,
+  bg_list = NULL,
+  min_gs_size = 5,
+  max_gs_size = 500,
+  gs2gene = NULL,
+  use_gs = NULL,
+  display_gs_list = NULL,
+  Pv_adj = "none",
+  Pv_thre = 0.1,
+  top_geneset_number = 30,
+  top_driver_number = 30,
+  pdf_file = NULL,
+  main = "",
+  mark_gene = NULL,
+  driver_cex = 1,
+  gs_cex = 1,
+  only_return_mat = FALSE
+)
 }
 \arguments{
 \item{driver_list}{a vector of characters, the names of top drivers.}

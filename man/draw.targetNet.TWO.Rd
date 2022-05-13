@@ -4,12 +4,23 @@
 \alias{draw.targetNet.TWO}
 \title{Target Ntwork Structure Plot for Two Drivers}
 \usage{
-draw.targetNet.TWO(source1_label = "", source2_label = "",
-  source1_z = NULL, source2_z = NULL, edge_score1 = NULL,
-  edge_score2 = NULL, arrow_direction1 = "out",
-  arrow_direction2 = "out", label_cex = 0.7, source_cex = 1,
-  pdf_file = NULL, total_possible_target = NULL, show_test = FALSE,
-  n_layer = 1, alphabetical_order = FALSE)
+draw.targetNet.TWO(
+  source1_label = "",
+  source2_label = "",
+  source1_z = NULL,
+  source2_z = NULL,
+  edge_score1 = NULL,
+  edge_score2 = NULL,
+  arrow_direction1 = "out",
+  arrow_direction2 = "out",
+  label_cex = 0.7,
+  source_cex = 1,
+  pdf_file = NULL,
+  total_possible_target = NULL,
+  show_test = FALSE,
+  n_layer = 1,
+  alphabetical_order = FALSE
+)
 }
 \arguments{
 \item{source1_label}{character, the label of the first selected driver (to be displayed on the left).}

@@ -4,8 +4,13 @@
 \alias{IQR.filter}
 \title{IQR (interquartile range) filter to extract genes from expression matrix}
 \usage{
-IQR.filter(exp_mat, use_genes = rownames(exp_mat), thre = 0.5,
-  loose_gene = NULL, loose_thre = 0.1)
+IQR.filter(
+  exp_mat,
+  use_genes = rownames(exp_mat),
+  thre = 0.5,
+  loose_gene = NULL,
+  loose_thre = 0.1
+)
 }
 \arguments{
 \item{exp_mat}{matrix, the gene expression matrix. Each row represents a gene/transcript/probe, each column represents a sample.}

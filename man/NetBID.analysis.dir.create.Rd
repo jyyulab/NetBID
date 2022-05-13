@@ -4,10 +4,14 @@
 \alias{NetBID.analysis.dir.create}
 \title{Manipulation of Working Directories for NetBID2 Driver Estimation Step}
 \usage{
-NetBID.analysis.dir.create(project_main_dir = NULL,
-  project_name = NULL, network_dir = NULL,
-  network_project_name = NULL, tf.network.file = NULL,
-  sig.network.file = NULL)
+NetBID.analysis.dir.create(
+  project_main_dir = NULL,
+  project_name = NULL,
+  network_dir = NULL,
+  network_project_name = NULL,
+  tf.network.file = NULL,
+  sig.network.file = NULL
+)
 }
 \arguments{
 \item{project_main_dir}{character, name or absolute path of the main working directory for driver analysis.}

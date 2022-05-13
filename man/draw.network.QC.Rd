@@ -4,9 +4,15 @@
 \alias{draw.network.QC}
 \title{QC Tables and Plots for Network Object}
 \usage{
-draw.network.QC(igraph_obj, outdir = NULL, prefix = "",
-  directed = TRUE, weighted = FALSE, generate_html = TRUE,
-  html_info_limit = TRUE)
+draw.network.QC(
+  igraph_obj,
+  outdir = NULL,
+  prefix = "",
+  directed = TRUE,
+  weighted = FALSE,
+  generate_html = TRUE,
+  html_info_limit = TRUE
+)
 }
 \arguments{
 \item{igraph_obj}{igraph object, created by \code{get.SJAracne.network}.}

@@ -4,11 +4,23 @@
 \alias{draw.emb.kmeans}
 \title{Visualize the K-means Clustering Result by several dimension reduction and embedding methods.}
 \usage{
-draw.emb.kmeans(mat = NULL, embedding_method = "pca", all_k = NULL,
-  obs_label = NULL, legend_pos = "topleft", legend_cex = 0.8,
-  plot_type = "2D.ellipse", point_cex = 1, kmeans_strategy = "basic",
-  choose_k_strategy = "ARI", return_type = "optimal", main = "",
-  verbose = TRUE, use_color = NULL, pre_define = NULL)
+draw.emb.kmeans(
+  mat = NULL,
+  embedding_method = "pca",
+  all_k = NULL,
+  obs_label = NULL,
+  legend_pos = "topleft",
+  legend_cex = 0.8,
+  plot_type = "2D.ellipse",
+  point_cex = 1,
+  kmeans_strategy = "basic",
+  choose_k_strategy = "ARI",
+  return_type = "optimal",
+  main = "",
+  verbose = TRUE,
+  use_color = NULL,
+  pre_define = NULL
+)
 }
 \arguments{
 \item{mat}{a numeric data matrix, the columns (e.g. sample) will be clustered using the feature (e.g. genes) rows.}

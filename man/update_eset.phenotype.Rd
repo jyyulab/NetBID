@@ -4,8 +4,12 @@
 \alias{update_eset.phenotype}
 \title{Reassign the phenoData slot of ExpressionSet and Update phenotype information}
 \usage{
-update_eset.phenotype(use_eset = NULL, use_phenotype_info = NULL,
-  use_sample_col = NULL, use_col = "auto")
+update_eset.phenotype(
+  use_eset = NULL,
+  use_phenotype_info = NULL,
+  use_sample_col = NULL,
+  use_col = "auto"
+)
 }
 \arguments{
 \item{use_eset}{ExpressionSet class object.}

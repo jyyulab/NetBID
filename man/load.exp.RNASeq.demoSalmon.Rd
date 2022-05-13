@@ -4,9 +4,15 @@
 \alias{load.exp.RNASeq.demoSalmon}
 \title{Load Gene Expression Set from Salmon Output (demo version)}
 \usage{
-load.exp.RNASeq.demoSalmon(salmon_dir = NULL, tx2gene = NULL,
-  use_phenotype_info = NULL, use_sample_col = NULL,
-  use_design_col = NULL, return_type = "tpm", merge_level = "gene")
+load.exp.RNASeq.demoSalmon(
+  salmon_dir = NULL,
+  tx2gene = NULL,
+  use_phenotype_info = NULL,
+  use_sample_col = NULL,
+  use_design_col = NULL,
+  return_type = "tpm",
+  merge_level = "gene"
+)
 }
 \arguments{
 \item{salmon_dir}{character, the directory to save the results created by Salmon.}

@@ -4,8 +4,14 @@
 \alias{get_IDtransfer_betweenSpecies}
 \title{Create Data Frame for ID Conversion Between Species}
 \usage{
-get_IDtransfer_betweenSpecies(from_spe = "human", to_spe = "mouse",
-  from_type = NULL, to_type = NULL, use_genes = NULL)
+get_IDtransfer_betweenSpecies(
+  from_spe = "human",
+  to_spe = "mouse",
+  from_type = NULL,
+  to_type = NULL,
+  use_genes = NULL,
+  useCache = TRUE
+)
 }
 \arguments{
 \item{from_spe}{character, name of the original species (e.g. "human", "mouse", "rat") that \code{use_genes} belongs to. Default is "human".}
@@ -20,6 +26,8 @@ The "attribute" is inherited from the \code{biomaRt} package. For details, user 
 
 \item{use_genes}{a vector of characters, the genes for ID conversion. Must be the genes with ID type of \code{from_type}, and from species \code{from_spe}.
 If NULL, all the possible genes will be shown in the conversion table. Default is NULL.}
+
+\item{useCache}{Boolean, parameter pass to \code{getBM()} indicating whether the results cache should be used. Setting to FALSE will disable reading and writing of the cache.}
 }
 \value{
 Return a data frame for ID conversion, from one species to another.

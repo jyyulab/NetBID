@@ -4,8 +4,13 @@
 \alias{get_IDtransfer2symbol2type}
 \title{Create Data Frame for ID Conversion With Biotype Information}
 \usage{
-get_IDtransfer2symbol2type(from_type = NULL, use_genes = NULL,
-  dataset = NULL, use_level = "gene", ignore_version = FALSE)
+get_IDtransfer2symbol2type(
+  from_type = NULL,
+  use_genes = NULL,
+  dataset = NULL,
+  use_level = "gene",
+  ignore_version = FALSE
+)
 }
 \arguments{
 \item{from_type}{character, the attribute name matches the current ID type (the type of use_genes).

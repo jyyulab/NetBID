@@ -4,8 +4,12 @@
 \alias{generate.eset}
 \title{Generate ExpressionSet Object}
 \usage{
-generate.eset(exp_mat = NULL, phenotype_info = NULL,
-  feature_info = NULL, annotation_info = "")
+generate.eset(
+  exp_mat = NULL,
+  phenotype_info = NULL,
+  feature_info = NULL,
+  annotation_info = ""
+)
 }
 \arguments{
 \item{exp_mat}{matrix, the expression data matrix. Each row represents a gene/transcript/probe, each column represents a sample.}

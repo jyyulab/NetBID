@@ -4,10 +4,23 @@
 \alias{draw.3D}
 \title{Visualize Sample Clustering Result in 3D Plot}
 \usage{
-draw.3D(X, Y, Z, class_label, xlab = "PC1", ylab = "PC2",
-  zlab = "PC3", legend_cex = 0.8, main = "", point_cex = 1,
-  legend_pos = "topright", legend_ncol = 1, use_color = NULL,
-  pre_define = NULL, ...)
+draw.3D(
+  X,
+  Y,
+  Z,
+  class_label,
+  xlab = "PC1",
+  ylab = "PC2",
+  zlab = "PC3",
+  legend_cex = 0.8,
+  main = "",
+  point_cex = 1,
+  legend_pos = "topright",
+  legend_ncol = 1,
+  use_color = NULL,
+  pre_define = NULL,
+  ...
+)
 }
 \arguments{
 \item{X}{a vector of numerics, the x coordinates of points in the plot. If user would like to create a PCA biplot, this parameter should be the first component.}

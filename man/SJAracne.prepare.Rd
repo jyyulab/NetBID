@@ -4,10 +4,18 @@
 \alias{SJAracne.prepare}
 \title{Prepare Data Files for Running SJARACNe}
 \usage{
-SJAracne.prepare(eset, use.samples = rownames(Biobase::pData(eset)),
-  TF_list = NULL, SIG_list = NULL, SJAR.main_dir = "",
-  SJAR.project_name = "", IQR.thre = 0.5, IQR.loose_thre = 0.1,
-  add_options = "", geneSymbol_column = NULL)
+SJAracne.prepare(
+  eset,
+  use.samples = rownames(Biobase::pData(eset)),
+  TF_list = NULL,
+  SIG_list = NULL,
+  SJAR.main_dir = "",
+  SJAR.project_name = "",
+  IQR.thre = 0.5,
+  IQR.loose_thre = 0.1,
+  add_options = "",
+  geneSymbol_column = NULL
+)
 }
 \arguments{
 \item{eset}{an ExpressionSet class object, which contains the expression matrix.}

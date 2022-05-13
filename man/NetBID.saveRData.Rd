@@ -4,8 +4,7 @@
 \alias{NetBID.saveRData}
 \title{Save Data Produced by Corresponding NetBID2 Pipeline Step.}
 \usage{
-NetBID.saveRData(network.par = NULL, analysis.par = NULL,
-  step = "exp-load")
+NetBID.saveRData(network.par = NULL, analysis.par = NULL, step = "exp-load")
 }
 \arguments{
 \item{network.par}{list, stores all related datasets from network construction pipeline step.}

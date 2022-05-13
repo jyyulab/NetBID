@@ -4,10 +4,18 @@
 \alias{generate.masterTable}
 \title{Generate the Master Table for Drivers}
 \usage{
-generate.masterTable(use_comp = NULL, DE = NULL, DA = NULL,
-  target_list = NULL, main_id_type = NULL, transfer_tab = NULL,
-  tf_sigs = tf_sigs, z_col = "Z-statistics", display_col = c("logFC",
-  "P.Value"), column_order_stratey = "type")
+generate.masterTable(
+  use_comp = NULL,
+  DE = NULL,
+  DA = NULL,
+  target_list = NULL,
+  main_id_type = NULL,
+  transfer_tab = NULL,
+  tf_sigs = tf_sigs,
+  z_col = "Z-statistics",
+  display_col = c("logFC", "P.Value"),
+  column_order_stratey = "type"
+)
 }
 \arguments{
 \item{use_comp}{a vector of characters, the name of multiple comparisons. It will be used to name the columns of master table.}

@@ -4,8 +4,12 @@
 \alias{gs.preload}
 \title{Load MSigDB Database into R Workspace}
 \usage{
-gs.preload(use_spe = "Homo sapiens", update = FALSE, main.dir = NULL,
-  db.dir = sprintf("\%s/db/", main.dir))
+gs.preload(
+  use_spe = "Homo sapiens",
+  update = FALSE,
+  main.dir = NULL,
+  db.dir = sprintf("\%s/db/", main.dir)
+)
 }
 \arguments{
 \item{use_spe}{character, name of interested species (e.g. "Homo sapiens", "Mus musculus").

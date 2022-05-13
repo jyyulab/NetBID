@@ -4,11 +4,23 @@
 \alias{draw.GSEA.NetBID.GS}
 \title{Draw GSEA (gene set enrichment analysis) Plot with NetBID Analysis of Gene Sets}
 \usage{
-draw.GSEA.NetBID.GS(DE = NULL, name_col = NULL, profile_col = NULL,
-  profile_trend = "pos2neg", sig_gs_list = NULL, gs_DA_Z = NULL,
-  use_gs2gene = NULL, top_gs_number = 30, target_col = "RdBu",
-  left_annotation = "", right_annotation = "", main = "",
-  profile_sig_thre = 0, Z_sig_thre = 1.64, pdf_file = NULL)
+draw.GSEA.NetBID.GS(
+  DE = NULL,
+  name_col = NULL,
+  profile_col = NULL,
+  profile_trend = "pos2neg",
+  sig_gs_list = NULL,
+  gs_DA_Z = NULL,
+  use_gs2gene = NULL,
+  top_gs_number = 30,
+  target_col = "RdBu",
+  left_annotation = "",
+  right_annotation = "",
+  main = "",
+  profile_sig_thre = 0,
+  Z_sig_thre = 1.64,
+  pdf_file = NULL
+)
 }
 \arguments{
 \item{DE}{data.frame, a data.frame created either by function \code{getDE.limma.2G} or \code{getDE.BID.2G}.

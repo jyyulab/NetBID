@@ -4,11 +4,21 @@
 \alias{draw.funcEnrich.bar}
 \title{Bar Plot for Gene Set Enrichment Analysis Result}
 \usage{
-draw.funcEnrich.bar(funcEnrich_res = NULL, top_number = 30,
-  Pv_col = "Ori_P", item_col = "Intersected_items", Pv_thre = 0.1,
-  display_genes = FALSE, name_col = "#Name", gs_cex = 0.5,
-  gene_cex = 0.5, main = "", bar_col = brewer.pal(8, "RdBu")[7],
-  eg_num = 5, pdf_file = NULL)
+draw.funcEnrich.bar(
+  funcEnrich_res = NULL,
+  top_number = 30,
+  Pv_col = "Ori_P",
+  item_col = "Intersected_items",
+  Pv_thre = 0.1,
+  display_genes = FALSE,
+  name_col = "#Name",
+  gs_cex = 0.5,
+  gene_cex = 0.5,
+  main = "",
+  bar_col = brewer.pal(8, "RdBu")[7],
+  eg_num = 5,
+  pdf_file = NULL
+)
 }
 \arguments{
 \item{funcEnrich_res}{data.frame, containing the result of functional enrichment analysis.

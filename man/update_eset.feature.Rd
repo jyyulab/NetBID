@@ -4,9 +4,14 @@
 \alias{update_eset.feature}
 \title{Reassign featureData slot of ExpressionSet and Update feature information}
 \usage{
-update_eset.feature(use_eset = NULL, use_feature_info = NULL,
-  from_feature = NULL, to_feature = NULL, merge_method = "median",
-  distribute_method = "equal")
+update_eset.feature(
+  use_eset = NULL,
+  use_feature_info = NULL,
+  from_feature = NULL,
+  to_feature = NULL,
+  merge_method = "median",
+  distribute_method = "equal"
+)
 }
 \arguments{
 \item{use_eset}{ExpressionSet class object.}

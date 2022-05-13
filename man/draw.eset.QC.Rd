@@ -4,11 +4,20 @@
 \alias{draw.eset.QC}
 \title{QC plots for ExpressionSet class object.}
 \usage{
-draw.eset.QC(eset, outdir = ".", do.logtransform = FALSE,
-  intgroup = NULL, prefix = "", choose_plot = c("heatmap", "pca",
-  "boxplot", "density", "correlation"), generate_html = TRUE,
-  correlation_strategy = "pearson", plot_all_point = FALSE,
-  emb_plot_type = "2D.ellipse", use_color = NULL, pre_define = NULL)
+draw.eset.QC(
+  eset,
+  outdir = ".",
+  do.logtransform = FALSE,
+  intgroup = NULL,
+  prefix = "",
+  choose_plot = c("heatmap", "pca", "boxplot", "density", "correlation"),
+  generate_html = TRUE,
+  correlation_strategy = "pearson",
+  plot_all_point = FALSE,
+  emb_plot_type = "2D.ellipse",
+  use_color = NULL,
+  pre_define = NULL
+)
 }
 \arguments{
 \item{eset}{ExpressionSet class, quality control analysis target.}

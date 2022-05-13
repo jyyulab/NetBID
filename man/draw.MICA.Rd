@@ -4,11 +4,23 @@
 \alias{draw.MICA}
 \title{Draw Cluster Plot Using MICA (cluster algorithm)}
 \usage{
-draw.MICA(outdir = NULL, prjname = NULL, all_k = NULL,
-  obs_label = NULL, legend_pos = "topleft", legend_cex = 0.8,
-  point_cex = 1, plot_type = "2D.ellipse", choose_k_strategy = "ARI",
-  visualization_type = "tsne", return_type = "optimal", main = "",
-  verbose = TRUE, use_color = NULL, pre_define = NULL)
+draw.MICA(
+  outdir = NULL,
+  prjname = NULL,
+  all_k = NULL,
+  obs_label = NULL,
+  legend_pos = "topleft",
+  legend_cex = 0.8,
+  point_cex = 1,
+  plot_type = "2D.ellipse",
+  choose_k_strategy = "ARI",
+  visualization_type = "tsne",
+  return_type = "optimal",
+  main = "",
+  verbose = TRUE,
+  use_color = NULL,
+  pre_define = NULL
+)
 }
 \arguments{
 \item{outdir}{character, the output directory for running MICA.}

@@ -4,10 +4,19 @@
 \alias{getDE.BID.2G}
 \title{Differential Expression Analysis and Differential Activity Analysis Between 2 Sample Groups Using Bayesian Inference}
 \usage{
-getDE.BID.2G(eset, output_id_column = NULL, G1 = NULL, G0 = NULL,
-  G1_name = NULL, G0_name = NULL, method = "Bayesian",
-  family = gaussian, pooling = "full", logTransformed = TRUE,
-  verbose = TRUE)
+getDE.BID.2G(
+  eset,
+  output_id_column = NULL,
+  G1 = NULL,
+  G0 = NULL,
+  G1_name = NULL,
+  G0_name = NULL,
+  method = "Bayesian",
+  family = gaussian,
+  pooling = "full",
+  logTransformed = TRUE,
+  verbose = TRUE
+)
 }
 \arguments{
 \item{eset}{ExpressionSet class object, contains gene expression data or driver activity data.}

@@ -4,8 +4,10 @@
 \alias{merge_gs}
 \title{Merge Selected Major GeneSets from MsigDB}
 \usage{
-merge_gs(all_gs2gene = all_gs2gene, use_gs = c("H", "CP:BIOCARTA",
-  "CP:REACTOME", "CP:KEGG", "C5"))
+merge_gs(
+  all_gs2gene = all_gs2gene,
+  use_gs = c("H", "CP:BIOCARTA", "CP:REACTOME", "CP:KEGG", "C5")
+)
 }
 \arguments{
 \item{all_gs2gene}{list, the list returned by \code{gs.preload()}.}

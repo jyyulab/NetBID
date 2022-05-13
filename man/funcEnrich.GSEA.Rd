@@ -20,7 +20,7 @@ funcEnrich.GSEA(
 \arguments{
 \item{rank_profile}{a named vector of numerics, the differential values (DE or DA) calculated from a sample comparison (e.g. "G4 vs. Others").
 Names of the vector must be gene names.
-For the DA, user could use 'prcocessDriverProfile()' to convert the DA profile into gene-name based profile.
+For the DA, user could use 'processDriverProfile()' to convert the DA profile into gene-name based profile.
 The differential values can be "logFC" or "t-statistics".}
 
 \item{use_gs}{a vector of characters, the names of gene sets.
@@ -71,7 +71,7 @@ analysis.par$out.dir.DATA <- system.file('demo1','driver/DATA/',package = "NetBI
 NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
 ms_tab <- analysis.par$final_ms_tab
 ## get significant gene set by driver's DA profile
-DA_profile <- prcocessDriverProfile(Driver_name=ms_tab$gene_label,
+DA_profile <- processDriverProfile(Driver_name=ms_tab$gene_label,
                                     Driver_profile=ms_tab$logFC.G4.Vs.others_DA,
                                     choose_strategy='absmax',
                                     return_type ='gene_statistics')

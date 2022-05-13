@@ -4,9 +4,15 @@
 \alias{combineDE}
 \title{Combine Multiple Comparison Results from Differential Expression (DE) or Differential Activity (DA) Analysis}
 \usage{
-combineDE(DE_list, DE_name = NULL, transfer_tab = NULL,
-  main_id = NULL, method = "Stouffer", twosided = TRUE,
-  signed = TRUE)
+combineDE(
+  DE_list,
+  DE_name = NULL,
+  transfer_tab = NULL,
+  main_id = NULL,
+  method = "Stouffer",
+  twosided = TRUE,
+  signed = TRUE
+)
 }
 \arguments{
 \item{DE_list}{list, each element in the list is one DE/DA comparison need to be combined.}

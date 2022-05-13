@@ -4,8 +4,7 @@
 \alias{NetBID.loadRData}
 \title{Reload Saved RData Created by \code{NetBID.saveRData}.}
 \usage{
-NetBID.loadRData(network.par = NULL, analysis.par = NULL,
-  step = "exp-load")
+NetBID.loadRData(network.par = NULL, analysis.par = NULL, step = "exp-load")
 }
 \arguments{
 \item{network.par}{list, stores all related datasets from network construction step.}

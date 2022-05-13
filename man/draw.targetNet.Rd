@@ -4,9 +4,17 @@
 \alias{draw.targetNet}
 \title{Target Network Structure Plot for One Driver}
 \usage{
-draw.targetNet(source_label = "", source_z = NULL, edge_score = NULL,
-  label_cex = 0.7, source_cex = 1, pdf_file = NULL,
-  arrow_direction = "out", n_layer = 1, alphabetical_order = FALSE)
+draw.targetNet(
+  source_label = "",
+  source_z = NULL,
+  edge_score = NULL,
+  label_cex = 0.7,
+  source_cex = 1,
+  pdf_file = NULL,
+  arrow_direction = "out",
+  n_layer = 1,
+  alphabetical_order = FALSE
+)
 }
 \arguments{
 \item{source_label}{character, the label of selected one driver.}

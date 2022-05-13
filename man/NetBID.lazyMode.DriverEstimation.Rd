@@ -4,13 +4,24 @@
 \alias{NetBID.lazyMode.DriverEstimation}
 \title{Lazy mode for NetBID2 driver estimation}
 \usage{
-NetBID.lazyMode.DriverEstimation(project_main_dir = NULL,
-  project_name = NULL, tf.network.file = NULL,
-  sig.network.file = NULL, cal.eset = NULL, main_id_type = NULL,
-  cal.eset_main_id_type = NULL, use_level = "gene",
-  transfer_tab = NULL, intgroup = NULL, G1_name = NULL,
-  G0_name = NULL, comp_name = NULL, do.QC = TRUE,
-  DE_strategy = "bid", return_analysis.par = TRUE)
+NetBID.lazyMode.DriverEstimation(
+  project_main_dir = NULL,
+  project_name = NULL,
+  tf.network.file = NULL,
+  sig.network.file = NULL,
+  cal.eset = NULL,
+  main_id_type = NULL,
+  cal.eset_main_id_type = NULL,
+  use_level = "gene",
+  transfer_tab = NULL,
+  intgroup = NULL,
+  G1_name = NULL,
+  G0_name = NULL,
+  comp_name = NULL,
+  do.QC = TRUE,
+  DE_strategy = "bid",
+  return_analysis.par = TRUE
+)
 }
 \arguments{
 \item{project_main_dir}{character, name or absolute path of the main working directory for driver analysis.}

@@ -4,9 +4,16 @@
 \alias{load.exp.RNASeq.demo}
 \title{Load Gene Expression Set from RNA-Seq Results (demo version)}
 \usage{
-load.exp.RNASeq.demo(files, type = "salmon", tx2gene = NULL,
-  use_phenotype_info = NULL, use_sample_col = NULL,
-  use_design_col = NULL, return_type = "tpm", merge_level = "gene")
+load.exp.RNASeq.demo(
+  files,
+  type = "salmon",
+  tx2gene = NULL,
+  use_phenotype_info = NULL,
+  use_sample_col = NULL,
+  use_design_col = NULL,
+  return_type = "tpm",
+  merge_level = "gene"
+)
 }
 \arguments{
 \item{files}{a vector of characters, the filenames for the transcript-level abundances. It will be passed to \code{tximport}.

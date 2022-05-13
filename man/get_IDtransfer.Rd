@@ -4,8 +4,15 @@
 \alias{get_IDtransfer}
 \title{Creates Data Frame for ID Conversion}
 \usage{
-get_IDtransfer(from_type = NULL, to_type = NULL, add_type = NULL,
-  use_genes = NULL, dataset = NULL, ignore_version = FALSE)
+get_IDtransfer(
+  from_type = NULL,
+  to_type = NULL,
+  add_type = NULL,
+  use_genes = NULL,
+  dataset = NULL,
+  ignore_version = FALSE,
+  useCache = TRUE
+)
 }
 \arguments{
 \item{from_type}{character, the attribute name match the current ID type (the type of \code{use_genes}).
@@ -26,6 +33,8 @@ Default is NULL.}
 \item{ignore_version}{logical, if it is set to TRUE and \code{from_type} is "ensembl_gene_id_version" or "ensembl_transcript_id_version",
 the version of the original ID will be ignored in ID mapping.
 Default is FALSE.}
+
+\item{useCache}{Boolean, parameter pass to \code{getBM()} indicating whether the results cache should be used. Setting to FALSE will disable reading and writing of the cache.}
 }
 \value{
 Return a data frame for ID conversion.

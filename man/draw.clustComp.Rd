@@ -4,9 +4,17 @@
 \alias{draw.clustComp}
 \title{Visualize Each Sample's Observed Label vs. Predicted Label in Table}
 \usage{
-draw.clustComp(pred_label, obs_label, strategy = "ARI", use_col = TRUE,
-  low_K = 5, highlight_clust = NULL, main = NULL, clust_cex = 1,
-  outlier_cex = 0.3)
+draw.clustComp(
+  pred_label,
+  obs_label,
+  strategy = "ARI",
+  use_col = TRUE,
+  low_K = 5,
+  highlight_clust = NULL,
+  main = NULL,
+  clust_cex = 1,
+  outlier_cex = 0.3
+)
 }
 \arguments{
 \item{pred_label}{a vector of characters, the predicted labels created by classification (e.g K-means).}

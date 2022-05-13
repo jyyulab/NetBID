@@ -4,10 +4,17 @@
 \alias{db.preload}
 \title{Preload database files into R workspace for NetBID2}
 \usage{
-db.preload(use_level = "transcript", use_spe = "human",
-  update = FALSE, TF_list = NULL, SIG_list = NULL,
-  input_attr_type = "external_gene_name", main.dir = NULL,
-  db.dir = sprintf("\%s/db/", main.dir))
+db.preload(
+  use_level = "transcript",
+  use_spe = "human",
+  update = FALSE,
+  TF_list = NULL,
+  SIG_list = NULL,
+  input_attr_type = "external_gene_name",
+  main.dir = NULL,
+  db.dir = sprintf("\%s/db/", main.dir),
+  useCache = TRUE
+)
 }
 \arguments{
 \item{use_level}{character, users can choose "transcript" or "gene". Default is "gene".}
@@ -33,6 +40,8 @@ If NULL, will be \code{system.file(package = "NetBID2")}. Default is NULL.}
 
 \item{db.dir}{character, a path for saving the RData.
 Default is \code{db} directory under the \code{main.dir}, if \code{main.dir} is provided.}
+
+\item{useCache}{Boolean, parameter pass to \code{getBM()} indicating whether the results cache should be used. Setting to FALSE will disable reading and writing of the cache.}
 }
 \value{
 Return TRUE if loading is successful, otherwise return FALSE. Two variables will be loaded into R workspace, \code{tf_sigs} and \code{db_info}.

@@ -4,8 +4,13 @@
 \alias{test.targetNet.overlap}
 \title{Test for Intersection of Target Genes between Two Drivers}
 \usage{
-test.targetNet.overlap(source1_label = NULL, source2_label = NULL,
-  target1 = NULL, target2 = NULL, total_possible_target = NULL)
+test.targetNet.overlap(
+  source1_label = NULL,
+  source2_label = NULL,
+  target1 = NULL,
+  target2 = NULL,
+  total_possible_target = NULL
+)
 }
 \arguments{
 \item{source1_label}{character, the label of the first selected driver.}

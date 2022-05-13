@@ -4,8 +4,12 @@
 \alias{get.TF_SIG.list}
 \title{Get Transcription Factor (TF) and Signaling Factor (SIG) List}
 \usage{
-get.TF_SIG.list(use_genes = NULL, use_gene_type = "external_gene_name",
-  ignore_version = FALSE, dataset = NULL)
+get.TF_SIG.list(
+  use_genes = NULL,
+  use_gene_type = "external_gene_name",
+  ignore_version = FALSE,
+  dataset = NULL
+)
 }
 \arguments{
 \item{use_genes}{a vector of characters, genes will be used in the network construction.

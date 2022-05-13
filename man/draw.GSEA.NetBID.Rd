@@ -4,13 +4,27 @@
 \alias{draw.GSEA.NetBID}
 \title{Draw GSEA (gene set enrichment analysis) Plot with NetBID Analysis of Drivers}
 \usage{
-draw.GSEA.NetBID(DE = NULL, name_col = NULL, profile_col = NULL,
-  profile_trend = "pos2neg", driver_list = NULL,
-  show_label = driver_list, driver_DA_Z = NULL, driver_DE_Z = NULL,
-  target_list = NULL, top_driver_number = 30, target_nrow = 2,
-  target_col = "RdBu", target_col_type = "PN", left_annotation = "",
-  right_annotation = "", main = "", profile_sig_thre = 0,
-  Z_sig_thre = 1.64, pdf_file = NULL)
+draw.GSEA.NetBID(
+  DE = NULL,
+  name_col = NULL,
+  profile_col = NULL,
+  profile_trend = "pos2neg",
+  driver_list = NULL,
+  show_label = driver_list,
+  driver_DA_Z = NULL,
+  driver_DE_Z = NULL,
+  target_list = NULL,
+  top_driver_number = 30,
+  target_nrow = 2,
+  target_col = "RdBu",
+  target_col_type = "PN",
+  left_annotation = "",
+  right_annotation = "",
+  main = "",
+  profile_sig_thre = 0,
+  Z_sig_thre = 1.64,
+  pdf_file = NULL
+)
 }
 \arguments{
 \item{DE}{data.frame, a data.frame created either by function \code{getDE.limma.2G} or \code{getDE.BID.2G}. Row names are gene/driver names,

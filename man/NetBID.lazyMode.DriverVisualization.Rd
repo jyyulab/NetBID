@@ -4,12 +4,20 @@
 \alias{NetBID.lazyMode.DriverVisualization}
 \title{Lazy mode for NetBID2 result visualization}
 \usage{
-NetBID.lazyMode.DriverVisualization(analysis.par = NULL,
-  intgroup = NULL, use_comp = NULL,
-  main_id_type = "external_gene_name", transfer_tab = NULL,
+NetBID.lazyMode.DriverVisualization(
+  analysis.par = NULL,
+  intgroup = NULL,
+  use_comp = NULL,
+  main_id_type = "external_gene_name",
+  transfer_tab = NULL,
   use_gs = c("H", "CP:BIOCARTA", "CP:REACTOME", "CP:KEGG"),
-  min_Size = 30, max_Size = 1000, top_number = 30,
-  top_strategy = "Both", logFC_thre = 0.05, Pv_thre = 0.05)
+  min_Size = 30,
+  max_Size = 1000,
+  top_number = 30,
+  top_strategy = "Both",
+  logFC_thre = 0.05,
+  Pv_thre = 0.05
+)
 }
 \arguments{
 \item{analysis.par}{list, stores all related datasets from driver analysis step.}

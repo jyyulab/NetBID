@@ -4,9 +4,18 @@
 \alias{draw.combineDE}
 \title{Plot for combined DE (differentiated expressed)/DA (differentiated activity) Vs. original DE/DA}
 \usage{
-draw.combineDE(DE_list = NULL, main_id = NULL, top_number = 30,
-  display_col = "P.Value", z_col = "Z-statistics", digit_num = 2,
-  row_cex = 1, column_cex = 1, text_cex = 1, pdf_file = NULL)
+draw.combineDE(
+  DE_list = NULL,
+  main_id = NULL,
+  top_number = 30,
+  display_col = "P.Value",
+  z_col = "Z-statistics",
+  digit_num = 2,
+  row_cex = 1,
+  column_cex = 1,
+  text_cex = 1,
+  pdf_file = NULL
+)
 }
 \arguments{
 \item{DE_list}{list, a list of DE/DA results, with one more component named "combine" that include the combined results.
