@@ -2396,9 +2396,8 @@ getDE.limma.2G <- function(eset=NULL, G1=NULL, G0=NULL,G1_name=NULL,G0_name=NULL
   exp_G0 <- base::rowMeans(new_mat[,G0,drop=FALSE]);
   w1 <- which(tT$P.Value<=0);
   if(base::length(w1)>0) tT$P.Value[w1] <- .Machine$double.xmin;
-  w1 <- which(tT$logFC==0) ## 2022-05-13
-  if(base::length(w1)>0){tT$logFC[w1] <- .Machine$double.xmin;} ## remove zero for logFC
-  z_val <- sapply(tT$P.Value*sign(tT$logFC),function(x)combinePvalVector(x,twosided = TRUE)[1])
+  #z_val <- sapply(tT$P.Value*sign(tT$logFC),function(x)combinePvalVector(x,twosided = TRUE)[1])
+  z_val <- sapply(tT$P.Value*sign(tT$logFC),function(x)ifelse(x ==0, 0, combinePvalVector(x,twosided = TRUE)[1])) ## remove zero
   if(is.null(random_effect)==TRUE){
     tT <- base::cbind(tT,'Z-statistics'=z_val,'Ave.G0'=exp_G0,'Ave.G1'=exp_G1)
   }else{
@@ -4695,11 +4694,10 @@ draw.volcanoPlot <- function(dat=NULL,label_col=NULL,logFC_col=NULL,Pv_col=NULL,
     yyy <- c(1,round(base::seq(1,base::max(y)*1.5,length.out=base::min(base::length(y),5)))) ## max:5
     graphics::axis(side=2,at=c(0,yyy),labels=c(1,format(10^-yyy,scientific = TRUE)),las=2)
     graphics::mtext(side=2,line = 4,ylab,cex=1.2)
-    w1 <- which(x==0) ## 2022-05-13
-    if(base::length(w1)>0){x[w1] <- .Machine$double.xmin;} ## remove zero for logFC
     w1 <- which(dat[,Pv_col]==0) ## 2022-05-13
     if(base::length(w1)>0){dat[w1,Pv_col] <- .Machine$double.xmin;} ## remove zero for logFC
-    z_val <- sapply(dat[,Pv_col]*sign(x),combinePvalVector)[1,]
+    #z_val <- sapply(dat[,Pv_col]*sign(x),combinePvalVector)[1,]
+    z_val <- sapply(dat[,Pv_col]*sign(x),function(xx)ifelse(xx ==0, 0, combinePvalVector(xx,twosided = TRUE)[1]))
     if(logFC_thre>0){graphics::abline(v=logFC_thre,lty=2,lwd=0.5);graphics::abline(v=-logFC_thre,lty=2,lwd=0.5)}
     if(Pv_thre<1) graphics::abline(h=-log10(Pv_thre),lty=2,lwd=0.5);
     graphics::points(y~x,pch=16,col=get_transparent('grey',0.7))
@@ -6692,7 +6690,8 @@ get_z2p_each <- function(x,use_star=FALSE,digit_num=2,twosided=T){
     use_p <- format(use_pv,digits=digit_num,scientific = TRUE)
   }else{
     low_p <- .Machine$double.xmin
-    low_z <- sapply(10^(-(1:(1+-log10(low_p)))),function(xx)combinePvalVector(xx,twosided = twosided))
+    #low_z <- sapply(10^(-(1:(1+-log10(low_p)))),function(xx)combinePvalVector(xx,twosided = twosided))
+    low_z <- sapply(10^(-(1:(1+-log10(low_p)))),function(xx)ifelse(xx == 0, 0, combinePvalVector(xx,twosided = twosided)))
     use_pv <- low_z[2,which(low_z[1,]>=x)[1]]
     use_p <- format(use_pv, digits=3,scientific = TRUE)
     use_p[which(use_p=='NA')] <- '<1e-308'
