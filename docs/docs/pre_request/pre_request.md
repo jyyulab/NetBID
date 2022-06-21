@@ -9,9 +9,9 @@ permalink: /docs/pre_request
 
 **R version >= 3.6.0**
 
-Following is the description for dependent R packages, mainly for developers to better understand the code in NetBID2.
+The following is a description of the dependent R packages, mainly to help developers better understand the code in NetBID2.
 
-Users do not need to digest the information below. 
+The users does not need to digest the information below. 
 
 
 |R package|Functions[^1]|Category|Purpose|
@@ -27,20 +27,20 @@ Users do not need to digest the information below.
 |igraph|-|Visualization|Igraph class and basic network-based calculation|
 |RColorBrewer|brewer.pal|Visualization|Get color bar|
 |plot3D|scatter3D|Visualization|3D plot|
-|plotrix|draw.ellipse|Visualization|drawing ellipse|
-|umap|umap|Visualization|data dimension reduction and visualization|
-|ComplexHeatmap|Heatmap|Visualization|heatmap drawing|
+|plotrix|draw.ellipse|Visualization|Drawing ellipse|
+|umap|umap|Visualization|Data dimension reduction and visualization|
+|ComplexHeatmap|Heatmap|Visualization|Heatmap drawing|
 |plotly|-|Visualization|For interactive plot|
-|ordinal|clm,clmm|bid|Cumulative Link Mixed Models|
-|MCMCglmm|MCMCglmm|bid|Multivariate Generalized Linear Mixed Models|
+|ordinal|clm,clmm|bid|Cumulative link mixed models|
+|MCMCglmm|MCMCglmm|bid|Multivariate generalized linear mixed models|
 |arm|bayesglm|bid|Bayesian generalized linear models|
 |reshape|melt|bid|Melt an object into a form suitable for easy casting|
 |biomaRt|-|ID conversion|ID conversion|
-|GSVA|gsva|Gene Set|gene set activity calculation|
+|GSVA|gsva|Gene Set|Gene set activity calculation|
 |msigdbr|-|Gene Set|MSigDB database|
-|openxlsx|-|IO|Output into excel file (master table)|
+|openxlsx|-|IO|Output into EXCEL file (master table)|
 |rhdf5|H5Fopen,H5Fclose|IO|For hd5 formation data processing (MICA)|
-|rmarkdown|render|Report|For generating html report file|
+|rmarkdown|render|Report|For generating HTML report file|
 |kableExtra|-|Report|For table layout in the report file|
 
 
