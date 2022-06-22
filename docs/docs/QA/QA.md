@@ -10,14 +10,14 @@ permalink: /docs/QA
 ### Network reconstruction
 
 - [Step 0: Preparations](../docs/network_reconstruction#step-0-preparations)
-- [Step 1: Load in gene expression datasets for network reconstruction (exp-load)](../docs/network_reconstruction#step-1-load-in-gene-expression-datasets-for-network-reconstruction-exp-load)
+- [Step 1: Load gene expression datasets for network reconstruction (exp-load)](../docs/network_reconstruction#step-1-load-gene-expression-datasets-for-network-reconstruction-exp-load)
    - [Q&A: The choice of expression dataset for network reconstruction](../docs/network_reconstruction#the-choice-of-expression-data-set-for-network-reconstruction)
    - [Q&A: Input RNA-Seq dataset](../docs/network_reconstruction#input-rna-seq-dataset)
-   - [Q&A: Input expression matrix not from GEO database](../docs/network_reconstruction#input-expression-matrix-not-from-geo-database)
+   - [Q&A: Input expression matrix not from the GEO database](../docs/network_reconstruction#input-expression-matrix-not-from-the-geo-database)
 - [Step 2: Normalization for the expression dataset (exp-QC)](../docs/network_reconstruction#step-2-normalization-for-the-expression-dataset-exp-qc)
-   - [Q&A: QC for RNA-Seq dataset](../docs/network_reconstruction#qc-for-rna-seq-dataset)
-   - [Q&A: Combine two datasets](../docs/network_reconstruction#combine-two-datasets)
-- [Step 3: Check sample cluster information, optional (exp-cluster)](../docs/network_reconstruction#step-3-check-sample-cluster-analysis-optional-exp-cluster)
+   - [Q&A: QC for an RNA-Seq dataset](../docs/network_reconstruction#qc-for-an-rna-seq-dataset)
+   - [Q&A: Combining two datasets](../docs/network_reconstruction#combining-two-datasets)
+- [Step 3: Check sample cluster information (optional) (exp-cluster)](../docs/network_reconstruction#step-3-check-sample-cluster-analysis-optional-exp-cluster)
 - [Step 4: Prepare files to run SJARACNe (sjaracne-prep)](../docs/network_reconstruction#step-4-prepare-files-to-run-sjaracne-sjaracne-prep)
    - [Q&A: ID conversion](../docs/network_reconstruction#id-conversion)
    
