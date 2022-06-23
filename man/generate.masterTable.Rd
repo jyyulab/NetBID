@@ -14,7 +14,7 @@ generate.masterTable(
   tf_sigs = tf_sigs,
   z_col = "Z-statistics",
   display_col = c("logFC", "P.Value"),
-  column_order_stratey = "type"
+  column_order_strategy = "type"
 )
 }
 \arguments{
@@ -42,7 +42,7 @@ Default is NULL.}
 
 \item{display_col}{character, name of the column in \code{DE} and \code{DA} need to be kept in the master table. Default is c("logFC","P.Value").}
 
-\item{column_order_stratey}{character, users can choose between "type" and "comp". Default is "type".
+\item{column_order_strategy}{character, users can choose between "type" and "comp". Default is "type".
 If set as type, the columns will be ordered by column type; If set as comp, the columns will be ordered by comparison.}
 }
 \value{

@@ -2637,7 +2637,7 @@ merge_TF_SIG.network <- function(TF_network=NULL,SIG_network=NULL){
 #' @param tf_sigs list, contains all the detailed information of TF and Sig. Users can call \code{db.preload} for access.
 #' @param z_col character, name of the column in \code{DE} and \code{DA} contains the Z statistics. Default is "Z-statistics".
 #' @param display_col character, name of the column in \code{DE} and \code{DA} need to be kept in the master table. Default is c("logFC","P.Value").
-#' @param column_order_stratey character, users can choose between "type" and "comp". Default is "type".
+#' @param column_order_strategy character, users can choose between "type" and "comp". Default is "type".
 #' If set as type, the columns will be ordered by column type; If set as comp, the columns will be ordered by comparison.
 #' @return Return a data frame contains the mega information of all tested drivers.
 #' The column "originalID" and "originalID_label" is the same ID as from the original dataset.
@@ -2678,12 +2678,12 @@ generate.masterTable <- function(use_comp=NULL,DE=NULL,DA=NULL,
                                  target_list=NULL,main_id_type=NULL,transfer_tab=NULL,
                                  tf_sigs=tf_sigs,
                                  z_col='Z-statistics',display_col=c('logFC','P.Value'),
-                                 column_order_stratey='type'){
+                                 column_order_strategy='type'){
   #
-  all_input_para <- c('use_comp','DE','DA','target_list','main_id_type','tf_sigs','z_col','display_col','column_order_stratey')
+  all_input_para <- c('use_comp','DE','DA','target_list','main_id_type','tf_sigs','z_col','display_col','column_order_strategy')
   check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
   if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
-  check_res <- c(check_option('column_order_stratey',c('type','comp'),envir=environment()))
+  check_res <- c(check_option('column_order_strategy',c('type','comp'),envir=environment()))
   if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
   #
   if(base::length(base::setdiff(use_comp,names(DE)))>0){message(sprintf('%s not included in DE, please check and re-try!',base::setdiff(use_comp,names(DE))));return(FALSE)}
@@ -2759,7 +2759,7 @@ generate.masterTable <- function(use_comp=NULL,DE=NULL,DA=NULL,
   combine_info_DA <- do.call(base::cbind,lapply(combine_info,function(x)x[rn_label,grep('_DA$',colnames(x))]))
   combine_info_DE <- do.call(base::cbind,lapply(combine_info,function(x)x[rn_label,grep('_DE$',colnames(x))]))
   # re-organize the columns for combine info
-  if(column_order_stratey=='type' & length(use_comp)>1){
+  if(column_order_strategy=='type' & length(use_comp)>1){
     col_ord <- c('Z','AveExpr',display_col)
     tmp1 <- lapply(col_ord,function(x){
       combine_info_DA[,grep(sprintf('^%s\\.',x),colnames(combine_info_DA))]

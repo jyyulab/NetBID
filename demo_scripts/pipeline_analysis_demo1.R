@@ -146,7 +146,7 @@ all_comp <- names(analysis.par$DE) # Users can use index or name to get target o
 use_genes <- unique(c(analysis.par$merge.network$network_dat$source.symbol,analysis.par$merge.network$network_dat$target.symbol))
 transfer_tab <- get_IDtransfer2symbol2type(from_type = 'external_gene_name',use_genes=use_genes)
 analysis.par$transfer_tab <- transfer_tab
-# Creat the final master table
+# Create the final master table
 analysis.par$final_ms_tab <- generate.masterTable(use_comp=all_comp,DE=analysis.par$DE,DA=analysis.par$DA,
                                                   target_list=analysis.par$merge.network$target_list,
                                                   tf_sigs=tf_sigs,z_col='Z-statistics',display_col=c('logFC','P.Value'),

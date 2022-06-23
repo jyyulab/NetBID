@@ -24,13 +24,13 @@ permalink: /docs/QA
 ### Driver inference
 
 - [Step 0: Preparations](../docs/driver_inference#step-0-preparations)
-- [Step 1: Load in the expression dataset for analysis (exp-load, exp-cluster, exp-QC)](../docs/driver_inference#step-1-load-in-the-expression-dataset-for-analysis-exp-load-exp-cluster-exp-qc)
+- [Step 1: Load the expression dataset for analysis (exp-load, exp-cluster, exp-QC)](../docs/driver_inference#step-1-load-the-expression-dataset-for-analysis-exp-load-exp-cluster-exp-qc)
    - [Q&A: What to do if the ID types from network-reconstruction dataset and analysis dataset are different?](../docs/driver_inference#what-to-do-if-the-id-types-from-network-reconstruction-dataset-and-analysis-dataset-are-different)
-- [Step 2: Read in network files and calcualte driver activity (act-get)](../docs/driver_inference#step-2-read-in-network-files-and-calcualte-driver-activity-act-get)
+- [Step 2: Read in network files and calculate driver activity (act-get)](../docs/driver_inference#step-2-read-in-network-files-and-calculate-driver-activity-act-get)
     - [Q&A: Why study driver’s activity ?](../docs/driver_inference#why-study-drivers-activity-) 
-- [Step 3: Get differential expression (DE) / differential activity (DA) for drivers (act-DA)](../docs/driver_inference#step-3-get-differential-expression-de--differential-activity-da-for-drivers-act-da)
+- [Step 3: Obtain differential expression (DE) / differential activity (DA) for drivers (act-DA)](../docs/driver_inference#step-3-obtain-differential-expression-de--differential-activity-da-for-drivers-act-da)
 - [Step 4: Generate a master table for drivers (ms-tab)](../docs/driver_inference#step-4-generate-a-master-table-for-drivers-ms-tab)
-    - [Q&A: How to interpret and use the master table ?](../docs/driver_inference#how-to-interpret-and-use-the-master-table-)
+    - [Q&A: How to interpret and use the master table](../docs/driver_inference#how-to-interpret-and-use-the-master-table-)
 
 ### Advanced analysis
 
