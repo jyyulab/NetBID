@@ -6690,8 +6690,8 @@ get_z2p_each <- function(x,use_star=FALSE,digit_num=2,twosided=T){
     use_p <- format(use_pv,digits=digit_num,scientific = TRUE)
   }else{
     low_p <- .Machine$double.xmin
-    #low_z <- sapply(10^(-(1:(1+-log10(low_p)))),function(xx)combinePvalVector(xx,twosided = twosided))
-    low_z <- sapply(10^(-(1:(1+-log10(low_p)))),function(xx)ifelse(xx == 0, 0, combinePvalVector(xx,twosided = twosided)))
+    low_z <- sapply(10^(-(1:(1+-log10(low_p)))),function(xx)combinePvalVector(xx,twosided = twosided))
+    #low_z <- sapply(10^(-(1:(1+-log10(low_p)))),function(xx)ifelse(xx == 0, 0, combinePvalVector(xx,twosided = twosided)))
     use_pv <- low_z[2,which(low_z[1,]>=x)[1]]
     use_p <- format(use_pv, digits=3,scientific = TRUE)
     use_p[which(use_p=='NA')] <- '<1e-308'
