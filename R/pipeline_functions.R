@@ -6684,8 +6684,10 @@ get_ES <- function(rank_profile=NULL,use_genes=NULL,weighted.score.type=1){
 }
 ##
 get_z2p_each <- function(x,use_star=FALSE,digit_num=2,twosided=T){
+  x <- abs(x)
   if(twosided==T) use_pv <- pnorm(x,lower.tail = F)*2 ## two-tail
   if(twosided==F) use_pv <- pnorm(x,lower.tail = F) ## one-tail
+  x_star <- ''
   if(as.character(use_pv)!='0'){
     use_p <- format(use_pv,digits=digit_num,scientific = TRUE)
   }else{
@@ -6696,8 +6698,8 @@ get_z2p_each <- function(x,use_star=FALSE,digit_num=2,twosided=T){
     use_p <- format(use_pv, digits=3,scientific = TRUE)
     use_p[which(use_p=='NA')] <- '<1e-308'
     use_p <- as.character(use_p)
+    x_star <- '***'
   }
-  x_star <- rep('',length.out=base::length(use_pv))
   x_star[which(use_pv<0.05)] <-'*'
   x_star[which(use_pv<0.01)] <-'**'
   x_star[which(use_pv<0.001)] <-'***'
