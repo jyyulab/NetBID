@@ -21,7 +21,7 @@ jobs:
           cat cgc/netbid.cwl
       - id: cgcdeploy
         if: ${{ !env.ACT }}
-        uses: jordan-rash/cgc-go@v0.1.4
+        uses: stjudecloud/cgc-go@v0.1.4
         with:
           file_location: cgc/netbid.cwl
           shortid: stjude/netbid/netbid
