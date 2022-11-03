@@ -27,7 +27,7 @@ NetBID2 is a systematic, data-driven, network-based approach for revealing and c
 
 ![SupFigure1](SupFigure1.jpg)
 
-NetBID2 has the following key features, making it a handy, comprehensive, and practicable software with which to perform “hidden driver” analysis. 
+NetBID2 has the following key features, making it a handy, comprehensive and practicable software with which to perform “hidden driver” analysis. 
 
 **More data processing functions:** 
 
