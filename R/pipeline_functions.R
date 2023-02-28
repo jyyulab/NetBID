@@ -1812,8 +1812,8 @@ cal.Activity.old <- function(target_list=NULL, cal_mat=NULL, es.method = 'weight
     if (target_num == 0)
       next
     if (target_num == 1){
-      if (es.method == 'weightedmean') ac.mat[i, ] <- cal_mat[x2,]
-      if (es.method != 'weightedmean') ac.mat[i, ] <- cal_mat[x2,]*x1$MI * sign(x1$spearman)
+      if (es.method != 'weightedmean') ac.mat[i, ] <- cal_mat[x2,] # 20230228
+      if (es.method == 'weightedmean') ac.mat[i, ] <- cal_mat[x2,]*x1$MI * sign(x1$spearman) # 20230228
       next
     }
     if (es.method != 'weightedmean')
@@ -2676,12 +2676,12 @@ merge_TF_SIG.network <- function(TF_network=NULL,SIG_network=NULL){
 #' @export
 generate.masterTable <- function(use_comp=NULL,DE=NULL,DA=NULL,
                                  target_list=NULL,main_id_type=NULL,transfer_tab=NULL,
-                                 tf_sigs=tf_sigs,
+                                 tf_sigs=NULL,
                                  z_col='Z-statistics',display_col=c('logFC','P.Value'),
                                  column_order_strategy='type'){
   #
   all_input_para <- c('use_comp','DE','DA','target_list','main_id_type','tf_sigs','z_col','display_col','column_order_strategy')
-  check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
+  check_res <- sapply(all_input_para,function(x)check_para(x,envir=base::environment()))
   if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
   check_res <- c(check_option('column_order_strategy',c('type','comp'),envir=environment()))
   if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
@@ -2740,14 +2740,14 @@ generate.masterTable <- function(use_comp=NULL,DE=NULL,DA=NULL,
   add_info <- tmp1[rn,]
   #
   combine_info <- lapply(use_comp,function(x){
-    DA[[x]] <- DA[[x]][rn_label,]
+    DA[[x]] <- DA[[x]][rn_label,,drop=F]
     DE[[x]] <- as.data.frame(DE[[x]])[rn,]
     avg_col <- colnames(DA[[x]])[grep('^Ave',colnames(DA[[x]]))]
     uc <- c(z_col,avg_col,base::setdiff(display_col,c(z_col,avg_col))); uc <- base::intersect(uc,colnames(DA[[x]]))
-    DA_info <- DA[[x]][rn_label,uc]
+    DA_info <- DA[[x]][rn_label,uc,drop=F]
     avg_col <- colnames(DE[[x]])[grep('^Ave',colnames(DE[[x]]))]
     uc <- c(z_col,avg_col,base::setdiff(display_col,c(z_col,avg_col))); uc <- base::intersect(uc,colnames(DE[[x]]))
-    DE_info <- as.data.frame(DE[[x]])[rn,uc]
+    DE_info <- as.data.frame(DE[[x]])[rn,uc,drop=F]
     colnames(DA_info) <- paste0(colnames(DA_info),'.',x,'_DA')
     colnames(DE_info) <- paste0(colnames(DE_info),'.',x,'_DE')
     colnames(DA_info)[1] <- paste0('Z.',x,'_DA')
@@ -2756,13 +2756,14 @@ generate.masterTable <- function(use_comp=NULL,DE=NULL,DA=NULL,
     rownames(out) <- rn_label
     out
   })
-  combine_info_DA <- do.call(base::cbind,lapply(combine_info,function(x)x[rn_label,grep('_DA$',colnames(x))]))
-  combine_info_DE <- do.call(base::cbind,lapply(combine_info,function(x)x[rn_label,grep('_DE$',colnames(x))]))
+  combine_info_DA <- do.call(base::cbind,lapply(combine_info,function(x)x[rn_label,grep('_DA$',colnames(x)),drop=T]))
+  combine_info_DE <- do.call(base::cbind,lapply(combine_info,function(x)x[rn_label,grep('_DE$',colnames(x)),drop=T]))
   # re-organize the columns for combine info
   if(column_order_strategy=='type' & length(use_comp)>1){
     col_ord <- c('Z','AveExpr',display_col)
     tmp1 <- lapply(col_ord,function(x){
-      combine_info_DA[,grep(sprintf('^%s\\.',x),colnames(combine_info_DA))]
+      x1 <- grep(sprintf('^%s\\.',x),colnames(combine_info_DA))
+      if(length(x1)>0) combine_info_DA[,x1] else return(NULL)
     })
     combine_info_DA <- do.call(base::cbind,tmp1)
     tmp1 <- lapply(col_ord,function(x){
