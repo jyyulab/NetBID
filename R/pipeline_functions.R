@@ -3588,8 +3588,9 @@ draw.2D.interactive <- function(X,Y,sample_label=NULL,color_label=NULL,shape_lab
                          hoverinfo='text',text=display_text,
                          mode='markers',symbol=~shape_label) %>%
       plotly::layout(title = main,
-                     yaxis = list(zeroline = FALSE,title=list(text=xlab)),
-                     xaxis = list(zeroline = FALSE,title=list(text=ylab),showlegend=TRUE)
+                     xaxis = list(zeroline = FALSE,title=list(text=xlab)),#20240327
+                     yaxis = list(zeroline = FALSE,title=list(text=ylab),
+                                  showlegend=TRUE)
       )
   }
   if(is.null(shape_label)==TRUE & is.null(color_label)==FALSE){
