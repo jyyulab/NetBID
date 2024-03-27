@@ -5870,7 +5870,7 @@ draw.funcEnrich.cluster <- function(funcEnrich_res=NULL,top_number=30,
   }
   if(is.null(pdf_file)==FALSE){plot_part(ori=TRUE);plot_part(ori=TRUE,before_off=TRUE);while (!is.null(dev.list()))  dev.off()} else {plot_part()}
   if(return_mat==TRUE){
-    return(mat1)
+    return(list(mat=mat1,gene_cluster=gene_cluster,gs_cluster=gs_cluster))
   }else{
     return(TRUE)
   }
@@ -9467,8 +9467,8 @@ draw.oncoprint <- function(phenotype_info=NULL,
   use_colname_full <- c('Amplification','Missense','Deletion')[which(use_col==1)]
   #
   col = c(AMP=brewer.pal(8,'Set1')[1], ## red
-          MIS=brewer.pal(8,'Set1')[3], ## green
-          DEL=brewer.pal(8,'Set1')[2],  ## blue
+          MIS=brewer.pal(8,'Set1')[2], ## blue
+          DEL=brewer.pal(8,'Set1')[4], ## purple
           OTHER='light grey')
   #########################################################
   if(is.null(pdf_file)==FALSE){
