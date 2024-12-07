@@ -136,7 +136,7 @@ Detailed statistics for all `r length(source_list)` drivers.
 ```{r echo=FALSE}
 dt <- do.call(cbind,net_detail)
 dt1 <- dt[source_list,]
-if(class(dt1)=='numeric'){dt1 <- t(as.matrix(dt1)); colnames(dt1) <- colnames(dt); rownames(dt1) <- source_list}
+if(class(dt1)[1]=='numeric'){dt1 <- t(as.matrix(dt1)); colnames(dt1) <- colnames(dt); rownames(dt1) <- source_list}
 if(nrow(dt1)<20){
 kableExtra::kable(dt1,align = "c") %>%
   kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed")) %>%
