@@ -16,6 +16,9 @@ Email: xinran.dong@foxmail.com
 
 ### Citation
 
+NetBID2 is published in Nature Communications! You can find the publication [here](https://www.nature.com/articles/s41467-023-38335-6).
+
+Dong X, Ding L, Thrasher A, Wang X, Liu J, Pan Q, Rash J, Dhungana Y, Yang X, Risch I, Li Y. NetBID2 provides comprehensive hidden driver analysis. Nature Communications. 2023 May 4;14(1):2581.
 
 
 ### License
