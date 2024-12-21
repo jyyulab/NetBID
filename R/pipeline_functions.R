@@ -8496,7 +8496,7 @@ SJAracne.prepare <-
     }
     use.genes <- clean_charVector(use.genes)
     use.genes.symbol <- clean_charVector(use.genes.symbol)
-    expdata <- data.frame(base::cbind(isoformId = use.genes, geneSymbol = use.genes.symbol, d),stringsAsFactors=FALSE)
+    expdata <- data.frame(isoformId = use.genes, geneSymbol = use.genes.symbol, d, stringsAsFactors=FALSE)
     #
     write.table(
       expdata,
