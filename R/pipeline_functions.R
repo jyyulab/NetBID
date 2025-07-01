@@ -2936,7 +2936,7 @@ out2excel <- function(all_ms_tab,out.xlsx,
 #' It will call \code{msigdbr} to download data from MSigDB and save it as RData under the \code{db/} directory with species name.
 #'
 #' @param use_spe character, name of interested species (e.g. "Homo sapiens", "Mus musculus").
-#' Users can call \code{msigdbr_show_species()} to access the full list of available species names.
+#' Users can call \code{msigdbr_species()} to access the full list of available species names.
 #' Default is "Homo sapiens".
 #' @param update logical, if TRUE, the previous loaded RData will be updated. Default is FALSE.
 #' @param main.dir character, the main file path of user's NetBID2 project.
@@ -2966,7 +2966,7 @@ gs.preload <- function(use_spe='Homo sapiens',update=FALSE,
   all_input_para <- c('use_spe','update')
   check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
   if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
-  all_spe <- msigdbr::msigdbr_show_species()
+  all_spe <- msigdbr::msigdbr_species()
   check_res <- c(check_option('update',c(TRUE,FALSE),envir=environment()),
                  check_option('use_spe',all_spe,envir=environment()))
   if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
@@ -2984,7 +2984,7 @@ gs.preload <- function(use_spe='Homo sapiens',update=FALSE,
   out_file <- sprintf('%s/%s_gs2gene.RData',db.dir,use_spe1)
   if(file.exists(out_file)==FALSE | update==TRUE){
     message('Begin generating all_gs2gene !')
-    all_gs_info <-  msigdbr::msigdbr(species = use_spe) ## use msigdbr_show_species() to check possible available species
+    all_gs_info <-  msigdbr::msigdbr(species = use_spe) ## use msigdbr_species() to check possible available species
     # for gs_cat
     all_gs_cat <- base::unique(all_gs_info$gs_cat)
     all_gs2gene_1 <- lapply(all_gs_cat,function(x){
