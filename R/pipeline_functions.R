@@ -2966,7 +2966,7 @@ gs.preload <- function(use_spe='Homo sapiens',update=FALSE,
   all_input_para <- c('use_spe','update')
   check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
   if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
-  all_spe <- msigdbr::msigdbr_species()
+  all_spe <- as.vector(msigdbr::msigdbr_species()[,1])
   check_res <- c(check_option('update',c(TRUE,FALSE),envir=environment()),
                  check_option('use_spe',all_spe,envir=environment()))
   if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
