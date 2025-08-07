@@ -179,8 +179,8 @@ db.preload <- function(use_level='transcript',use_spe='human',update = FALSE,
                            'chromosome_name','strand','start_position','end_position','band',
                            'description','phenotype_description','refseq_mrna')
     if(use_spe=='HUMAN'){
-      ensembl.attr.transcript <- c(ensembl.attr.transcript,'hgnc_symbol','entrezgene')
-      ensembl.attr.gene <- c(ensembl.attr.gene,'hgnc_symbol','entrezgene')
+      ensembl.attr.transcript <- c(ensembl.attr.transcript,'hgnc_symbol','entrezgene_id')
+      ensembl.attr.gene <- c(ensembl.attr.gene,'hgnc_symbol','entrezgene_id')
     }
     ## do not output hgnc in non-human species
     if(use_spe != 'HUMAN')
@@ -258,7 +258,7 @@ db.preload <- function(use_level='transcript',use_spe='human',update = FALSE,
     tf_sigs$tf$info  <- TF_info; tf_sigs$sig$info <- SIG_info;
     for(each_id_type in base::intersect(c('ensembl_transcript_id','ensembl_gene_id',
                                     'external_transcript_name','external_gene_name','hgnc_symbol',
-                                    'entrezgene','refseq_mrna'),colnames(TF_info))){
+                                    'entrezgene_id','refseq_mrna'),colnames(TF_info))){
       tf_sigs$tf[[each_id_type]] <- base::setdiff(base::unique(TF_info[[each_id_type]]),"")
       tf_sigs$sig[[each_id_type]] <- base::setdiff(base::unique(SIG_info[[each_id_type]]),"")
     }
@@ -2966,7 +2966,7 @@ gs.preload <- function(use_spe='Homo sapiens',update=FALSE,
   all_input_para <- c('use_spe','update')
   check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
   if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
-  all_spe <- msigdbr::msigdbr_species()
+  all_spe <- msigdbr::msigdbr_species()[["species_name"]]
   check_res <- c(check_option('update',c(TRUE,FALSE),envir=environment()),
                  check_option('use_spe',all_spe,envir=environment()))
   if(base::min(check_res)==0){message('Please check and re-try!');return(FALSE)}
@@ -2985,10 +2985,10 @@ gs.preload <- function(use_spe='Homo sapiens',update=FALSE,
   if(file.exists(out_file)==FALSE | update==TRUE){
     message('Begin generating all_gs2gene !')
     all_gs_info <-  msigdbr::msigdbr(species = use_spe) ## use msigdbr_species() to check possible available species
-    # for gs_cat
-    all_gs_cat <- base::unique(all_gs_info$gs_cat)
+    # for gs_collection
+    all_gs_cat <- base::unique(all_gs_info$gs_collection)
     all_gs2gene_1 <- lapply(all_gs_cat,function(x){
-      x1 <- all_gs_info[which(all_gs_info$gs_cat==x),]
+      x1 <- all_gs_info[which(all_gs_info$gs_collection==x),]
       all_gs <- base::unique(x1$gs_name)
       x2 <- lapply(all_gs, function(y){
         base::unique(x1$gene_symbol[which(x1$gs_name==y)])
@@ -2996,9 +2996,9 @@ gs.preload <- function(use_spe='Homo sapiens',update=FALSE,
       names(x2) <- all_gs;x2
     })
     names(all_gs2gene_1) <- all_gs_cat
-    all_gs_subcat <- base::setdiff(base::unique(all_gs_info$gs_subcat),"")
+    all_gs_subcat <- base::setdiff(base::unique(all_gs_info$gs_subcollection),"")
     all_gs2gene_2 <- lapply(all_gs_subcat,function(x){
-      x1 <- all_gs_info[which(all_gs_info$gs_subcat==x),]
+      x1 <- all_gs_info[which(all_gs_info$gs_subcollection==x),]
       all_gs <- base::unique(x1$gs_name)
       x2 <- lapply(all_gs, function(y){
         base::unique(x1$gene_symbol[which(x1$gs_name==y)])
@@ -3011,11 +3011,11 @@ gs.preload <- function(use_spe='Homo sapiens',update=FALSE,
     all_gs2gene <- all_gs2gene[sort(names(all_gs2gene))]
     gs_size <- unlist(lapply(all_gs2gene,length))
     # info for cat
-    info_cat <- c('C1'='positional gene sets','C2'='curated gene set','C3'='motif','C4'='computational','C5'='GO','C6'='oncogenic','C7'='immune','H'='hallmark genesets')
+    info_cat <- c('C1'='positional gene sets','C2'='curated gene set','C3'='motif','C4'='computational','C5'='GO','C6'='oncogenic','C7'='immune','C8'='cell type signature','H'='hallmark genesets')
     info_subcat <- c('CGP'='chemical and genetic perturbations','CP'='Canonical pathways','CP:BIOCARTA'='BioCarta gene sets','CP:KEGG'='KEGG gene sets',
                      'CP:REACTOME'='Reactome gene sets','MIR'='microRNA targets','TFT'='transcription factor targets','CGN'='cancer gene neighborhoods','CM'='cancer modules',
                      'BP'='Biological Process','MF'='Molecular Function','CC'='Cellular Component')
-    cat_rel <- base::unique(as.data.frame(all_gs_info[,c('gs_cat','gs_subcat')]))
+    cat_rel <- base::unique(as.data.frame(all_gs_info[,c('gs_collection','gs_subcollection')]))
     all_gs2gene_info <- data.frame(cat_rel[,1],info_cat[cat_rel[,1]],gs_size[cat_rel[,1]],cat_rel[,2],info_subcat[cat_rel[,2]],gs_size[cat_rel[,2]],stringsAsFactors = FALSE)
     colnames(all_gs2gene_info) <- c('Category','Category_Info','Category_Size','Sub-Category','Sub-Category_Info','Sub-Category_Size')
     all_gs2gene_info <- all_gs2gene_info[order(all_gs2gene_info[,1]),]
