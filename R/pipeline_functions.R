@@ -179,8 +179,8 @@ db.preload <- function(use_level='transcript',use_spe='human',update = FALSE,
                            'chromosome_name','strand','start_position','end_position','band',
                            'description','phenotype_description','refseq_mrna')
     if(use_spe=='HUMAN'){
-      ensembl.attr.transcript <- c(ensembl.attr.transcript,'hgnc_symbol','entrezgene')
-      ensembl.attr.gene <- c(ensembl.attr.gene,'hgnc_symbol','entrezgene')
+      ensembl.attr.transcript <- c(ensembl.attr.transcript,'hgnc_symbol','entrezgene_id')
+      ensembl.attr.gene <- c(ensembl.attr.gene,'hgnc_symbol','entrezgene_id')
     }
     ## do not output hgnc in non-human species
     if(use_spe != 'HUMAN')
@@ -258,7 +258,7 @@ db.preload <- function(use_level='transcript',use_spe='human',update = FALSE,
     tf_sigs$tf$info  <- TF_info; tf_sigs$sig$info <- SIG_info;
     for(each_id_type in base::intersect(c('ensembl_transcript_id','ensembl_gene_id',
                                     'external_transcript_name','external_gene_name','hgnc_symbol',
-                                    'entrezgene','refseq_mrna'),colnames(TF_info))){
+                                    'entrezgene_id','refseq_mrna'),colnames(TF_info))){
       tf_sigs$tf[[each_id_type]] <- base::setdiff(base::unique(TF_info[[each_id_type]]),"")
       tf_sigs$sig[[each_id_type]] <- base::setdiff(base::unique(SIG_info[[each_id_type]]),"")
     }
@@ -2950,18 +2950,19 @@ out2excel <- function(all_ms_tab,out.xlsx,
 #' gs.preload(use_spe='Homo sapiens',update=FALSE)
 #' gs.preload(use_spe='Mus musculus',update=FALSE)
 #' print(all_gs2gene_info)
-#' # contain the information for all gene set category, category info, category size,
-#' ## sub category,sub category info, sub category size
-#' print(names(all_gs2gene)) # the first level of the list is the category and sub-category IDs
+#' # contain the information for all gene set collection, collection info, collection size,
+#' ## sub collection,sub collection info, sub collection size
+#' print(names(all_gs2gene)) # the first level of the list is the collection and sub-collection IDs
 #' print(str(all_gs2gene$`CP:KEGG`))
 #'
 #' \dontrun{
 #' gs.preload(use_spe='Homo sapiens',update=TRUE)
 #' }
 #' @export
-gs.preload <- function(use_spe='Homo sapiens',update=FALSE,
-                       main.dir=NULL,
-                       db.dir=sprintf("%s/db/",main.dir)){
+gs.preload <- function(use_spe = 'Homo sapiens',
+                       update = FALSE,
+                       main.dir = NULL,
+                       db.dir = sprintf("%s/db/",main.dir)){
   #
   all_input_para <- c('use_spe','update')
   check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
@@ -2985,10 +2986,10 @@ gs.preload <- function(use_spe='Homo sapiens',update=FALSE,
   if(file.exists(out_file)==FALSE | update==TRUE){
     message('Begin generating all_gs2gene !')
     all_gs_info <-  msigdbr::msigdbr(species = use_spe) ## use msigdbr_species() to check possible available species
-    # for gs_cat
-    all_gs_cat <- base::unique(all_gs_info$gs_cat)
+    # for gs_collection
+    all_gs_cat <- base::unique(all_gs_info$gs_collection)
     all_gs2gene_1 <- lapply(all_gs_cat,function(x){
-      x1 <- all_gs_info[which(all_gs_info$gs_cat==x),]
+      x1 <- all_gs_info[which(all_gs_info$gs_collection==x),]
       all_gs <- base::unique(x1$gs_name)
       x2 <- lapply(all_gs, function(y){
         base::unique(x1$gene_symbol[which(x1$gs_name==y)])
@@ -2996,9 +2997,9 @@ gs.preload <- function(use_spe='Homo sapiens',update=FALSE,
       names(x2) <- all_gs;x2
     })
     names(all_gs2gene_1) <- all_gs_cat
-    all_gs_subcat <- base::setdiff(base::unique(all_gs_info$gs_subcat),"")
+    all_gs_subcat <- base::setdiff(base::unique(all_gs_info$gs_subcollection),"")
     all_gs2gene_2 <- lapply(all_gs_subcat,function(x){
-      x1 <- all_gs_info[which(all_gs_info$gs_subcat==x),]
+      x1 <- all_gs_info[which(all_gs_info$gs_subcollection==x),]
       all_gs <- base::unique(x1$gs_name)
       x2 <- lapply(all_gs, function(y){
         base::unique(x1$gene_symbol[which(x1$gs_name==y)])
@@ -3011,13 +3012,15 @@ gs.preload <- function(use_spe='Homo sapiens',update=FALSE,
     all_gs2gene <- all_gs2gene[sort(names(all_gs2gene))]
     gs_size <- unlist(lapply(all_gs2gene,length))
     # info for cat
-    info_cat <- c('C1'='positional gene sets','C2'='curated gene set','C3'='motif','C4'='computational','C5'='GO','C6'='oncogenic','C7'='immune','H'='hallmark genesets')
-    info_subcat <- c('CGP'='chemical and genetic perturbations','CP'='Canonical pathways','CP:BIOCARTA'='BioCarta gene sets','CP:KEGG'='KEGG gene sets',
-                     'CP:REACTOME'='Reactome gene sets','MIR'='microRNA targets','TFT'='transcription factor targets','CGN'='cancer gene neighborhoods','CM'='cancer modules',
-                     'BP'='Biological Process','MF'='Molecular Function','CC'='Cellular Component')
-    cat_rel <- base::unique(as.data.frame(all_gs_info[,c('gs_cat','gs_subcat')]))
+    info_cat <- c('C1'='positional gene sets', 'C2'='curated gene sets', 'C3'='regulatory target gene sets', 'C4'='computational gene sets', 'C5'='ontology gene sets',
+                  'C6'='oncogenic signature gene sets', 'C7'='immunologic signature gene sets', 'C8'='cell type signature gene sets', 'H'='hallmark gene sets')
+    info_subcat <- c('CGP'='Chemical and Genetic Perturbations', 'CP'='Canonical Pathways', 'CP:BIOCARTA'='BioCarta subset', 'CP:KEGG_MEDICUS'='KEGG MEDICUS subset', 'CP:KEGG_LEGACY'='KEGG LEGACY subset', 'CP:REACTOME'='Reactome subset', 'CP:WIKIPATHWAYS'='WikiPahtways subset', 'CP:PID'='PID subset',
+                     'MIR:MIRDB'='microRNA targets predicted by miRDB v6.0', 'MIR:MIR_LEGACY'='microRNA targets predicted by motif matching', 'TFT:GTRD'='Transcription Factor Targets mined from GTRD', 'TFT:TFT_LEGACY'='Transcription Factor Targets predicted by motif matching',
+                     '3CA'='Computational gene sets mined from Curated Cancer Cell Atlas (3CA) metaprograms', 'CGN'='Computational gene sets defined by expression neighborhoods centered on 380 cancer-associated genes', 'CM'='Computational gene sets compiled from cancer modules significantly changed in a variety of cancer conditions',
+                     'GO:BP'='GO Biological Process', 'GO:MF'='GO Molecular Function', 'GO:CC'='GO Cellular Component', 'HPO'='Human Phenotype Ontology', 'VAX'='Immune signatures curated from vaccine response studies', 'IMMUNESIGDB'='Immune signatures collected from ImmuneSigDB')
+    cat_rel <- base::unique(as.data.frame(all_gs_info[,c('gs_collection','gs_subcollection')]))
     all_gs2gene_info <- data.frame(cat_rel[,1],info_cat[cat_rel[,1]],gs_size[cat_rel[,1]],cat_rel[,2],info_subcat[cat_rel[,2]],gs_size[cat_rel[,2]],stringsAsFactors = FALSE)
-    colnames(all_gs2gene_info) <- c('Category','Category_Info','Category_Size','Sub-Category','Sub-Category_Info','Sub-Category_Size')
+    colnames(all_gs2gene_info) <- c('Collection','Collection_Info','Collection_Size','Subcollection','Subcollection_Info','Subcollection_Size')
     all_gs2gene_info <- all_gs2gene_info[order(all_gs2gene_info[,1]),]
     all_gs2gene_info[,c(1,2,4,5)] <- as.data.frame(apply(all_gs2gene_info[,c(1,2,4,5)],2,function(x){x[which(is.na(x)==TRUE)] <- "";x}),stringsAsFactors=FALSE)
     save(all_gs2gene,all_gs2gene_info,file=out_file)
@@ -5273,7 +5276,7 @@ merge_gs <- function(all_gs2gene=all_gs2gene,use_gs=c('H','CP:BIOCARTA','CP:REAC
   if(min(check_res)==0){message('Please check and re-try!');return(FALSE)}
   #
   if(is.null(use_gs)==TRUE | 'all' %in% use_gs){ ## all gene sets
-    use_gs <- base::unique(all_gs2gene_info$Category)
+    use_gs <- base::unique(all_gs2gene_info$Collection)
   }
   #
   use_gs <- base::unique(use_gs)
@@ -5401,12 +5404,12 @@ funcEnrich.Fisher <- function(input_list=NULL,bg_list=NULL,
       use_gs <- c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG')
     }else{
       if(use_gs[1] == 'all'){
-        use_gs <- c(all_gs2gene_info$Category,all_gs2gene_info$`Sub-Category`)
+        use_gs <- c(all_gs2gene_info$Collection,all_gs2gene_info$`Subcollection`)
       }
     }
-    if(base::length(base::setdiff(use_gs,c(all_gs2gene_info$Category,all_gs2gene_info$`Sub-Category`)))>0){
-      message(sprintf('Input %s not in all_gs2gene, please check all_gs2gene_info (items in Category or Sub-Category) and re-try!',
-                      base::paste(base::setdiff(use_gs,c(all_gs2gene_info$Category,all_gs2gene_info$`Sub-Category`)),collapse=';')));
+    if(base::length(base::setdiff(use_gs,c(all_gs2gene_info$Collection,all_gs2gene_info$`Subcollection`)))>0){
+      message(sprintf('Input %s not in all_gs2gene, please check all_gs2gene_info (items in Collection or Subcollection) and re-try!',
+                      base::paste(base::setdiff(use_gs,c(all_gs2gene_info$Collection,all_gs2gene_info$`Subcollection`)),collapse=';')));
       return(FALSE)
     }
     if(base::length(use_gs)>1){
@@ -6268,12 +6271,12 @@ funcEnrich.GSEA <- function(rank_profile=NULL,
       use_gs <- c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG')
     }else{
       if(use_gs[1] == 'all'){
-        use_gs <- c(all_gs2gene_info$Category,all_gs2gene_info$`Sub-Category`)
+        use_gs <- c(all_gs2gene_info$Collection,all_gs2gene_info$`Subcollection`)
       }
     }
-    if(base::length(base::setdiff(use_gs,c(all_gs2gene_info$Category,all_gs2gene_info$`Sub-Category`)))>0){
-      message(sprintf('Input %s not in all_gs2gene, please check all_gs2gene_info (items in Category or Sub-Category) and re-try!',
-                      base::paste(base::setdiff(use_gs,c(all_gs2gene_info$Category,all_gs2gene_info$`Sub-Category`)),collapse=';')));
+    if(base::length(base::setdiff(use_gs,c(all_gs2gene_info$Collection,all_gs2gene_info$`Subcollection`)))>0){
+      message(sprintf('Input %s not in all_gs2gene, please check all_gs2gene_info (items in Collection or Subcollection) and re-try!',
+                      base::paste(base::setdiff(use_gs,c(all_gs2gene_info$Collection,all_gs2gene_info$`Subcollection`)),collapse=';')));
       return(FALSE)
     }
     if(base::length(use_gs)>1){
