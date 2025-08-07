@@ -40,6 +40,7 @@ Install without cloning the repository
 
 ```R
 devtools::install_github("jyyulab/NetBID",ref='master',dependencies='Depends') 
+devtools::install_github("jyyulab/NetBID") 
 ```
 
 Or clone the repository and install locally:
