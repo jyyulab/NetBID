@@ -1950,7 +1950,7 @@ processDriverProfile <- function(Driver_profile,Driver_name,
 #' \code{cal.Activity.GS} calculates activity value for each gene set, and return a numeric matrix with rows of gene sets and columns of samples.
 #'
 #' @param use_gs2gene list, contains elements of gene sets. Element name is gene set name, each element contains a vector of genes belong to that gene set.
-#' Default is using \code{all_gs2gene[c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG')]}, which is loaded from \code{gs.preload}.
+#' Default is using \code{all_gs2gene[c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG_MEDICU')]}, which is loaded from \code{gs.preload}.
 #' @param cal_mat numeric matrix, gene/transcript expression matrix.
 #' If want to input activity matrix, need to use `processDriverProfile()` to pre-process the dataset.
 #' Detailed could see demo.
@@ -1965,7 +1965,7 @@ processDriverProfile <- function(Driver_profile,Driver_name,
 #' NetBID.loadRData(analysis.par=analysis.par,step='ms-tab')
 #' gs.preload(use_spe='Homo sapiens',update=FALSE)
 #' use_gs2gene <- merge_gs(all_gs2gene=all_gs2gene,
-#'                         use_gs=c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG','C5'))
+#'                         use_gs=c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG_MEDICU','C5'))
 #' exp_mat_gene <- Biobase::exprs(analysis.par$cal.eset)
 #' ## each row is a gene symbol, if not, must convert ID first
 #' ac_gs <- cal.Activity.GS(use_gs2gene = use_gs2gene,
@@ -1993,7 +1993,7 @@ processDriverProfile <- function(Driver_profile,Driver_name,
 #' driver_ac_gs <- cal.Activity.GS(use_gs2gene = use_gs2gene,
 #'                         cal_mat = ac_mat_gene)
 #' @export
-cal.Activity.GS <- function(use_gs2gene=all_gs2gene[c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG')], cal_mat=NULL, es.method = 'mean',std=TRUE) {
+cal.Activity.GS <- function(use_gs2gene=all_gs2gene[c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG_MEDICU')], cal_mat=NULL, es.method = 'mean',std=TRUE) {
   #
   all_input_para <- c('use_gs2gene','cal_mat','es.method','std')
   check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
@@ -2953,7 +2953,7 @@ out2excel <- function(all_ms_tab,out.xlsx,
 #' # contain the information for all gene set collection, collection info, collection size,
 #' ## sub collection,sub collection info, sub collection size
 #' print(names(all_gs2gene)) # the first level of the list is the collection and sub-collection IDs
-#' print(str(all_gs2gene$`CP:KEGG`))
+#' print(str(all_gs2gene$`CP:KEGG_MEDICUS`))
 #'
 #' \dontrun{
 #' gs.preload(use_spe='Homo sapiens',update=TRUE)
@@ -5261,15 +5261,15 @@ draw.heatmap <- function(mat=NULL,use_genes=rownames(mat),use_gene_label=use_gen
 #'
 #' @param all_gs2gene list, the list returned by \code{gs.preload()}.
 #' @param use_gs a vector of characters, names of major gene set collections. Users can call \code{all_gs2gene_info} to see all the available collections.
-#' Default is c("H", "CP:BIOCARTA", "CP:REACTOME", "CP:KEGG").
+#' Default is c("H", "CP:BIOCARTA", "CP:REACTOME", "CP:KEGG_MEDICUS").
 #' @return Return a list object with sub-collection gene sets as elements. Each element contains a vector of genes.
 #' @examples
 #' gs.preload(use_spe='Homo sapiens',update=FALSE)
 #' use_gs2gene <- merge_gs(all_gs2gene=all_gs2gene,
-#'                        use_gs=c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG','C5'))
+#'                        use_gs=c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG_MEDICUS','C5'))
 #'
 #' @export
-merge_gs <- function(all_gs2gene=all_gs2gene,use_gs=c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG','C5')){
+merge_gs <- function(all_gs2gene=all_gs2gene,use_gs=c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG_MEDICUS','C5')){
   #
   all_input_para <- c('all_gs2gene')
   check_res <- sapply(all_input_para,function(x)check_para(x,envir=environment()))
@@ -5347,7 +5347,7 @@ vec2list <- function(input_v,sep=NULL){
 #' If \code{gs2gene} is NULL, \code{all_gs2gene} will be used. The \code{use_gs} must be the subset of \code{names(all_gs2gene)}.
 #' If "all", all the gene sets in \code{gs2gene} will be used.
 #' If user input his own \code{gs2gene} list, \code{use_gs} will be set to "all" as default.
-#' Default is c("H", "CP:BIOCARTA", "CP:REACTOME", "CP:KEGG").
+#' Default is c("H", "CP:BIOCARTA", "CP:REACTOME", "CP:KEGG_MEDICUS").
 #' @param min_gs_size numeric, the minimum size of gene set to analysis. Default is 5.
 #' @param max_gs_size numeric, the maximum size of gene set to analysis. Default is 500.
 #' @param Pv_adj character, method to adjust P-value. Default is "fdr".
@@ -5401,7 +5401,7 @@ funcEnrich.Fisher <- function(input_list=NULL,bg_list=NULL,
   #
   if(is.null(gs2gene)==TRUE){ ## use inner gs2gene
     if(is.null(use_gs)==TRUE){
-      use_gs <- c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG')
+      use_gs <- c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG_MEDICUS')
     }else{
       if(use_gs[1] == 'all'){
         use_gs <- c(all_gs2gene_info$Collection,all_gs2gene_info$`Subcollection`)
@@ -5904,7 +5904,7 @@ draw.funcEnrich.cluster <- function(funcEnrich_res=NULL,top_number=30,
 #' If NULL, will use \code{all_gs2gene}, which is created by function \code{gs.preload}. Default is NULL.
 #' @param use_gs a vector of characters, the names of gene sets. If \code{gs2gene} is NULL, \code{all_gs2gene} will be used. And the \code{use_gs} must be the subset of names(all_gs2gene).
 #' Please check \code{all_gs2gene_info} for detailed cateogory description.
-#' Default is c("H", "CP:BIOCARTA", "CP:REACTOME", "CP:KEGG").
+#' Default is c("H", "CP:BIOCARTA", "CP:REACTOME", "CP:KEGG_MEDICUS").
 #' @param display_gs_list a vector of characters, the names of gene sets to be displayed in the plot.
 #' If NULL, all the gene sets will be displayed in descending order of their significance. Default is NULL.
 #' @param bg_list a vector of characters, a vector of background gene symbols. If NULL, genes in \code{gs2gene} will be used as background. Default is NULL.
@@ -5987,7 +5987,7 @@ draw.funcEnrich.cluster <- function(funcEnrich_res=NULL,top_number=30,
 #'                target_list=analysis.par$merge.network$target_list,
 #'                transfer2symbol2type=transfer_tab,
 #'                min_gs_size=5,max_gs_size=500,
-#'                use_gs=use_gs=c('CP:KEGG','CP:BIOCARTA','H'),
+#'                use_gs=use_gs=c('CP:KEGG_MEDICUS','CP:BIOCARTA','H'),
 #'                top_geneset_number=30,top_driver_number=50,
 #'                pdf_file = sprintf('%s/bubbledraw.pdf',
 #'                analysis.par$out.dir.PLOT),
@@ -6209,7 +6209,7 @@ draw.bubblePlot <- function(driver_list=NULL,show_label=driver_list,Z_val=NULL,d
 #' If \code{gs2gene} is NULL, \code{all_gs2gene} will be used. The \code{use_gs} must be the subset of \code{names(all_gs2gene)}.
 #' If "all", all the gene sets in \code{gs2gene} will be used.
 #' If user input his own \code{gs2gene} list, \code{use_gs} will be set to "all" as default.
-#' Default is c("H", "CP:BIOCARTA", "CP:REACTOME", "CP:KEGG").
+#' Default is c("H", "CP:BIOCARTA", "CP:REACTOME", "CP:KEGG_MEDICUS").
 #' @param min_gs_size numeric, the minimum size of gene set to analysis. Default is 5.
 #' @param max_gs_size numeric, the maximum size of gene set to analysis. Default is 500.
 #' @param Pv_adj character, method to adjust P-value. Default is "fdr".
@@ -6268,7 +6268,7 @@ funcEnrich.GSEA <- function(rank_profile=NULL,
   #
   if(is.null(gs2gene)==TRUE){ ## use inner gs2gene
     if(is.null(use_gs)==TRUE){
-      use_gs <- c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG')
+      use_gs <- c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG_MEDICUS')
     }else{
       if(use_gs[1] == 'all'){
         use_gs <- c(all_gs2gene_info$Collection,all_gs2gene_info$`Subcollection`)
@@ -7164,7 +7164,7 @@ draw.GSEA.NetBID <- function(DE=NULL,name_col=NULL,profile_col=NULL,profile_tren
 #'
 #' ## calculate activity for all genesets
 #' use_gs2gene <- merge_gs(all_gs2gene=all_gs2gene,
-#'                        use_gs=c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG','C5'))
+#'                        use_gs=c('H','CP:BIOCARTA','CP:REACTOME','CP:KEGG_MEDICU','C5'))
 #' ac_gs <- cal.Activity.GS(use_gs2gene = use_gs2gene,cal_mat = exp_mat_gene)
 #'
 #' ## get DA for the gene set
@@ -8933,7 +8933,7 @@ strwidthMod <- function(s, units = "inch", cex = 1,ori=TRUE,mod=FALSE){
 #' For details, user can call \code{biomaRt::listAttributes()} to display all available attributes in the selected dataset.
 #' @param transfer_tab data.frame, the ID conversion table. Users can call \code{get_IDtransfer} to get this table.
 #' @param use_gs a vector of characters, names of major gene set collections. Users can call \code{all_gs2gene_info} to see all the available collections.
-#' Default is c("H", "CP:BIOCARTA", "CP:REACTOME", "CP:KEGG").
+#' Default is c("H", "CP:BIOCARTA", "CP:REACTOME", "CP:KEGG_MEDICU").
 #' @param min_Size numeric, minimum size for the target genes. Default is 30.
 #' @param max_Size numeric, maximum size for the target genes. Default is 1000.
 #' @param top_number number for the top significant genes/drivers in the combine results to be displayed on the plot.
@@ -8962,7 +8962,7 @@ strwidthMod <- function(s, units = "inch", cex = 1,ori=TRUE,mod=FALSE){
 #' @export
 NetBID.lazyMode.DriverVisualization <- function(analysis.par=NULL,intgroup=NULL,use_comp=NULL,
                                                 main_id_type='external_gene_name',
-                                                transfer_tab=NULL,use_gs=c("H", "CP:BIOCARTA", "CP:REACTOME", "CP:KEGG"),
+                                                transfer_tab=NULL,use_gs=c("H", "CP:BIOCARTA", "CP:REACTOME", "CP:KEGG_MEDICU"),
                                                 min_Size=30,max_Size=1000,top_number=30,top_strategy='Both',
                                                 logFC_thre=0.05,Pv_thre=0.05){
   all_input_para <- c('analysis.par','intgroup','use_comp','main_id_type',
