@@ -7,47 +7,28 @@ permalink: /docs/installation
 
 ## Installation
 
-### Dependencies
+### 1. Install from github main branch
 
-R, version >= 3.6.0
+```R
+# install.packages("devtools")
+devtools::install_github("jyyulab/NetBID") 
+```
 
-[Pre-request R packages](docs/pre_request)
-
-
-### Install a released R package
+### 2. Install a released R package
 
 Download a released version from [https://github.com/jyyulab/NetBID/releases](https://github.com/jyyulab/NetBID/releases) and run:
 
 ```R
-devtools::install_local('NetBID2_2.0.2.tar.gz')
+# install.packages("devtools")
+devtools::install_local('NetBID2_2.2.0.tar.gz')
 ```
-
-### Install from github master branch
+NOTE:
+1) For MAC users, please make sure the XCode and Xquartz have been installed properly before you start installing NetBID2.
+2) Some dependencies might not be available in your situation. If so, please run the commands below to install them:
 
 ```R
-# set repos, for R version 3.6.0, Bioconductor version 3.9
-local({
-  r <- getOption("repos")
-  r["CRAN"] <- "https://cran.rstudio.com/"
-  r["BioCsoft"] <- "https://bioconductor.org/packages/3.9/bioc"
-  r["BioCann"] <- "https://bioconductor.org/packages/3.9/data/annotation"
-  r["BioCexp"] <- "https://bioconductor.org/packages/3.9/data/experiment"
-  options(repos = r)
-})
-```
-
-Install without cloning the repository
-
-```R
-devtools::install_github("jyyulab/NetBID",ref='master',dependencies='Depends') 
-devtools::install_github("jyyulab/NetBID") 
-```
-
-Or clone the repository and install locally:
-
-```R
-devtools::install(pkg='.',dependencies=TRUE) ## Install the package with dependencies.
-devtools::install_deps(pkg = ".", dependencies = TRUE) ## Install package dependencies if needed.
+# install.packages("BiocManager")
+BiocManager::install(c('SummarizedExperiment', 'Biobase', 'GEOquery', 'limma', 'impute', 'tximport', 'DESeq2', 'ConsensusClusterPlus', 'ComplexHeatmap', 'biomaRt', 'GSVA', 'rhdf5')) # Modify the list per your requirements
 ```
 
 ---
