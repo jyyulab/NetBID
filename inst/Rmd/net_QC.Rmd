@@ -149,7 +149,7 @@ kableExtra::kable(dt1,align = "c") %>%
 
 ```
 
-## Part III: Drirver's target size checking
+## Part III: Driver's target size checking
 
 ```{r echo=FALSE, fig.width=8, fig.height=8}
 par(mar=c(6,6,6,8))
